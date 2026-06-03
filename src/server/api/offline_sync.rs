@@ -1,5 +1,5 @@
-use axum::{Json, response::IntoResponse, http::StatusCode, extract::State};
-use serde::{Deserialize, Serialize};
+use axum::{Json, response::IntoResponse, http::StatusCode, extract::State;
+use serde::{Deserialize, Serialize;
 use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
@@ -7,24 +7,24 @@ pub struct OfflineMutation {
     pub transaction_id: String,
     pub product_id: String,
     pub quantity_deducted: i32,
-}
+
 
 #[derive(Deserialize, Debug)]
 pub struct OfflineSyncRequest {
     pub mutations: Vec<OfflineMutation>,
-}
+
 
 #[derive(Serialize)]
 pub struct OfflineSyncResponse {
     pub success: bool,
-}
+
 
 pub async fn offline_sync_handler(
     State((db, mesh)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>)>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
-    tracing::info!("Received {} offline mutations for edge sync.", payload.mutations.len());
+    tracing::info!("Received { offline mutations for edge sync.", payload.mutations.len());
 
     let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
@@ -32,15 +32,15 @@ pub async fn offline_sync_handler(
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(OfflineSyncResponse { success: false }),
+            Json(OfflineSyncResponse { success: false ),
         ).into_response();
-    }
+
 
     let cache = crate::builder::edge::get_edge_cache();
-    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    cache.invalidate_by_tag(&format!("tenant-id:{", tenant_id)).await;
 
     for mutation in &payload.mutations {
-        cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
+        cache.invalidate_by_tag(&format!("entity:product:{", mutation.product_id)).await;
 
         let query = "
             UPDATE products
@@ -69,32 +69,31 @@ pub async fn offline_sync_handler(
                         "transaction_id": mutation.transaction_id,
                         "quantity_deducted": mutation.quantity_deducted,
                         "tenant_id": tenant_id
-                    }).to_string().into_bytes(),
-                };
+                    ).to_string().into_bytes(),
+                ;
                 let _ = mesh.publish("mesh:inventory:updated", event).await;
-            }
+
             Ok(None) => {
-                tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
-            }
+                tracing::warn!("Product { not found or unauthorized for tenant {", mutation.product_id, tenant_id);
+
             Err(e) => {
-                tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
-            }
-        }
-    }
+                tracing::error!("Failed to deduct inventory for product {: {", mutation.product_id, e);
+
+
+
 
     (
         StatusCode::OK,
-        Json(OfflineSyncResponse { success: true }),
+        Json(OfflineSyncResponse { success: true ),
     ).into_response()
-}
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::http::HeaderMap;
-    use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+    use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport;
     use sqlx::postgres::PgPoolOptions;
-
 
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
@@ -102,19 +101,19 @@ mod tests {
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
-        let req = OfflineSyncRequest { mutations: vec![] };
+        let req = OfflineSyncRequest { mutations: vec![] ;
         let headers = HeaderMap::new();
 
         let response = offline_sync_handler(state, headers, Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-    }
+
 
     #[tokio::test]
     async fn test_offline_sync_success_and_negative_guard() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
-        }
+
 
         let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
 
@@ -133,9 +132,9 @@ mod tests {
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
-                },
+                ,
             ],
-        };
+        ;
 
         let mut headers = HeaderMap::new();
         headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline/agent/x".parse().unwrap());
@@ -154,9 +153,9 @@ mod tests {
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
-                },
+                ,
             ],
-        };
+        ;
 
         let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
@@ -164,5 +163,94 @@ mod tests {
         let count2: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count2.0, 0); // GREATEST(0, 2 - 10) = 0
+
+
+
+    #[tokio::test]
+    async fn test_offline_sync_integration() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+
+
+        let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        // Setup test data
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline-e2e', 'Offline E2E Test Tenant') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-e2e-1', 'tenant-offline-e2e', 'Test E2E Prod', 10) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let state = State((pool.clone(), mesh.clone()));
+
+        // Simulate mobile client queueing mutations
+        let mut queued_mutations = vec![];
+        for i in 1..=3 {
+            queued_mutations.push(OfflineMutation {
+                transaction_id: format!("e2e-tx-{", i),
+                product_id: "prod-e2e-1".to_string(),
+                quantity_deducted: 1, // 3 * 1 = 3 deducted
+            );
+
+
+        let req = OfflineSyncRequest {
+            mutations: queued_mutations,
+        ;
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline-e2e/agent/x".parse().unwrap());
+
+        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Verify inventory update was correctly persisted
+        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-e2e-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 7); // 10 - 3 = 7
+
+
+    #[tokio::test]
+    async fn test_offline_sync_integration() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        // Setup test data
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline-e2e', 'Offline E2E Test Tenant') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-e2e-1', 'tenant-offline-e2e', 'Test E2E Prod', 10) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let state = State((pool.clone(), mesh.clone()));
+
+        // Simulate mobile client queueing mutations
+        let mut queued_mutations = vec![];
+        for i in 1..=3 {
+            queued_mutations.push(OfflineMutation {
+                transaction_id: format!("e2e-tx-{}", i),
+                product_id: "prod-e2e-1".to_string(),
+                quantity_deducted: 1, // 3 * 1 = 3 deducted
+            });
+        }
+
+        let req = OfflineSyncRequest {
+            mutations: queued_mutations,
+        };
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline-e2e/agent/x".parse().unwrap());
+
+        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Verify inventory update was correctly persisted
+        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-e2e-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 7); // 10 - 3 = 7
     }
 }
