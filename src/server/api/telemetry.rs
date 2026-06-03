@@ -75,7 +75,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "tenant_id": tenant_id.clone(),
                             "model": model_string.clone()
                         });
-                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                        let _ = ::server_lib::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
                     });
                 }
             }
@@ -112,7 +112,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "tenant_id": tenant_id.clone(),
                             "api": api_string.clone()
                         });
-                        let _ = crate::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                        let _ = ::server_lib::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
                     });
                 }
             }
@@ -153,13 +153,13 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .get("mission_id")
                     .and_then(Value::as_str)
                     .unwrap_or("");
-                crate::telemetry::record_swarm_task_completed(mission_id);
+                ::server_lib::telemetry::record_swarm_task_completed(mission_id);
             }
             _ => {
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
                     let pool = crate::db::get_pool();
-                    let _ = crate::telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+                    let _ = ::server_lib::telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
                 }
                 // Ignore other metrics in cloud
                 tracing::trace!(
