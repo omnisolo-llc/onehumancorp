@@ -37,32 +37,42 @@ pub async fn bench_db_query_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    let iterations = 2;
+    let iterations = 100;
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS _bench_users (id TEXT, name TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("INSERT INTO _bench_users (id, name) VALUES ('test-1', 'benchmark_user')").execute(&pg_pool).await;
+
         let mut pg_times = Vec::new();
         for _ in 0..iterations {
             let start = Instant::now();
-            let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
+            let _ = sqlx::query("SELECT name FROM _bench_users WHERE id = 'test-1'").fetch_optional(&pg_pool).await;
             pg_times.push(start.elapsed().as_micros());
         }
         pg_times.sort();
         tracing::info!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], pg_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+
+        let _ = sqlx::query("DROP TABLE IF EXISTS _bench_users").execute(&pg_pool).await;
     }
 
     // Standalone Mode (SQLite)
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS _bench_users (id TEXT, name TEXT)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("INSERT INTO _bench_users (id, name) VALUES ('test-1', 'benchmark_user')").execute(&sqlite_pool).await;
+
     let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
-        let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
+        let _ = sqlx::query("SELECT name FROM _bench_users WHERE id = 'test-1'").fetch_optional(&sqlite_pool).await;
         sqlite_times.push(start.elapsed().as_micros());
     }
     sqlite_times.sort();
     tracing::info!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], sqlite_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    let _ = sqlx::query("DROP TABLE IF EXISTS _bench_users").execute(&sqlite_pool).await;
 }
 
 pub async fn bench_api_response_time() {
