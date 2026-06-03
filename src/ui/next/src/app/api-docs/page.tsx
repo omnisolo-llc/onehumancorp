@@ -176,7 +176,7 @@ export default function ApiDocsPage() {
           <strong className="font-outfit">Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
         </p>
       </div>
-      {mounted && spec && <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40"><SwaggerUI spec={spec} /></div>}
+      {mounted && spec && <div className="bg-white/70 backdrop-blur-[24px] saturate-200 p-8 rounded-3xl shadow-[0_16px_64px_rgba(0,0,0,0.08)] border border-white/60 ring-1 ring-black/5 overflow-hidden"><SwaggerUI spec={spec} /></div>}
     </div>
   );
 }
