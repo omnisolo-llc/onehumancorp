@@ -34,7 +34,14 @@ async fn process_intake_handler(
         Err(error) => {
             tracing::warn!("onboarding intake fallback used after agent error: {}", error);
             Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
-                business_name: payload.description.trim().to_string(),
+                business_name: {
+                    let desc = payload.description.trim();
+                    if desc.len() > 30 {
+                        format!("{}...", &desc[..27])
+                    } else {
+                        desc.to_string()
+                    }
+                },
                 business_type: "Local Business".to_string(),
                 categories: vec!["services".to_string()],
                 initial_products: Vec::new(),
