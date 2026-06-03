@@ -341,13 +341,13 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap shrink-0 ml-4 mac-glass-container border border-white/50 dark:border-white/10 p-2 rounded-[8px] hover:bg-white/20 active:scale-[0.98] transition-all"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  {saveMessage && <div className="mb-4 p-3 rounded-[8px] mac-glass-container border border-[#34C759]/30 flex items-center justify-center animate-fade-in"><p className="text-[#34C759] text-sm font-bold flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>{saveMessage}</p></div>}
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -405,13 +405,13 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap shrink-0 ml-4 mac-glass-container border border-white/50 dark:border-white/10 p-2 rounded-[8px] hover:bg-white/20 active:scale-[0.98] transition-all"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  {saveMessage && <div className="mb-4 p-3 rounded-[8px] mac-glass-container border border-[#34C759]/30 flex items-center justify-center animate-fade-in"><p className="text-[#34C759] text-sm font-bold flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>{saveMessage}</p></div>}
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -468,13 +468,13 @@ export default function OnboardingWizard() {
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap shrink-0 ml-4 mac-glass-container border border-white/50 dark:border-white/10 p-2 rounded-[8px] hover:bg-white/20 active:scale-[0.98] transition-all"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  {saveMessage && <div className="mb-4 p-3 rounded-[8px] mac-glass-container border border-[#34C759]/30 flex items-center justify-center animate-fade-in"><p className="text-[#34C759] text-sm font-bold flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>{saveMessage}</p></div>}
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -543,14 +543,14 @@ export default function OnboardingWizard() {
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
-                  onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap shrink-0 ml-4 mac-glass-container border border-white/50 dark:border-white/10 p-2 rounded-[8px] hover:bg-white/20 active:scale-[0.98] transition-all"
+                    >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
               </div>
 
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+              {saveMessage && <div className="mb-4 p-3 rounded-[8px] mac-glass-container border border-[#34C759]/30 flex items-center justify-center animate-fade-in"><p className="text-[#34C759] text-sm font-bold flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>{saveMessage}</p></div>}
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
@@ -665,14 +665,14 @@ export default function OnboardingWizard() {
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
                 <button
-                  onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap shrink-0 ml-4 mac-glass-container border border-white/50 dark:border-white/10 p-2 rounded-[8px] hover:bg-white/20 active:scale-[0.98] transition-all"
+                    >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
               </div>
 
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+              {saveMessage && <div className="mb-4 p-3 rounded-[8px] mac-glass-container border border-[#34C759]/30 flex items-center justify-center animate-fade-in"><p className="text-[#34C759] text-sm font-bold flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>{saveMessage}</p></div>}
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <div>

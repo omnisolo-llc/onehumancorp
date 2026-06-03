@@ -80,6 +80,11 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.locator('input[value="45.00"]')).toBeVisible();
 
     // Maya decides to proceed
+
+    // Verify Save Draft button functionality
+    await page.getByRole('button', { name: 'Save Draft' }).click();
+    await expect(page.getByText('Draft Saved!')).toBeVisible();
+
     await page.getByRole('button', { name: 'Continue' }).click();
 
     // --- Step 3: Style & Team ---
