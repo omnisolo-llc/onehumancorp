@@ -438,7 +438,7 @@ pub async fn bench_get_analytics() {
     let iterations = 5;
 
     // First run (cold start, no cache)
-    let mut request_cold = tonic::Request::new(::server_ohc::orchestration::GetAnalyticsRequest { organization_id: org_id.to_string(), mobile_optimized: false });
+    let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
     request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
     let start_cold = std::time::Instant::now();
     use ::server_ohc::orchestration::org_service_server::OrgService;
@@ -448,33 +448,20 @@ pub async fn bench_get_analytics() {
     // Warm runs (hot start, hits hybrid cache)
     let mut fetch_times = Vec::new();
     for _ in 0..iterations {
-        let mut request = tonic::Request::new(::server_ohc::orchestration::GetAnalyticsRequest { organization_id: org_id.to_string(), mobile_optimized: false });
+        let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
         request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
 
         let start = std::time::Instant::now();
-        let res = org_service.get_analytics(request).await.unwrap().into_inner();
-        println!("Payload message length: {}", res.upgrade_message.len());
+        let _ = org_service.get_analytics(request).await;
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    println!("get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+    tracing::info!("get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
         fetch_times[iterations / 2],
         fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
         fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
     );
-
-    let mut mobile_fetch_times = Vec::new();
-    for _ in 0..iterations {
-        let mut request = tonic::Request::new(::server_ohc::orchestration::GetAnalyticsRequest { organization_id: org_id.to_string(), mobile_optimized: true });
-        request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
-        let start = std::time::Instant::now();
-        let res = org_service.get_analytics(request).await.unwrap().into_inner();
-        println!("Payload message length: {}", res.upgrade_message.len());
-        mobile_fetch_times.push(start.elapsed().as_micros());
-    }
-    mobile_fetch_times.sort();
-    println!("get_analytics Mobile Mode: p50: {} us, p95: {} us, p99: {} us", mobile_fetch_times[iterations / 2], mobile_fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], mobile_fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
 }
 #[cfg(test)]
 mod tests {

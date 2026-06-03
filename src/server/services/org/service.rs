@@ -95,13 +95,10 @@ impl OrgService for MyOrgService {
 
     async fn get_analytics(
         &self,
-        _request: Request<::server_ohc::orchestration::GetAnalyticsRequest>,
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
         let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
-
-        let req = _request.into_inner();
-        let mobile_optimized = req.mobile_optimized;
-        let cache_key = format!("org_analytics_{}_mobile_{}", org_id, mobile_optimized);
+        let cache_key = format!("org_analytics_{}", org_id);
 
         if let Some(cached) = self.analytics_cache.get(&cache_key).await {
             return Ok(Response::new(cached));
@@ -161,18 +158,6 @@ impl OrgService for MyOrgService {
             user_message: None,
         });
 
-        let upgrade_msg = if mobile_optimized {
-            status.user_message.as_deref().unwrap_or_default().chars().take(20).collect()
-        } else {
-            let mut long_msg = status.user_message.clone().unwrap_or_default();
-            if !mobile_optimized {
-                for _ in 0..1000 {
-                    long_msg.push_str("Upgrade to pro to see more detailed analytics and get more features! ");
-                }
-            }
-            long_msg
-        };
-
         let response = AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
@@ -183,7 +168,7 @@ impl OrgService for MyOrgService {
             active_handoffs: 1,
             token_velocity: summary.total_tokens,
             soft_limit_reached: status.soft_limit_reached,
-            upgrade_message: upgrade_msg,
+            upgrade_message: status.user_message.unwrap_or_default(),
             is_allowed: status.is_allowed,
         };
 
@@ -207,14 +192,14 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let mut request1 = Request::new(::server_ohc::orchestration::GetAnalyticsRequest { organization_id: "system".to_string(), mobile_optimized: false });
+        let mut request1 = Request::new(::server_ohc::orchestration::EmptyRequest {});
         request1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start = std::time::Instant::now();
         let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
         let _elapsed1 = start.elapsed();
 
-        let mut request2 = Request::new(::server_ohc::orchestration::GetAnalyticsRequest { organization_id: "system".to_string(), mobile_optimized: false });
+        let mut request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
         request2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start2 = std::time::Instant::now();

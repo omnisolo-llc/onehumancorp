@@ -1128,11 +1128,6 @@ message MarketplaceItemsResponse {
   repeated MarketplaceItemProto items = 1;
 }
 
-message GetAnalyticsRequest {
-  string organization_id = 1;
-  bool mobile_optimized = 2;
-}
-
 message AnalyticsSummaryResponse {
   double human_agent_ratio = 1;
   int32 total_agents = 2;
@@ -1152,7 +1147,7 @@ service OrgService {
   rpc GetSettings(EmptyRequest) returns (SettingsResponse);
   rpc UpdateSettings(UpdateSettingsRequest) returns (SettingsResponse);
   rpc GetMarketplaceItems(EmptyRequest) returns (MarketplaceItemsResponse);
-  rpc GetAnalytics(GetAnalyticsRequest) returns (AnalyticsSummaryResponse);
+  rpc GetAnalytics(EmptyRequest) returns (AnalyticsSummaryResponse);
 }
 
 message ProtoSchedule {
