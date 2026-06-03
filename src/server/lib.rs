@@ -1264,9 +1264,9 @@ impl HubService for MyHubService {
 
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
-        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        let terminal = crate::integrations::stripe::terminal::StripeTerminal::new(stripe_key);
 
-        let token = client.create_terminal_connection_token(&tenant_id).await
+        let token = terminal.create_connection_token(&tenant_id).await
             .map_err(|e| tonic::Status::internal(e))?;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::CreateTerminalTokenResponse {
@@ -2961,6 +2961,7 @@ async fn create_ui_bom_item_handler(
     );
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
+        .nest("/api/v1/payments", api::payments::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
