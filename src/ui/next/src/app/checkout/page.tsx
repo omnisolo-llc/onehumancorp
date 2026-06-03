@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCurrency } from '../../lib/localizationStore';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function CheckoutPage() {
@@ -15,6 +16,65 @@ export default function CheckoutPage() {
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const [deliveryRadius] = useState(5); // Fixed for demo, would come from business settings
   const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
+
+  const { currency, setCurrency, convert } = useCurrency();
+  const [geoCountry, setGeoCountry] = React.useState('US');
+  const [cartItems, setCartItems] = React.useState([]);
+  const [baseTotalCents, setBaseTotalCents] = React.useState(0);
+
+  React.useEffect(() => {
+    // Load cart items from API
+    const loadCart = async () => {
+      try {
+        const res = await fetch('/api/v1/cart');
+        if (res.ok) {
+          const data = await res.json();
+          setCartItems(data.items || []);
+          setBaseTotalCents(data.total_cents || 0);
+        }
+      } catch (e) {
+        console.error('Failed to load cart', e);
+      }
+    };
+    loadCart();
+
+    const detectCurrency = async () => {
+      try {
+        const res = await fetch('/api/v1/geo/detect', { headers: { 'Cache-Control': 'max-age=3600' } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.currency) {
+            setCurrency(data.currency);
+            setGeoCountry(data.country);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to detect currency via geo IP', e);
+      }
+    };
+    detectCurrency();
+  }, [setCurrency]);
+
+  const formatPrice = (cents: number, curr: string) => {
+    let { amount } = convert(cents, 'USD', curr);
+
+    if (curr !== 'USD') {
+      let major = amount / 100;
+      if (curr === 'JPY' || curr === 'INR') {
+        major = Math.round(major);
+        amount = major * 100;
+      } else {
+        major = Math.floor(major) + 0.99;
+        amount = major * 100;
+      }
+    }
+
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: curr,
+    }).format(amount / 100);
+  };
+
 
   const checkDeliveryEligibility = async () => {
     if (!deliveryAddress) return;
@@ -65,6 +125,24 @@ export default function CheckoutPage() {
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
         <div className="p-6 shadow-sm flex flex-col gap-4 mb-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <h2 className="text-lg font-semibold text-gray-900">Local Delivery</h2>
+
+          <div className="mb-6">
+            <h3 className="text-md font-semibold text-gray-800 mb-2">Order Summary</h3>
+            {cartItems.map((item: any) => (
+              <div key={item.id} className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">{item.name}</span>
+                <span className="text-sm font-medium text-gray-900">{formatPrice(item.price_usd_cents, currency)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between py-4 mt-2 border-t border-gray-200">
+              <span className="text-base font-bold text-gray-900">Total</span>
+              <div className="text-right">
+                <span className="text-lg font-bold text-indigo-600">{formatPrice(baseTotalCents, currency)}</span>
+                {currency !== 'USD' && <p className="text-xs text-gray-500 mt-1">Localized for {geoCountry}</p>}
+              </div>
+            </div>
+          </div>
+
           <p className="text-sm text-gray-600">Enter your address to see if we can deliver to you via DoorDash Drive (flat fee).</p>
           <div className="flex gap-2">
             <input

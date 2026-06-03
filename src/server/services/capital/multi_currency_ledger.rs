@@ -14,6 +14,8 @@ pub struct MultiCurrencyEntry {
     pub exchange_rate: f64,
     pub is_offline_sync: bool,
     pub safe_margin_absorbed: i64,
+    pub payout_status: String,
+    pub guaranteed_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 pub struct MultiCurrencyLedger {
@@ -71,8 +73,8 @@ impl MultiCurrencyLedger {
 
         sqlx::query(
             "INSERT INTO ohc_multi_currency_ledger
-             (id, tenant_id, presentment_amount, presentment_currency, settlement_amount, settlement_currency, exchange_rate, is_offline_sync, safe_margin_absorbed)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+             (id, tenant_id, presentment_amount, presentment_currency, settlement_amount, settlement_currency, exchange_rate, is_offline_sync, safe_margin_absorbed, payout_status, guaranteed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NULL)"
         )
         .bind(&entry_id)
         .bind(tenant_id)
@@ -89,6 +91,24 @@ impl MultiCurrencyLedger {
 
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(entry_id)
+    }
+
+
+    pub async fn mark_payout_guaranteed(&self, tenant_id: &str, entry_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "UPDATE ohc_multi_currency_ledger SET payout_status = 'guaranteed', guaranteed_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
+        )
+        .bind(entry_id)
+        .bind(tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(())
     }
 
     async fn get_fx_rate(&self, from: &str, to: &str) -> Result<f64, String> {

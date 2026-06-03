@@ -70,3 +70,30 @@ mod tests {
         assert!(row.2);
     }
 }
+
+    #[tokio::test]
+    async fn test_mark_payout_guaranteed() {
+        let pool = setup_test_db().await;
+        let ledger = MultiCurrencyLedger::new(pool.clone());
+        let tenant_id = "test_tenant";
+
+        sqlx::query("SET app.current_tenant = 'test_tenant'").execute(&*pool).await.unwrap();
+
+        let res = ledger.record_transaction(tenant_id, 5000, "USD", "EUR", None).await;
+        assert!(res.is_ok());
+        let entry_id = res.unwrap();
+
+        let mark_res = ledger.mark_payout_guaranteed(tenant_id, &entry_id).await;
+        assert!(mark_res.is_ok());
+
+        let row: (String, Option<chrono::DateTime<chrono::Utc>>) = sqlx::query_as("SELECT payout_status, guaranteed_at FROM ohc_multi_currency_ledger WHERE id = $1")
+            .bind(entry_id)
+            .fetch_one(&*pool)
+            .await
+            .unwrap();
+
+        assert_eq!(row.0, "guaranteed");
+        assert!(row.1.is_some());
+    }
+
+}
