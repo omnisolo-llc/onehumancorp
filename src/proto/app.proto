@@ -164,6 +164,7 @@ message GetVideoTutorialsResponse {
 service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
+  rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
 }
 
 message CheckAvailabilityRequest {
@@ -192,4 +193,22 @@ message ReserveTimeSlotRequest {
 message ReserveTimeSlotResponse {
   string booking_id = 1;
   string deposit_stripe_link = 2;
+}
+
+message CreateConversationalCheckoutRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  int64 amount_cents = 3;
+  string product_id = 4;
+}
+
+message ConversationalCheckoutSession {
+  string session_id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  int64 amount_cents = 4;
+  string inventory_lock_id = 5;
+  string checkout_url = 6;
+  string status = 7;
+  int64 expires_at_unix = 8;
 }

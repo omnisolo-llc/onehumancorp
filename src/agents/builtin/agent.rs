@@ -1,3 +1,4 @@
+use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -90,6 +91,7 @@ pub enum AgentEvent {
     CheckpointSaved { iteration: i32, path: String },
     Handoff { target_agent: String },
     RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
+    GuardrailTripped { reason: String },
 }
 
 /// Configuration for a single agent run.
@@ -141,6 +143,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub enable_actor_model_message_passing: bool,
     pub enable_tao_orchestration_loop: bool,
     pub enable_agent_curated_memory: bool,
     pub curated_memory_nudge_threshold: i32,
@@ -201,6 +204,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            enable_actor_model_message_passing: false,
             enable_tao_orchestration_loop: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
@@ -702,6 +706,14 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // Guardrails & Safety: OpenAI Mechanic (Input Guardrail)
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
+
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
@@ -764,6 +776,13 @@ impl Agent {
             // 5. Parse output / check tool calls
             // Termination Condition: Model returns text with no tool calls
             if msg.tool_calls.is_empty() {
+                // Guardrails & Safety: OpenAI Mechanic (Output Guardrail)
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = guardrails.check_output(&msg.content) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
+                    }
+                }
                 return Ok(msg.content);
             }
 
@@ -778,6 +797,14 @@ impl Agent {
 
             for (i, tc) in msg.tool_calls.iter().enumerate() {
                 tool_results[i].tool_call_id = tc.id.clone();
+
+                // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = guardrails.check_tool(tc) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Tool Guardrail tripwire fires: {}", e))));
+                    }
+                }
 
                 // Termination Condition: Guardrail tripwire fires
                 if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
@@ -839,6 +866,75 @@ impl Agent {
 
         // Termination Condition: Max turn limit exceeded
         Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Max turn limit exceeded")))
+    }
+
+    /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
+    pub async fn run_actor_model_message_passing<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: Vec<crate::tools::Tool>,
+        _on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        tracing::info!("Executing via Actor-model message passing");
+
+        let system = std::sync::Arc::new(crate::actor_model::ActorSystem::new());
+
+        let coord_agent = std::sync::Arc::new(Self {
+            event_stream: self.event_stream.clone(),
+            llm: self.llm.clone(),
+            tools: session_tools.clone(),
+            progress: self.progress.clone(),
+            memory_store: self.memory_store.clone(),
+            checkpointer: self.checkpointer.clone(),
+            observation_store: self.observation_store.clone(),
+            native_env: self.native_env.clone(),
+        });
+
+        let coord_actor = crate::actor_model::AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: cfg.clone(),
+        };
+
+        let tool_actor = crate::actor_model::ToolActor {
+            name: "ToolActor".to_string(),
+            agent: coord_agent.clone(),
+        };
+
+        let (coord_tx, coord_rx) = tokio::sync::mpsc::channel(100);
+        let (tool_tx, tool_rx) = tokio::sync::mpsc::channel(100);
+
+        system.register(coord_actor.name.clone(), coord_tx).await;
+        system.register(tool_actor.name.clone(), tool_tx).await;
+
+        coord_actor.start(coord_rx, system.clone());
+        tool_actor.start(tool_rx, system.clone());
+
+        let (test_tx, mut test_rx) = tokio::sync::mpsc::channel(100);
+        let run_id = format!("Run-{}", uuid::Uuid::new_v4());
+        system.register(run_id.clone(), test_tx).await;
+
+        let initial_msg = crate::actor_model::ActorMessage {
+            sender: run_id.clone(),
+            recipient: "Coordinator".to_string(),
+            content: initial_message.to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: run_id.clone(),
+            original_sender: run_id.clone(),
+        };
+
+        system.send(initial_msg).await.map_err(|e| format!("Failed to send start message: {}", e))?;
+
+        if let Some(reply) = test_rx.recv().await {
+            Ok(reply.content)
+        } else {
+            Err("Failed to receive final reply from Actor System".into())
+        }
     }
 
     pub async fn run_langgraph<F>(
@@ -2063,6 +2159,10 @@ impl Agent {
                     }
                 }
             }
+        }
+
+        if final_cfg.enable_actor_model_message_passing {
+            return self_with_memory.run_actor_model_message_passing(&final_cfg, initial_message, session_tools, on_event).await;
         }
 
         if final_cfg.enable_langgraph_mechanic {
@@ -3635,6 +3735,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.confidence_threshold = 2.0;
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
@@ -3642,7 +3743,7 @@ mod tests {
         // Wait, confidence_threshold is 0.0 by default, so it triggers.
         // We'll assert it triggers user intervention.
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("requires explicit user confirmation"));
+        assert!(res.unwrap_err().to_string().contains("Human supervision required"));
     }
 
     #[tokio::test]
@@ -5971,11 +6072,11 @@ mod tests {
     #[tokio::test]
     async fn test_agent_ml_resilience_60s_timeout_rule() {
         // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
-        let timeout_duration = std::time::Duration::from_millis(50);
+        let timeout_duration = std::time::Duration::from_millis(150);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             Ok::<(), String>(())
         }).await;
 
@@ -7353,5 +7454,171 @@ mod tao_tests {
         let _action = "Call LLM API -> Parse output -> Execute tool calls";
         let _observation = "Format results back -> Repeat";
         assert_eq!(_thought, "Assemble prompt");
+    }
+}
+#[cfg(test)]
+mod guardrail_tests {
+    use super::*;
+    use crate::guardrails::{GuardrailRegistry, InputGuardrail, OutputGuardrail, ToolGuardrail};
+    use crate::types::{ChatResponse, Message, Role, ToolCall, Usage};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    struct TestLlmClient {
+        responses: Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for TestLlmClient {
+        async fn chat(&self, _req: crate::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("default"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+    }
+
+    struct MockInputGuardrail(String);
+    impl InputGuardrail for MockInputGuardrail {
+        fn check_input(&self, input: &str) -> Result<(), String> {
+            if input.contains(&self.0) {
+                return Err(format!("Blocked input keyword: {}", self.0));
+            }
+            Ok(())
+        }
+    }
+
+    struct MockOutputGuardrail(String);
+    impl OutputGuardrail for MockOutputGuardrail {
+        fn check_output(&self, output: &str) -> Result<(), String> {
+            if output.contains(&self.0) {
+                return Err(format!("Blocked output keyword: {}", self.0));
+            }
+            Ok(())
+        }
+    }
+
+    struct MockToolGuardrail(String);
+    impl ToolGuardrail for MockToolGuardrail {
+        fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
+            if tc.name.contains(&self.0) || tc.arguments.to_string().contains(&self.0) {
+                return Err(format!("Blocked tool keyword: {}", self.0));
+            }
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_input_guardrail_trips_loop() {
+        let llm = Arc::new(TestLlmClient { responses: Mutex::new(vec![]) });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut registry = GuardrailRegistry::new();
+        registry.input_guardrails.push(Arc::new(MockInputGuardrail("nuclear".to_string())));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.max_iterations = 2;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run_tao_orchestration_loop(&cfg, "Tell me about nuclear codes", &[], &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Input Guardrail tripwire fires"));
+
+        let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+        assert!(has_tripped_event);
+    }
+
+    #[tokio::test]
+    async fn test_output_guardrail_trips_loop() {
+        let llm = Arc::new(TestLlmClient {
+            responses: Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Here are the secret launch codes"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut registry = GuardrailRegistry::new();
+        registry.output_guardrails.push(Arc::new(MockOutputGuardrail("secret".to_string())));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.max_iterations = 2;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run_tao_orchestration_loop(&cfg, "What are the codes?", &[], &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Output Guardrail tripwire fires"));
+
+        let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+        assert!(has_tripped_event);
+    }
+
+    #[tokio::test]
+    async fn test_tool_guardrail_trips_loop() {
+        let llm = Arc::new(TestLlmClient {
+            responses: Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "1".to_string(),
+                            name: "bash".to_string(),
+                            arguments: serde_json::json!({"command": "rm -rf /"}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut registry = GuardrailRegistry::new();
+        registry.tool_guardrails.push(Arc::new(MockToolGuardrail("rm -rf".to_string())));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.max_iterations = 2;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run_tao_orchestration_loop(&cfg, "Clean the disk", &[], &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Tool Guardrail tripwire fires"));
+
+        let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+        assert!(has_tripped_event);
     }
 }

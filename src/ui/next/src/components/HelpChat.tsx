@@ -40,6 +40,7 @@ export function HelpChat() {
     { id: '1', sender: 'agent', text: "Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?" }
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef(2);
 
@@ -53,16 +54,17 @@ export function HelpChat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isLoading]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const messageText = inputValue.trim();
-    if (!messageText) return;
+    if (!messageText || isLoading) return;
 
     const userMessage: Message = { id: nextMessageId('user'), sender: 'user', text: messageText };
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
+    setIsLoading(true);
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -86,7 +88,9 @@ export function HelpChat() {
         sender: 'agent',
         text: "Sorry, I'm having trouble connecting right now."
       }]);
-    };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
@@ -147,6 +151,15 @@ export function HelpChat() {
                 )}
               </div>
             ))}
+            {isLoading && (
+              <div className="flex flex-col items-start animate-pulse">
+                <div className="px-4 py-3 rounded-2xl max-w-[85%] bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -157,15 +170,20 @@ export function HelpChat() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
-              className="flex-1 bg-white/70 backdrop-blur-[20px] saturate-200 border border-white/60 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner"
+              disabled={isLoading}
+              className="flex-1 bg-white/70 backdrop-blur-[20px] saturate-200 border border-white/60 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
             <button
               type="submit"
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() || isLoading}
               className="bg-blue-600/95 backdrop-blur-[20px] text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
               aria-label="Send message"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              {isLoading ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              )}
             </button>
           </form>
         </div>

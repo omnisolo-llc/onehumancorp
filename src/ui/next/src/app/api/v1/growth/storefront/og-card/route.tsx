@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const tenantRaw = searchParams.get('tenant') || 'my-store';
     const productName = searchParams.get('product_name') || 'Product';
 
-    return new ImageResponse(
+    const res = new ImageResponse(
       (
         <div
           style={{
@@ -62,6 +62,8 @@ export async function GET(request: Request) {
         height: 630,
       }
     );
+    res.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
+    return res;
   } catch (e: any) {
     console.error(`${e.message}`);
     return new Response(`Failed to generate the image`, {

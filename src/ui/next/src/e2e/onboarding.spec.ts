@@ -74,10 +74,10 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText('Review Details')).toBeVisible();
 
     // Verify AI extracted details correctly
-    await expect(page.getByDisplayValue('Maya Bakery')).toBeVisible();
-    await expect(page.getByDisplayValue('Bakery')).toBeVisible();
-    await expect(page.getByDisplayValue('Custom Vegan Cake')).toBeVisible();
-    await expect(page.getByDisplayValue('45.00')).toBeVisible();
+    await expect(page.locator('input[value="Maya Bakery"]')).toBeVisible();
+    await expect(page.locator('input[value="Bakery"]')).toBeVisible();
+    await expect(page.locator('input[value="Custom Vegan Cake"]')).toBeVisible();
+    await expect(page.locator('input[value="45.00"]')).toBeVisible();
 
     // Maya decides to proceed
     await page.getByRole('button', { name: 'Continue' }).click();

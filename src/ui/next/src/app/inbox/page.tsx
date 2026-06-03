@@ -43,7 +43,10 @@ export default function InboxPage() {
     },
   ]);
   const [replyInput, setReplyInput] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | string | null>(null);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [checkoutSession, setCheckoutSession] = useState<any>(null);
   const [showScheduler, setShowScheduler] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
@@ -238,6 +241,61 @@ export default function InboxPage() {
         </div>
       )}
 
+      {/* Checkout Half-Sheet Modal */}
+      {showCheckoutModal && (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-lg sm:rounded-2xl rounded-t-2xl p-6 shadow-2xl relative font-inter" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 font-outfit">Checkout Session</h2>
+              <button
+                onClick={() => setShowCheckoutModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {!checkoutSuccess ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-gray-700">Please review your order and complete the deposit.</p>
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-gray-800">Booking Deposit</span>
+                    <span className="font-bold text-gray-900">${((checkoutSession?.amount_cents || 1000) / 100).toFixed(2)}</span>
+                  </div>
+                  {checkoutSession && (
+                    <div className="text-xs text-gray-500 mt-2">
+                        Session: {checkoutSession.session_id}<br/>
+                        Checkout URL: <a href={checkoutSession.checkout_url} className="text-blue-500 underline" target="_blank" rel="noreferrer">Open Payment</a>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setCheckoutSuccess(true)}
+                  className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-[#005bb5] transition-colors mt-2"
+                >
+                  Pay Now
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-4 py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl shadow-inner text-green-600">
+                  ✅
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 font-outfit">Payment Successful!</h3>
+                <p className="text-gray-600 text-center">Your deposit has been processed and inventory locked.</p>
+                <button
+                  onClick={() => setShowCheckoutModal(false)}
+                  className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-lg shadow-sm hover:bg-black transition-colors mt-4"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
         {messages.map(msg => (
           <div key={msg.id} className={`mb-6 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
@@ -283,6 +341,24 @@ export default function InboxPage() {
                            <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                Edit
+                           </button>
+                           <button onClick={async () => {
+                               const res = await fetch('/api/v1/booking/conversational_checkout', {
+                                   method: 'POST',
+                                   headers: { 'Content-Type': 'application/json' },
+                                   body: JSON.stringify({
+                                       tenant_id: 'tenant_123',
+                                       customer_id: 'cust_456',
+                                       amount_cents: 1000,
+                                       product_id: 'prod_789'
+                                   })
+                               });
+                               const data = await res.json();
+                               setCheckoutSession(data);
+                               setShowCheckoutModal(true);
+                               setCheckoutSuccess(false);
+                           }} className="flex-1 bg-green-500 text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-1">
+                               Generate Checkout Link
                            </button>
                         </div>
                       </>
