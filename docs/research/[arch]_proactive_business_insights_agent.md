@@ -35,4 +35,4 @@ sequenceDiagram
 - **Actionable**: Every insight should ideally come with a "1-Tap Action" (e.g., "Run a sale", "Order more stock").
 
 ## 4. Implementation Prompt for Implementer Agent
-"Enhance the \`BusinessAdvisoryAgent\` to perform periodic correlation analysis across the \`ContextMesh\`. Implement a natural language summarizer that converts raw transaction and inventory data into human-readable insights. Acceptance criteria: A scheduled job that generates a 'Weekly Health Report' JSON payload suitable for mobile display."
+"Enhance the `BusinessAdvisoryAgent` to perform periodic correlation analysis across the `ContextMesh`. Implement a natural language summarizer that converts raw transaction and inventory data into human-readable insights. Acceptance criteria: A scheduled job that generates a 'Weekly Health Report' JSON payload suitable for mobile display."

@@ -37,4 +37,4 @@ sequenceDiagram
 - **Multi-channel**: Can send via Email, SMS, or Social DM based on the customer's preferred contact method in their profile.
 
 ## 4. Implementation Prompt for Implementer Agent
-"Extend the \`SalesAgent\` in \`src/server/orchestration/departments/sales_agent.rs\` to handle sales recovery scenarios. Implement handlers for abandonment events. Integrate with the \`ContextMeshService\` to pull product and customer history. Acceptance criteria: A generated draft message that includes a personalized reference to the abandoned item and a proposed discount based on tenant-defined limits."
+"Extend the `SalesAgent` in `src/server/orchestration/departments/sales_agent.rs` to handle sales recovery scenarios. Implement handlers for abandonment events. Integrate with the `ContextMeshService` to pull product and customer history. Acceptance criteria: A generated draft message that includes a personalized reference to the abandoned item and a proposed discount based on tenant-defined limits."

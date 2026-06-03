@@ -33,4 +33,4 @@ graph TD
 - **Privacy-First**: Sensitive information (PII) is handled via the existing analytics redaction patterns before being used in LLM prompts for drafting.
 
 ## 4. Implementation Prompt for Implementer Agent
-"Create an \`OmnichannelHubService\` that aggregates messages from external integrations (Instagram, WhatsApp, Twilio). Use the existing \`CustomerSuccessAgent\` to automatically draft replies for every incoming message. Ensure the drafts are stored in the \`unified_inbox_messages\` table and visible in the mobile UI for 1-tap approval."
+"Create an `OmnichannelHubService` that aggregates messages from external integrations (Instagram, WhatsApp, Twilio). Use the existing `CustomerSuccessAgent` to automatically draft replies for every incoming message. Ensure the drafts are stored in the `unified_inbox_messages` table and visible in the mobile UI for 1-tap approval."
