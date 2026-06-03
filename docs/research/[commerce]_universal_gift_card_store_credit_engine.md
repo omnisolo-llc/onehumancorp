@@ -74,10 +74,16 @@ sequenceDiagram
 - **Refund to Credit:** During a return flow on the app, the UI presents a massive, easily tappable "Issue Store Credit" button alongside "Refund to Original Payment". No complex dropdowns.
 - **Customer View:** The gift card receipt sent via SMS/Email opens a mobile-optimized webpage with a single "Add to Apple Wallet" / "Add to Google Wallet" button. No complex logins needed.
 
+### Offline-First Architecture & Syncing
+- **Local-First Writes:** When a business owner issues a gift card or processes a store credit redemption via the mobile app, the transaction is immediately written to a local SQLite ledger on the device if network connectivity is weak or unavailable.
+- **Eventual Consistency:** A background sync manager monitors connectivity. When online, the local ledger entries are appended to the primary PostgreSQL `ohc_gift_card_ledger_entries` via a conflict-free sync endpoint.
+- **Double-Spend Prevention:** To prevent an offline double-spend (e.g., a customer redeeming a card offline at the food cart, while simultaneously using it online), offline redemptions rely on a pre-authorized threshold or cryptographic signed balance pass. If a double-spend is detected during sync, the ledger correctly reflects a negative balance flag, triggering the "Operations Department" AI to alert the owner for manual reconciliation or customer follow-up.
+- **Offline Sync Flag:** Ledger entries include an `is_offline_sync` boolean to mark delayed transactions, ensuring the Finance AI can accurately attribute temporary balance discrepancies.
+
 ### Mobile UX flow
 - **375px First Focus:** All interfaces prioritize a 375px mobile viewport.
 - **Grandmother Test:** If Fatima the food cart owner or Maya the baker can't figure out how to issue a gift card in 30 seconds, the flow fails.
-- **Interactions:** Tap "+ Issue New", enter amount (e.g. $50), enter customer phone number. The OHC Assistant handles the rest in the background. The app instantly confirms with a large green checkmark.
+- **Interactions:** Tap "+ Issue New", enter amount (e.g. $50), enter customer phone number. The OHC Assistant handles the rest in the background. The app instantly confirms with a large green checkmark. Even if offline, the UI shows success immediately and syncs invisibly.
 
 ### AI agent integration points
 - **Finance Department:** Monitors the append-only ledger for anomalies and reconciles gift card liabilities (unredeemed balances) for accounting without owner intervention.
