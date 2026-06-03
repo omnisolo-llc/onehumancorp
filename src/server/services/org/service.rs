@@ -123,15 +123,12 @@ impl OrgService for MyOrgService {
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
-        let mut agent_set = std::collections::HashSet::new();
-        for a in agents.iter() {
-            agent_set.insert(a.id.clone());
-        }
+        let agent_set: std::collections::HashSet<&str> = agents.iter().map(|a| a.id.as_str()).collect();
         
         for m in meetings.iter() {
             for msg in &m.transcript {
                 total_msgs += 1;
-                if agent_set.contains(&msg.from_agent) {
+                if agent_set.contains(msg.from_agent.as_str()) {
                     audited_msgs += 1;
                 }
             }

@@ -276,6 +276,8 @@ protoc-gen-prost = "0.4.0"
 protoc-gen-tonic = "0.4.0"
 prost-types = "0.13"
 futures = "0.3"
+async-trait = "0.1"
+tracing = "0.1"
 
 [workspace.dependencies.tokio]
 version = "1"
