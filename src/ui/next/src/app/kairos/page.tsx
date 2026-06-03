@@ -99,8 +99,6 @@ function KairosContent() {
         } else {
           setMemoryStats({ "Context": "Infinite Context", "Size": "842.5 MB" });
         }
-);
-        }
       } catch (e: any) {
         setError(e?.message || "Failed to load Kairos data");
       } finally {
