@@ -226,8 +226,8 @@ impl VectorRepository {
                         let content: String = row.get("content");
                         let emb_str_res: String = row.get("embedding");
                         let source_type: String = row.get("source_type");
-                        let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?;
-                        let last_referenced_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?;
+                        let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").or_else(|_| row.try_get::<String, _>("created_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?;
+                        let last_referenced_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("last_referenced_at").or_else(|_| row.try_get::<String, _>("last_referenced_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?;
                         let reference_count: i32 = row.get("reference_count");
                         let reliability_score: i32 = row.get("reliability_score");
                         let owner_override: bool = row.get("owner_override");
@@ -284,8 +284,8 @@ impl VectorRepository {
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").or_else(|_| row.try_get::<String, _>("created_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
+                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").or_else(|_| row.try_get::<String, _>("last_referenced_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
@@ -449,8 +449,8 @@ impl VectorRepository {
             content: row.try_get("a_content").map_err(|e| e.to_string())?,
             embedding: a_embedding,
             source_type: row.try_get("a_source_type").map_err(|e| e.to_string())?,
-            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").or_else(|_| row.try_get::<String, _>("a_created_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
+            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").or_else(|_| row.try_get::<String, _>("a_last_referenced_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
             reference_count: row.try_get("a_reference_count").map_err(|e| e.to_string())?,
             reliability_score: row.try_get("a_reliability_score").map_err(|e| e.to_string())?,
             owner_override: row.try_get("a_owner_override").map_err(|e| e.to_string())?,
@@ -464,8 +464,8 @@ impl VectorRepository {
             content: row.try_get("b_content").map_err(|e| e.to_string())?,
             embedding: b_embedding,
             source_type: row.try_get("b_source_type").map_err(|e| e.to_string())?,
-            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").or_else(|_| row.try_get::<String, _>("b_created_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
+            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").or_else(|_| row.try_get::<String, _>("b_last_referenced_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
             reference_count: row.try_get("b_reference_count").map_err(|e| e.to_string())?,
             reliability_score: row.try_get("b_reliability_score").map_err(|e| e.to_string())?,
             owner_override: row.try_get("b_owner_override").map_err(|e| e.to_string())?,
@@ -536,8 +536,8 @@ impl VectorRepository {
                             content: row.get("a_content"),
                             embedding: a_embedding,
                             source_type: row.get("a_source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").or_else(|_| row.try_get::<String, _>("a_created_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
+                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").or_else(|_| row.try_get::<String, _>("a_last_referenced_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
                             reference_count: row.get("a_reference_count"),
                             reliability_score: row.get("a_reliability_score"),
                             owner_override: row.get("a_owner_override"),
@@ -551,8 +551,8 @@ impl VectorRepository {
                             content: row.get("b_content"),
                             embedding: b_embedding,
                             source_type: row.get("b_source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").or_else(|_| row.try_get::<String, _>("b_created_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
+                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").or_else(|_| row.try_get::<String, _>("b_last_referenced_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
                             reference_count: row.get("b_reference_count"),
                             reliability_score: row.get("b_reliability_score"),
                             owner_override: row.get("b_owner_override"),
@@ -585,8 +585,8 @@ impl VectorRepository {
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").or_else(|_| row.try_get::<String, _>("created_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
+                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").or_else(|_| row.try_get::<String, _>("last_referenced_at").and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&Utc)).map_err(|e| sqlx::Error::Decode(Box::new(e))))).map_err(|e| e.to_string())?,
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
