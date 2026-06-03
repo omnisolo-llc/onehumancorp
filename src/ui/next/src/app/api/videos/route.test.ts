@@ -44,6 +44,7 @@ describe('/api/videos GET', () => {
 
   it('handles fetch exceptions gracefully', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const request = new NextRequest('http://localhost:3000/api/videos');
     const response = await GET(request);
@@ -51,5 +52,7 @@ describe('/api/videos GET', () => {
     expect(response.status).toBe(500);
     const data = await response.json();
     expect(data).toEqual([]);
+
+    consoleSpy.mockRestore();
   });
 });
