@@ -21,6 +21,7 @@ export default function OnboardingWizard() {
     adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
+    aiTone, setAiTone,
     isLoading, setIsLoading,
     error, setError,
     startResult, setStartResult
@@ -55,7 +56,8 @@ export default function OnboardingWizard() {
         adminEmail,
         adminPassword,
         aiAgents,
-        aiAutoRespond
+        aiAutoRespond,
+        aiTone
       };
 
       const res = await fetch('/api/onboarding/draft', {
@@ -110,6 +112,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        if (data.wizardState.aiTone) setAiTone(data.wizardState.aiTone);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -141,7 +144,8 @@ export default function OnboardingWizard() {
       adminEmail,
       adminPassword,
       aiAgents,
-      aiAutoRespond
+      aiAutoRespond,
+      aiTone
     };
 
     const timer = setTimeout(() => {
@@ -156,7 +160,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
+    adminEmail, adminPassword, aiAgents, aiAutoRespond, aiTone, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -730,7 +734,23 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2">
+
+                <div className="pt-2 border-t border-white/50 dark:border-white/10">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">AI Tone</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Friendly & Professional', 'Casual & Fun', 'Direct & Formal', 'Humorous & Witty'].map(tone => (
+                      <div
+                        key={tone}
+                        onClick={() => setAiTone(tone)}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${aiTone === tone ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                      >
+                        <div className="font-semibold text-sm">{tone}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] border border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white">
                     <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
                     <input

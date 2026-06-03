@@ -18,6 +18,8 @@ interface OnboardingState {
   adminPassword: string;
   aiAgents: string[];
   aiAutoRespond: boolean;
+  aiTone: string;
+  setAiTone: (tone: string) => void;
   isLoading: boolean;
   error: string;
   startResult: any;
@@ -61,6 +63,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       adminPassword: '',
       aiAgents: [],
       aiAutoRespond: true,
+      aiTone: 'Friendly & Professional',
       isLoading: false,
       error: '',
       startResult: null,
@@ -80,12 +83,13 @@ export const useOnboardingStore = create<OnboardingState>()(
       setAdminPassword: (adminPassword) => set({ adminPassword }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
+      setAiTone: (aiTone) => set({ aiTone }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v4', // Changed name to avoid cache collision with new structure
     }
   )
 );

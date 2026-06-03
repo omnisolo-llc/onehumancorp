@@ -96,6 +96,10 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
     await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
 
+
+    // Select AI Tone
+    await page.getByText('Casual & Fun').click();
+
     // Launch store
     await page.getByRole('button', { name: 'Launch Store' }).click();
 
