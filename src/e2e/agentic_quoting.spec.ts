@@ -7,7 +7,7 @@ test.describe('Agentic Service Quoting CUJ', () => {
     const ownerPage = await ownerContext.newPage();
 
     // Set tenant explicitly for the test
-    await ownerPage.goto('http://localhost:3000/settings/sales');
+    await ownerPage.goto('/settings/sales');
     await ownerPage.evaluate(() => localStorage.setItem('tenant', 'test-tenant-123'));
     await ownerPage.reload();
 
@@ -42,7 +42,7 @@ test.describe('Agentic Service Quoting CUJ', () => {
     // Our fake frontend passes localStorage.getItem('tenant') or defaults to 'my-store'.
     // So we need to inject the tenant ID just to route correctly in this mock frontend
     // (In reality, tenant is determined by subdomain/URL).
-    await customerPage.goto('http://localhost:3000/booking');
+    await customerPage.goto('/booking');
     await customerPage.evaluate(() => localStorage.setItem('tenant', 'test-tenant-123'));
     await customerPage.reload();
 
