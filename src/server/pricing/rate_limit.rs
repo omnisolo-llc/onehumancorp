@@ -1,5 +1,6 @@
 use redis::{AsyncCommands, Client};
 use tokio::sync::OnceCell;
+use dashmap::DashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanTier {
@@ -104,11 +105,12 @@ pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
+    pub tier_cache: DashMap<String, (PlanTier, std::time::Instant)>,
 }
 
 impl RedisRateLimiter {
     pub fn new(client: Client) -> Self {
-        Self { client, connection: OnceCell::new(), telemetry_store: None }
+        Self { client, connection: OnceCell::new(), telemetry_store: None, tier_cache: DashMap::new() }
     }
 
     pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
@@ -119,20 +121,29 @@ impl RedisRateLimiter {
     pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
-        }).await.map_err(|e| e.to_string())?;
+        }).await.map_err(|e: redis::RedisError| e.to_string())?;
         Ok(conn.clone())
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
-        let mut conn = self.get_connection().await?;
-        let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
-
-        match tier.as_deref() {
-            Some("Starter") => Ok(PlanTier::Starter),
-            Some("Pro") => Ok(PlanTier::Pro),
-            Some("Business") => Ok(PlanTier::Business),
-            _ => Ok(PlanTier::Free),
+        if let Some(entry) = self.tier_cache.get(tenant_id) {
+            if entry.value().1.elapsed() < std::time::Duration::from_secs(60 * 5) {
+                return Ok(entry.value().0.clone());
+            }
         }
+
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
+        let tier: Option<String> = redis::AsyncCommands::get(&mut conn, format!("tenant:{}:tier", tenant_id)).await.map_err(|e: redis::RedisError| e.to_string())?;
+
+        let pt = match tier.as_deref() {
+            Some("Starter") => PlanTier::Starter,
+            Some("Pro") => PlanTier::Pro,
+            Some("Business") => PlanTier::Business,
+            _ => PlanTier::Free,
+        };
+
+        self.tier_cache.insert(tenant_id.to_string(), (pt.clone(), std::time::Instant::now()));
+        Ok(pt)
     }
 
     pub async fn get_tenant_actions_used(&self, tenant_id: &str) -> Result<u32, String> {
@@ -140,26 +151,30 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-        let used: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
+         let used: Option<u32> = redis::AsyncCommands::get(&mut conn, &tenant_key).await.map_err(|e: redis::RedisError| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
 
     pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
         let mut conn = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
-        let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
+         let used: Option<i64> = redis::AsyncCommands::get(&mut conn, &storage_key).await.map_err(|e: redis::RedisError| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
 
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let tier_str = match tier {
             PlanTier::Free => "Free",
             PlanTier::Starter => "Starter",
             PlanTier::Pro => "Pro",
             PlanTier::Business => "Business",
         };
-        conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
+        let res: redis::RedisResult<()> = redis::AsyncCommands::set(&mut conn, format!("tenant:{}:tier", tenant_id), tier_str).await;
+        if res.is_ok() {
+            self.tier_cache.insert(tenant_id.to_string(), (tier.clone(), std::time::Instant::now()));
+        }
+        res.map_err(|e: redis::RedisError| e.to_string())
     }
 
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
@@ -176,12 +191,12 @@ impl RedisRateLimiter {
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
         let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
 
-        let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
-        let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
+         let tenant_used: u32 = redis::AsyncCommands::incr(&mut conn, &tenant_key, 1).await.map_err(|e: redis::RedisError| e.to_string())?;
+        let agent_used: u32 = redis::AsyncCommands::incr(&mut conn, &agent_key, 1).await.map_err(|e: redis::RedisError| e.to_string())?;
 
         // Expire keys after ~2 months to save space
-        let _ : () = conn.expire(&tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
-        let _ : () = conn.expire(&agent_key, 60 * 60 * 24 * 60).await.unwrap_or(());
+        let _ : () = redis::AsyncCommands::expire(&mut conn, &tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
+        let _ : () = redis::AsyncCommands::expire(&mut conn, &agent_key, 60 * 60 * 24 * 60).await.unwrap_or(());
 
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
@@ -241,7 +256,7 @@ impl RedisRateLimiter {
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let product_key = format!("tenant:{}:products", tenant_id);
-        let total_products: Option<usize> = conn.get(&product_key).await.map_err(|e| e.to_string())?;
+         let total_products: Option<usize> = redis::AsyncCommands::get(&mut conn, &product_key).await.map_err(|e: redis::RedisError| e.to_string())?;
         let total_products = total_products.unwrap_or(0);
 
         if let Some(limit) = tier.max_products() {
@@ -275,7 +290,7 @@ impl RedisRateLimiter {
     pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let product_key = format!("tenant:{}:products", tenant_id);
-        let _ : usize = conn.incr(&product_key, 1).await.map_err(|e| e.to_string())?;
+         let _ : usize = redis::AsyncCommands::incr(&mut conn, &product_key, 1).await.map_err(|e: redis::RedisError| e.to_string())?;
         Ok(())
     }
 
@@ -288,7 +303,7 @@ impl RedisRateLimiter {
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let agent_key = format!("tenant:{}:agents", tenant_id);
-        let total_agents: Option<usize> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
+         let total_agents: Option<usize> = redis::AsyncCommands::get(&mut conn, &agent_key).await.map_err(|e: redis::RedisError| e.to_string())?;
         let total_agents = total_agents.unwrap_or(0);
 
         if let Some(limit) = tier.max_agents() {
@@ -322,7 +337,7 @@ impl RedisRateLimiter {
     pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let agent_key = format!("tenant:{}:agents", tenant_id);
-        let _ : usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
+         let _ : usize = redis::AsyncCommands::incr(&mut conn, &agent_key, 1).await.map_err(|e: redis::RedisError| e.to_string())?;
         Ok(())
     }
 
@@ -336,7 +351,7 @@ impl RedisRateLimiter {
 
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
-        let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
+         let total_storage: i64 = redis::AsyncCommands::incr(&mut conn, &storage_key, delta_bytes).await.map_err(|e: redis::RedisError| e.to_string())?;
 
         if let Some(store) = &self.telemetry_store {
             store.storage_bytes_counter.add(
@@ -424,7 +439,7 @@ mod tests {
                 // Clear any existing products
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let product_key = format!("tenant:{}:products", tenant_id);
-                let _ : () = conn.del(&product_key).await.unwrap_or(());
+                 let _ : () = redis::AsyncCommands::del(&mut conn, &product_key).await.unwrap_or(());
 
                 // Set tier to free
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
@@ -493,7 +508,7 @@ mod tests {
                 // Clear any existing agents
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let agent_key = format!("tenant:{}:agents", tenant_id);
-                let _ : () = conn.del(&agent_key).await.unwrap_or(());
+                 let _ : () = redis::AsyncCommands::del(&mut conn, &agent_key).await.unwrap_or(());
 
                 // Set tier to free
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
@@ -522,7 +537,7 @@ mod tests {
 
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-                let _ : () = conn.del(&tenant_key).await.unwrap_or(());
+                 let _ : () = redis::AsyncCommands::del(&mut conn, &tenant_key).await.unwrap_or(());
 
                 // Set tier to Free
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
@@ -533,7 +548,7 @@ mod tests {
                 assert!(!status.soft_limit_reached);
 
                 // Verify the monthly key was created and has a value of 1
-                let count: usize = conn.get(&tenant_key).await.unwrap_or(0);
+                 let count: usize = redis::AsyncCommands::get(&mut conn, &tenant_key).await.unwrap_or(0);
                 assert_eq!(count, 1);
             }
         }

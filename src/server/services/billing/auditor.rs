@@ -414,6 +414,30 @@ impl CostAuditor {
             false
         }
     }
+
+    pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
+        self.pricing.rate_limiter().get_tenant_tier(tenant_id).await
+    }
+
+    pub async fn check_and_record_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+        let status = self.pricing.rate_limiter().check_agent_quota(tenant_id).await?;
+        if status.is_allowed && !status.soft_limit_reached {
+            self.pricing.rate_limiter().record_agent_added(tenant_id).await?;
+        }
+        Ok(status)
+    }
+
+    pub async fn check_and_record_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+        let status = self.pricing.rate_limiter().check_product_quota(tenant_id).await?;
+        if status.is_allowed && !status.soft_limit_reached {
+            self.pricing.rate_limiter().record_product_added(tenant_id).await?;
+        }
+        Ok(status)
+    }
+
+    pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
+        self.pricing.rate_limiter().check_storage_quota(tenant_id, delta_bytes).await
+    }
 }
 
 #[cfg(test)]
@@ -519,5 +543,29 @@ mod tests {
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("test_tenant"), 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("other_tenant"), 0.0);
+    }
+
+    pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<server_pricing::rate_limit::PlanTier, String> {
+        self.pricing.rate_limiter().get_tenant_tier(tenant_id).await
+    }
+
+    pub async fn check_and_record_agent_quota(&self, tenant_id: &str) -> Result<server_pricing::rate_limit::RateLimitStatus, String> {
+        let status = self.pricing.rate_limiter().check_agent_quota(tenant_id).await?;
+        if status.is_allowed {
+            self.pricing.rate_limiter().record_agent_added(tenant_id).await?;
+        }
+        Ok(status)
+    }
+
+    pub async fn check_and_record_product_quota(&self, tenant_id: &str) -> Result<server_pricing::rate_limit::RateLimitStatus, String> {
+        let status = self.pricing.rate_limiter().check_product_quota(tenant_id).await?;
+        if status.is_allowed {
+            self.pricing.rate_limiter().record_product_added(tenant_id).await?;
+        }
+        Ok(status)
+    }
+
+    pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<server_pricing::rate_limit::RateLimitStatus, String> {
+        self.pricing.rate_limiter().check_storage_quota(tenant_id, delta_bytes).await
     }
 }
