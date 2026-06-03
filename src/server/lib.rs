@@ -1146,23 +1146,23 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
+        let tenant_id_clone_2 = tenant_id.clone();
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
-                (llm, rev)
+                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
+                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
+                let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
+                (llm, rev, fees)
             }),
             async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
             }
         );
 
-        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let (llm_cost_f64, total_revenue_f64, payment_fees_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0));
         let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
-
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
@@ -2278,13 +2278,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
 
-    dept_orchestrator.register_department(ops_agent).await;
-    dept_orchestrator.register_department(cs_agent).await;
-    dept_orchestrator.register_department(mkt_agent).await;
-    dept_orchestrator.register_department(sales_agent).await;
-    dept_orchestrator.register_department(finance_agent).await;
-    dept_orchestrator.register_department(legal_agent).await;
-    dept_orchestrator.register_department(advisory_agent).await;
+    tokio::join!(
+        dept_orchestrator.register_department(ops_agent),
+        dept_orchestrator.register_department(cs_agent),
+        dept_orchestrator.register_department(mkt_agent),
+        dept_orchestrator.register_department(sales_agent),
+        dept_orchestrator.register_department(finance_agent),
+        dept_orchestrator.register_department(legal_agent),
+        dept_orchestrator.register_department(advisory_agent)
+    );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
     let department_service = crate::services::agent::department::service::DepartmentService::new(bus.clone(), dept_orchestrator.clone());
@@ -2942,12 +2944,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
+            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
+            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
+            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
+            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
+            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
+            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
             { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
@@ -2963,16 +2965,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+            { "id": 1, "title": "Set up your store", "duration": "1:20" },
+            { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
+            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
+            { "id": 4, "title": "Add a product", "duration": "1:05" },
+            { "id": 5, "title": "Review an order", "duration": "1:10" },
+            { "id": 6, "title": "Send a campaign", "duration": "1:25" },
+            { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
+            { "id": 8, "title": "Manage inventory", "duration": "1:00" },
+            { "id": 9, "title": "View analytics", "duration": "0:45" },
+            { "id": 10, "title": "Update your profile", "duration": "0:55" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
@@ -2988,16 +2990,29 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
-            let mut link_url = "/help";
+            let mut link_url = "/help/getting-started";
 
-            for (kw, desc) in help_articles {
-                if query.contains(kw) {
-                    reply = format!("Based on our help center: {}", desc);
-                    if kw == "api" {
-                        link_url = "/api-docs";
-                    }
-                    break;
-                }
+            if query.contains("getting started") {
+                reply = format!("Based on our help center: {}", help_articles[0].1);
+                link_url = "/help/getting-started";
+            } else if query.contains("store") {
+                reply = format!("Based on our help center: {}", help_articles[1].1);
+                link_url = "/help/my-store";
+            } else if query.contains("payment") {
+                reply = format!("Based on our help center: {}", help_articles[2].1);
+                link_url = "/help/payments";
+            } else if query.contains("ai agent") {
+                reply = format!("Based on our help center: {}", help_articles[3].1);
+                link_url = "/help/ai-agents";
+            } else if query.contains("marketing") {
+                reply = format!("Based on our help center: {}", help_articles[4].1);
+                link_url = "/help/marketing";
+            } else if query.contains("billing") {
+                reply = format!("Based on our help center: {}", help_articles[5].1);
+                link_url = "/help/account-billing";
+            } else if query.contains("api") || query.contains("advanced") {
+                reply = format!("Based on our help center: {}", help_articles[6].1);
+                link_url = "/api-docs";
             }
 
             axum::Json(serde_json::json!({
@@ -4649,20 +4664,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
                         </div>
 
-                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px;">
-                            <button onclick="openLegacyDepartment('The Ambassador')">The Ambassador - Customer Success - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Manager')">The Manager - Operations - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Closer')">The Closer - Sales - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Promoter')">The Promoter - Marketing - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Salesperson')">The Salesperson - Sales - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Accountant')">The Accountant - Finance</button>
-                            <button onclick="openLegacyDepartment('The Protector')">The Protector - Security</button>
-                            <button onclick="openLegacyDepartment('The Advisor')">The Advisor - Strategy</button>
-                            <button onclick="openLegacyDepartment('The Scout')">The Scout - Research</button>
-                            <div>
-                                <span>Advanced</span>
-                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'">Show settings</button>
-                                <p id="legacy-agent-settings" style="display: none;">Auto-approve: $0</p>
+                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
+                            <button onclick="openLegacyDepartment('The Ambassador')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>✨ The Ambassador (Omnichannel Inbox)</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Manager')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Manager - Operations</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Closer')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Closer - Sales</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Promoter')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Promoter - Marketing</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Salesperson')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Salesperson - Sales</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Accountant')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Accountant - Finance</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Protector')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Protector - Security</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Advisor')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Advisor - Strategy</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Scout')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Scout - Research</span>
+                            </button>
+                            <div style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px;">
+                                <span style="font-size: 0.9em; opacity: 0.8;">Advanced Settings</span>
+                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 8px; margin-left: 10px; font-size: 0.8em;">Show settings</button>
+                                <p id="legacy-agent-settings" style="display: none; font-size: 0.8em; margin-top: 5px; opacity: 0.7;">Auto-approve: $0</p>
                             </div>
                         </div>
 
@@ -7464,7 +7502,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if(data.link.url === '/api-docs') {
                                         aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;api-docs-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;; return false;">Read the full article →</a>';
                                     } else {
-                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_blank">Read the full article →</a>';
+                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_self">Read the full article →</a>';
                                     }
                                 }
                                 messages.appendChild(aiMsg);

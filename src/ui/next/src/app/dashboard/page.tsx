@@ -268,7 +268,7 @@ export default function Dashboard() {
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ tenant_id: tenant })
                 }),
-                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                fetch(`/api/v1/growth/team-invites/aggregated-metrics?team_id=${tenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -415,15 +415,21 @@ export default function Dashboard() {
 
   const walkthroughSteps = [
     {
-      targetId: "sales-card-target",
-      title: "Track Your Revenue",
-      content: "This card shows the total amount of money your store has made today. Keep an eye on it to see your business grow!",
+      targetId: "store-setup-target",
+      title: "Set up your store",
+      content: "Click here to set up your business details and launch your storefront.",
       position: "bottom" as const
     },
     {
-      targetId: "visitors-card-target",
-      title: "Monitor Your Traffic",
-      content: "Here you can see how many people have visited your store today. More visitors means more chances to make a sale.",
+      targetId: "stripe-setup-btn",
+      title: "Accept your first payment",
+      content: "Connect your bank account securely to start accepting payments from customers.",
+      position: "bottom" as const
+    },
+    {
+      targetId: "agents-tab-target",
+      title: "Activate your AI Support Agent",
+      content: "Hire and manage your AI assistants here to handle customer support while you sleep.",
       position: "bottom" as const
     }
   ];
@@ -467,17 +473,25 @@ export default function Dashboard() {
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Share Cards 🎴
              </Link>
+             <Link href="/milestones" className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-md text-sm font-medium hover:bg-indigo-200 transition-colors border border-indigo-200 shadow-sm">
+               Milestones 🏆
+             </Link>
              <Link href="/business-analytics" className="px-4 py-2 bg-teal-100 text-teal-800 rounded-md text-sm font-medium hover:bg-teal-200 transition-colors border border-teal-200 shadow-sm">
                Business Analytics
              </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
+             <Link href="/wrapped" className="px-4 py-2 rounded-md text-sm font-medium text-white transition-colors border border-pink-300 shadow-sm" style={{ background: 'linear-gradient(135deg, #FF0066 0%, #A445B2 100%)' }}>
+               Store Wrapped 🎁
+             </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
              <WithTooltip id="agents-tab-tooltip" defaultText="Hire and manage your AI assistants here.">
-               <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-                 <span>🤖</span> AI Departments
-               </Link>
+               <WalkthroughTarget id="agents-tab-target">
+                 <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+                   <span>🤖</span> AI Departments
+                 </Link>
+               </WalkthroughTarget>
              </WithTooltip>
              <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
                <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
@@ -555,7 +569,7 @@ export default function Dashboard() {
                  <div className="text-2xl">🌅</div>
                  <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Morning Briefing</h2>
                </div>
-               <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
+               <p id="store-setup-target" className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
                  Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
                </p>
                <div className="flex gap-4">
@@ -1273,6 +1287,32 @@ export default function Dashboard() {
               </div>
            </section>
          )}
+
+         {/* Growth Loop: Store Wrapped */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>2024 Store Wrapped</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Viral Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #A445B2 0%, #D41872 52%, #FF0066 100%)', border: '1px solid rgba(255, 255, 255, 0.4)', color: 'white' }}>
+                <div className="flex-1">
+                    <h3 className="text-xl font-bold font-outfit text-white mb-2">Celebrate Your Success ✨</h3>
+                    <p className="text-sm text-white/90 mb-4 leading-relaxed">Your 2024 Store Wrapped is ready! Discover your top-selling products, review your annual revenue, and share your incredible journey with your customers and followers.</p>
+                    <Link href="/wrapped" className="inline-flex px-6 py-3 bg-white text-[#D41872] font-bold rounded-xl shadow-xl hover:bg-gray-50 transition-all font-inter text-sm items-center gap-2">
+                        View Your Wrapped 🎁
+                    </Link>
+                </div>
+                <div className="w-full md:w-1/3 bg-white/20 backdrop-blur-md rounded-xl p-6 flex flex-col items-center justify-center border border-white/30 min-h-[160px] text-center">
+                    <div className="text-4xl mb-2">🎉</div>
+                    <div className="text-sm font-semibold opacity-90 uppercase tracking-widest">Share to earn</div>
+                    <div className="text-xs font-medium mt-1">Get $50 credit for every new store created from your link</div>
+                </div>
+            </div>
+         </section>
 
          {/* Growth Loop: Social Share Cards */}
          <section className="mb-8">

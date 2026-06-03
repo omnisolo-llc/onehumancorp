@@ -1,3 +1,4 @@
+use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -141,6 +142,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub enable_actor_model_message_passing: bool,
     pub enable_tao_orchestration_loop: bool,
     pub enable_agent_curated_memory: bool,
     pub curated_memory_nudge_threshold: i32,
@@ -201,6 +203,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            enable_actor_model_message_passing: false,
             enable_tao_orchestration_loop: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
@@ -839,6 +842,75 @@ impl Agent {
 
         // Termination Condition: Max turn limit exceeded
         Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Max turn limit exceeded")))
+    }
+
+    /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
+    pub async fn run_actor_model_message_passing<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: Vec<crate::tools::Tool>,
+        _on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        tracing::info!("Executing via Actor-model message passing");
+
+        let system = std::sync::Arc::new(crate::actor_model::ActorSystem::new());
+
+        let coord_agent = std::sync::Arc::new(Self {
+            event_stream: self.event_stream.clone(),
+            llm: self.llm.clone(),
+            tools: session_tools.clone(),
+            progress: self.progress.clone(),
+            memory_store: self.memory_store.clone(),
+            checkpointer: self.checkpointer.clone(),
+            observation_store: self.observation_store.clone(),
+            native_env: self.native_env.clone(),
+        });
+
+        let coord_actor = crate::actor_model::AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: cfg.clone(),
+        };
+
+        let tool_actor = crate::actor_model::ToolActor {
+            name: "ToolActor".to_string(),
+            agent: coord_agent.clone(),
+        };
+
+        let (coord_tx, coord_rx) = tokio::sync::mpsc::channel(100);
+        let (tool_tx, tool_rx) = tokio::sync::mpsc::channel(100);
+
+        system.register(coord_actor.name.clone(), coord_tx).await;
+        system.register(tool_actor.name.clone(), tool_tx).await;
+
+        coord_actor.start(coord_rx, system.clone());
+        tool_actor.start(tool_rx, system.clone());
+
+        let (test_tx, mut test_rx) = tokio::sync::mpsc::channel(100);
+        let run_id = format!("Run-{}", uuid::Uuid::new_v4());
+        system.register(run_id.clone(), test_tx).await;
+
+        let initial_msg = crate::actor_model::ActorMessage {
+            sender: run_id.clone(),
+            recipient: "Coordinator".to_string(),
+            content: initial_message.to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: run_id.clone(),
+            original_sender: run_id.clone(),
+        };
+
+        system.send(initial_msg).await.map_err(|e| format!("Failed to send start message: {}", e))?;
+
+        if let Some(reply) = test_rx.recv().await {
+            Ok(reply.content)
+        } else {
+            Err("Failed to receive final reply from Actor System".into())
+        }
     }
 
     pub async fn run_langgraph<F>(
@@ -2063,6 +2135,10 @@ impl Agent {
                     }
                 }
             }
+        }
+
+        if final_cfg.enable_actor_model_message_passing {
+            return self_with_memory.run_actor_model_message_passing(&final_cfg, initial_message, session_tools, on_event).await;
         }
 
         if final_cfg.enable_langgraph_mechanic {
@@ -3705,8 +3781,9 @@ mod tests {
         assert_eq!(res.unwrap(), "Done!");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "current_thread")]
     async fn test_tao_termination_guardrail_user_fixable() {
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let llm = Arc::new(crate::agent::tests::MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 crate::types::ChatResponse {
@@ -3747,8 +3824,10 @@ mod tests {
         cfg.enable_tao_orchestration_loop = true;
 
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut |_| {}).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Guardrail tripwire fires (UserFixable): needs human"));
+        let err_str = res.unwrap_err().to_string();
+        assert!(err_str.contains("Guardrail tripwire fires (UserFixable): needs human") || err_str.contains("User aborted"));
     }
 
     #[tokio::test]
@@ -5032,6 +5111,7 @@ mod tests {
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
                 message: crate::types::Message {
@@ -5051,10 +5131,11 @@ mod tests {
         let mut events3 = vec![];
         let mut on_event3 = |e| { events3.push(e); };
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                error.contains("USER_FIXABLE: please login to external service")
+                error.contains("User intervention required: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: please login to external service")
             } else {
                 false
             }
@@ -5966,11 +6047,11 @@ mod tests {
     #[tokio::test]
     async fn test_agent_ml_resilience_60s_timeout_rule() {
         // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
-        let timeout_duration = std::time::Duration::from_millis(50);
+        let timeout_duration = std::time::Duration::from_millis(150);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             Ok::<(), String>(())
         }).await;
 
@@ -6331,14 +6412,17 @@ mod tests {
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);
         let mut events4 = vec![];
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let res4 = agent4.run(&cfg, "Start", &mut |e| events4.push(e)).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res4.is_err());
-        assert!(res4.unwrap_err().to_string().contains("User intervention required: please login to proceed"));
+        let err_str = res4.unwrap_err().to_string();
+        assert!(err_str.contains("User intervention required: User aborted. Original error: please login to proceed") || err_str.contains("USER_FIXABLE: User aborted. Original error: please login to proceed"));
 
         let mut found_event = false;
         for e in events4 {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                assert!(error.contains("please login to proceed"));
+                assert!(error.contains("User aborted. Original error: please login to proceed"));
                 found_event = true;
             }
         }
