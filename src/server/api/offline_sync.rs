@@ -7,6 +7,7 @@ pub struct OfflineMutation {
     pub transaction_id: String,
     pub product_id: String,
     pub quantity_deducted: i32,
+    pub timestamp: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -42,36 +43,104 @@ pub async fn offline_sync_handler(
     for mutation in &payload.mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
-        let query = "
-            UPDATE products
-            SET inventory_count = GREATEST(0, inventory_count - $1)
-            WHERE id = $2 AND tenant_id = $3
+        let mut tx = match db.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                tracing::error!("Failed to begin transaction: {}", e);
+                continue;
+            }
+        };
+
+        let insert_tx_query = "
+            INSERT INTO synced_transactions (tenant_id, transaction_id, product_id, timestamp)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (tenant_id, transaction_id) DO NOTHING
             RETURNING id
         ";
 
-        let result = sqlx::query(query)
+        let tx_result = sqlx::query(insert_tx_query)
+            .bind(&tenant_id)
+            .bind(&mutation.transaction_id)
+            .bind(&mutation.product_id)
+            .bind(mutation.timestamp.unwrap_or_else(|| chrono::Utc::now()))
+            .fetch_optional(&mut *tx)
+            .await;
+
+        match tx_result {
+            Ok(Some(_)) => {
+                // Successfully recorded unique transaction
+            }
+            Ok(None) => {
+                tracing::info!("Transaction {} already synced for tenant {}, skipping.", mutation.transaction_id, tenant_id);
+                continue;
+            }
+            Err(e) => {
+                tracing::error!("Failed to record transaction {}: {}", mutation.transaction_id, e);
+                continue;
+            }
+        }
+
+        let query = "
+            UPDATE products
+            SET inventory_count = inventory_count - $1
+            WHERE id = $2 AND tenant_id = $3
+            RETURNING inventory_count
+        ";
+
+        let result = sqlx::query_as::<_, (i32,)>(query)
             .bind(mutation.quantity_deducted)
             .bind(&mutation.product_id)
             .bind(&tenant_id)
-            .fetch_optional(&db)
+            .fetch_optional(&mut *tx)
             .await;
 
-        match result {
-            Ok(Some(_)) => {
-                // Publish mesh event
-                let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                    action: "InventoryUpdated".to_string(),
-                    agent_id: "system".to_string(),
-                    status: "".to_string(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                    payload: serde_json::json!({
-                        "product_id": mutation.product_id,
-                        "transaction_id": mutation.transaction_id,
-                        "quantity_deducted": mutation.quantity_deducted,
-                        "tenant_id": tenant_id
-                    }).to_string().into_bytes(),
-                };
-                let _ = mesh.publish("mesh:inventory:updated", event).await;
+        let commit_result = match result {
+            Ok(Some((new_count,))) => {
+                tx.commit().await.map(|_| Some(new_count))
+            }
+            Ok(None) => {
+                let _ = tx.rollback().await;
+                Ok(None)
+            }
+            Err(e) => {
+                let _ = tx.rollback().await;
+                Err(e)
+            }
+        };
+
+        match commit_result {
+            Ok(Some(new_count)) => {
+                if new_count < 0 {
+                    tracing::warn!("Inventory anomaly: Product {} dropped below 0 ({})", mutation.product_id, new_count);
+                    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                        action: "InventoryAnomaly".to_string(),
+                        agent_id: "system".to_string(),
+                        status: "".to_string(),
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                        payload: serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "transaction_id": mutation.transaction_id,
+                            "quantity_deducted": mutation.quantity_deducted,
+                            "resulting_inventory": new_count,
+                            "tenant_id": tenant_id
+                        }).to_string().into_bytes(),
+                    };
+                    let _ = mesh.publish("mesh:inventory:anomaly", event).await;
+                } else {
+                    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                        action: "InventoryUpdated".to_string(),
+                        agent_id: "system".to_string(),
+                        status: "".to_string(),
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                        payload: serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "transaction_id": mutation.transaction_id,
+                            "quantity_deducted": mutation.quantity_deducted,
+                            "tenant_id": tenant_id
+                        }).to_string().into_bytes(),
+                    };
+                    let _ = mesh.publish("mesh:inventory:updated", event).await;
+                }
             }
             Ok(None) => {
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
@@ -118,6 +187,18 @@ mod tests {
 
         let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
 
+        // Ensure synced_transactions table exists for the test
+        sqlx::query("
+            CREATE TABLE IF NOT EXISTS synced_transactions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                tenant_id VARCHAR NOT NULL,
+                transaction_id VARCHAR NOT NULL,
+                product_id VARCHAR NOT NULL,
+                timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tenant_id, transaction_id)
+            )
+        ").execute(&pool).await.unwrap();
+
         // Setup test data
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline', 'Offline Test Tenant') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
@@ -133,6 +214,7 @@ mod tests {
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
+                    timestamp: None,
                 },
             ],
         };
@@ -147,13 +229,33 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count.0, 2); // 5 - 3 = 2
 
-        // Test negative guard
+        // Test idempotency: submitting the exact same transaction should NOT deduct inventory again.
+        let req_idempotent = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    transaction_id: "tx1".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 3,
+                    timestamp: None,
+                },
+            ],
+        };
+
+        let response_idempotent = offline_sync_handler(state.clone(), headers.clone(), Json(req_idempotent)).await.into_response();
+        assert_eq!(response_idempotent.status(), StatusCode::OK);
+
+        let count_idempotent: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count_idempotent.0, 2); // Inventory remains 2, not deducted again.
+
+        // Test negative guard: dropping below zero should now be allowed to drop to -8 and trigger an anomaly.
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
+                    timestamp: None,
                 },
             ],
         };
@@ -163,6 +265,6 @@ mod tests {
 
         let count2: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
             .fetch_one(&pool).await.unwrap();
-        assert_eq!(count2.0, 0); // GREATEST(0, 2 - 10) = 0
+        assert_eq!(count2.0, -8); // 2 - 10 = -8
     }
 }
