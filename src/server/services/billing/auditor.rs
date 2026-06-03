@@ -207,11 +207,6 @@ impl CostAuditor {
         savings
     }
 
-    pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
-        let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
-        *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
-    }
-
     pub fn get_total_cost(&self) -> f64 {
         let total_cost = self.total_cost.lock().unwrap();
         *total_cost
@@ -501,7 +496,6 @@ mod tests {
         let compressed_bw_bytes = 512 * 1024 * 1024; // 0.5 GB
         let bw_savings = auditor.record_bandwidth_savings("tenant1", original_bw_bytes, compressed_bw_bytes);
         assert_eq!(bw_savings, 0.05); // 0.5 GB * 0.10
-        assert_eq!(auditor.get_tenant_bandwidth_savings("tenant1"), 0.05);
     }
 
     #[test]
@@ -518,7 +512,5 @@ mod tests {
         let savings = auditor.record_bandwidth_compression("test_tenant", original_bytes, compressed_bytes);
         // (3GB - 1GB) = 2GB saved. 2 * 0.05 = 0.10
         assert_eq!(savings, 0.1);
-        assert_eq!(auditor.get_tenant_bandwidth_savings("test_tenant"), 0.1);
-        assert_eq!(auditor.get_tenant_bandwidth_savings("other_tenant"), 0.0);
     }
 }

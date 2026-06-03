@@ -132,7 +132,7 @@ pub async fn cost_dashboard_handler(
             auditor.get_tenant_payment_fees(&tenant_id_clone_2),
             auditor.get_tenant_compute_cost(&tenant_id_clone_2),
             auditor.get_tenant_network_cost(&tenant_id_clone_2),
-            auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2)
+            0.0
         )
     });
 
@@ -157,7 +157,7 @@ pub async fn cost_dashboard_handler(
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
-        bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
+        bandwidth_savings: ((bandwidth_savings_f64 as f64) * 100.0).round() as i64,
         period_start,
         period_end,
     })
