@@ -17,6 +17,7 @@ pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
+    pub hub: Option<Arc<crate::hub::Hub>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -160,22 +161,86 @@ pub async fn stripe_webhook_handler(
                     if acquired {
                         let update_res = match &webhook_state.db.store {
                             crate::db::DbStore::Sqlite(pool) => {
-                                sqlx::query("UPDATE products SET inventory_count = MAX(0, inventory_count - ?) WHERE id = ? AND tenant_id = ?")
+                                let r = sqlx::query("UPDATE products SET inventory_count = MAX(0, inventory_count - ?) WHERE id = ? AND tenant_id = ? RETURNING inventory_count")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
+                                    .fetch_optional(pool)
+                                    .await;
+                                if let Ok(Some(row)) = &r {
+                                    let new_count: i32 = sqlx::Row::try_get(row, "inventory_count").unwrap_or(0);
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO department_tasks (id, tenant_id, department, event_type, payload)
+                                        VALUES (?, ?, 'operations', 'InventoryStatusChanged', ?)
+                                        "#
+                                    )
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind(serde_json::json!({
+                                        "product_id": product_id,
+                                        "inventory_count": new_count
+                                    }).to_string())
                                     .execute(pool)
-                                    .await
-                                    .map(|_| ())
+                                    .await;
+
+                                    if let Some(hub) = &webhook_state.hub {
+                                        let status_changed_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                            action: "InventoryStatusChanged".to_string(),
+                                            agent_id: "system".to_string(),
+                                            status: "".to_string(),
+                                            msg_id: uuid::Uuid::new_v4().to_string(),
+                                            payload: serde_json::json!({
+                                                "product_id": product_id,
+                                                "inventory_count": new_count,
+                                                "tenant_id": tenant_id
+                                            }).to_string().into_bytes(),
+                                        };
+                                        let _ = hub.publish_teammate_event("products_inbox".to_string(), status_changed_event);
+                                    }
+                                }
+                                r.map(|_| ())
                             }
                             crate::db::DbStore::Postgres => {
-                                sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
+                                let r = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3 RETURNING inventory_count")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
+                                    .fetch_optional(&webhook_state.db.pool)
+                                    .await;
+                                if let Ok(Some(row)) = &r {
+                                    let new_count: i32 = sqlx::Row::try_get(row, "inventory_count").unwrap_or(0);
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO department_tasks (id, tenant_id, department, event_type, payload)
+                                        VALUES ($1, $2, 'operations', 'InventoryStatusChanged', $3)
+                                        "#
+                                    )
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind(serde_json::json!({
+                                        "product_id": product_id,
+                                        "inventory_count": new_count
+                                    }))
                                     .execute(&webhook_state.db.pool)
-                                    .await
-                                    .map(|_| ())
+                                    .await;
+
+                                    if let Some(hub) = &webhook_state.hub {
+                                        let status_changed_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                            action: "InventoryStatusChanged".to_string(),
+                                            agent_id: "system".to_string(),
+                                            status: "".to_string(),
+                                            msg_id: uuid::Uuid::new_v4().to_string(),
+                                            payload: serde_json::json!({
+                                                "product_id": product_id,
+                                                "inventory_count": new_count,
+                                                "tenant_id": tenant_id
+                                            }).to_string().into_bytes(),
+                                        };
+                                        let _ = hub.publish_teammate_event("products_inbox".to_string(), status_changed_event);
+                                    }
+                                }
+                                r.map(|_| ())
                             }
                         };
 

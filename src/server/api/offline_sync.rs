@@ -46,7 +46,7 @@ pub async fn offline_sync_handler(
             UPDATE products
             SET inventory_count = GREATEST(0, inventory_count - $1)
             WHERE id = $2 AND tenant_id = $3
-            RETURNING id
+            RETURNING id, inventory_count
         ";
 
         let result = sqlx::query(query)
@@ -57,7 +57,9 @@ pub async fn offline_sync_handler(
             .await;
 
         match result {
-            Ok(Some(_)) => {
+            Ok(Some(row)) => {
+                let new_count: i32 = sqlx::Row::try_get(&row, "inventory_count").unwrap_or(0);
+
                 // Publish mesh event
                 let event = ::server_ohc::orchestration::TeammateMeshEvent {
                     action: "InventoryUpdated".to_string(),
@@ -72,6 +74,35 @@ pub async fn offline_sync_handler(
                     }).to_string().into_bytes(),
                 };
                 let _ = mesh.publish("mesh:inventory:updated", event).await;
+
+                // Fire AI Agent InventoryStatusChanged event
+                let status_changed_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                    action: "InventoryStatusChanged".to_string(),
+                    agent_id: "system".to_string(),
+                    status: "".to_string(),
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                    payload: serde_json::json!({
+                        "product_id": mutation.product_id,
+                        "inventory_count": new_count,
+                        "tenant_id": tenant_id
+                    }).to_string().into_bytes(),
+                };
+                let _ = mesh.publish("products_inbox", status_changed_event).await;
+
+                let _ = sqlx::query(
+                    r#"
+                    INSERT INTO department_tasks (id, tenant_id, department, event_type, payload)
+                    VALUES ($1, $2, 'operations', 'InventoryStatusChanged', $3)
+                    "#
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id)
+                .bind(serde_json::json!({
+                    "product_id": mutation.product_id,
+                    "inventory_count": new_count
+                }))
+                .execute(&db)
+                .await;
             }
             Ok(None) => {
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);

@@ -56,13 +56,13 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryStatusChanged')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
                             FOR UPDATE SKIP LOCKED
                         )
-                        RETURNING id, tenant_id, payload
+                        RETURNING id, tenant_id, payload, event_type
                         "#
                     )
                     .bind(Utc::now() + chrono::Duration::minutes(5))
@@ -70,7 +70,7 @@ impl OperationsWorker {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                    let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                    let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
                     tx.commit().await.map_err(|e| e.to_string())?;
                     res
                 },
@@ -78,8 +78,8 @@ impl OperationsWorker {
                     let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                     let row = sqlx::query(
                         r#"
-                        SELECT id, tenant_id, payload FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                        SELECT id, tenant_id, payload, event_type FROM department_tasks
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryStatusChanged')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -94,6 +94,7 @@ impl OperationsWorker {
                         let tenant_id: String = r.get("tenant_id");
                         let payload_str: String = r.get("payload");
                         let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
+                        let event_type: String = r.get("event_type");
 
                         sqlx::query(
                             "UPDATE department_tasks SET status = 'IN_PROGRESS', locked_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
@@ -102,7 +103,7 @@ impl OperationsWorker {
                         .bind(&id)
                         .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                        Some((id, tenant_id, payload))
+                        Some((id, tenant_id, payload, event_type))
                     } else {
                         None
                     };
@@ -119,23 +120,38 @@ impl OperationsWorker {
         };
 
         let processed = task.is_some();
-        if let Some((id, tenant_id, payload)) = task {
+        if let Some((id, tenant_id, payload, event_type)) = task {
             let mut final_status = "COMPLETED";
 
+            let mut items_to_check = vec![];
+
+            if event_type == "InventoryStatusChanged" {
+                if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                    items_to_check.push(json!({"product_id": product_id, "quantity": 0}));
+                }
+            } else {
+                if let Some(items) = payload.get("items").and_then(|v| v.as_array()) {
+                    for item in items {
+                        items_to_check.push(item.clone());
+                    }
+                }
+            }
+
             // Check inventory levels
-            let items = payload.get("items").and_then(|v| v.as_array());
-            if let Some(items) = items {
-                for item in items {
+            if !items_to_check.is_empty() {
+                for item in items_to_check {
                     if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
                         let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
                             crate::db::DbStore::Postgres => {
                                 let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND (tenant_id = $3 OR organization_id = $3)")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(&tenant_id)
-                                    .execute(&db.pool)
-                                    .await;
+                                if event_type != "InventoryStatusChanged" && quantity > 0 {
+                                    let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND (tenant_id = $3 OR organization_id = $3)")
+                                        .bind(quantity)
+                                        .bind(product_id)
+                                        .bind(&tenant_id)
+                                        .execute(&db.pool)
+                                        .await;
+                                }
 
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
@@ -159,13 +175,15 @@ impl OperationsWorker {
                             },
                             crate::db::DbStore::Sqlite(pool) => {
                                 let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND (tenant_id = ? OR organization_id = ?)")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(&tenant_id)
-                                    .bind(&tenant_id)
-                                    .execute(pool)
-                                    .await;
+                                if event_type != "InventoryStatusChanged" && quantity > 0 {
+                                    let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND (tenant_id = ? OR organization_id = ?)")
+                                        .bind(quantity)
+                                        .bind(product_id)
+                                        .bind(&tenant_id)
+                                        .bind(&tenant_id)
+                                        .execute(pool)
+                                        .await;
+                                }
 
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
@@ -818,7 +836,7 @@ impl PromoterWorker {
         let db_social = db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
-                if event.action == "ProductCreated" || event.action == "ProductUpdated" {
+                if event.action == "ProductCreated" || event.action == "ProductUpdated" || event.action == "InventoryStatusChanged" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
@@ -831,7 +849,7 @@ impl PromoterWorker {
                     }
                 }
 
-                if event.action == "ProductCreated" {
+                if event.action == "ProductCreated" || event.action == "InventoryStatusChanged" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
@@ -879,13 +897,30 @@ impl PromoterWorker {
                             })
                             .unwrap_or_else(|| "No saved Brand DNA yet; infer a simple clear brand voice from the product.".to_string());
 
-                            let prompt = format!(
-                                "Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Use this saved brand context: {}. Include captions, visual directions, and calls to action. Be professional, specific, and on-brand.",
-                                product_name,
-                                brand_context
-                            );
+                            let is_stockout = event.action == "InventoryStatusChanged" && payload_json.get("inventory_count").and_then(|v| v.as_i64()).unwrap_or(1) <= 0;
+                            if event.action == "InventoryStatusChanged" && !is_stockout {
+                                continue;
+                            }
 
-                            let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+                            let prompt = if event.action == "ProductCreated" {
+                                format!(
+                                    "Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Use this saved brand context: {}. Include captions, visual directions, and calls to action. Be professional, specific, and on-brand.",
+                                    product_name,
+                                    brand_context
+                                )
+                            } else {
+                                format!(
+                                    "Generate a catchy and engaging 'Sold Out! Pre-order now' social media campaign for our product: '{}'. Use this saved brand context: {}. Include captions, visual directions, and calls to action. Be professional, specific, and on-brand.",
+                                    product_name,
+                                    brand_context
+                                )
+                            };
+
+                            let mut drafted_post = if event.action == "ProductCreated" {
+                                format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name)
+                            } else {
+                                format!("{} is Sold Out! Pre-order now. 🚀 #restock #ohc", product_name)
+                            };
 
                             let mut attempts = 0;
                             while attempts < MAX_RETRIES {
@@ -927,19 +962,29 @@ impl PromoterWorker {
                             }
 
                             let task_id = Uuid::new_v4().to_string();
-                            let title = format!("7-Day Social Calendar: {}", product_name);
+                            let title = if event.action == "ProductCreated" {
+                                format!("7-Day Social Calendar: {}", product_name)
+                            } else {
+                                format!("Sold Out Campaign: {}", product_name)
+                            };
+                            let description = if event.action == "ProductCreated" {
+                                "The Promoter drafted a 7-day social media calendar for your review."
+                            } else {
+                                "The Promoter drafted a Sold Out / Pre-order social media campaign for your review."
+                            };
 
                             match &db_social.store {
                                 crate::db::DbStore::Postgres => {
                                     let _ = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'HIGH', 'PENDING', $5)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(org_id)
                                     .bind(&title)
+                                    .bind(&description)
                                     .bind(&drafted_post)
                                     .execute(&db_social.pool)
                                     .await;
@@ -948,12 +993,13 @@ impl PromoterWorker {
                                     let _ = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
+                                        VALUES (?, ?, ?, ?, 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
                                         "#
                                     )
                                     .bind(&task_id)
                                     .bind(org_id)
                                     .bind(&title)
+                                    .bind(&description)
                                     .bind(&drafted_post)
                                     .execute(pool)
                                     .await;
