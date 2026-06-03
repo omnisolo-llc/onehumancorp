@@ -34,7 +34,9 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    return Err(ToolError::LlmRecoverable(msg));
+                    // Instead of failing the orchestration loop, return the raw error as a string message directly to the model so it can self-correct.
+                    // This implements the Error Handling (Compounding Error Prevention) mechanic.
+                    return Ok(format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.
