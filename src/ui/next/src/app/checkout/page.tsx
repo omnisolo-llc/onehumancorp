@@ -114,13 +114,13 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
 
-          <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using Apple/Google Pay for frictionless vaulting.">
+          <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using saved wallet payment for frictionless vaulting.">
             <button
               onClick={() => handlePayment(true)}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
-              {isProcessing ? 'Processing...' : 'Subscribe Monthly (Apple Pay)'}
+              {isProcessing ? 'Processing...' : 'Subscribe Monthly (Wallet Pay)'}
             </button>
           </WithTooltip>
 
@@ -140,7 +140,9 @@ export default function CheckoutPage() {
                   } catch (e) {}
 
                   queue.push({
-                    id: 'txn_' + Date.now(),
+                    transaction_id: 'txn_' + Date.now(),
+                    product_id: 'custom-pos-amount',
+                    quantity_deducted: 1,
                     amount: parseFloat(amount),
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',

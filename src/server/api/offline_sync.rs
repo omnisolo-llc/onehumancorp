@@ -40,45 +40,64 @@ pub async fn offline_sync_handler(
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
     for mutation in &payload.mutations {
-        cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
-
-        let query = "
-            UPDATE products
-            SET inventory_count = GREATEST(0, inventory_count - $1)
-            WHERE id = $2 AND tenant_id = $3
-            RETURNING id
+        let insert_ledger_query = "
+            INSERT INTO offline_sync_ledger (transaction_id, tenant_id, product_id, quantity_deducted)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (transaction_id) DO NOTHING
+            RETURNING transaction_id
         ";
 
-        let result = sqlx::query(query)
-            .bind(mutation.quantity_deducted)
-            .bind(&mutation.product_id)
+        let ledger_result = sqlx::query(insert_ledger_query)
+            .bind(&mutation.transaction_id)
             .bind(&tenant_id)
+            .bind(&mutation.product_id)
+            .bind(mutation.quantity_deducted)
             .fetch_optional(&db)
             .await;
 
-        match result {
-            Ok(Some(_)) => {
-                // Publish mesh event
-                let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                    action: "InventoryUpdated".to_string(),
-                    agent_id: "system".to_string(),
-                    status: "".to_string(),
-                    msg_id: uuid::Uuid::new_v4().to_string(),
-                    payload: serde_json::json!({
-                        "product_id": mutation.product_id,
-                        "transaction_id": mutation.transaction_id,
-                        "quantity_deducted": mutation.quantity_deducted,
-                        "tenant_id": tenant_id
-                    }).to_string().into_bytes(),
-                };
-                let _ = mesh.publish("mesh:inventory:updated", event).await;
+        if let Ok(Some(_)) = ledger_result {
+            cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
+
+            let update_inventory_query = "
+                UPDATE products
+                SET inventory_count = GREATEST(0, inventory_count - $1)
+                WHERE id = $2 AND tenant_id = $3
+                RETURNING id
+            ";
+
+            let result = sqlx::query(update_inventory_query)
+                .bind(mutation.quantity_deducted)
+                .bind(&mutation.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&db)
+                .await;
+
+            match result {
+                Ok(Some(_)) => {
+                    // Publish mesh event
+                    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                        action: "InventoryUpdated".to_string(),
+                        agent_id: "system".to_string(),
+                        status: "".to_string(),
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                        payload: serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "transaction_id": mutation.transaction_id,
+                            "quantity_deducted": mutation.quantity_deducted,
+                            "tenant_id": tenant_id
+                        }).to_string().into_bytes(),
+                    };
+                    let _ = mesh.publish("mesh:inventory:updated", event).await;
+                }
+                Ok(None) => {
+                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
+                }
+                Err(e) => {
+                    tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
+                }
             }
-            Ok(None) => {
-                tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
-            }
-            Err(e) => {
-                tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
-            }
+        } else if let Err(e) = ledger_result {
+            tracing::error!("Failed to insert offline_sync_ledger for transaction {}: {}", mutation.transaction_id, e);
         }
     }
 
