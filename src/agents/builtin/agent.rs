@@ -109,7 +109,8 @@ pub struct AgentRunConfig {
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
-        pub enable_harness_thickness_optimization: bool,
+        pub harness_thickness: crate::harness_thickness::HarnessThickness,
+    pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_gpt_researcher: bool,
     pub enable_acon_context_strategy: bool,
@@ -170,7 +171,8 @@ impl Default for AgentRunConfig {
             max_iterations: 100,
             max_task_tokens: 100_000,
             confidence_threshold: 0.0,
-                        enable_harness_thickness_optimization: false,
+                        harness_thickness: crate::harness_thickness::HarnessThickness::Medium,
+            enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
             enable_gpt_researcher: false,
             enable_acon_context_strategy: false,
@@ -2084,12 +2086,23 @@ impl Agent {
 
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
-            // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
-            if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") || model_lower.contains("o3-mini") {
-                final_cfg.enable_llmcompiler_plan_and_execute = false;
-                final_cfg.server_system_message = final_cfg.server_system_message.replace("You must think step by step and make a detailed plan.", "");
-                final_cfg.server_system_message = final_cfg.server_system_message.replace("Make a plan before executing.", "");
+            // Automatically set HarnessThickness based on model capabilities if not explicitly configured
+            if final_cfg.harness_thickness == crate::harness_thickness::HarnessThickness::Medium {
+                if model_lower.contains("o1") || model_lower.contains("o3-mini") {
+                    final_cfg.harness_thickness = crate::harness_thickness::HarnessThickness::Thin;
+                } else if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") {
+                    final_cfg.harness_thickness = crate::harness_thickness::HarnessThickness::Thin; // Also thin for these advanced models
+                } else if model_lower.contains("gpt-3.5") || model_lower.contains("claude-2") {
+                    final_cfg.harness_thickness = crate::harness_thickness::HarnessThickness::Thick;
+                }
             }
+
+            // Architectural Decision 7: Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
+            if final_cfg.harness_thickness == crate::harness_thickness::HarnessThickness::Thin {
+                final_cfg.enable_llmcompiler_plan_and_execute = false;
+            }
+            final_cfg.server_system_message = final_cfg.harness_thickness.override_system_prompt(&final_cfg.server_system_message);
+            final_cfg.max_retries = final_cfg.harness_thickness.override_retries(final_cfg.max_retries);
         }
         if final_cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
@@ -2100,7 +2113,7 @@ impl Agent {
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
-        // Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
+        // Architectural Decision 6: Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
         if final_cfg.enable_vercel_tool_scoping_metric && session_tools.len() > 5 {
             let keep_count = (session_tools.len() as f64 * 0.2).max(1.0) as usize;
             session_tools.truncate(keep_count);
@@ -2280,7 +2293,7 @@ impl Agent {
             crate::observation_masking::apply_observation_masking(&mut final_messages, final_cfg.observation_masking_threshold, final_cfg.observation_masking_size_limit);
         }
 
-            // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
+            // Architectural Decision 3: Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
                 let acon_cfg = final_cfg.acon_config.clone().unwrap_or_default();
                 crate::acon_context::apply_acon_strategy(&mut final_messages, &acon_cfg);
