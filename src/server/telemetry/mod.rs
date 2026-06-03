@@ -193,6 +193,7 @@ pub fn record_harness_execution_latency(latency_seconds: f64) {
 
 #[cfg(test)]
 mod harness_execution_tests {
+    #[allow(unused_imports)]
     use super::*;
 
 
@@ -1127,7 +1128,9 @@ pub fn is_email(s: &str) -> bool {
 }
 
 #[cfg(test)]
+#[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
 
@@ -1341,6 +1344,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
+    #[allow(unused_imports)]
     use super::*;
 
 
@@ -1438,6 +1442,7 @@ pub fn record_harness_io_bytes(agent_id: &str, task_id: &str, bytes: u64) {
 
 #[cfg(test)]
 mod harness_io_bytes_tests {
+    #[allow(unused_imports)]
     use super::*;
 
 

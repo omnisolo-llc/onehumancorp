@@ -443,7 +443,6 @@ pub async fn bench_get_analytics() {
     let start_cold = std::time::Instant::now();
     use ::server_ohc::orchestration::org_service_server::OrgService;
     let _ = org_service.get_analytics(request_cold).await;
-    tracing::info!("get_analytics Cold Start: {} us", start_cold.elapsed().as_micros());
 
     // Warm runs (hot start, hits hybrid cache)
     let mut fetch_times = Vec::new();

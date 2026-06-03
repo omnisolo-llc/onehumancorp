@@ -10,6 +10,8 @@ use std::sync::OnceLock;
 static DOMAINS_CACHE: OnceLock<HybridCache<Vec<DomainInfoProto>>> = OnceLock::new();
 static MARKETPLACE_ITEMS_CACHE: OnceLock<HybridCache<Vec<MarketplaceItemProto>>> = OnceLock::new();
 
+static ADVISORY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<::server_ohc::orchestration::AdvisoryInsightsResponse>> = std::sync::OnceLock::new();
+
 pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
     settings: RwLock<SettingsResponse>,
@@ -175,6 +177,71 @@ impl OrgService for MyOrgService {
         self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
+    }
+
+    async fn get_advisory_insights(
+        &self,
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::AdvisoryInsightsResponse>, Status> {
+        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
+        let cache_key = format!("org_advisory_{}", org_id);
+        let cache = ADVISORY_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(cached) = cache.get(&cache_key).await {
+            return Ok(Response::new(cached));
+        }
+
+        let tenant_id_org = org_id.clone();
+        let tenant_id_orders = org_id.clone();
+
+        let db_org = self.hub.pool.clone();
+        let db_orders = self.hub.pool.clone();
+
+        let mut tenant_name = String::new();
+        let mut industry = String::new();
+        let mut active_orders = 0;
+
+        match 1 {
+            1 => {
+                let (_org_res, _active_orders_res) = tokio::join!(
+                    tokio::spawn(async move {
+                        sqlx::query_as::<_, (String, String)>(
+                            "SELECT name, COALESCE(industry, ) FROM tenants WHERE id = $1"
+                        )
+                        .bind(&tenant_id_org)
+                        .fetch_optional(&db_org)
+                        .await
+                    }),
+                    tokio::spawn(async move {
+                        sqlx::query_scalar::<_, i64>(
+                            "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != delivered"
+                        )
+                        .bind(&tenant_id_orders)
+                        .fetch_one(&db_orders)
+                        .await
+                    })
+                );
+                if let Ok(Ok(Some((n, ind)))) = _org_res {
+                    tenant_name = n;
+                    industry = ind;
+                }
+                if let Ok(Ok(count)) = _active_orders_res {
+                    active_orders = count;
+                }
+            }
+            _ => {}
+        }
+
+        let response = ::server_ohc::orchestration::AdvisoryInsightsResponse {
+            tenant_name,
+            industry,
+            active_orders,
+        };
+
+        cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(Response::new(response))
+    }
     }
 }
 

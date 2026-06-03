@@ -1128,6 +1128,12 @@ message MarketplaceItemsResponse {
   repeated MarketplaceItemProto items = 1;
 }
 
+message AdvisoryInsightsResponse {
+  string tenant_name = 1;
+  string industry = 2;
+  int64 active_orders = 3;
+}
+
 message AnalyticsSummaryResponse {
   double human_agent_ratio = 1;
   int32 total_agents = 2;
@@ -1148,6 +1154,7 @@ service OrgService {
   rpc UpdateSettings(UpdateSettingsRequest) returns (SettingsResponse);
   rpc GetMarketplaceItems(EmptyRequest) returns (MarketplaceItemsResponse);
   rpc GetAnalytics(EmptyRequest) returns (AnalyticsSummaryResponse);
+  rpc GetAdvisoryInsights(EmptyRequest) returns (AdvisoryInsightsResponse);
 }
 
 message ProtoSchedule {
