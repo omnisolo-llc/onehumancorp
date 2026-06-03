@@ -334,7 +334,6 @@ mod tests {
                     .bind(&tenant_id)
                     .execute(&db.pool)
                     .await;
-
                 let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, type, inventory_count) VALUES ($1, $2, $3, $4, $5, 10) ON CONFLICT DO NOTHING")
                     .bind(&product_id)
                     .bind(&tenant_id)
@@ -349,7 +348,6 @@ mod tests {
                     .bind(&tenant_id)
                     .execute(pool)
                     .await;
-
                 let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, type, inventory_count) VALUES (?, ?, ?, ?, ?, 10) ON CONFLICT DO NOTHING")
                     .bind(&product_id)
                     .bind(&tenant_id)
