@@ -75,32 +75,16 @@ impl Department for MarketingAgent {
                 ""
             };
 
-            // Vision API: Optimize/Crop Image
-            // In a real implementation this would call a Vision API or image processing service.
-            // For now, we simulate the optimized image URL.
-            let optimized_image_url = if !image_url.is_empty() {
-                format!("{}_optimized.jpg", image_url.trim_end_matches(".jpg"))
-            } else {
-                "".to_string()
-            };
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            let minimax = crate::minimax::MinimaxClient::new(api_key);
 
             let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
-
-            let draft_copy = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
-                if provider == "minimax" {
-                    let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
-                } else {
-                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
-                }
-            } else {
-                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
-            };
+            let draft_copy = minimax.reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}! #newarrival #shoplocal", product_name)).to_string();
 
             let payload = serde_json::json!({
                 "feature_type": "social_post",
                 "product_name": product_name,
-                "image_url": optimized_image_url,
+                "image_url": image_url,
                 "draft_copy": draft_copy
             });
 
