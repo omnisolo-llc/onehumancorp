@@ -856,6 +856,45 @@ impl DB {
                         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
+                    CREATE TABLE IF NOT EXISTS builder_sites (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        domain TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS builder_pages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        site_id TEXT NOT NULL,
+                        path TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        seo_metadata TEXT DEFAULT '{}',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(site_id) REFERENCES builder_sites(id) ON DELETE CASCADE
+                    );
+                    CREATE TABLE IF NOT EXISTS builder_blocks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        page_id TEXT NOT NULL,
+                        block_type TEXT NOT NULL,
+                        content TEXT NOT NULL DEFAULT '{}',
+                        sort_order INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(page_id) REFERENCES builder_pages(id) ON DELETE CASCADE
+                    );
+                    CREATE TABLE IF NOT EXISTS builder_brand_toolboxes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        source_description TEXT NOT NULL DEFAULT '',
+                        toolbox TEXT NOT NULL DEFAULT '{}',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_builder_brand_toolboxes_tenant_id ON builder_brand_toolboxes(tenant_id);
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
