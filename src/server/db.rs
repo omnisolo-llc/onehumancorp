@@ -780,6 +780,19 @@ impl DB {
                         mission_log TEXT
                     );
 
+                                        CREATE TABLE IF NOT EXISTS unified_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        sender_id TEXT NOT NULL,
+                        channel TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        attachments TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        status TEXT DEFAULT 'pending',
+                        confidence_score REAL,
+                        draft_reply TEXT
+                    );
+
                     CREATE TABLE IF NOT EXISTS inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,

@@ -1,0 +1,9 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "mod.rs",
+    "omnichannel_gateway.rs",
+    "omnichannel_gateway_test.rs"
+])
