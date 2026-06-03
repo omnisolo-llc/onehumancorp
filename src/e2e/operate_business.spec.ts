@@ -14,11 +14,14 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.getByRole('button', { name: /Start My Business/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
+  // Need to make sure the element is ready before filling
+  await expect(page.getByPlaceholder("e.g. Maya's Cakes")).toBeVisible({ timeout: 15000 });
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
   await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
 
   await page.getByLabel(/Physical Products/).check();
   await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
+  await expect(page.getByPlaceholder('What is the name of this product?')).toBeVisible({ timeout: 15000 });
   await page.getByPlaceholder('What is the name of this product?').fill('Custom Cake');
   await page.getByPlaceholder('0.00').fill('75.00');
   await page.locator('#step-5').getByRole('button', { name: /Next/ }).click();

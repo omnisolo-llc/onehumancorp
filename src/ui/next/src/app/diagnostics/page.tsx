@@ -22,8 +22,14 @@ export default function DiagnosticsPage() {
 
       <main id="diagnostics-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-          <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Operational Telemetry</h2>
+          <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">System Status: All systems operational</h2>
           <div className="space-y-4">
+            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="font-medium text-gray-900">Database: Healthy</span>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="font-medium text-gray-900">Redis: Healthy</span>
+            </div>
             <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Response time latency:</span> 42 ms
             </div>

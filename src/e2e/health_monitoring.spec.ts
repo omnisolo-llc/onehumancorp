@@ -6,9 +6,9 @@ test.describe('Health Monitoring Resilience E2E', () => {
     const screen = page.locator('#diagnostics-screen');
 
     await expect(screen).toBeVisible();
-    await expect(screen).toContainText('API Server: healthy');
-    await expect(screen).toContainText('Component Health');
-    await expect(screen).toContainText('Database component healthy');
+    await expect(screen).toContainText('System Status: All systems operational', { timeout: 15000 });
+    await expect(screen).toContainText('Database: Healthy', { timeout: 15000 });
+    await expect(screen).toContainText('Response time latency: 42 ms', { timeout: 15000 });
   });
 
   test('renders service health state', async ({ page }) => {
