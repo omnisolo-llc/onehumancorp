@@ -162,7 +162,7 @@ async fn test_single_agent_flow() {
     let task_id = uuid::Uuid::new_v4().to_string();
 
     if let DbStore::Sqlite(pool) = &db.store {
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 't1', 'PENDING')")
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status) VALUES (?, 'system', 'm1', 't1', 'PENDING')")
             .bind(&task_id)
             .execute(pool)
             .await
@@ -203,13 +203,13 @@ async fn test_dag_workflow() {
     let deps = format!(r#"["{}"]"#, parent_id);
 
     if let DbStore::Sqlite(pool) = &db.store {
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 'parent', 'PENDING')")
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status) VALUES (?, 'system', 'm1', 'parent', 'PENDING')")
             .bind(&parent_id)
             .execute(pool)
             .await
             .unwrap();
 
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'child', 'PENDING', ?)")
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES (?, 'system', 'm1', 'child', 'PENDING', ?)")
             .bind(&child_id)
             .bind(&deps)
             .execute(pool)
@@ -257,13 +257,13 @@ async fn test_cloud_dag_workflow_mock() {
     let deps = format!(r#"["{}"]"#, parent_id);
 
     if let DbStore::Sqlite(pool) = &db.store {
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 'parent', 'PENDING')")
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status) VALUES (?, 'system', 'm1', 'parent', 'PENDING')")
             .bind(&parent_id)
             .execute(pool)
             .await
             .unwrap();
 
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'child', 'PENDING', ?)")
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES (?, 'system', 'm1', 'child', 'PENDING', ?)")
             .bind(&child_id)
             .bind(&deps)
             .execute(pool)

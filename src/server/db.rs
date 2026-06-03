@@ -481,6 +481,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS swarm_tasks (
                         id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
                         mission_id TEXT NOT NULL,
                         parent_plan_id TEXT,
                         dependencies TEXT NOT NULL DEFAULT '[]',

@@ -157,7 +157,7 @@ mod parity_tests {
 
         // SQLite
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_task", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES (?, ?, NULL, ?)")
+            sqlite_db.execute_with_retry("insert_task", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, parent_plan_id, title) VALUES (?, 'system', ?, NULL, ?)")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
@@ -176,7 +176,7 @@ mod parity_tests {
         // Postgres
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
-            db.execute_with_retry("insert_task", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES ($1, $2, NULL, $3)")
+            db.execute_with_retry("insert_task", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, parent_plan_id, title) VALUES ($1, 'system', $2, NULL, $3)")
                 .bind(parsed_id)
                 .bind(mission_id)
                 .bind(title)
@@ -205,7 +205,7 @@ mod parity_tests {
 
         // SQLite
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES (?, ?, NULL, ?)")
+            sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, parent_plan_id, title) VALUES (?, 'system', ?, NULL, ?)")
                 .bind(&task_id1)
                 .bind(mission_id)
                 .bind(title)
@@ -213,7 +213,7 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES (?, ?, 'plan_1', ?)")
+            sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, parent_plan_id, title) VALUES (?, 'system', ?, 'plan_1', ?)")
                 .bind(&task_id2)
                 .bind(mission_id)
                 .bind(title)
@@ -243,7 +243,7 @@ mod parity_tests {
             let parsed_id1 = uuid::Uuid::parse_str(&task_id1).unwrap();
             let parsed_id2 = uuid::Uuid::parse_str(&task_id2).unwrap();
 
-            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES ($1, $2, NULL, $3)")
+            sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, parent_plan_id, title) VALUES ($1, 'system', $2, NULL, $3)")
                 .bind(parsed_id1)
                 .bind(mission_id)
                 .bind(title)
@@ -251,7 +251,7 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, parent_plan_id, title) VALUES ($1, $2, 'plan_1', $3)")
+            sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, parent_plan_id, title) VALUES ($1, 'system', $2, 'plan_1', $3)")
                 .bind(parsed_id2)
                 .bind(mission_id)
                 .bind(title)
@@ -287,7 +287,7 @@ mod parity_tests {
         let title = "Test Txn Title";
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_task_tx", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, ?, ?, \'PENDING\')")
+            sqlite_db.execute_with_retry("insert_task_tx", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status) VALUES (?, 'system', ?, ?, \'PENDING\')")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
@@ -354,7 +354,7 @@ mod parity_tests {
 
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
-            db.execute_with_retry("insert_task_tx", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES ($1, $2, $3, \'PENDING\')")
+            db.execute_with_retry("insert_task_tx", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status) VALUES ($1, 'system', $2, $3, \'PENDING\')")
                 .bind(parsed_id)
                 .bind(mission_id)
                 .bind(title)
@@ -394,7 +394,7 @@ mod parity_tests {
         let dt = chrono::Utc::now();
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES (?, ?, ?, \'PENDING\', ?)")
+            sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, created_at) VALUES (?, 'system', ?, ?, \'PENDING\', ?)")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
@@ -417,7 +417,7 @@ mod parity_tests {
 
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
-            db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES ($1, $2, $3, \'PENDING\', $4)")
+            db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, created_at) VALUES ($1, 'system', $2, $3, \'PENDING\', $4)")
                 .bind(parsed_id)
                 .bind(mission_id)
                 .bind(title)
@@ -449,7 +449,7 @@ mod parity_tests {
         let dt = chrono::Utc.with_ymd_and_hms(2025, 2, 28, 15, 30, 45).unwrap();
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES (?, ?, ?, \'PENDING\', ?)")
+            sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, created_at) VALUES (?, 'system', ?, ?, \'PENDING\', ?)")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
@@ -469,7 +469,7 @@ mod parity_tests {
 
         if let Some(ref db) = pg_db {
             let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
-            db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES ($1, $2, $3, \'PENDING\', $4)")
+            db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, created_at) VALUES ($1, 'system', $2, $3, \'PENDING\', $4)")
                 .bind(parsed_id)
                 .bind(mission_id)
                 .bind(title)
