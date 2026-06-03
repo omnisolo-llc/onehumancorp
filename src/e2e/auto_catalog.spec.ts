@@ -24,11 +24,12 @@ test.describe('Auto-Catalog flow', () => {
     // Verify loading state
     await expect(page.getByText('AutoDream AI is analyzing your photo...')).toBeVisible();
 
-    // Verify generated product data populates the form
-    const generatedFields = page.locator('#auto-catalog-form input');
-    await expect(generatedFields.nth(0)).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 10000 });
-    await expect(generatedFields.nth(1)).toHaveValue('4.99');
-    await expect(generatedFields.nth(2)).toHaveValue('Baked Goods');
+    // The component does not have the #auto-catalog-form ID.
+    // Let's select the inputs correctly based on the DOM output:
+    const inputs = page.locator('input[type="text"]');
+    await expect(inputs.nth(0)).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 10000 });
+    await expect(inputs.nth(1)).toHaveValue('4.99');
+    await expect(inputs.nth(2)).toHaveValue('Baked Goods');
 
     // Click Publish
     await page.getByRole('button', { name: 'Publish Product' }).click();

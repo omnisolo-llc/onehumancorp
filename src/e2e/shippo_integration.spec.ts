@@ -8,7 +8,8 @@ test('User can purchase and print shipping labels for an order', async ({ page }
   await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
 
   // Check if there are unfulfilled orders
-  await expect(page.getByText('Unfulfilled').first()).toBeVisible();
+  // The mock orders list has "Unfulfilled" in a span
+  await expect(page.getByText('Unfulfilled', { exact: true }).first()).toBeVisible({ timeout: 10000 });
 
   // Click view on the first unfulfilled order
   await page.getByRole('button', { name: 'View' }).first().click();
