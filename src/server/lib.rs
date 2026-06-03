@@ -6902,11 +6902,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (result) result.textContent = 'Checking live health endpoints...';
                             try {
                                 const [healthz, readyz] = await Promise.all([
-                                    'ok',
-                                    'ok'
+                                    fetch('/healthz').then(res => res.ok ? 'ok' : 'failed'),
+                                    fetch('/readyz').then(res => res.ok ? 'ok' : 'failed')
                                 ]);
                                 if (status) status.textContent = `Health: ${healthz}; readiness: ${readyz}.`;
-                                if (result) result.textContent = healthz === 'ok' if (result) result.textContent = healthz === 'ok' if (result) result.textContent = healthz === 'ok' && readyz === 'ok' ? 'Live health checks passed.' : 'One or more live health checks failed.';if (result) result.textContent = healthz === 'ok' && readyz === 'ok' ? 'Live health checks passed.' : 'One or more live health checks failed.'; readyz === 'ok' ? 'Diagnostics data refreshed' : 'One or more live health checks failed.';if (result) result.textContent = healthz === 'ok' && readyz === 'ok' ? 'Live health checks passed.' : 'One or more live health checks failed.'; readyz === 'ok' ? 'Diagnostics data refreshed' : 'One or more live health checks failed.';
+                                if (result) result.textContent = healthz === 'ok' && readyz === 'ok' ? 'Diagnostics data refreshed' : 'One or more live health checks failed.';
                             } catch (e) {
                                 if (result) result.textContent = 'Live health checks are unavailable.';
                             }

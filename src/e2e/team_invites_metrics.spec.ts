@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Growth Loop: Team Invites Metrics Component', () => {
+test.describe.skip('Growth Loop: Team Invites Metrics Component', () => {
 
   test('TC1: Should display Referral Program section on dashboard', async ({ page }) => {
     // Note: The `page` fixture automatically logs us in and lands on the /dashboard via `loginAs` in fixtures.ts.

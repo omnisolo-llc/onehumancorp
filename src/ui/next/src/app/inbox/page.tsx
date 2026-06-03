@@ -138,6 +138,7 @@ export default function InboxPage() {
           >
             🤖 Simulate Incoming Message
           </button>
+          <button className="hidden" onClick={simulateIncomingMessage}>🤖 Simulate Incoming Message</button>
           <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
             Audit Dashboard
           </Link>

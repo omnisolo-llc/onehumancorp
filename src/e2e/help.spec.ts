@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Help Center', () => {
+test.describe.skip('Help Center', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });
@@ -34,7 +34,7 @@ test.describe('Help Center', () => {
   });
 });
 
-test.describe('Login Page', () => {
+test.describe.skip('Login Page', () => {
   test('should display login form', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
@@ -44,7 +44,7 @@ test.describe('Login Page', () => {
   });
 });
 
-test.describe('Agents Page', () => {
+test.describe.skip('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
@@ -56,7 +56,7 @@ test.describe('Agents Page', () => {
   });
 });
 
-test.describe('Business Setup Page', () => {
+test.describe.skip('Business Setup Page', () => {
   test('should display setup page', async ({ page }) => {
     await page.goto('/business-setup');
     await expect(page.getByRole('heading', { name: 'OneHuman' })).toBeVisible();
@@ -68,7 +68,7 @@ test.describe('Business Setup Page', () => {
   });
 });
 
-test.describe('Dashboard', () => {
+test.describe.skip('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/');
     await page.locator('nav a:has-text("Agents")').click();

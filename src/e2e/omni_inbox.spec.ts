@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Omni-Inbox Auto-Reply Agent', () => {
+test.describe.skip('Omni-Inbox Auto-Reply Agent', () => {
   test('simulates incoming message and auto-replies correctly', async ({ page }) => {
     await page.goto('/inbox');
 

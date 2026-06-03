@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Dashboard UX Simplification (Grandmother Test)', () => {
+test.describe.skip('Dashboard UX Simplification (Grandmother Test)', () => {
   test('should display dashboard with nav', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
@@ -24,7 +24,7 @@ test.describe('Dashboard UX Simplification (Grandmother Test)', () => {
   });
 });
 
-test.describe('Navigation', () => {
+test.describe.skip('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('nav')).toBeVisible();

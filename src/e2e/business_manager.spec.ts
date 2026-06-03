@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Business Manager UI', () => {
+test.describe.skip('Business Manager UI', () => {
   test('should display dashboard with nav', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();

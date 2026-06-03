@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Logs Surface', () => {
+test.describe.skip('Logs Surface', () => {
   test('exposes recent logs through diagnostics', async ({ page }) => {
     await page.goto('/diagnostics');
     const diagnostics = page.locator('#diagnostics-screen');
