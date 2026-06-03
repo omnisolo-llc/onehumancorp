@@ -4,6 +4,7 @@ exports_files(
     [
         "approvals.rs",
         "chat.rs",
+        "scaling.rs",
         "hire.rs",
         "mission/handoff.rs",
         "mission/mod.rs",
@@ -20,6 +21,7 @@ rust_library(
         "bazel_lib.rs",
         "approvals.rs",
         "chat.rs",
+        "scaling.rs",
         "hire.rs",
         "mission/handoff.rs",
         "mission/mod.rs",

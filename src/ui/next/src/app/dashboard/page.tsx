@@ -5,6 +5,7 @@ import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { OneTapReferral } from "../components/OneTapReferral";
+import DynamicScalingCard from "../../components/DynamicScalingCard";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -512,6 +513,11 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Dynamic Scaling Component */}
+         <section className="mb-6 animate-fade-in">
+           <DynamicScalingCard />
+         </section>
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
