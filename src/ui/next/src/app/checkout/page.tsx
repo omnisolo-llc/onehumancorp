@@ -30,7 +30,7 @@ export default function CheckoutPage() {
     }
   }, []);
 
-  const handleAddUpsell = (item: any) => {
+  const handleAddUpsell = (item: { name: string, price: number }) => {
     const newCart = [...cartItems, { name: item.name, price: item.price }];
     setCartItems(newCart);
     setSubtotal(subtotal + item.price);
