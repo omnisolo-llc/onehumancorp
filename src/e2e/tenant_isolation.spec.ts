@@ -1,5 +1,5 @@
-import { expect } from '@playwright/test';
-import { test } from './fixtures';
+
+import { test, expect } from './fixtures';
 
 test.describe('Tenant Isolation & Business Setup Data Model', () => {
     // E2E Mandatory 1: Start from the home page after user login with no pre-authenticated shortcuts
