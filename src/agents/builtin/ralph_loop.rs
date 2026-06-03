@@ -25,9 +25,9 @@ pub struct Feature {
 #[derive(Debug, PartialEq, Eq)]
 pub enum RalphPhase {
     /// Phase 1 (Initializer Agent): Sets up environment, writes init script, progress file, feature list, and makes initial git commit.
-    Phase1_Initialize,
+    Phase1Initialize,
     /// Phase 2 (Coding Agent): Reads git logs and progress files to orient itself, picks the highest-priority incomplete feature, works, commits.
-    Phase2_Coding,
+    Phase2Coding,
 }
 
 /// The "Ralph Loop": For long-running asynchronous tasks spanning multiple context windows.
@@ -58,11 +58,11 @@ impl RalphLoop {
         if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
             if serde_json::from_str::<RalphProgress>(&data).is_ok() {
                 // If progress file exists and is valid, we are in Phase 2.
-                return RalphPhase::Phase2_Coding;
+                return RalphPhase::Phase2Coding;
             }
         }
         // Fallback or missing progress file means we must initialize.
-        RalphPhase::Phase1_Initialize
+        RalphPhase::Phase1Initialize
     }
 
     /// Run the full Ralph Loop
@@ -70,11 +70,11 @@ impl RalphLoop {
         let phase = self.determine_phase().await;
         
         let mut progress = match phase {
-            RalphPhase::Phase1_Initialize => {
+            RalphPhase::Phase1Initialize => {
                 tracing::info!("Ralph Loop executing Phase 1: Initialize.");
                 self.execute_phase1(initial_task).await?
             }
-            RalphPhase::Phase2_Coding => {
+            RalphPhase::Phase2Coding => {
                 tracing::info!("Ralph Loop executing Phase 2: Resume Coding.");
                 let data = fs::read_to_string(&self.progress_file_path).await?;
                 serde_json::from_str::<RalphProgress>(&data)?

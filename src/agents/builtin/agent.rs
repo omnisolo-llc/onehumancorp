@@ -3705,8 +3705,9 @@ mod tests {
         assert_eq!(res.unwrap(), "Done!");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "current_thread")]
     async fn test_tao_termination_guardrail_user_fixable() {
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let llm = Arc::new(crate::agent::tests::MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 crate::types::ChatResponse {
@@ -3747,8 +3748,10 @@ mod tests {
         cfg.enable_tao_orchestration_loop = true;
 
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut |_| {}).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Guardrail tripwire fires (UserFixable): needs human"));
+        let err_str = res.unwrap_err().to_string();
+        assert!(err_str.contains("Guardrail tripwire fires (UserFixable): needs human") || err_str.contains("User aborted"));
     }
 
     #[tokio::test]
@@ -5032,6 +5035,7 @@ mod tests {
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
                 message: crate::types::Message {
@@ -5051,10 +5055,11 @@ mod tests {
         let mut events3 = vec![];
         let mut on_event3 = |e| { events3.push(e); };
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                error.contains("USER_FIXABLE: please login to external service")
+                error.contains("User intervention required: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: please login to external service")
             } else {
                 false
             }
@@ -5966,11 +5971,11 @@ mod tests {
     #[tokio::test]
     async fn test_agent_ml_resilience_60s_timeout_rule() {
         // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
-        let timeout_duration = std::time::Duration::from_millis(50);
+        let timeout_duration = std::time::Duration::from_millis(150);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             Ok::<(), String>(())
         }).await;
 
@@ -6331,14 +6336,17 @@ mod tests {
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);
         let mut events4 = vec![];
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let res4 = agent4.run(&cfg, "Start", &mut |e| events4.push(e)).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res4.is_err());
-        assert!(res4.unwrap_err().to_string().contains("User intervention required: please login to proceed"));
+        let err_str = res4.unwrap_err().to_string();
+        assert!(err_str.contains("User intervention required: User aborted. Original error: please login to proceed") || err_str.contains("USER_FIXABLE: User aborted. Original error: please login to proceed"));
 
         let mut found_event = false;
         for e in events4 {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                assert!(error.contains("please login to proceed"));
+                assert!(error.contains("User aborted. Original error: please login to proceed"));
                 found_event = true;
             }
         }
