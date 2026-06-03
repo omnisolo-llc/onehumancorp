@@ -23,6 +23,9 @@ export function currentAppSmoke(label: string) {
     await page.goto('/storefront-builder');
     await expect(page.locator('.builder-block').first()).toBeVisible();
 
+    await page.goto('/growth-hub');
+    await expect(page.getByRole('heading', { name: 'Growth Hub 🚀' }).first()).toBeVisible();
+
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
     expect(ogCard.headers()['content-type']).toContain('image/svg+xml');

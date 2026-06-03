@@ -1146,23 +1146,23 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
+        let tenant_id_clone_2 = tenant_id.clone();
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
-                (llm, rev)
+                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
+                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
+                let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
+                (llm, rev, fees)
             }),
             async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
             }
         );
 
-        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let (llm_cost_f64, total_revenue_f64, payment_fees_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0));
         let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
-
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
@@ -2278,13 +2278,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
 
-    dept_orchestrator.register_department(ops_agent).await;
-    dept_orchestrator.register_department(cs_agent).await;
-    dept_orchestrator.register_department(mkt_agent).await;
-    dept_orchestrator.register_department(sales_agent).await;
-    dept_orchestrator.register_department(finance_agent).await;
-    dept_orchestrator.register_department(legal_agent).await;
-    dept_orchestrator.register_department(advisory_agent).await;
+    tokio::join!(
+        dept_orchestrator.register_department(ops_agent),
+        dept_orchestrator.register_department(cs_agent),
+        dept_orchestrator.register_department(mkt_agent),
+        dept_orchestrator.register_department(sales_agent),
+        dept_orchestrator.register_department(finance_agent),
+        dept_orchestrator.register_department(legal_agent),
+        dept_orchestrator.register_department(advisory_agent)
+    );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
     let department_service = crate::services::agent::department::service::DepartmentService::new(bus.clone(), dept_orchestrator.clone());
@@ -2963,16 +2965,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+            { "id": 1, "title": "Set up your store", "duration": "1:20" },
+            { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
+            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
+            { "id": 4, "title": "Add a product", "duration": "1:05" },
+            { "id": 5, "title": "Review an order", "duration": "1:10" },
+            { "id": 6, "title": "Send a campaign", "duration": "1:25" },
+            { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
+            { "id": 8, "title": "Manage inventory", "duration": "1:00" },
+            { "id": 9, "title": "View analytics", "duration": "0:45" },
+            { "id": 10, "title": "Update your profile", "duration": "0:55" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
@@ -4662,20 +4664,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
                         </div>
 
-                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px;">
-                            <button onclick="openLegacyDepartment('The Ambassador')">The Ambassador - Customer Success - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Manager')">The Manager - Operations - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Closer')">The Closer - Sales - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Promoter')">The Promoter - Marketing - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Salesperson')">The Salesperson - Sales - 1 item awaiting approval</button>
-                            <button onclick="openLegacyDepartment('The Accountant')">The Accountant - Finance</button>
-                            <button onclick="openLegacyDepartment('The Protector')">The Protector - Security</button>
-                            <button onclick="openLegacyDepartment('The Advisor')">The Advisor - Strategy</button>
-                            <button onclick="openLegacyDepartment('The Scout')">The Scout - Research</button>
-                            <div>
-                                <span>Advanced</span>
-                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'">Show settings</button>
-                                <p id="legacy-agent-settings" style="display: none;">Auto-approve: $0</p>
+                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
+                            <button onclick="openLegacyDepartment('The Ambassador')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>✨ The Ambassador (Omnichannel Inbox)</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Manager')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Manager - Operations</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Closer')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Closer - Sales</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Promoter')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Promoter - Marketing</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Salesperson')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Salesperson - Sales</span>
+                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Accountant')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Accountant - Finance</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Protector')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Protector - Security</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Advisor')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Advisor - Strategy</span>
+                            </button>
+                            <button onclick="openLegacyDepartment('The Scout')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>The Scout - Research</span>
+                            </button>
+                            <div style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px;">
+                                <span style="font-size: 0.9em; opacity: 0.8;">Advanced Settings</span>
+                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 8px; margin-left: 10px; font-size: 0.8em;">Show settings</button>
+                                <p id="legacy-agent-settings" style="display: none; font-size: 0.8em; margin-top: 5px; opacity: 0.7;">Auto-approve: $0</p>
                             </div>
                         </div>
 
