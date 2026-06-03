@@ -100,14 +100,19 @@ spec:
             httpGet:
               path: /healthz
               port: {{ .Values.backend.service.port }}
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /readyz
               port: {{ .Values.backend.service.port }}
-            initialDelaySeconds: 3
+            initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
       volumes:
         - name: tmp
           emptyDir: {}
