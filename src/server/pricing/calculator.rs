@@ -110,6 +110,23 @@ pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, con
     (savings * 10000.0).round() / 10000.0
 }
 
+
+pub fn calculate_bandwidth_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
+    let cost = calculate_bandwidth_savings(original_bytes, compressed_bytes, config);
+    (cost * 100.0).round() as i64
+}
+
+pub fn calculate_bandwidth_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
+    if original_bytes < 0 || compressed_bytes < 0 {
+        return 0.0;
+    }
+    let saved_bytes = (original_bytes - compressed_bytes) as f64;
+    let saved_bytes = if saved_bytes < 0.0 { 0.0 } else { saved_bytes };
+    let saved_gb = saved_bytes / (1024.0 * 1024.0 * 1024.0);
+    let savings = saved_gb * config.cost_per_network_gb;
+    (savings * 10000.0).round() / 10000.0
+}
+
 pub fn calculate_compute_cost_cents(hours: f64, config: &CostConfig) -> i64 {
     let cost = calculate_compute_cost(hours, config);
     (cost * 100.0).round() as i64
@@ -228,6 +245,25 @@ mod tests {
 
         let cost_cents = calculate_cost_with_config_cents(1000, 500, 200, 100, &config);
         assert_eq!(cost_cents, 190);
+    }
+
+    #[test]
+    fn test_calculate_bandwidth_savings() {
+        let config = CostConfig {
+            cost_per_network_gb: 0.50,
+            ..Default::default()
+        };
+
+        let original = 2 * 1024 * 1024 * 1024; // 2GB
+        let compressed = 1 * 1024 * 1024 * 1024; // 1GB
+        let savings = calculate_bandwidth_savings(original, compressed, &config);
+        assert_eq!(savings, 0.50);
+
+        let savings_cents = calculate_bandwidth_savings_cents(original, compressed, &config);
+        assert_eq!(savings_cents, 50);
+
+        assert_eq!(calculate_bandwidth_savings(-1, 100, &config), 0.0);
+        assert_eq!(calculate_bandwidth_savings(100, -1, &config), 0.0);
     }
 
     #[test]
