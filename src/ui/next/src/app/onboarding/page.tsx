@@ -685,40 +685,20 @@ export default function OnboardingWizard() {
                       <input
                         type="email"
                         value={adminEmail}
-                        onChange={(e) => {
-                          setAdminEmail(e.target.value);
-                          if (e.target.value.trim().length === 0) {
-                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Required field.' }));
-                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.target.value)) {
-                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Invalid email address.' }));
-                          } else {
-                            setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
-                          }
-                        }}
+                        onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
-                      {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
                       <input
                         type="password"
                         value={adminPassword}
-                        onChange={(e) => {
-                          setAdminPassword(e.target.value);
-                          if (e.target.value.trim().length === 0) {
-                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Required field.' }));
-                          } else if (e.target.value.length < 8) {
-                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Must be at least 8 characters.' }));
-                          } else {
-                            setValidationErrors(prev => { const { adminPassword, ...rest } = prev; return rest; });
-                          }
-                        }}
+                        onChange={(e) => setAdminPassword(e.target.value)}
                         placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
-                      {validationErrors.adminPassword && <p className="text-red-500 text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>
                   </div>
                 </div>
@@ -768,24 +748,8 @@ export default function OnboardingWizard() {
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={() => {
-                     let hasErrors = false;
-                     let newErrors = { ...validationErrors };
-                     if (!adminEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
-                        newErrors.adminEmail = !adminEmail ? 'Required field.' : 'Invalid email address.';
-                        hasErrors = true;
-                     }
-                     if (!adminPassword || adminPassword.length < 8) {
-                        newErrors.adminPassword = !adminPassword ? 'Required field.' : 'Must be at least 8 characters.';
-                        hasErrors = true;
-                     }
-                     if (hasErrors) {
-                        setValidationErrors(newErrors);
-                        return;
-                     }
-                     handleStartOnboarding();
-                  }}
-                  disabled={isLoading || Object.keys(validationErrors).length > 0}
+                  onClick={handleStartOnboarding}
+                  disabled={isLoading}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
