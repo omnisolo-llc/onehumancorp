@@ -160,9 +160,7 @@ impl PlanAndExecuteOrchestrator {
                     replace_in_json(&mut resolved_args, &r);
                     drop(r);
 
-                    let res = tool
-                        .execute
-                        .execute(resolved_args)
+                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2)
                         .await
                         .map_err(|e| format!("Tool execution failed: {}", e))?;
 
