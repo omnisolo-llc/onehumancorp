@@ -39,11 +39,9 @@ impl BaseFSProvider {
     fn resolve_path(&self, path_str: &str) -> io::Result<PathBuf> {
         let path = Path::new(path_str);
         // Prevent absolute path bypassing
-        let path = if path.is_absolute() {
-            path.strip_prefix("/").unwrap_or(path)
-        } else {
-            path
-        };
+        if path.is_absolute() {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Absolute paths not allowed"));
+        }
 
         let full_path = self.root_dir.join(path);
         let normalized = normalize_path(&full_path);
@@ -95,6 +93,7 @@ impl FileSystemProvider for BaseFSProvider {
                 .open(resolved)
                 .await?;
             file.write_all(content).await?;
+            file.sync_all().await?;
         }
         #[cfg(not(unix))]
         {

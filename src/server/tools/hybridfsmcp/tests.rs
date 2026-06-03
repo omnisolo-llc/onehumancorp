@@ -12,7 +12,7 @@ async fn test_local_fs_provider() {
     // Test write and read
     provider.write_file("test.txt", b"hello world").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"hello world");
+    assert_eq!(content, b"hello world".to_vec());
 
     // Test list dir
     provider.write_file("dir/file1.txt", b"1").await.unwrap();
@@ -32,7 +32,7 @@ async fn test_cloud_fs_provider() {
     // Test write and read
     provider.write_file("test.txt", b"cloud content").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"cloud content");
+    assert_eq!(content, b"cloud content".to_vec());
 
     // Verify it was written to tenant dir
     let tenant_file = dir.path().join(&tenant_id).join("test.txt");
@@ -135,9 +135,8 @@ async fn test_provider_path_traversal() {
     assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
 
     // Attempt to write an absolute path that is stripped and becomes in bounds
-    provider.write_file("/in_bounds.txt", b"absolute").await.unwrap();
-    let content = provider.read_file("in_bounds.txt").await.unwrap();
-    assert_eq!(content, b"absolute");
+    let err = provider.write_file("/in_bounds.txt", b"absolute").await.unwrap_err();
+    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
 
     // Check that an absolute path out of bounds doesn't traverse
     let err = provider.read_file("/../etc/passwd").await.unwrap_err();
