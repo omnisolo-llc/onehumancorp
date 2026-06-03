@@ -90,13 +90,54 @@ impl Department for CustomerSuccessAgent {
                 "No relevant memory found.".to_string()
             };
 
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
-                "Yes, we do vegan cakes!"
+            let mut final_risk = risk;
+
+            // Intelligent intent parsing using LLM instead of simple string containment
+            let prompt = format!(
+                "Classify the customer intent from this message. Respond with EXACTLY one of these labels, followed by a colon and the extracted order ID if applicable:
+                - ORDER_STATUS_REQUEST: <order_id>
+                - VEGAN_INQUIRY
+                - GENERAL_INQUIRY
+
+                Message: '{}'", message
+            );
+
+            let intent_result = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
+                if provider == "minimax" {
+                    let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| "GENERAL_INQUIRY".to_string())
+                } else {
+                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| "GENERAL_INQUIRY".to_string())
+                }
             } else {
-                "Thank you for your message. We will get back to you shortly."
+                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| "GENERAL_INQUIRY".to_string())
             };
 
-            let description = if risk == ActionRisk::AutoExecute {
+            let generated_response = if intent_result.starts_with("ORDER_STATUS_REQUEST") {
+                final_risk = ActionRisk::AutoExecute;
+                let parts: Vec<&str> = intent_result.split(':').collect();
+                if parts.len() > 1 {
+                    let order_id = parts[1].trim();
+                    if order_id.is_empty() || order_id.to_lowercase() == "none" || order_id.to_lowercase() == "null" || order_id == "<order_id>" {
+                        "Could you please provide your order number?".to_string()
+                    } else {
+                        let status = self.orchestrator.get_order_status(&event.tenant_id, order_id).await.unwrap_or(None);
+                        if let Some(s) = status {
+                            format!("Your order {} is currently: {}.", order_id, s)
+                        } else {
+                            format!("I couldn't find an active order with ID {}.", order_id)
+                        }
+                    }
+                } else {
+                    "Could you please provide your order number?".to_string()
+                }
+            } else if intent_result.starts_with("VEGAN_INQUIRY") || (message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan")) {
+                "Yes, we do vegan cakes!".to_string()
+            } else {
+                "Thank you for your message. We will get back to you shortly.".to_string()
+            };
+
+            let description = if final_risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
                 "Draft email for review".to_string()
@@ -113,7 +154,7 @@ impl Department for CustomerSuccessAgent {
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),
-                risk,
+                final_risk,
                 action_payload,
             ).await.map(|_| ())?;
 

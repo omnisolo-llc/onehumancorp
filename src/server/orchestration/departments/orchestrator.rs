@@ -1034,6 +1034,41 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn get_order_status(&self, tenant_id: &str, order_id: &str) -> Result<Option<String>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT status FROM orders WHERE tenant_id = $1 AND id = $2")
+                    .bind(tenant_id)
+                    .bind(order_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let status: Option<String> = r.try_get("status").ok();
+                    Ok(Some(status.unwrap_or_else(|| "unknown".to_string())))
+                } else {
+                    Ok(None)
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT status FROM orders WHERE tenant_id = ? AND id = ?")
+                    .bind(tenant_id)
+                    .bind(order_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let status: Option<String> = r.try_get("status").ok();
+                    Ok(Some(status.unwrap_or_else(|| "unknown".to_string())))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+
     pub async fn get_booking(&self, tenant_id: &str, booking_id: &str) -> Result<Option<String>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
