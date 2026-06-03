@@ -21,7 +21,7 @@ impl SupportTicketRepository {
             SupportTicket,
             r#"
             INSERT INTO support_tickets (tenant_id, channel, external_message_id, customer_id, status)
-            VALUES ($1::UUID, $2, $3, $4::UUID, 'open')
+            VALUES ($1, $2, $3, $4, 'open')
             RETURNING
                 id::TEXT as "id!",
                 tenant_id::TEXT as "tenant_id!",
@@ -54,7 +54,7 @@ impl SupportTicketRepository {
             TicketMessage,
             r#"
             INSERT INTO ticket_messages (ticket_id, sender_type, content, ai_confidence)
-            VALUES ($1::UUID, $2, $3, $4)
+            VALUES ($1, $2, $3, $4)
             RETURNING
                 id::TEXT as "id!",
                 ticket_id::TEXT as "ticket_id!",
@@ -88,7 +88,7 @@ impl SupportTicketRepository {
                 created_at,
                 updated_at
             FROM support_tickets
-            WHERE tenant_id = $1::UUID AND status IN ('open', 'draft')
+            WHERE tenant_id = $1 AND status IN ('open', 'draft')
             ORDER BY created_at DESC
             "#,
             tenant_id
@@ -111,7 +111,7 @@ impl SupportTicketRepository {
                 ai_confidence::FLOAT8 as ai_confidence,
                 created_at
             FROM ticket_messages
-            WHERE ticket_id = $1::UUID
+            WHERE ticket_id = $1
             ORDER BY created_at ASC
             "#,
             ticket_id

@@ -1,7 +1,7 @@
 CREATE TABLE support_tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id),
-    customer_id UUID REFERENCES customers(id),
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    customer_id TEXT REFERENCES customers(id),
     channel VARCHAR(50) NOT NULL, -- 'instagram', 'whatsapp', 'sms', 'web'
     external_message_id VARCHAR(255),
     status VARCHAR(50) NOT NULL, -- 'open', 'draft', 'resolved'
@@ -12,7 +12,7 @@ CREATE TABLE support_tickets (
 ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Tenant isolation for support_tickets" ON support_tickets
-    USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+    USING (tenant_id = current_setting('app.current_tenant_id')::TEXT);
 
 CREATE TABLE ticket_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -26,4 +26,4 @@ CREATE TABLE ticket_messages (
 ALTER TABLE ticket_messages ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Tenant isolation for ticket_messages" ON ticket_messages
-    USING (ticket_id IN (SELECT id FROM support_tickets WHERE tenant_id = current_setting('app.current_tenant_id')::UUID));
+    USING (ticket_id IN (SELECT id FROM support_tickets WHERE tenant_id = current_setting('app.current_tenant_id')::TEXT));
