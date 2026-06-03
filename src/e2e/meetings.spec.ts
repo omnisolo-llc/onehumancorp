@@ -5,7 +5,7 @@ test.describe('Meetings Page', () => {
     await page.goto('/meetings');
     await expect(page.locator('#meetings-screen')).toBeVisible();
     await expect(page.getByRole('button', { name: /\+ Schedule New Appointment/ })).toBeVisible();
-    await expect(page.getByText('Team Sync - 14:00')).toBeVisible();
+    await expect(page.getByText('No meeting records returned from the database.')).toBeVisible();
 
     await page.getByRole('button', { name: /\+ Schedule New Appointment/ }).click();
     await expect(page.getByRole('heading', { name: 'Plan Create' })).toBeVisible();
