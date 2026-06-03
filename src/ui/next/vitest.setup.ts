@@ -28,8 +28,7 @@ vi.mock('next/link', () => {
     default: ({ children, href, ...rest }: any) => {
       // @ts-ignore
       const React = require('react')
-      const { passHref, legacyBehavior, ...cleanedRest } = rest
-      return React.createElement('a', { href, ...cleanedRest }, children)
+      return React.createElement('a', { href, ...rest }, children)
     }
   }
 })
@@ -39,7 +38,6 @@ vi.mock('next/image', () => ({
   default: (props: any) => {
     // @ts-ignore
     const React = require('react')
-      const { passHref, legacyBehavior, ...cleanedRest } = rest
     return React.createElement('img', props)
   }
 }))
