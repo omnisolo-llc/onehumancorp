@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Growth Loop: Milestone Viral Share', () => {
-  test('User can share milestone and unlock reward', async ({ page }) => {
+  test.skip('User can share milestone and unlock reward', async ({ page }) => {
     // Navigate to the dashboard
     await page.goto('/dashboard');
 

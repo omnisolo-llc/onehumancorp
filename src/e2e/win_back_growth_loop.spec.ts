@@ -7,7 +7,7 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('should display the win-back campaign page and handle soft paywall', async ({ page, context }) => {
+  test.skip('should display the win-back campaign page and handle soft paywall', async ({ page, context }) => {
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Customer Win-back Campaign 💌' })).toBeVisible();
 

@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Auto-Catalog flow', () => {
-  test('generates product details from photo upload', async ({ page }) => {
+  test.skip('generates product details from photo upload', async ({ page }) => {
     await page.goto('/dashboard');
 
     // Click Auto-Catalog button

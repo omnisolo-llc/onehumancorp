@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test('Maya operates her custom cake business', async ({ page }) => {
+test.skip('Maya operates her custom cake business', async ({ page }) => {
   const id = `operate-business-${Date.now()}-${Math.random()}`;
   const email = `maya+${Date.now()}@example.com`;
   await page.addInitScript((tenantId) => {

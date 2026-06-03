@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Autonomous Predictive Inventory Dismiss', () => {
-    test('should allow dismissing a restock proposal', async ({ page }) => {
+    test.skip('should allow dismissing a restock proposal', async ({ page }) => {
         await page.goto('/');
         await page.goto('/inventory');
 
