@@ -11,8 +11,8 @@ vi.mock('next/navigation', () => ({
 describe('SmartPricingPage', () => {
   it('renders the smart pricing header', () => {
     render(<SmartPricingPage />);
-    expect(screen.getByText('Smart Pricing')).toBeDefined();
-    expect(screen.getByText(/Let AI automatically adjust your prices/i)).toBeDefined();
+    expect(screen.getByText('Smart Pricing Optimizer 💸')).toBeDefined();
+    expect(screen.getByText(/Let our AI analyze market trends and competitor pricing/i)).toBeDefined();
   });
 
   it('toggles smart pricing and shows configuration', () => {

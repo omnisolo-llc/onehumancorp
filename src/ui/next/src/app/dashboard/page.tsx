@@ -481,6 +481,9 @@ export default function Dashboard() {
              <Link href="/business-analytics" className="px-4 py-2 bg-teal-100 text-teal-800 rounded-md text-sm font-medium hover:bg-teal-200 transition-colors border border-teal-200 shadow-sm">
                Business Analytics
              </Link>
+             <Link href="/smart-pricing" className="px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium hover:bg-green-200 transition-colors border border-green-200 shadow-sm">
+               Smart Pricing 💸
+             </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
@@ -1205,9 +1208,35 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Smart Pricing Optimizer */}
+         <section className="mb-8 mt-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Smart Pricing</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">Revenue Optimization</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Maximize Your Profit Margins</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI analyze market trends and competitor pricing to suggest the optimal price point for your products. Boost your revenue instantly.</p>
+                    <Link href="/smart-pricing" className="inline-flex px-5 py-2.5 bg-green-600 text-white font-bold rounded-xl shadow-md hover:bg-green-700 transition-all font-inter text-sm items-center gap-2">
+                        <span className="text-lg">💸</span> Optimize Pricing
+                    </Link>
+                </div>
+                <div className="w-full md:w-1/3 bg-green-50 rounded-xl p-4 flex flex-col items-center justify-center border border-green-100 min-h-[160px] relative overflow-hidden">
+                    <div className="absolute top-2 right-2 text-3xl opacity-20">📈</div>
+                    <div className="text-4xl mb-3 z-10">💰</div>
+                    <span className="text-sm font-medium text-green-800 text-center z-10">AI Pricing Analysis</span>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Post-Purchase Social Share */}
          {showSaleCelebration && (
-         <section className="mb-8 mt-8">
+         <section className="mb-8">
             <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl">
