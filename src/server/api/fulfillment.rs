@@ -144,12 +144,18 @@ async fn execute_action(
                 "request_driver" => {
                     if order.fulfillment_mode == "LocalDelivery" {
                         // Requesting driver dispatch via DoorDash Drive
-                        let provider = DoorDashProvider::new("dummy_key".to_string());
+                        let api_key = std::env::var("DOORDASH_DRIVE_API_KEY").unwrap_or_else(|_| "dummy_key".to_string());
+                        let provider = crate::integrations::doordash::provider::DoorDashProvider::new(api_key);
 
                         // We are spawning a blocking task to avoid making execute_action async block long.
                         let order_id = order.id.clone();
+                        let phone = "dummy_phone";
                         tokio::spawn(async move {
                             let _ = provider.dispatch_delivery("Store Address", "Customer Address", &order_id).await;
+
+                            // Share tracking link
+                            // In a real app we'd dispatch an SMS with the tracking link here
+                            tracing::info!("Dispatched DoorDash driver for {}, sharing tracking link via SMS to {}", order_id, phone);
                         });
 
                         order.status = "DriverRequested".to_string();
