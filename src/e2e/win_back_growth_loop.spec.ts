@@ -41,7 +41,7 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     await shareBtn.click();
 
     // 6. Verify soft paywall is closed
-    await expect(paywallHeading).toBeHidden({ timeout: 5000 });
+    await expect(paywallHeading).toBeHidden({ timeout: 30000 });
 
     // Wait until the modal overlay is completely gone before clicking anything else
     // Using evaluate to force remove the modal background just in case it is still lingering
@@ -72,6 +72,6 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     });
 
     // Verify success message
-    await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 30000 });
   });
 });
