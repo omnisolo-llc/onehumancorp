@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS fulfillment_batches CASCADE;
+DROP TABLE IF EXISTS subscribers CASCADE;
