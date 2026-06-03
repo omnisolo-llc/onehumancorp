@@ -54,7 +54,7 @@ export default function WebsiteBuilderPage() {
         if (res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0 && data.wizardState) {
-            useWebsiteBuilderStore.setState(data.wizardState);
+            useWebsiteBuilderStore.getState().loadState?.(data.wizardState);
           }
         }
       } catch (e) {
@@ -374,7 +374,7 @@ export default function WebsiteBuilderPage() {
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep(1)}
                     >
-                      Start My Business
+                      Start My Business Next
                     </button>
 
                     <button

@@ -93,7 +93,7 @@ impl TaskQueue for MemoryTaskQueue {
                 // Pop until we find a valid pending job, or queue is empty
                 while let Some(job_id) = q.pop_front() {
                     if let Some(mut job_ref) = self.jobs.get_mut(&job_id) {
-                        if job_ref.status == "QUEUED" {
+                        if job_ref.status == "PENDING" {
                             job_ref.status = "IN_PROGRESS".to_string();
                             job_ref.updated_at = Utc::now();
                             return Ok(Some(job_ref.clone()));
@@ -195,7 +195,7 @@ impl TaskQueue for PostgresTaskQueue {
         }
 
         let org_ids_vec: Vec<String> = org_ids.into_iter().collect();
-        let counts: Vec<(String, i64)> = sqlx::query_as("SELECT tenant_id, COUNT(*) FROM sub_agent_queue WHERE tenant_id = ANY($1) AND status = 'QUEUED' GROUP BY tenant_id")
+        let counts: Vec<(String, i64)> = sqlx::query_as("SELECT tenant_id, COUNT(*) FROM sub_agent_queue WHERE tenant_id = ANY($1) AND status = 'PENDING' GROUP BY tenant_id")
             .bind(&org_ids_vec)
             .fetch_all(&mut *tx)
             .await
@@ -244,7 +244,7 @@ impl TaskQueue for PostgresTaskQueue {
              .push_bind(org_id)
              .push_bind(parent_task_id)
              .push_bind(new_payload)
-             .push_bind("QUEUED")
+             .push_bind("PENDING")
              .push_bind(run_after);
         });
 
@@ -273,7 +273,7 @@ impl TaskQueue for PostgresTaskQueue {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
 
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'QUEUED'")
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'PENDING'")
             .bind(&org_id)
             .fetch_one(&mut *tx)
             .await
@@ -291,7 +291,7 @@ impl TaskQueue for PostgresTaskQueue {
             .bind(org_id)
             .bind(job.parent_task_id)
             .bind(new_payload)
-            .bind("QUEUED")
+            .bind("PENDING")
             .bind(run_after)
             .execute(&mut *tx)
             .await
@@ -304,7 +304,7 @@ impl TaskQueue for PostgresTaskQueue {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await
@@ -420,7 +420,7 @@ impl Worker {
                                     if job.retry_count < job.max_retries {
                                         let mut retry_job = job.clone();
                                         retry_job.retry_count += 1;
-                                        retry_job.status = "QUEUED".to_string();
+                                        retry_job.status = "PENDING".to_string();
                                         retry_job.next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(5);
                                         let _ = self.queue.requeue(retry_job).await;
                                     } else {
@@ -814,7 +814,7 @@ impl TaskQueueService {
             .bind(task.parent_id)
             .bind(task.epic_id)
             .bind(task.title)
-            .bind("QUEUED")
+            .bind("PENDING")
             .bind(task.assigned_agent)
             .bind(payload_str)
             .bind(task.tenant_id)
@@ -831,7 +831,7 @@ impl TaskQueueService {
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'QUEUED' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
             .bind(agent_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -944,7 +944,7 @@ impl SqliteTaskQueue {
                 task_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 payload BLOB,
-                status TEXT DEFAULT 'QUEUED'
+                status TEXT DEFAULT 'PENDING'
             );"
         ).execute(&self.pool).await?;
         Ok(())
@@ -989,7 +989,7 @@ impl TaskQueue for SqliteTaskQueue {
         // To avoid SQLITE_BUSY lock-upgrade errors when claiming tasks in SQLite, execute an atomic UPDATE ... RETURNING query
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'QUEUED' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
+            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
             role_placeholders
         );
 
@@ -1053,7 +1053,7 @@ impl TaskQueue for SqliteTaskQueue {
         payload_map["max_attempts"] = serde_json::json!(job.max_retries);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
-        sqlx::query("UPDATE local_queue_jobs SET status = 'QUEUED', payload = ? WHERE id = ? AND tenant_id = ?")
+        sqlx::query("UPDATE local_queue_jobs SET status = 'PENDING', payload = ? WHERE id = ? AND tenant_id = ?")
             .bind(new_payload)
             .bind(&job.id)
             .bind(&job.tenant_id)
@@ -1304,7 +1304,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Test Task".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({"action": "test"}),
                 dependencies: serde_json::json!([]),
@@ -1436,7 +1436,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Test Task to Fail".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({"action": "test_fail"}),
                 dependencies: serde_json::json!([]),
@@ -1491,7 +1491,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Parent Task".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({}),
                 dependencies: serde_json::json!([]),
@@ -1508,7 +1508,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Child Task".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({}),
                 dependencies: serde_json::json!([task_id_parent]),
