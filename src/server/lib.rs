@@ -3731,7 +3731,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .tooltip-box.show { opacity: 1; transform: translateY(0); }
             #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
             #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
-            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
+            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: rgba(30, 30, 30, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
             #global-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
             #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
             #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
@@ -7638,7 +7638,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
                     <button id="global-help-btn" aria-label="Help" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
-                    <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
+                    <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'" placeholder="ask-ai-tooltip">✨ Ask anything</button>
 
                     <div id="ai-chat-widget">
                         <div id="ai-chat-header">

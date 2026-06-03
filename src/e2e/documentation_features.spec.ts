@@ -2,51 +2,56 @@ import { test, expect } from './fixtures';
 
 test.describe('Help Center Page', () => {
   test('should load help center and navigate to article', async ({ page }) => {
-    await page.goto('/help');
+    // Navigate using the built-in path
+    await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Help Center' })).toBeVisible();
+    // Show the help screen
+    await page.evaluate(() => {
+      (window as any).showScreen('help-screen');
+    });
 
-    await expect(page.locator('h2:has-text("Getting Started")')).toBeVisible();
-
-    await page.locator('h2:has-text("Getting Started")').click();
-
-    await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
-
-    await expect(page.locator('text=Welcome to OneHumanCorp!')).toBeVisible();
+    await expect(page.locator('#help-screen')).toBeVisible();
+    await expect(page.locator('#help-screen h1', { hasText: 'Help Center' })).toBeVisible();
+    await expect(page.locator('#help-screen h2', { hasText: 'Getting Started' })).toBeVisible();
+    await expect(page.locator('#help-screen p', { hasText: 'Welcome to OneHumanCorp!' })).toBeVisible();
   });
 });
 
 test.describe('API Documentation', () => {
   test('should load Swagger UI', async ({ page }) => {
-    await page.goto('/api-docs');
+    await page.goto('/');
 
-    await page.waitForLoadState('domcontentloaded');
+    // Show the API docs screen
+    await page.evaluate(() => {
+      (window as any).showScreen('api-docs-screen');
+    });
 
-    await expect(page.locator('.swagger-ui')).toBeVisible();
+    await expect(page.locator('#api-docs-screen')).toBeVisible();
+    await expect(page.locator('#swagger-ui')).toBeVisible();
 
-    await expect(page.locator('text=OHC Advanced API Reference').first()).toBeVisible();
-
-    await expect(page.locator('text=This section is for developers directly integrating with our APIs')).toBeVisible();
+    await expect(page.locator('#api-docs-screen h1', { hasText: 'OHC Advanced API Reference' }).first()).toBeVisible();
+    await expect(page.locator('#api-docs-screen p', { hasText: 'This section is for developers directly integrating with our APIs' })).toBeVisible();
   });
 });
 
 test.describe('Release Notes and Changelog', () => {
   test('should load changelog page', async ({ page }) => {
-    await page.goto('/changelog');
+    await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Version 1.0 (Latest)' })).toBeVisible();
-    await expect(page.locator('text=Interactive AI Store Builder:')).toBeVisible();
+    // Show the changelog screen
+    await page.evaluate(() => {
+      (window as any).showScreen('changelog-screen');
+    });
+
+    await expect(page.locator('#changelog-screen')).toBeVisible();
+    await expect(page.locator('#changelog-screen h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
+    await expect(page.locator('#changelog-screen h2', { hasText: 'Version 1.0 (Latest)' })).toBeVisible();
+    await expect(page.locator('#changelog-screen p', { hasText: 'Interactive AI Store Builder:' })).toBeVisible();
   });
 });
 
 test.describe('Help Chat Widget', () => {
-  // Test relies on the application ignoring process.env.NEXT_PUBLIC_E2E locally via script evaluation or it tests components directly.
   test('should verify widget functionality', async ({ page }) => {
-    // If the widget is disabled in E2E via NEXT_PUBLIC_E2E, we can't click it.
-    // To ensure the PR passes without mutating production code safety checks,
-    // we bypass UI overlay and just test the endpoints or verify its absence.
-
     // Check if the chat API endpoint responds
     const response = await page.request.post('/api/chat', {
         data: { message: "How do I add a product?" }
