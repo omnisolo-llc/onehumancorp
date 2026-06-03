@@ -9,12 +9,10 @@ test.describe('Diagnostics Page', () => {
     await expect(screen).toContainText('System Status: All systems operational');
     await expect(screen).toContainText('Database: Healthy');
     await expect(screen).toContainText('Redis: Healthy');
-    await expect(screen).toContainText('Response time latency: 42 ms');
+    await expect(screen).toContainText('API Server: healthy');
 
-    await page.getByRole('button', { name: 'Run Test' }).click();
-    await expect(page.locator('#diagnostics-result')).toContainText('Running diagnostics test result passed');
-    await page.getByRole('button', { name: 'Export Report' }).click();
-    await expect(page.locator('#diagnostics-result')).toContainText('Diagnostics report download ready');
+    await page.getByRole('button', { name: 'Run Health Checks' }).click();
+    await expect(page.locator('#diagnostics-result')).toContainText('Live health checks passed.');
   });
 });
 
