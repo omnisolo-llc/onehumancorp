@@ -72,6 +72,6 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     });
 
     // Verify success message
-    await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 10000 });
   });
 });

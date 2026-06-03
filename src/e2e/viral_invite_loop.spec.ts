@@ -6,14 +6,14 @@ test.describe('Viral Invite Loop on Team Page', () => {
 
     // Check if the growth component is visible
     await expect(page.getByRole('heading', { name: 'Grow Your Team' })).toBeVisible();
-    await expect(page.getByText('Bridge your local sovereignty with cloud-native collaboration.')).toBeVisible();
+    await expect(page.getByText('Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space and both get $50 in cloud credit!')).toBeVisible();
 
     // Click the invite button
     await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
 
     // Verify modal content
     await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).toBeVisible();
-    await expect(page.getByText('Share this link to provision a temporary multi-tenant context')).toBeVisible();
+    await expect(page.getByText('Share this link to provision a temporary multi-tenant context for your collaborator. When they join, you both receive $50 in cloud credit!')).toBeVisible();
 
     // Verify loading spinner (optional) and then the generated link
     await expect(page.locator('#cloud-bridge-invite-link')).toHaveValue(/https:\/\/ohc\.app\/invite\/.*/);

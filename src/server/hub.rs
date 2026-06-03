@@ -43,6 +43,7 @@ pub struct Hub {
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
     referral_tracker: Arc<crate::services::growth::referrals::ReferralTracker>,
+    pub viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
 }
 
 impl Hub {
@@ -119,7 +120,12 @@ impl Hub {
             event_log_tx,
             redis_client,
             referral_tracker: Arc::new(crate::services::growth::referrals::ReferralTracker::new()),
+            viral_loop_tracker: Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()),
         }
+    }
+
+    pub fn viral_loop_tracker(&self) -> Arc<crate::services::growth::viral_loop::ViralLoopTracker> {
+        self.viral_loop_tracker.clone()
     }
 
     pub fn referral_tracker(&self) -> Arc<crate::services::growth::referrals::ReferralTracker> {

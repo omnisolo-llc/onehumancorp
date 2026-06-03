@@ -271,15 +271,16 @@ impl CostAuditor {
         *tenant_compute_costs.get(tenant_id).unwrap_or(&0.0)
     }
 
+    pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
+        let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
+        *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
+    }
+
     pub fn get_tenant_network_cost(&self, tenant_id: &str) -> f64 {
         let tenant_network_costs = self.tenant_network_costs.lock().unwrap();
         *tenant_network_costs.get(tenant_id).unwrap_or(&0.0)
     }
 
-    pub fn get_tenant_bandwidth_savings(&self, tenant_id: &str) -> f64 {
-        let tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
-        *tenant_bandwidth_savings.get(tenant_id).unwrap_or(&0.0)
-    }
 
     pub fn calculate_roi(&self, cost: f64, revenue: f64) -> f64 {
         calculator::calculate_roi(cost, revenue)

@@ -813,6 +813,7 @@ async fn handle_team_invite_accept(
 
     match tracker.accept_invite(&req.id).await {
         Ok(_) => {
+            state.hub.viral_loop_tracker().record_invite_accepted(&req.id);
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
@@ -831,6 +832,7 @@ async fn handle_create_team_invite(
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(_) => {
+            state.hub.viral_loop_tracker().record_invite_sent(&req.inviter_id);
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
