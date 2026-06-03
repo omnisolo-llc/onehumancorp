@@ -200,16 +200,6 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Voice Agent Integration */}
-        <section className="mb-8 border-b pb-8">
-          <h2 className="text-xl font-semibold mb-2 text-gray-800">Voice Agent Settings</h2>
-          <p className="text-sm text-gray-500 mb-4">Manage your AI Receptionist and call settings.</p>
-          <Link href="/settings/voice-agent" className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 font-medium rounded-lg hover:bg-indigo-100 transition-colors">
-            Configure Voice Agent
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-          </Link>
-        </section>
-
         {/* Profile */}
         <section className="mb-8 border-b pb-8">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Profile</h2>
