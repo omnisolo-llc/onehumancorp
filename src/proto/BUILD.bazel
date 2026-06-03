@@ -1,5 +1,238 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_go//proto:def.bzl", "go_proto_library")
+load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
+
+
+exports_files([
+    "agent.proto",
+    "agent_service.proto",
+    "app.proto",
+    "billing.proto",
+    "common.proto",
+    "docs.proto",
+    "hub.proto",
+    "model.proto",
+    "organization.proto",
+    "skills.proto",
+], visibility = ["//visibility:public"])
+
+# ── Hub / Orchestration ────────────────────────────────────────────────────────
+
+proto_library(
+    name = "hub_proto",
+    srcs = ["hub.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "hub",
+    proto = ":hub_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Model ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "model_proto",
+    srcs = ["model.proto"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "model",
+    proto = ":model_proto",
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Common ─────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "common_proto",
+    srcs = ["common.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "common",
+    proto = ":common_proto",
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Agent ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "agent_proto",
+    srcs = ["agent.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "agent",
+    proto = ":agent_proto",
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Agent Service ──────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "agent_service_proto",
+    srcs = ["agent_service.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "agent_service",
+    proto = ":agent_service_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Skills ─────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "skills_proto",
+    srcs = ["skills.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "skills",
+    proto = ":skills_proto",
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Billing ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "billing_proto",
+    srcs = ["billing.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "billing",
+    proto = ":billing_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Organization ───────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "organization_proto",
+    srcs = ["organization.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "organization",
+    proto = ":organization_proto",
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── App API ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "app_proto",
+    srcs = ["app.proto"],
+    deps = [
+        ":agent_proto",
+        ":billing_proto",
+        ":organization_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "app",
+    proto = ":app_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── MCP Proxy ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "mcp_proxy_proto",
+    srcs = ["mcp_proxy.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "mcp_proxy",
+    proto = ":mcp_proxy_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── MCP Proxy ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "interop_proto",
+    srcs = ["interop.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "interop",
+    proto = ":interop_proto",
+    visibility = ["//visibility:public"],
+)
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "docs_proto",
+    srcs = ["docs.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "docs",
+    proto = ":docs_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Delivery ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "delivery_proto",
+    srcs = ["delivery.proto"],
+    deps = [
+        ":organization_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "delivery",
+    proto = ":delivery_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
 
 proto_library(
     name = "events_proto",
