@@ -131,25 +131,46 @@ impl VectorRepository {
     }
 
     pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+        self.semantic_search_with_agent_filter(tenant_id, None, query_embedding, limit).await
+    }
+
+    pub async fn semantic_search_with_agent_filter(&self, tenant_id: &str, filter_agent_id: Option<&str>, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                     FROM consolidated_memory \
-                     WHERE tenant_id = $1 \
-                     ORDER BY embedding <=> $2::vector \
-                     LIMIT $3"
-                )
-                .bind(tenant_id)
-                .bind(emb_str)
-                .bind(limit)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| e.to_string())?;
+                let rows = if let Some(agent_id) = filter_agent_id {
+                    sqlx::query(
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = $1 AND agent_id = $4 \
+                         ORDER BY embedding <=> $2::vector \
+                         LIMIT $3"
+                    )
+                    .bind(tenant_id)
+                    .bind(emb_str.clone())
+                    .bind(limit)
+                    .bind(agent_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+                } else {
+                    sqlx::query(
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = $1 \
+                         ORDER BY embedding <=> $2::vector \
+                         LIMIT $3"
+                    )
+                    .bind(tenant_id)
+                    .bind(emb_str.clone())
+                    .bind(limit)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?
+                };
 
                 let mut ids_to_update = Vec::new();
 
@@ -161,8 +182,8 @@ impl VectorRepository {
                     let content: String = row.get("content");
                     let emb_str_res: String = row.get("embedding");
                     let source_type: String = row.get("source_type");
-                    let created_at: DateTime<Utc> = row.get("created_at");
-                    let last_referenced_at: DateTime<Utc> = row.get("last_referenced_at");
+                    let created_at: chrono::DateTime<chrono::Utc> = row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map_err(|e| e.to_string())?;
+                    let last_referenced_at: chrono::DateTime<chrono::Utc> = row.try_get::<chrono::DateTime<chrono::Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?;
                     let reference_count: i32 = row.get("reference_count");
                     let reliability_score: i32 = row.get("reliability_score");
                     let owner_override: bool = row.get("owner_override");
@@ -202,19 +223,36 @@ impl VectorRepository {
                     .is_ok();
 
                 if has_vec_extension {
-                    let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                         FROM consolidated_memory \
-                         WHERE tenant_id = ? \
-                         ORDER BY vec_distance_cosine(embedding, ?) \
-                         LIMIT ?"
-                    )
-                    .bind(tenant_id)
-                    .bind(&emb_str)
-                    .bind(limit)
-                    .fetch_all(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    let rows = if let Some(agent_id) = filter_agent_id {
+                        sqlx::query(
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? AND agent_id = ? \
+                             ORDER BY vec_distance_cosine(embedding, ?) \
+                             LIMIT ?"
+                        )
+                        .bind(tenant_id)
+                        .bind(agent_id)
+                        .bind(&emb_str)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                    } else {
+                        sqlx::query(
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                             FROM consolidated_memory \
+                             WHERE tenant_id = ? \
+                             ORDER BY vec_distance_cosine(embedding, ?) \
+                             LIMIT ?"
+                        )
+                        .bind(tenant_id)
+                        .bind(&emb_str)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                    };
 
                     let mut ids_to_update = Vec::new();
 
@@ -261,16 +299,27 @@ impl VectorRepository {
                         let _ = q.execute(pool).await;
                     }
                 } else {
-                    let rows = sqlx::query(
-                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
-                         FROM consolidated_memory \
-                         WHERE tenant_id = ? \
-                         LIMIT 1000"
-                    )
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    // Fallback for tests environments without sqlite-vec loaded:
+                    let rows = if let Some(agent_id) = filter_agent_id {
+                        sqlx::query(
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                             FROM consolidated_memory WHERE tenant_id = ? AND agent_id = ? LIMIT 1000"
+                        )
+                        .bind(tenant_id)
+                        .bind(agent_id)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                    } else {
+                        sqlx::query(
+                            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                             FROM consolidated_memory WHERE tenant_id = ? LIMIT 1000"
+                        )
+                        .bind(tenant_id)
+                        .fetch_all(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                    };
 
                     let mut all_records = Vec::new();
                     for row in rows {
@@ -316,14 +365,10 @@ impl VectorRepository {
                 }
             }
         }
-
         Ok(results)
     }
 
-    /// Prunes stale context to prevent unbounded memory growth.
-    /// It deletes records older than `older_than` where `owner_override = FALSE`,
-    /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
-    pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")

@@ -449,7 +449,7 @@ impl AgentServiceImpl {
             } else {
                 vec![]
             };
-            store.semantic_search(&org_id, &embedding, 5).await.map(|records| {
+            store.semantic_search_with_agent_filter(&org_id, Some(&self.agent_id), &embedding, 5).await.map(|records| {
                 records.into_iter().map(|r| MemoryEntry {
                     memory_id: r.id,
                     context: r.content,
