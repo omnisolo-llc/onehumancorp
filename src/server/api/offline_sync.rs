@@ -59,19 +59,34 @@ pub async fn offline_sync_handler(
         match result {
             Ok(Some(_)) => {
                 // Publish mesh event
+                let product_name = sqlx::query_scalar::<_, String>("SELECT title FROM products WHERE id = $1")
+                    .bind(&mutation.product_id)
+                    .fetch_optional(&db)
+                    .await
+                    .unwrap_or(None)
+                    .unwrap_or("Product".to_string());
+                let inventory_count = sqlx::query_scalar::<_, i32>("SELECT inventory_count FROM products WHERE id = $1")
+                    .bind(&mutation.product_id)
+                    .fetch_optional(&db)
+                    .await
+                    .unwrap_or(None)
+                    .unwrap_or(0);
+
                 let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                    action: "InventoryUpdated".to_string(),
+                    action: "InventoryStatusChanged".to_string(),
                     agent_id: "system".to_string(),
                     status: "".to_string(),
                     msg_id: uuid::Uuid::new_v4().to_string(),
                     payload: serde_json::json!({
                         "product_id": mutation.product_id,
+                        "product_name": product_name,
+                        "inventory_count": inventory_count,
                         "transaction_id": mutation.transaction_id,
                         "quantity_deducted": mutation.quantity_deducted,
                         "tenant_id": tenant_id
                     }).to_string().into_bytes(),
                 };
-                let _ = mesh.publish("mesh:inventory:updated", event).await;
+                let _ = mesh.publish("mesh:inventory:status_changed", event).await;
             }
             Ok(None) => {
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);

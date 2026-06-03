@@ -190,6 +190,32 @@ impl OperationsWorker {
                             }
                         };
 
+                        let payload_value = serde_json::json!({
+                            "product_id": product_id,
+                            "product_name": product_name,
+                            "inventory_count": inventory_count,
+                            "tenant_id": tenant_id
+                        });
+
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query("INSERT INTO outbound_mesh_events (tenant_id, topic, payload) VALUES ($1, $2, $3)")
+                                    .bind(&tenant_id)
+                                    .bind("mesh:inventory:status_changed")
+                                    .bind(&payload_value)
+                                    .execute(&db.pool)
+                                    .await;
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query("INSERT INTO outbound_mesh_events (tenant_id, topic, payload) VALUES (?, ?, ?)")
+                                    .bind(&tenant_id)
+                                    .bind("mesh:inventory:status_changed")
+                                    .bind(payload_value.to_string())
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+
                         let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
 
                         let recent_sales: i64 = match &db.store {

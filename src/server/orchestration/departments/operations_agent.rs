@@ -22,10 +22,42 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "mesh:inventory:status_changed".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "mesh:inventory:status_changed" {
+            let count = event.payload.get("inventory_count").and_then(|v| v.as_i64()).unwrap_or(0);
+            let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Product");
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            if count == 0 {
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    format!("Marking {} as out of stock due to zero inventory.", product_name),
+                    event.tenant_id.clone(),
+                    ActionRisk::AutoExecute,
+                    serde_json::json!({
+                        "product_id": product_id,
+                        "action": "mark_out_of_stock"
+                    }),
+                ).await.map(|_| ());
+            } else if count < 5 {
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    format!("Low stock alert for {} ({} left). Drafted a restock order.", product_name, count),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    serde_json::json!({
+                        "product_id": product_id,
+                        "action": "prepare_reorder"
+                    }),
+                ).await.map(|_| ());
+            }
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

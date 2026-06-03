@@ -1,5 +1,98 @@
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_inventory_status_changed_flow() {
+        use crate::orchestration::departments::marketing_agent::MarketingAgent;
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
+        let marketing_agent = Arc::new(RwLock::new(MarketingAgent::new(orchestrator.clone())));
+
+        orchestrator.register_department(ops_agent).await;
+        orchestrator.register_department(marketing_agent).await;
+
+        let tenant_id = "test-tenant-inv-123".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        // Simulate zero inventory event
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "mesh:inventory:status_changed".to_string(),
+            payload: serde_json::json!({
+                "product_id": "prod-123",
+                "product_name": "Test Product",
+                "inventory_count": 0
+            }),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_ops_auto = false;
+        let mut has_marketing_draft = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+
+            // Note: ops creates an ActionRisk::AutoExecute task for zero inventory which is automatically executed and might not be in pending approval list
+            // Marketing creates a ActionRisk::DraftForReview which should be in pending approvals
+            if pending.iter().any(|req| req.description.contains("Sold Out! Pre-order now.")) {
+                has_marketing_draft = true;
+            }
+            if pending.iter().any(|req| req.description.contains("Marking Test Product as out of stock")) {
+                has_ops_auto = true;
+            }
+
+            let executed: i64 = match &db.store {
+                DbStore::Postgres => {
+                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE title = 'Action auto-approved' AND description LIKE '%Marking Test Product as out of stock%'")
+                        .fetch_one(&db.pool)
+                        .await
+                        .unwrap_or(0)
+                },
+                DbStore::Sqlite(pool) => {
+                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE title = 'Action auto-approved' AND description LIKE '%Marking Test Product as out of stock%'")
+                        .fetch_one(pool)
+                        .await
+                        .unwrap_or(0)
+                }
+            };
+            if executed > 0 {
+                has_ops_auto = true;
+            }
+
+            if has_ops_auto && has_marketing_draft {
+                break;
+            }
+        }
+
+        assert!(has_ops_auto, "Cross-department flow should result in an Operations auto execute task for zero inventory");
+        assert!(has_marketing_draft, "Cross-department flow should result in a Marketing draft for zero inventory");
+    }
     use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
     use crate::orchestration::departments::types::{DepartmentEvent};
     use crate::orchestration::departments::operations_agent::OperationsAgent;
