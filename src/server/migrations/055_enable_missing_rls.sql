@@ -23,6 +23,15 @@ ALTER TABLE epics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE embedding_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loyalty_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer360 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE interactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inbox_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer_timeline ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
 
 -- Define RLS Policies
 DO $$
@@ -37,7 +46,16 @@ BEGIN
             'epics',
             'tasks',
             'embedding_cache',
-            'task_dependencies'
+            'task_dependencies',
+            'loyalty_ledger',
+            'customer360',
+            'agent_actions',
+            'interactions',
+            'inbox_messages',
+            'customer_timeline',
+            'agent_session_data',
+            'swarm_truth_embeddings',
+            'swarm_tasks'
         ])
     LOOP
         IF to_regclass(t_name) IS NOT NULL THEN
