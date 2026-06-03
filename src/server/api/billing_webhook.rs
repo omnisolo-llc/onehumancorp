@@ -345,7 +345,8 @@ pub async fn stripe_webhook_handler(
 
                 // Also mark our internal subscription table
                 let sub_id_opt = obj.get("id").and_then(|id| id.as_str());
-                if let Some(sub_id) = sub_id_opt {
+                if let Some(sub_id_ref) = sub_id_opt {
+                    let sub_id = sub_id_ref.to_string();
                     let _res = match &webhook_state.db.store {
                          DbStore::Sqlite(pool) => {
                             sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE id = ?")
@@ -380,7 +381,8 @@ pub async fn stripe_webhook_handler(
 
             if let Some(_tenant_id) = tenant_id_opt {
                 let sub_id_opt = obj.get("subscription").and_then(|id| id.as_str());
-                if let Some(sub_id) = sub_id_opt {
+                if let Some(sub_id_ref) = sub_id_opt {
+                    let sub_id = sub_id_ref.to_string();
                     let _res = match &webhook_state.db.store {
                          DbStore::Sqlite(pool) => {
                             sqlx::query("UPDATE subscriptions SET status = 'past_due' WHERE id = ?")
