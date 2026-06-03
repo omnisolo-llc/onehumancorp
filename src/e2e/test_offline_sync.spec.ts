@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
   test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // Navigate to the dashboard
     await page.goto('/dashboard');
 
