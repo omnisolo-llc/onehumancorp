@@ -134,7 +134,7 @@ export default function InboxPage() {
           <button
             onClick={simulateIncomingMessage}
             className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
-            title="Simulate Incoming Message"
+            title="🤖 Simulate Incoming Message"
           >
             🤖 Simulate Incoming Message
           </button>

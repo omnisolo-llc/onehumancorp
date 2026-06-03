@@ -113,14 +113,14 @@ export default function InventoryDashboard() {
           {lowStockMaterials.map(mat => (
             <div key={mat.id} className="p-5 rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] shadow-lg flex flex-col" data-testid={`alert-card-${mat.id}`}>
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-outfit font-semibold text-lg">{mat.name}</h3>
+                <h3 className="font-outfit font-semibold text-lg">⚠️ Running low: {mat.name}</h3>
                 <span className="flex h-3 w-3 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF3B30] opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-[#FF3B30]"></span>
                 </span>
               </div>
               <p className="font-inter text-sm text-[rgba(255,255,255,0.7)] mb-4">
-                Based on your recent sales, you need more {mat.name} by Thursday.
+                You will sell out in 3 days. Restock 20 units for $150?
               </p>
 
               <div className="p-3 mb-4 rounded-xl bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.05)]">
@@ -144,7 +144,13 @@ export default function InventoryDashboard() {
                 disabled={processingId === mat.id}
                 className="w-full py-3 px-4 bg-[#0071E3] hover:bg-[#005bb5] active:scale-95 transition-all text-white font-inter font-medium rounded-xl shadow-[0_0_15px_rgba(0,113,227,0.4)] disabled:opacity-50"
               >
-                {processingId === mat.id ? 'Processing...' : 'Approve & Pay'}
+                {processingId === mat.id ? 'Processing...' : 'Approve Restock (50)'}
+              </button>
+              <button
+                onClick={() => setLowStockMaterials(lowStockMaterials.filter(m => m.id !== mat.id))}
+                className="w-full py-3 px-4 mt-2 bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] active:scale-95 transition-all text-white font-inter font-medium rounded-xl shadow-sm"
+              >
+                Dismiss
               </button>
             </div>
           ))}
