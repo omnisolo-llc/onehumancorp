@@ -276,8 +276,20 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        // Enforced via static code analysis rather than unit tests to prevent Bazel caching/sandbox limitations
-        assert!(true, "Verified code does not emit any sensitive strings in its logging layer");
+        // Enforced via static code analysis checking for common PII variable names being passed to tracing macros
+        let output = std::process::Command::new("bash")
+            .arg("-c")
+            .arg("find src/server -name '*.rs' -type f -exec grep -nE 'tracing::(info|debug|warn|error|trace)!?\\(.*(password|email|credit_card|ssn|secret|token|api_key|phone|address)[^a-zA-Z0-9].*\\{[^}]*\\}.*' {} + || true")
+            .output()
+            .expect("Failed to execute grep command");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+
+        assert!(
+            stdout.is_empty(),
+            "Found potential PII leakage in tracing statements:\n{}",
+            stdout
+        );
     }
 
     #[test]
