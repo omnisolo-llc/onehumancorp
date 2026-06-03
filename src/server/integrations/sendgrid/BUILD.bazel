@@ -6,6 +6,7 @@ rust_library(
         "client.rs",
         "mod.rs",
         "provider.rs",
+        "template.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
