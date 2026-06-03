@@ -1,12 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Autonomous Social Media Manager Agent E2E', () => {
   test('Creating a product automatically drafts a social media post for approval', async ({ page }) => {
-    // Navigate to dashboard/login
-    await page.goto('/');
-
-    // Go to Setup Screen to enter standard mock tenant data if needed, or straight to Add Product
-    // Wait for the app to initialize
+    // Navigate to dashboard
+    await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
     // Click on Add Product via mobile bottom nav
