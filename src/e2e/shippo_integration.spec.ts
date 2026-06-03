@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('User can purchase and print shipping labels for an order', async ({ page }) => {
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
   // Navigate to the orders page
   await page.goto('/orders');
 
