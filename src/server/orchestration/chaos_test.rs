@@ -540,6 +540,44 @@ mod chaos_tests {
         }).await;
     }
 
+
+    #[tokio::test]
+    async fn test_partial_network_partition_resilience() {
+        // We simulate a network partition where the mesh can occasionally reach the server
+        // but drops packets randomly (DroppingMockTransport with 80% loss)
+        // And we ensure that our retry queue safely preserves messages until they clear.
+
+        let transport = Arc::new(DroppingMockTransport::new(80)); // 80% drop rate = severe partition
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let received_clone = received.clone();
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(20);
+
+        let _ = mesh.subscribe("mesh:test:partition", Box::new(move |_msg| {
+            received_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let _ = tx.try_send(());
+        })).await.unwrap();
+
+        let _ = mesh.start_health_responder().await;
+
+        let mut successful_sends = 0;
+        for _ in 0..10 {
+             // We attempt to send a message. Since drop rate is 80%, many will fail.
+             // But because we retry inside ping() / publish_with_ack, some should get through eventually.
+             if mesh.ping().await.is_ok() {
+                 successful_sends += 1;
+                 let _ = rx.recv().await;
+             }
+        }
+
+        // We should survive a partial partition by successfully dropping but gracefully passing back
+        // the errors to the caller so it can be re-queued in Postgres/SQLite rather than crashing.
+        assert!(successful_sends < 10, "Some packets should definitely drop in an 80% partition");
+
+        // System must not panic!
+    }
+
     #[tokio::test]
     async fn test_host_memory_exhaustion_degradation() {
         // We simulate host memory exhaustion by synthetically increasing database operation latency

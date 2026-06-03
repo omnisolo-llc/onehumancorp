@@ -5,9 +5,7 @@ use chrono::Utc;
 
 #[tokio::test]
 async fn test_pg_fail_backoff() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()

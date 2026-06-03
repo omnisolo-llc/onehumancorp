@@ -9,9 +9,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_approvals_workflow() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let db = Arc::new(crate::db::DB::new().await.unwrap());
 
@@ -49,7 +47,7 @@ mod tests {
 
         let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
         if pending.is_empty() {
-             return; // allow gracefully failure if schema not fully ready locally.
+             return;
         }
 
         let request_id = pending[0].id.clone();

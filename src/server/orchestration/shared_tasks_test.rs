@@ -5,9 +5,7 @@ use chrono::Utc;
 
 #[tokio::test]
 async fn test_shared_task_orchestrator() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
     // Safety check - do not run db tests with production DB
     let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
@@ -340,9 +338,7 @@ async fn test_shared_task_orchestrator_update_and_list_sqlite() {
 
 #[tokio::test]
 async fn test_shared_task_orchestrator_dependencies() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
     let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
     if !db_url.contains("test") {

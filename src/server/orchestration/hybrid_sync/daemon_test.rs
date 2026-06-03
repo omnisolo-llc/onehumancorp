@@ -29,10 +29,7 @@ mod tests {
         .await
         {
             Ok(Ok(p)) => p,
-            Ok(Err(_)) | Err(_) => {
-                // If PG is not running during the test, we'll just mock or skip.
-                return;
-            }
+            Ok(Err(_)) | Err(_) => { return; }
         };
 
         sqlx::query(

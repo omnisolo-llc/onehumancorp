@@ -14,9 +14,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_department_flow() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let db = Arc::new(crate::db::DB::new().await.unwrap());
         let transport = Arc::new(InProcessTransport::new());
@@ -85,9 +83,7 @@ mod tests {
     #[tokio::test]
     async fn test_customer_success_message_handling() {
         use crate::orchestration::departments::orchestrator::Department;
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let db = Arc::new(crate::db::DB::new().await.unwrap());
         let transport = Arc::new(InProcessTransport::new());
@@ -189,9 +185,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_department_service_msgbus_integration() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         use crate::msgbus::{Bus, MemoryBus, Message};
         use crate::services::agent::department::service::DepartmentService;
@@ -252,9 +246,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_marketing_job_completed_case_study() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         use crate::orchestration::departments::marketing_agent::MarketingAgent;
 
@@ -311,9 +303,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_marketing_product_created_social_post() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         use crate::orchestration::departments::marketing_agent::MarketingAgent;
 

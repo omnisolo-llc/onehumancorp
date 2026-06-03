@@ -18,9 +18,7 @@ async fn test_stripe_webhook_handler_completed() {
         Err(_) => return,
     };
 
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
+    if client.get_multiplexed_async_connection().await.is_err() { return; }
 
     let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
     let db = match DB::new().await {
@@ -93,9 +91,7 @@ async fn test_stripe_webhook_handler_deleted() {
         Err(_) => return,
     };
 
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
+    if client.get_multiplexed_async_connection().await.is_err() { return; }
 
     let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
     let db = match DB::new().await {
@@ -170,9 +166,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         Ok(c) => c,
         Err(_) => return,
     };
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
+    if client.get_multiplexed_async_connection().await.is_err() { return; }
 
     let rate_limiter = Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
     let db = match crate::db::DB::new().await {
@@ -354,9 +348,7 @@ async fn test_stripe_webhook_pos_transaction() {
         Err(_) => return,
     };
 
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
+    if client.get_multiplexed_async_connection().await.is_err() { return; }
 
     let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
     let db = match DB::new().await {

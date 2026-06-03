@@ -4,30 +4,24 @@ test.describe('Viral Share Cards Growth Loop', () => {
   test('verify social share cards flow and viral branding', async ({ page }) => {
     test.setTimeout(90000);
 
-    try {
-        await page.goto('/dashboard', { timeout: 30000 }).catch(() => {});
+    await page.goto('/dashboard');
 
-        // 2. Verify Social Share Cards Growth Loop section
-        const shareCardsHeading = page.locator('h2', { hasText: 'Social Share Cards' });
-        await expect(shareCardsHeading).toBeVisible({ timeout: 15000 }).catch(() => {});
+    // 2. Verify Social Share Cards Growth Loop section
+    const shareCardsHeading = page.locator('h2', { hasText: 'Social Share Cards' });
+    await expect(shareCardsHeading).toBeVisible({ timeout: 15000 });
 
-        // 3. Click the Generate Share Cards button
-        const generateBtn = page.locator('a:has-text("Generate Share Cards")');
-        await expect(generateBtn).toBeVisible({ timeout: 15000 }).catch(() => {});
-        if (await generateBtn.isVisible()) {
-            await generateBtn.click();
-        }
+    // 3. Click the Generate Share Cards button
+    const generateBtn = page.locator('a:has-text("Generate Share Cards")');
+    await expect(generateBtn).toBeVisible({ timeout: 15000 });
+    await generateBtn.click();
 
-        // 4. Wait for navigation to /share-cards
-        await page.waitForURL('**/share-cards', { timeout: 15000 }).catch(() => {});
-        await expect(page.locator('h1', { hasText: 'Social Share Cards' })).toBeVisible({ timeout: 15000 }).catch(() => {});
+    // 4. Wait for navigation to /share-cards
+    await page.waitForURL('**/share-cards', { timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'Social Share Cards' })).toBeVisible({ timeout: 15000 });
 
-        // 5. Verify the ⚡ Powered by OHC branding in the card preview
-        const cardFooter = page.locator('span', { hasText: 'Powered by OHC' });
-        await expect(cardFooter).toBeVisible({ timeout: 15000 }).catch(() => {});
-    } catch(err) {
-        console.log("Viral share cards flow flaked locally");
-    }
+    // 5. Verify the ⚡ Powered by OHC branding in the card preview
+    const cardFooter = page.locator('span', { hasText: 'Powered by OHC' });
+    await expect(cardFooter).toBeVisible({ timeout: 15000 });
 
     expect(true).toBeTruthy();
   });

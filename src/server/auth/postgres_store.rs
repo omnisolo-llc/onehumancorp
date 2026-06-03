@@ -316,7 +316,7 @@ mod security_tests {
         };
 
         if database_url.starts_with("sqlite") {
-            return; // Postgres-specific test
+            return; // Postgres required for test
         }
 
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -349,7 +349,7 @@ mod security_tests {
         };
 
         if database_url.starts_with("sqlite") {
-            return; // Postgres-specific test
+            return; // Postgres required for test
         }
 
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })

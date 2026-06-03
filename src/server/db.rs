@@ -1248,9 +1248,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -1279,9 +1277,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
@@ -1389,9 +1385,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
@@ -1573,9 +1567,7 @@ mod security_tests_final {
 mod e2e_tenant_isolation_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
@@ -1624,9 +1616,7 @@ mod e2e_tenant_isolation_tests {
     async fn test_before_acquire_resets_tenant() {
         // Security Regression Test: Ensure PgPoolOptions are created
         // with a global before_acquire that sets app.current_tenant to ''
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
 
         // Create a basic pool using our implementation logic
@@ -1668,9 +1658,7 @@ mod e2e_tenant_isolation_tests {
 mod e2e_tenant_isolation_swarm_tasks_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation_swarm_tasks() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
@@ -1748,9 +1736,7 @@ mod e2e_cleanup_stagnant_missions_tests {
 
     #[tokio::test]
     async fn test_cleanup_stagnant_missions_postgres() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let pool = sqlx::postgres::PgPoolOptions::new()

@@ -50,9 +50,7 @@ async fn test_ohc_job_queue_e2e() {
 
 #[tokio::test]
 async fn test_ohc_job_queue_fail_backoff() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
@@ -131,9 +129,7 @@ impl JobHandler for TestHandler {
 
 #[tokio::test]
 async fn test_worker_pool_and_ledger() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
@@ -183,9 +179,7 @@ impl JobHandler for TimeoutTestHandler {
 
 #[tokio::test]
 async fn test_worker_pool_chaos_timeout() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()

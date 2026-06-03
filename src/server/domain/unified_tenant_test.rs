@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use sqlx::{postgres::PgPoolOptions, Row};
-    use std::env;
+
     use crate::domain::repository::models::{Business, AgentMemory};
 
     #[tokio::test]
@@ -10,10 +10,7 @@ mod tests {
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 
-        if env::var("CI").is_ok() {
-            // We just ensure it compiles locally
-            return;
-        }
+
 
         let tenant_1 = "00000000-0000-0000-0000-000000000001";
         let tenant_2 = "00000000-0000-0000-0000-000000000002";
@@ -54,10 +51,7 @@ mod tests {
 
                 tx.commit().await.expect("Failed to commit test data");
             },
-            Err(_) => {
-                // Ignore errors if test db is not running
-                return;
-            }
+            Err(_) => { return; }
         }
 
         // Test regression: Empty org_id should NOT bypass RLS

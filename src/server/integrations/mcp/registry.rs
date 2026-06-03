@@ -289,9 +289,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pg_tool_registry_isolation() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
 

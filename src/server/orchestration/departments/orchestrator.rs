@@ -1077,9 +1077,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         let db = Arc::new(crate::db::DB::new().await.unwrap());
         let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));

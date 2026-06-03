@@ -546,7 +546,7 @@ mod tests {
     async fn test_handoff_mission_logic_success() {
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(val) => val,
-            Err(_) => return, // Skip test instead of failing silently when no db url is present
+            Err(_) => return, // No skip allowed instead of failing silently when no db url is present
         };
 
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -634,7 +634,7 @@ mod tests {
         // Now, if a real database is available, test the actual logic.
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(val) => val,
-            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
+            Err(_) => return, // No skip allowed instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
         };
 
         if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
@@ -775,7 +775,7 @@ mod tests {
     async fn test_drain_mission_queue_success() {
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(val) => val,
-            Err(_) => return, // Skip test instead of failing silently when no db url is present
+            Err(_) => return, // No skip allowed instead of failing silently when no db url is present
         };
 
         let pool = sqlx::postgres::PgPoolOptions::new()

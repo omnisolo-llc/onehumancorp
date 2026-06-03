@@ -275,9 +275,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_teammate_mesh_pubsub() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy(&db_url)

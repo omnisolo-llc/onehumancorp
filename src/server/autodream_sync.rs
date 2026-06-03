@@ -148,9 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_autodream_sync_service() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })

@@ -185,9 +185,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_memory_pipeline_postgres() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
