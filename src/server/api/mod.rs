@@ -16,3 +16,6 @@ pub mod syndication_handler;
 pub mod dynamic_workflows;
 
 pub mod catalog;
+pub mod conversational_webhook;
+#[cfg(test)]
+pub mod conversational_webhook_test;
