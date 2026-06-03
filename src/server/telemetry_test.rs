@@ -39,8 +39,6 @@ mod tests {
     use ::server_telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
-<<<<<<< HEAD
-=======
     fn test_redact_interface_pii_cross_mode() {
         let test_cases = vec![Some("true"), Some("false"), None];
         for mode in test_cases {
@@ -78,7 +76,6 @@ mod tests {
     }
 
     #[test]
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
     fn test_organization_id_not_redacted() {
         let input = json!({
             "organization_id": "tenant-123",

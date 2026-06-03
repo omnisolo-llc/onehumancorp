@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
-<<<<<<< HEAD
 import { AppShell } from '../components/AppShell';
 
 type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
@@ -31,8 +30,6 @@ function IconLabel({ icon, children }: { icon: SetupIconName; children: React.Re
     </span>
   );
 }
-=======
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
 
 export default function OnboardingWizard() {
   const {
@@ -297,7 +294,6 @@ export default function OnboardingWizard() {
   };
 
   return (
-<<<<<<< HEAD
     <AppShell
       title="Setup"
       subtitle="Guided business setup in the same operations-console layout."
@@ -311,16 +307,6 @@ export default function OnboardingWizard() {
         <div id="setup-screen" className="app-panel w-full overflow-hidden flex flex-col min-h-[640px] relative">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
-=======
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-      {/* Background Glows for Premium Aesthetic */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
-        {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
           <div
             className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
@@ -357,11 +343,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-<<<<<<< HEAD
                       <IconLabel icon="save">Save Draft</IconLabel>
-=======
-                      Save Draft
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     </button>
                   </div>
 
@@ -405,11 +387,7 @@ export default function OnboardingWizard() {
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-<<<<<<< HEAD
                       <IconLabel icon="next">Next</IconLabel>
-=======
-                      Next
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     </button>
                   </div>
                 </div>
@@ -429,11 +407,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-<<<<<<< HEAD
                       <IconLabel icon="save">Save Draft</IconLabel>
-=======
-                      Save Draft
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     </button>
                   </div>
 
@@ -476,11 +450,7 @@ export default function OnboardingWizard() {
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-<<<<<<< HEAD
                       <IconLabel icon="next">Next</IconLabel>
-=======
-                      Next
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     </button>
                   </div>
                 </div>
@@ -500,11 +470,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-<<<<<<< HEAD
                       <IconLabel icon="save">Save Draft</IconLabel>
-=======
-                      Save Draft
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     </button>
                   </div>
 
@@ -558,11 +524,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-<<<<<<< HEAD
                       ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
-=======
-                      ) : 'Generate My Business'}
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     </button>
                   </div>
                 </div>
@@ -584,13 +546,8 @@ export default function OnboardingWizard() {
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
-<<<<<<< HEAD
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
-=======
-                  Save Draft
-                </button>
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
@@ -691,11 +648,7 @@ export default function OnboardingWizard() {
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-<<<<<<< HEAD
                   <IconLabel icon="next">Continue</IconLabel>
-=======
-                  Continue
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                 </button>
               </div>
             </div>
@@ -715,13 +668,8 @@ export default function OnboardingWizard() {
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
-<<<<<<< HEAD
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
-=======
-                  Save Draft
-                </button>
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
@@ -845,11 +793,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Launching...
                     </span>
-<<<<<<< HEAD
                   ) : <IconLabel icon="launch">Launch Store</IconLabel>}
-=======
-                  ) : 'Launch Store'}
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                 </button>
               </div>
             </div>
@@ -893,7 +837,6 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-<<<<<<< HEAD
                   className="flex w-full items-center justify-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="dashboard">Go to Dashboard</IconLabel>
@@ -903,24 +846,12 @@ export default function OnboardingWizard() {
                   className="flex w-full items-center justify-center mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="eye">Preview Storefront</IconLabel>
-=======
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
-                >
-                  Go to Dashboard
-                </a>
-                <a
-                  href="/builder"
-                  className="block w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm  active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
-                >
-                  Preview Storefront
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                 </a>
               </div>
             </div>
           )}
         </div>
       </div>
-<<<<<<< HEAD
         <aside className="app-panel">
           <div className="app-panel-header">
             <div>
@@ -947,8 +878,5 @@ export default function OnboardingWizard() {
         </aside>
       </div>
     </AppShell>
-=======
-    </div>
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
   );
 }

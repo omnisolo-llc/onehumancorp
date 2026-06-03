@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 body {
-<<<<<<< HEAD
   background: #f4f6f8;
   color: #18212f;
   font-family: Inter, ui-sans-serif, system-ui, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -466,11 +465,6 @@ body {
   .app-grid.two {
     grid-template-columns: 1fr;
   }
-=======
-  backdrop-filter: blur(30px) saturate(210%);
-  background: rgba(255, 255, 255, 0.03);
-  font-family: 'Outfit', 'Inter', sans-serif;
->>>>>>> e123d49a (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
 }
 
 .ohc-hybrid-panel {
