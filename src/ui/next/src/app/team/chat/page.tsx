@@ -94,7 +94,7 @@ export default function TeamChatPage() {
                <span className="text-xs font-bold text-blue-600">OHC</span>
             </div>
             <div className="bg-gray-100 p-3 rounded-2xl rounded-tl-none text-sm text-gray-800">
-              Hello! I'm your central team interface. How can we help your business today?
+              Hello! I'm your unified team interface. How can we help your business today?
             </div>
           </div>
 
