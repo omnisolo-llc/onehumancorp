@@ -2766,7 +2766,6 @@ async fn list_ui_supply_handler(
     let tenant_id = ui_tenant_id(&query);
 
 
-
     let cache_key = format!("ui_supply:{}", tenant_id);
     let cache = UI_SUPPLY_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
     if let Some(cached) = cache.get(&cache_key).await {
