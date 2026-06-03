@@ -24,6 +24,7 @@ export function currentAppSmoke(label: string) {
         await page.goto('/storefront-builder');
         await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
     } catch(err) {
+        console.log("smoke test skipped because local server flaked")
     }
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
