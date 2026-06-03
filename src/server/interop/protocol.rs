@@ -754,12 +754,14 @@ mod tests {
             failures_left: std::sync::atomic::AtomicUsize::new(3),
         });
         let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(bus, lock, "server".to_string());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "server".to_string());
 
         let result = protocol.dispatch_job("job_retry_1", "tenant_a", "do_work", vec![], 10).await;
         // The mock bus doesn't publish ACK, so it's a timeout (returns false), but it shouldn't be a publish error
         assert!(result.is_ok());
         assert!(!result.unwrap());
+        // Verify that retry count has decreased
+        assert_eq!(bus.failures_left.load(Ordering::SeqCst), 0);
     }
 
     #[tokio::test]
@@ -781,10 +783,12 @@ mod tests {
             failures_left: std::sync::atomic::AtomicUsize::new(3),
         });
         let lock = Arc::new(MemoryBus::new());
-        let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
 
         let result = protocol.handoff("mission_retry_1", "tenant_1", vec![1, 2, 3]).await;
         assert!(result.is_ok());
+        // Verify that retry count has decreased
+        assert_eq!(bus.failures_left.load(Ordering::SeqCst), 0);
     }
 
     #[tokio::test]
@@ -806,7 +810,8 @@ mod tests {
     #[async_trait::async_trait]
     impl crate::msgbus::Bus for MockFailingBus {
         async fn publish(&self, _msg: crate::msgbus::Message) -> Result<(), String> {
-            if self.failures_left.fetch_sub(1, Ordering::SeqCst) > 0 {
+            if self.failures_left.load(Ordering::SeqCst) > 0 {
+                self.failures_left.fetch_sub(1, Ordering::SeqCst);
                 return Err("Simulated network failure".to_string());
             }
             Ok(())
@@ -822,10 +827,12 @@ mod tests {
             failures_left: std::sync::atomic::AtomicUsize::new(3),
         });
         let lock = Arc::new(MemoryBus::new()); // dummy lock
-        let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "agent".to_string());
 
         let result = protocol.report_job_status("job_retry_1", "tenant_a", "FAILED", vec![]).await;
         assert!(result.is_ok());
+        // Verify that retry count has decreased
+        assert_eq!(bus.failures_left.load(Ordering::SeqCst), 0);
     }
 
     #[tokio::test]
@@ -881,6 +888,8 @@ mod tests {
         assert!(!received.load(Ordering::SeqCst));
     }
 
+    /// Tests that the interop listener for pings gracefully handles malformed
+    /// protobuf messages without crashing and without sending an acknowledgement.
     #[tokio::test]
     async fn test_interop_listen_for_pings_malformed() {
         let bus = Arc::new(MemoryBus::new());
@@ -898,7 +907,7 @@ mod tests {
         });
         let _cancel_ack = bus.subscribe(ack_topic, handler).await.unwrap();
 
-        // Send a malformed ping
+        // Send a malformed ping. We only care that the handler didn't process it.
         let msg = Message {
             topic: "system:health_ping".to_string(),
             payload: vec![255, 255, 255], // Invalid protobuf
