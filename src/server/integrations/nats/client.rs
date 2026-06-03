@@ -4,6 +4,8 @@ use opentelemetry::{global, KeyValue};
 use opentelemetry::metrics::Counter;
 
 #[async_trait]
+
+
 pub trait NatsClientWrapper: Send + Sync {
     async fn publish(&self, subject: &str, data: Vec<u8>) -> Result<(), String>;
     async fn subscribe(

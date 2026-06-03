@@ -17,6 +17,7 @@ rust_library(
         "//src/server/common:server_common",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:hex",

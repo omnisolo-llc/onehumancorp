@@ -449,7 +449,7 @@ impl Store {
             revoked.retain(|_, v| *v > now);
         }
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await.map(|c: redis::aio::MultiplexedConnection| c) {
                 let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
                 let redis_key = format!("revoked_token:{}", jti);
                 let _: redis::RedisResult<()> = redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
@@ -467,7 +467,7 @@ impl Store {
             }
         }
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await.map(|c: redis::aio::MultiplexedConnection| c) {
                 let redis_key = format!("revoked_token:{}", jti);
                 let exists: redis::RedisResult<bool> = redis::AsyncCommands::exists(&mut conn, &redis_key).await;
                 if let Ok(true) = exists {
@@ -808,19 +808,19 @@ impl AuthService for AuthServiceServerImpl {
     async fn list_roles(&self, _request: Request<EmptyRequest>) -> Result<Response<ListRolesResponse>, Status> {
         Ok(Response::new(ListRolesResponse {
             roles: vec![
-                RoleProto {
+                ::server_ohc::orchestration::RoleProto {
                     id: ROLE_ADMIN.to_string(),
                     name: ROLE_ADMIN.to_string(),
                     permissions: vec!["*".to_string()],
                     created_at_unix: Utc::now().timestamp(),
                 },
-                RoleProto {
+                ::server_ohc::orchestration::RoleProto {
                     id: ROLE_OPERATOR.to_string(),
                     name: ROLE_OPERATOR.to_string(),
                     permissions: vec!["read".to_string(), "write".to_string()],
                     created_at_unix: Utc::now().timestamp(),
                 },
-                RoleProto {
+                ::server_ohc::orchestration::RoleProto {
                     id: ROLE_VIEWER.to_string(),
                     name: ROLE_VIEWER.to_string(),
                     permissions: vec!["read".to_string()],
@@ -830,7 +830,7 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
-        Ok(Response::new(RoleProto::default()))
+    async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<::server_ohc::orchestration::RoleProto>, Status> {
+        Ok(Response::new(::server_ohc::orchestration::RoleProto::default()))
     }
 }
