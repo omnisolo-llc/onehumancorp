@@ -710,38 +710,46 @@ export default function BuilderPage() {
             </button>
           </WithTooltip>
 
-          <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-gray-800">OHC Referral Banner</span>
-              <span className="text-[10px] text-gray-500">Earn $10 for every signup!</span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={isPoweredByBannerEnabled}
-                onChange={async (e) => {
-                  const enabled = e.target.checked;
-                  if (!enabled) {
-                    if (!confirm("Are you sure? You'll lose the chance to earn $10 for every merchant who signs up from your store!")) {
+          {(!isPremium || isPoweredByBannerEnabled) && (
+            <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-gray-800">OHC Referral Banner</span>
+                <span className="text-[10px] text-gray-500">Earn $10 for every signup!</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isPoweredByBannerEnabled}
+                  onChange={async (e) => {
+                    const enabled = e.target.checked;
+
+                    if (!isPremium && !enabled) {
+                      setShowUpgradeModal(true);
                       return;
                     }
-                  }
-                  setIsPoweredByBannerEnabled(enabled);
-                  try {
-                    await fetch('/api/v1/growth/powered-by-banner/toggle', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ enabled, tenant_id: tenantId }),
-                    });
-                  } catch(e) {
-                    console.error("Failed to toggle banner", e);
-                  }
-                }}
-              />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#34C759]"></div>
-            </label>
-          </div>
+
+                    if (!enabled) {
+                      if (!confirm("Are you sure? You'll lose the chance to earn $10 for every merchant who signs up from your store!")) {
+                        return;
+                      }
+                    }
+                    setIsPoweredByBannerEnabled(enabled);
+                    try {
+                      await fetch('/api/v1/growth/powered-by-banner/toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled, tenant_id: tenantId }),
+                      });
+                    } catch(e) {
+                      console.error("Failed to toggle banner", e);
+                    }
+                  }}
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#34C759]"></div>
+              </label>
+            </div>
+          )}
         </div>
 
         {/* Upgrade Modal */}

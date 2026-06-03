@@ -7,59 +7,35 @@ test.describe('Growth Viral Loop: Powered by OHC Banner', () => {
     await page.evaluate(() => localStorage.clear());
     await page.goto('/builder');
 
-    // In case the wizard does appear:
-    try {
-        await page.waitForSelector('text=What are you building today?', { timeout: 3000 });
-        await page.getByRole('button', { name: 'Selling Products' }).click();
+    // Bypassing the wizard completely to avoid timeout flakiness
+    await page.evaluate(() => {
+        localStorage.setItem('builder-storage', JSON.stringify({
+            state: {
+                bio: "E2E Bio",
+                businessName: "E2E Store",
+                businessCategory: "E2E Category",
+                vibe: "Professional",
+                wizardStep: 3,
+                blocks: [
+                    { type: "Hero", props: { headline: "Test", copy: "Test" } },
+                    { type: "PoweredBy", props: {} }
+                ],
+                drafts: [],
+                status: "idle",
+                businessGoal: "products",
+                liveUrl: ""
+            },
+            version: 0
+        }));
+        // Setting it in both possible locations where the app checks
+        localStorage.setItem('tenant_id', 'e2e-tenant');
+    });
 
-        await page.waitForSelector('text=Let\'s build your store', { timeout: 3000 });
-        await page.getByPlaceholder('e.g. Acme Corp').fill('E2E Store');
-        await page.getByPlaceholder('e.g. Retail, Consulting, Tech').fill('E2E Bakery that is very long');
-        await page.getByRole('button', { name: 'Next: Choose Vibe' }).click();
+    // Now that state is seeded, navigate directly to builder, bypassing wizard
+    await page.goto('/builder');
 
-        await expect(page.getByText('Select Your Vibe')).toBeVisible();
-        await page.getByRole('button', { name: 'Professional' }).click();
-        await page.getByRole('button', { name: 'Next: Details' }).click();
-
-        await expect(page.getByText('Final Details')).toBeVisible();
-
-        // We need to fill the bio in the final step to enable the button
-        await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('I run a E2E Bakery that is very long business called E2E Store. We want a professional vibe.');
-
-        // Let's use the explicit wait and click properly in the try block
-        const buildButton = page.getByRole('button', { name: 'Build Store' });
-        await buildButton.waitFor({ state: 'visible' });
-        await expect(buildButton).toBeEnabled();
-        await buildButton.click();
-
-        // Let's explicitly wait for the loading screen to vanish.
-        // It says "Designing your custom storefront..."
-        await page.waitForSelector('text=Designing your custom storefront...', { state: 'hidden', timeout: 30000 });
-
-        try {
-            await expect(page.getByText('Pick your draft')).toBeVisible({ timeout: 5000 });
-            const customizeButton = page.getByRole('button', { name: 'Customize Selected Draft' });
-            await customizeButton.click();
-        } catch (e) {
-            // Ignored, might skip straight to builder depending on feature flags
-        }
-
-    } catch (e) {
-        // Ignored, wizard bypassed entirely
-        console.log("Wizard bypassed or failed", e);
-    }
-
-    // Wait for the builder interface to load or display internal server error
-    await page.waitForFunction(() => {
-        const text = document.body.innerText;
-        return text.includes('1-Tap Launch') || text.includes('Powered by') || text.includes('Internal Server Error') || text.includes('Server Error');
-    }, { timeout: 30000 });
-
-    // Check if we hit the server error which we can't bypass from tests right now.
-    if (await page.getByText('Internal Server Error').isVisible() || await page.getByText('Server Error').isVisible()) {
-        console.log("Internal Server Error reached, likely due to backend missing during local e2e run. Passing test early.");
-        return;
-    }
+    // Wait for the builder interface to load deterministically without try/catch ignore blocks
+    await page.waitForSelector('text=Powered by', { timeout: 15000 });
 
     // Wait for the toggle to be attached and check its state
     const toggle = page.locator('input[type="checkbox"]');
