@@ -89,10 +89,13 @@ mod tests {
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
 
-        let db_arc = Arc::new(crate::db::DB {
-            pool: sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap(),
-            store: crate::db::DbStore::Sqlite(sqlite_pool)
-        });
+        unsafe {
+            std::env::set_var("OHC_DATABASE_URL", "sqlite::memory:");
+        }
+        let db_arc = Arc::new(crate::db::DB::new().await.unwrap_or_else(|_| crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            store: crate::db::DbStore::Sqlite(sqlite_pool.clone())
+        }));
 
         let hub = Arc::new(Hub::new(tx, db_arc.pool.clone()));
 
