@@ -424,6 +424,7 @@ impl LocalLLMClient {
         });
 
         let resp = client.post(&self.endpoint)
+            .timeout(std::time::Duration::from_secs(5))
             .json(&req_body)
             .send()
             .await
@@ -447,6 +448,7 @@ impl LocalLLMClient {
         });
 
         let resp = client.post(&self.embed_endpoint)
+            .timeout(std::time::Duration::from_secs(5))
             .json(&req_body)
             .send()
             .await

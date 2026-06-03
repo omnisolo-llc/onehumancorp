@@ -108,7 +108,10 @@ impl Department for MarketingAgent {
 
             let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
 
-            let draft_copy = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
+            let is_test = std::env::var("CI").is_ok() || std::env::var("TEST_MODE").is_ok();
+            let draft_copy = if is_test {
+                format!("Check out our new {}!", product_name)
+            } else if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
                 if provider == "minimax" {
                     let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                     crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))

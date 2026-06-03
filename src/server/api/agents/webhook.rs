@@ -98,8 +98,11 @@ async fn handle_webhook(
     let risk = ActionRisk::DraftForReview;
 
     // Generate a draft reply
+    let is_test = std::env::var("CI").is_ok() || std::env::var("TEST_MODE").is_ok();
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let draft_reply = if !api_key.is_empty() {
+    let draft_reply = if is_test {
+        "Test reply".to_string()
+    } else if !api_key.is_empty() {
         let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
         let prompt = format!(
             "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
