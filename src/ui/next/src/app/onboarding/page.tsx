@@ -27,6 +27,7 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(true);
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
@@ -84,7 +85,6 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
-    setIsLoaded(true);
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
@@ -112,12 +112,16 @@ export default function OnboardingWizard() {
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load onboarding state', err));
+    .catch(err => console.error('Failed to load onboarding state', err))
+    .finally(() => {
+      setIsLoaded(true);
+      setIsHydrating(false);
+    });
   }, []);
 
   // Sync state to backend
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || isHydrating) return;
 
     // Only save if we are past the initial state
     if (step === 1 && chatStep === 1 && !businessName) return;
@@ -264,6 +268,14 @@ export default function OnboardingWizard() {
     if (step === 5) return 100;
     return 0;
   };
+
+  if (isHydrating) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center items-center">
+         <div data-testid="loading-spinner" className="w-8 h-8 border-4 border-[#0066FF] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">

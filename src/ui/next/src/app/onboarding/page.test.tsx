@@ -33,7 +33,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
@@ -59,7 +59,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     // Chat Step 1 - Use Enter Key
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -83,7 +83,7 @@ describe('OnboardingWizard', () => {
   it('Handles validation failures when fields are empty', async () => {
     const user = userEvent.setup({ delay: null });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     // Chat Step 1 - Enter Key with short name
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -150,7 +150,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -230,7 +230,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -280,7 +280,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
@@ -311,7 +311,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     const nextButton = screen.getByRole('button', { name: /Next/i });
 
@@ -335,7 +335,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
@@ -371,7 +371,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -388,7 +388,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     // Verify initial Web Address options
     const subdomainOption = screen.getByText('Free Subdomain');
@@ -429,7 +429,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -458,7 +458,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 2 });
     });
 
-    render(<OnboardingWizard />);
+    render(<OnboardingWizard />); await waitFor(() => expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument());
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();

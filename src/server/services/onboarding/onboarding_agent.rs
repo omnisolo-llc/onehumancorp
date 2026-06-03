@@ -82,7 +82,9 @@ impl OnboardingAgent {
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = CASE \
-                 WHEN onboarding_state.state_json IS NULL THEN EXCLUDED.state_json \
+                 WHEN onboarding_state.state_json IS NULL OR onboarding_state.state_json::text = '{}'::text THEN EXCLUDED.state_json \
+                 WHEN jsonb_typeof(onboarding_state.state_json->'wizardState') = 'object' AND jsonb_typeof(EXCLUDED.state_json->'wizardState') = 'object' THEN \
+                      jsonb_set(onboarding_state.state_json, '{wizardState}', (onboarding_state.state_json->'wizardState') || (EXCLUDED.state_json->'wizardState')) \
                  ELSE onboarding_state.state_json || EXCLUDED.state_json \
                  END, \
                  current_step = GREATEST(onboarding_state.current_step, EXCLUDED.current_step), \
@@ -119,7 +121,13 @@ impl OnboardingAgent {
             let mut state: serde_json::Value = record.get("state_json");
             let current_step: i32 = record.get("current_step");
             if let Some(obj) = state.as_object_mut() {
-                obj.insert("step".to_string(), serde_json::json!(current_step));
+                if obj.contains_key("wizardState") {
+                    if let Some(wizard) = obj.get_mut("wizardState").and_then(|w| w.as_object_mut()) {
+                        wizard.insert("step".to_string(), serde_json::json!(current_step));
+                    }
+                } else {
+                    obj.insert("step".to_string(), serde_json::json!(current_step));
+                }
             }
             Ok(state)
         } else {
