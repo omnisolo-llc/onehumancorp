@@ -23,7 +23,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn().mockImplementation((url) => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
         return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     }) as any;
   });
@@ -32,13 +32,15 @@ describe('OnboardingWizard', () => {
     vi.clearAllMocks();
   });
 
-  it('Step 1: Renders initial screen correctly', async () => {
+  it('Step 1: Renders initial Instant Build screen correctly', async () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    const instantLaunchBtn = screen.getByRole('button', { name: /Instant Launch/i });
+    expect(instantLaunchBtn).toBeDisabled();
     expect(screen.getByRole('button', { name: /Detailed Setup/i })).toBeInTheDocument();
   });
-
 
   it('Performs Instant Launch successfully', async () => {
     const user = userEvent.setup({ delay: null });
@@ -135,6 +137,7 @@ describe('OnboardingWizard', () => {
     const instantLaunchBtn = screen.getByRole('button', { name: /Instant Launch/i });
     expect(instantLaunchBtn).toBeDisabled();
   });
+
   it('Step 2: Displays validation error when product price is invalid', async () => {
     const user = userEvent.setup({ delay: null });
 
@@ -226,14 +229,13 @@ describe('OnboardingWizard', () => {
     await user.click(salesAgent);
 
     // Toggle auto respond
-    await user.click(toggle);
+    await user.click(screen.getByText('Allow AI to Auto-Respond'));
 
-    await waitFor(() => {
-      const state = useOnboardingStore.getState();
-      expect(state.aiAgents).toContain('Sales Agent');
-      expect(state.aiAutoRespond).toBe(false);
-      expect(state.domainChoice).toBe('custom');
-    });
+    // Check that states updated.
+    const state = useOnboardingStore.getState();
+    expect(state.domainChoice).toBe('custom');
+    expect(state.aiAgents).toContain('Sales Agent');
+    expect(state.aiAutoRespond).toBe(false);
   });
 
   it('Step 5: Shows Live Screen with correct links', async () => {
