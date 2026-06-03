@@ -24,6 +24,8 @@ export default function ApprovalInbox({
   const [selectedReview, setSelectedReview] = useState<ApprovalRequest | null>(
     null,
   );
+  const [showShareModal, setShowShareModal] = useState<ApprovalRequest | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const handleToggle = async () => {
     const newValue = !reviewAll;
@@ -466,35 +468,93 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        if (payload && payload.original_message) {
-                          setSelectedReview(req);
-                        } else {
-                          onReject(req.id);
-                        }
-                      }}
-                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
-                    >
-                      {payload && payload.original_message
-                        ? "Review"
-                        : "Reject / Edit"}
-                    </button>
-                    <button
-                      onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
-                    >
-                      {req.payload?.feature_type === "case_study"
-                        ? "Publish to Website"
-                        : "Approve"}
-                    </button>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          if (payload && payload.original_message) {
+                            setSelectedReview(req);
+                          } else {
+                            onReject(req.id);
+                          }
+                        }}
+                        className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
+                      >
+                        {payload && payload.original_message
+                          ? "Review"
+                          : "Reject / Edit"}
+                      </button>
+                      <button
+                        onClick={() => onApprove(req.id)}
+                        className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
+                      >
+                        {req.payload?.feature_type === "case_study"
+                          ? "Publish to Website"
+                          : "Approve"}
+                      </button>
+                    </div>
+
+                    {req.payload?.feature_type === "case_study" && (
+                      <button
+                        onClick={() => setShowShareModal(req)}
+                        className="w-full py-3 px-4 rounded-xl font-bold text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 shadow-sm active:scale-[0.98] transition-all min-h-[44px] flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        Share via Cloud Bridge
+                      </button>
+                    )}
                   </div>
                 </div>
               );
             })
           )}
         </div>
+
+        {/* Share Modal (Cloud Bridge) */}
+        {showShareModal && (
+          <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
+            <div
+              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              style={{
+                animation: "slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h2 className="text-xl font-bold font-outfit text-gray-900">Cloud Bridge Invite</h2>
+                <button
+                  onClick={() => setShowShareModal(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                  aria-label="Close Cloud Bridge Invite"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4">Share this link to provision a temporary multi-tenant context for your collaborator, allowing them to view this output while you maintain local sovereignty.</p>
+
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-center gap-2 mb-4">
+                <input
+                  id="cloud-bridge-invite-link"
+                  type="text"
+                  readOnly
+                  value={`https://ohc.app/invite/${typeof window !== 'undefined' && window.localStorage ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default') : 'team-default'}?asset=${showShareModal.id}`}
+                  className="flex-1 bg-transparent text-sm text-gray-700 outline-none"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://ohc.app/invite/${typeof window !== 'undefined' && window.localStorage ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default') : 'team-default'}?asset=${showShareModal.id}`);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                }}
+                className={`w-full py-3 rounded-xl text-sm font-bold shadow-md transition-all active:scale-[0.98] ${linkCopied ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              >
+                {linkCopied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Review Modal */}
         {selectedReview && (
