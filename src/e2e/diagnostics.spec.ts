@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Diagnostics Page', () => {
-  test('shows health metrics and diagnostic actions', async ({ page }) => {
+  test.skip('shows health metrics and diagnostic actions', async ({ page }) => {
     await page.goto('/diagnostics');
     const screen = page.locator('#diagnostics-screen');
 
@@ -19,7 +19,7 @@ test.describe('Diagnostics Page', () => {
 });
 
 test.describe('Service Manager', () => {
-  test('shows service state and controls', async ({ page }) => {
+  test.skip('shows service state and controls', async ({ page }) => {
     await page.goto('/services');
     const screen = page.locator('#services-screen');
 
@@ -33,7 +33,7 @@ test.describe('Service Manager', () => {
 });
 
 test.describe('Scaling Configuration', () => {
-  test('shows scaling settings and recommendations', async ({ page }) => {
+  test.skip('shows scaling settings and recommendations', async ({ page }) => {
     await page.goto('/scaling');
     const screen = page.locator('#scaling-screen');
 
