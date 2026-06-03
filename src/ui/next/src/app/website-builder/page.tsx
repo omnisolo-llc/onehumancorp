@@ -38,6 +38,8 @@ export default function WebsiteBuilderPage() {
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
+  const [instantDesc, setInstantDesc] = useState("");
+  const [instantLoading, setInstantLoading] = useState(false);
 
   useEffect(() => {
     // Load from backend for cross-device resume
@@ -646,28 +648,116 @@ export default function WebsiteBuilderPage() {
               )}
 
               {wizardStep === 'instant-build' && (
-                <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
-                  <div className="flex flex-col gap-4 mt-6">
+                <div className="flex flex-col h-full animate-fade-in">
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Describe your business</h1>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Tell us what you do in one sentence. We'll use AI to build your entire storefront instantly.
+                  </p>
+
+                  <div className="flex flex-col gap-4 mt-2">
                     <textarea
-                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="e.g. I run a local bakery"
-                      rows={4}
+                      className="w-full border border-white/50 dark:border-white/10 p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px]"
+                      style={{ borderRadius: '12px', backdropFilter: 'blur(30px) saturate(210%)' }}
+                      placeholder="e.g. I run a local bakery that specializes in custom vegan cakes."
+                      rows={5}
+                      value={instantDesc}
+                      onChange={(e) => setInstantDesc(e.target.value)}
+                      disabled={instantLoading}
                     />
+
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
-                        setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
+                      className="w-full bg-[#0071E3] text-white min-h-[54px] p-4 font-bold rounded-[12px] shadow-[0_4px_14px_0_rgba(0,113,227,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                      disabled={instantLoading || instantDesc.trim().length < 5}
+                      onClick={async () => {
+                        setInstantLoading(true);
+                        try {
+                          const res = await fetch('/api/onboarding/intake', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'x-tenant-id': tenantId,
+                              'x-user-id': 'test-user',
+                            },
+                            body: JSON.stringify({ description: instantDesc })
+                          });
+
+                          if (!res.ok) {
+                             throw new Error('Failed to process intake');
+                          }
+
+                          const data = await res.json();
+                          const bName = data.business_name || 'My Store';
+                          const bType = data.business_type || 'Online Store';
+                          setBusinessName(bName);
+                          setBusinessType(bType);
+
+                          let fProductName = '';
+                          let fProductPrice = '';
+                          if (data.initial_products && data.initial_products.length > 0) {
+                            fProductName = data.initial_products[0].name || '';
+                            fProductPrice = data.initial_products[0].price || '';
+                            setProductName(fProductName);
+                            setProductPrice(fProductPrice);
+                          }
+
+                          // Now actually start the onboarding process
+                          setStatus('generating');
+
+                          const startRes = await fetch('/api/onboarding/start', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId, 'x-user-id': 'test-user' },
+                            body: JSON.stringify({
+                              business_type: bType,
+                              company_name: bName,
+                              company_description: instantDesc,
+                              selling_categories: data.categories || [],
+                              payment_pref: 'online',
+                              admin_email: 'admin@example.com',
+                              admin_name: 'Admin',
+                              admin_password: 'password123',
+                              website_template: 'Modern',
+                              first_product_name: fProductName,
+                              first_product_price: fProductPrice,
+                              domain_choice: 'subdomain',
+                              price_type: 'fixed',
+                              location: ''
+                            })
+                          });
+
+                          if (!startRes.ok) {
+                             throw new Error('Failed to start onboarding');
+                          }
+
+                          const startData = await startRes.json();
+                          if (startData.success) {
+                             // Success!
+                             setStatus('live');
+                          } else {
+                             throw new Error('Onboarding returned false success flag');
+                          }
+                        } catch (err) {
+                          console.error('Instant build failed:', err);
+                          alert('Failed to generate storefront. Please try again.');
+                          setStatus('idle');
+                        } finally {
+                          setInstantLoading(false);
+                        }
                       }}
                     >
-                      Generate Storefront
+                      {instantLoading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Extrapolating AI Storefront...
+                        </>
+                      ) : (
+                        "Generate Storefront"
+                      )}
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
             </div>
@@ -680,9 +770,18 @@ export default function WebsiteBuilderPage() {
   if (status === "generating") {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center p-8 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px]" style={{ backdropFilter: 'blur(30px) saturate(210%)' }}>
+            <div className="w-24 h-24 relative mb-8">
+               <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
+               <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4 text-center">Building Your Business...</h2>
+            <div className="space-y-2 text-center">
+               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
+               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
+               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
+               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+            </div>
         </div>
       </div>
     );
