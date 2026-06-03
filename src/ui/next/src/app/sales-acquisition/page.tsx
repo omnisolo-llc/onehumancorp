@@ -1,10 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 
 export default function AutoQuoteBookPage() {
   const [customerDescription, setCustomerDescription] = useState("");
@@ -49,49 +45,51 @@ export default function AutoQuoteBookPage() {
       </p>
 
       <div className="mt-8 grid gap-8 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Inquiry Simulator</CardTitle>
-            <CardDescription>
+        <div className="border rounded-lg p-6 bg-card text-card-foreground shadow-sm">
+          <div className="flex flex-col space-y-1.5 mb-4">
+            <h3 className="font-semibold leading-none tracking-tight">Customer Inquiry Simulator</h3>
+            <p className="text-sm text-muted-foreground">
               Test how your AI Salesperson responds to customer requests.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Customer Message</label>
-              <Textarea
+              <textarea
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="e.g. I need help fixing a broken pipe in my bathroom..."
                 value={customerDescription}
                 onChange={(e) => setCustomerDescription(e.target.value)}
                 rows={4}
               />
             </div>
-            <Button
+            <button
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4"
               onClick={handleGenerateQuote}
               disabled={!customerDescription || isGenerating}
             >
               {isGenerating ? "Generating..." : "Generate Quote"}
-            </Button>
-          </CardContent>
-        </Card>
+            </button>
+          </div>
+        </div>
 
         {generatedQuote && (
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Salesperson Response</CardTitle>
-              <CardDescription>Generated Quote & Booking Link</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg bg-muted p-4 whitespace-pre-wrap">
+          <div className="border rounded-lg p-6 bg-card text-card-foreground shadow-sm">
+            <div className="flex flex-col space-y-1.5 mb-4">
+              <h3 className="font-semibold leading-none tracking-tight">AI Salesperson Response</h3>
+              <p className="text-sm text-muted-foreground">Generated Quote & Booking Link</p>
+            </div>
+            <div>
+              <div className="rounded-lg bg-muted p-4 whitespace-pre-wrap text-sm">
                 {generatedQuote}
               </div>
               <div className="mt-4">
-                <Button variant="outline" className="w-full">
+                <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 py-2 px-4 w-full">
                   Approve & Send to Customer
-                </Button>
+                </button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </div>
