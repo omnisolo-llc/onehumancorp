@@ -4,56 +4,34 @@ use std::sync::Arc;
 /// AutoGPT Unique Harness Innovations: Agent Protocol
 /// Standardization via agentprotocol.ai, gaining cross-framework adoption.
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct TaskRequestBody {
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct TaskRequest {
     pub input: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_input: Option<serde_json::Value>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct Task {
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct TaskResponse {
     pub task_id: String,
     pub input: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_input: Option<serde_json::Value>,
-    pub artifacts: Vec<Artifact>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct Artifact {
-    pub artifact_id: String,
-    pub file_name: String,
-    pub relative_path: Option<String>,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct StepRequestBody {
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct StepRequest {
     pub input: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_input: Option<serde_json::Value>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct Step {
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct StepResponse {
     pub task_id: String,
     pub step_id: String,
-    pub name: Option<String>,
-    pub status: StepStatus,
-    pub output: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_output: Option<serde_json::Value>,
-    pub artifacts: Vec<Artifact>,
+    pub output: String,
     pub is_last: bool,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum StepStatus {
-    Created,
-    Running,
-    Completed,
-    Failed,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artifacts: Option<Vec<serde_json::Value>>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -72,7 +50,7 @@ impl AgentProtocolServer {
 
     /// POST /ap/v1/agent/tasks
     pub async fn create_task(&self, req_json: &str) -> String {
-        let req: TaskRequestBody = match serde_json::from_str(req_json) {
+        let req: TaskRequest = match serde_json::from_str(req_json) {
             Ok(r) => r,
             Err(_) => {
                 return serde_json::to_string(&ErrorResponse {
@@ -84,11 +62,10 @@ impl AgentProtocolServer {
         // For simplicity, we just generate a task ID
         let task_id = uuid::Uuid::new_v4().to_string();
 
-        let resp = Task {
+        let resp = TaskResponse {
             task_id,
             input: req.input,
             additional_input: req.additional_input,
-            artifacts: vec![],
         };
 
         serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
@@ -96,7 +73,7 @@ impl AgentProtocolServer {
 
     /// POST /ap/v1/agent/tasks/{task_id}/steps
     pub async fn execute_step(&self, task_id: &str, req_json: &str) -> String {
-        let req: StepRequestBody = match serde_json::from_str(req_json) {
+        let req: StepRequest = match serde_json::from_str(req_json) {
             Ok(r) => r,
             Err(_) => {
                 return serde_json::to_string(&ErrorResponse {
@@ -110,30 +87,19 @@ impl AgentProtocolServer {
 
         match self.runner.run_async(&initial_message).await {
             Ok(result) => {
-                let resp = Step {
+                let resp = StepResponse {
                     task_id: task_id.to_string(),
                     step_id: uuid::Uuid::new_v4().to_string(),
-                    name: None,
-                    status: StepStatus::Completed,
-                    output: Some(result),
-                    additional_output: None,
+                    output: result,
                     is_last: true,
-                    artifacts: vec![],
+                    artifacts: None,
                 };
                 serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
             Err(e) => {
-                let resp = Step {
-                    task_id: task_id.to_string(),
-                    step_id: uuid::Uuid::new_v4().to_string(),
-                    name: None,
-                    status: StepStatus::Failed,
-                    output: Some(e.to_string()),
-                    additional_output: None,
-                    is_last: true,
-                    artifacts: vec![],
-                };
-                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                serde_json::to_string(&ErrorResponse {
+                    error: e.to_string(),
+                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
         }
     }
@@ -170,18 +136,17 @@ mod tests {
         // Test create task
         let req_json = r#"{"input": "do this task"}"#;
         let resp_json = server.create_task(req_json).await;
-        let resp: Task = serde_json::from_str(&resp_json).unwrap();
+        let resp: TaskResponse = serde_json::from_str(&resp_json).unwrap();
         assert_eq!(resp.input, "do this task");
         let task_id = resp.task_id;
 
         // Test execute step
         let step_req = r#"{"input": "step 1"}"#;
         let step_resp_json = server.execute_step(&task_id, step_req).await;
-        let step_resp: Step = serde_json::from_str(&step_resp_json).unwrap();
+        let step_resp: StepResponse = serde_json::from_str(&step_resp_json).unwrap();
 
         assert_eq!(step_resp.task_id, task_id);
-        assert_eq!(step_resp.output.unwrap(), "agent protocol success");
-        assert_eq!(step_resp.status, StepStatus::Completed);
+        assert_eq!(step_resp.output, "agent protocol success");
         assert!(step_resp.is_last);
     }
 
@@ -232,8 +197,7 @@ mod tests {
         let req_json = r#"{"input": "step 1"}"#;
         let resp_json = server.execute_step("task-123", req_json).await;
 
-        let err_resp: Step = serde_json::from_str(&resp_json).unwrap();
-        assert_eq!(err_resp.status, StepStatus::Failed);
-        assert!(err_resp.output.unwrap().contains("LLM execution failed"));
+        let err_resp: ErrorResponse = serde_json::from_str(&resp_json).unwrap();
+        assert!(err_resp.error.contains("LLM execution failed"));
     }
 }

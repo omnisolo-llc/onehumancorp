@@ -124,15 +124,15 @@ mod tests {
     use super::*;
     use sqlx::PgPool;
 
-    async fn setup_test_db() -> Result<PgPool, sqlx::Error> {
+    async fn setup_test_db() -> PgPool {
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        PgPool::connect(&db_url).await
+        PgPool::connect(&db_url).await.unwrap()
     }
 
     #[tokio::test]
     async fn test_forecaster_logic() {
         let pool = match tokio::time::timeout(Duration::from_millis(500), setup_test_db()).await {
-            Ok(Ok(p)) => p,
+            Ok(p) => p,
             _ => return,
         };
 

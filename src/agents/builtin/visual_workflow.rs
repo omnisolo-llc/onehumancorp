@@ -107,7 +107,7 @@ impl WorkflowExecutor {
                     let tool = self.tools.iter().find(|t| &t.name == tool_name)
                         .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await
+                    let result = tool.execute.execute(args).await
                         .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
 
                     state.insert(node.id.clone(), result);

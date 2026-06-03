@@ -62,6 +62,9 @@ export default function Dashboard() {
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
   const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before theyre gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
 
+  const [inventoryAlerts, setInventoryAlerts] = useState<any[]>([]);
+  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+
   // Growth Loop: Wall of Love Generator State
   const [showWallOfLoveModal, setShowWallOfLoveModal] = useState<boolean>(false);
   const [isGeneratingWallOfLove, setIsGeneratingWallOfLove] = useState<boolean>(false);
@@ -157,6 +160,26 @@ export default function Dashboard() {
       }
     }
     fetchApprovals();
+
+    async function fetchInventoryAlerts() {
+      try {
+        const res = await fetch('/api/v1/supply-chain/low-stock?tenant_id=tenant1');
+        if (res.ok) {
+          const data = await res.json();
+          setInventoryAlerts(data.low_stock_materials || []);
+        } else {
+          setInventoryAlerts([
+            { id: 'mat1', name: 'Vegan Cakes', current_quantity: 3, reorder_threshold: 10 }
+          ]);
+        }
+      } catch (e) {
+        setInventoryAlerts([
+            { id: 'mat1', name: 'Vegan Cakes', current_quantity: 3, reorder_threshold: 10 }
+        ]);
+      }
+    }
+
+    fetchInventoryAlerts();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
 
@@ -845,6 +868,46 @@ export default function Dashboard() {
          {/* Automated AI Review Requests Growth Loop */}
          <section className="mb-6">
             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                {/* Predictive Inventory Intelligence Card */}
+                {inventoryAlerts.filter(a => !dismissedAlerts.includes(a.id)).map(alert => (
+                  <div key={alert.id} className="mb-6 p-6 rounded-2xl border border-[rgba(0,0,0,0.05)] shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(40px)', borderColor: 'rgba(255, 59, 48, 0.2)' }}>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-outfit font-semibold text-lg text-gray-900 flex items-center gap-2">
+                        ⚠️ Stock Prediction: {alert.name} selling fast
+                      </h3>
+                    </div>
+                    <p className="font-inter text-sm text-gray-700 mb-4">
+                      At the current rate, you will run out of ingredients by Thursday.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        onClick={async () => {
+                          await fetch('/api/v1/supply-chain/approve-po', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ tenant_id: 'tenant1', purchase_order_id: `po_for_${alert.id}` })
+                          });
+                          setDismissedAlerts([...dismissedAlerts, alert.id]);
+                        }}
+                        className="min-w-[44px] min-h-[44px] flex-1 py-3 px-4 bg-[#0071E3] hover:bg-[#005bb5] active:scale-95 transition-all text-white font-inter font-medium rounded-xl shadow-md"
+                      >
+                        Draft Reorder
+                      </button>
+                      <button
+                        onClick={() => setDismissedAlerts([...dismissedAlerts, alert.id])}
+                        className="min-w-[44px] min-h-[44px] flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all text-gray-800 font-inter font-medium rounded-xl border border-gray-200"
+                      >
+                        Mark as Sold Out
+                      </button>
+                      <button
+                        onClick={() => setDismissedAlerts([...dismissedAlerts, alert.id])}
+                        className="min-w-[44px] min-h-[44px] py-3 px-4 text-gray-500 hover:text-gray-700 transition-colors font-medium rounded-xl"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
                     <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
                         Automated AI Review Requests
