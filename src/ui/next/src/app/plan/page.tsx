@@ -31,26 +31,11 @@ export default function MyPlanPage() {
           setPlanData(data);
         } else {
             console.error("Failed to fetch plan data:", res.status);
-            // Fallback for UI if API is not wired perfectly in e2e
-            setPlanData({
-                current_plan: "Free",
-                ai_actions_used: 0,
-                ai_actions_limit: 100,
-                storage_used_bytes: 0,
-                storage_limit_bytes: 500 * 1024 * 1024,
-                next_bill_estimated: 0,
-            });
+            setPlanData(null);
         }
       } catch (err) {
         console.error("Error fetching plan data", err);
-        setPlanData({
-            current_plan: "Free",
-            ai_actions_used: 0,
-            ai_actions_limit: 100,
-            storage_used_bytes: 0,
-            storage_limit_bytes: 500 * 1024 * 1024,
-            next_bill_estimated: 0,
-        });
+        setPlanData(null);
       } finally {
         setLoading(false);
       }
@@ -68,6 +53,18 @@ export default function MyPlanPage() {
       if (mb > 1024) return (mb / 1024).toFixed(2) + " GB";
       return mb.toFixed(1) + " MB";
   };
+
+  if (!planData) {
+    return (
+      <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7] items-center justify-center p-6">
+        <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Plan Details Unavailable</h1>
+        <p className="text-gray-500 mb-6 text-center">We couldn't load your plan information. Please try again later.</p>
+        <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+            Back to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
