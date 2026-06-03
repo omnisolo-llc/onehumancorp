@@ -167,6 +167,71 @@ service BookingEngineService {
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
 }
 
+service SubscriptionEngineService {
+  rpc ToggleProductRecurring(ToggleProductRecurringRequest) returns (ToggleProductRecurringResponse);
+  rpc CreateSubscriptionCheckout(CreateSubscriptionCheckoutRequest) returns (CreateSubscriptionCheckoutResponse);
+  rpc GenerateMagicLink(GenerateMagicLinkRequest) returns (GenerateMagicLinkResponse);
+  rpc ManageCustomerSubscription(ManageCustomerSubscriptionRequest) returns (ManageCustomerSubscriptionResponse);
+  rpc SubscriptionDunningCallback(SubscriptionDunningCallbackRequest) returns (SubscriptionDunningCallbackResponse);
+}
+
+message ToggleProductRecurringRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  bool is_recurring = 3;
+  string interval = 4; // e.g. "monthly", "weekly"
+  int64 price_cents = 5;
+}
+
+message ToggleProductRecurringResponse {
+  bool success = 1;
+  string plan_id = 2;
+}
+
+message CreateSubscriptionCheckoutRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string plan_id = 3;
+}
+
+message CreateSubscriptionCheckoutResponse {
+  string checkout_url = 1;
+  string intent_id = 2;
+}
+
+message GenerateMagicLinkRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string subscription_id = 3;
+}
+
+message GenerateMagicLinkResponse {
+  string magic_link_url = 1;
+}
+
+message ManageCustomerSubscriptionRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string subscription_id = 3;
+  string action = 4; // "pause", "resume", "cancel"
+}
+
+message ManageCustomerSubscriptionResponse {
+  bool success = 1;
+  string new_status = 2;
+}
+
+message SubscriptionDunningCallbackRequest {
+  string tenant_id = 1;
+  string subscription_id = 2;
+  string failed_reason = 3;
+}
+
+message SubscriptionDunningCallbackResponse {
+  bool handled_by_ai = 1;
+  string action_taken = 2;
+}
+
 message CheckAvailabilityRequest {
   string tenant_id = 1;
   string product_id = 2;
