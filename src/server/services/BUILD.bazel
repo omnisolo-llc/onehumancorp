@@ -134,6 +134,7 @@ rust_library(
         "//src/server/services/docs:server_services_docs",
         "//src/server/telemetry:server_telemetry",
         "//src/server/utils:server_utils",
+        "//src/server/domain:server_domain",
         "@crates//:aes-gcm",
         "@crates//:async-nats",
         "@crates//:axum",
