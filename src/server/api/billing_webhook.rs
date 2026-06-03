@@ -17,6 +17,7 @@ pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
+    pub mesh: std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -160,31 +161,51 @@ pub async fn stripe_webhook_handler(
                     if acquired {
                         let update_res = match &webhook_state.db.store {
                             crate::db::DbStore::Sqlite(pool) => {
-                                sqlx::query("UPDATE products SET inventory_count = MAX(0, inventory_count - ?) WHERE id = ? AND tenant_id = ?")
+                                sqlx::query_as::<_, (i32,)>("UPDATE products SET inventory_count = MAX(0, inventory_count - ?) WHERE id = ? AND tenant_id = ? RETURNING inventory_count")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
-                                    .execute(pool)
+                                    .fetch_optional(pool)
                                     .await
-                                    .map(|_| ())
+                                    .map(|r| r.map(|row| row.0))
                             }
                             crate::db::DbStore::Postgres => {
-                                sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
+                                sqlx::query_as::<_, (i32,)>("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3 RETURNING inventory_count")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
-                                    .execute(&webhook_state.db.pool)
+                                    .fetch_optional(&webhook_state.db.pool)
                                     .await
-                                    .map(|_| ())
+                                    .map(|r| r.map(|row| row.0))
                             }
                         };
 
                         // Release lock
                         let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
 
-                        if let Err(e) = update_res {
-                            tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
-                            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                        match update_res {
+                            Err(e) => {
+                                tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
+                                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                            }
+                            Ok(Some(new_count)) => {
+                                let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                    action: "InventoryUpdated".to_string(),
+                                    agent_id: "system".to_string(),
+                                    status: "".to_string(),
+                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                    payload: serde_json::json!({
+                                        "product_id": product_id,
+                                        "quantity_deducted": quantity,
+                                        "tenant_id": tenant_id,
+                                        "new_count": new_count
+                                    }).to_string().into_bytes(),
+                                };
+                                let _ = webhook_state.mesh.publish("mesh:inventory:status_changed", event).await;
+                            }
+                            Ok(None) => {
+                                tracing::warn!("Product {} not found or unauthorized for tenant {}", product_id, tenant_id);
+                            }
                         }
                     } else {
                         tracing::warn!("Failed to acquire inventory lock for product {} on POS transaction", product_id);

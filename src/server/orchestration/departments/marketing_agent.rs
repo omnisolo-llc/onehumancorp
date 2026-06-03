@@ -22,11 +22,26 @@ impl Department for MarketingAgent {
         vec![
             "tenant.insight.trending".to_string(),
             "tenant.job.completed".to_string(),
+            "mesh:inventory:status_changed".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "mesh:inventory:status_changed" {
+            let new_count = event.payload.get("new_count").and_then(|v| v.as_i64()).unwrap_or(0);
+            if new_count == 0 {
+                return self.orchestrator.execute_action(
+                    DepartmentType::Marketing,
+                    "Draft \"Sold Out! Pre-order now\" social media campaign".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    event.payload.clone(),
+                ).await.map(|_| ());
+            }
+            return Ok(());
+        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");

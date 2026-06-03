@@ -32,6 +32,7 @@ async fn test_stripe_webhook_handler_completed() {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        mesh: std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()),
     };
 
     // Seed the database with a test tenant
@@ -107,6 +108,7 @@ async fn test_stripe_webhook_handler_deleted() {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db.clone()),
+        mesh: std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()),
     };
 
     // Seed the database with a test tenant
@@ -184,6 +186,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: Arc::new(db),
+        mesh: std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()),
     };
 
     let event = MercadoPagoEvent {
@@ -227,6 +230,7 @@ async fn test_webhook_security_invalid_signature() {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db),
+        mesh: std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()),
     };
 
     let app = Router::new()
@@ -270,6 +274,7 @@ async fn test_webhook_security_expired_timestamp() {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db),
+        mesh: std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()),
     };
 
     let app = Router::new()
@@ -314,6 +319,7 @@ async fn test_webhook_security_replay_protection() {
         rate_limiter,
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db),
+        mesh: std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()),
     };
 
     let app = Router::new()
@@ -368,6 +374,7 @@ async fn test_stripe_webhook_pos_transaction() {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: std::sync::Arc::new(db),
+        mesh: std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new()),
     };
 
     let app = Router::new()

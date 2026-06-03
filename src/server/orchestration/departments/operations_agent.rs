@@ -22,6 +22,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "mesh:inventory:status_changed".to_string(),
         ]
     }
 
@@ -36,6 +37,29 @@ impl Department for OperationsAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "mesh:inventory:status_changed" {
+            let new_count = event.payload.get("new_count").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            if new_count == 0 {
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    "Mark product out of stock".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::AutoExecute,
+                    event.payload.clone(),
+                ).await.map(|_| ());
+            } else if new_count < 5 {
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    "Draft review task for low stock reorder".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    event.payload.clone(),
+                ).await.map(|_| ());
+            }
+            return Ok(());
+        }
 
         let action_description = if event.event_type == "tenant.order.created" {
             "Process Order & Update Inventory".to_string()
