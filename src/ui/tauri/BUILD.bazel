@@ -20,13 +20,32 @@ config_setting(
 )
 
 genrule(
+    name = "tauri_ui_build",
+    srcs = glob(["tauri-ui/**", "tauri-ui/**/*"]),
+    outs = [
+        "tauri-ui/dist",
+    ],
+    cmd = """
+TMP_UI=$$(mktemp -d)
+cp -R src/ui/tauri/tauri-ui/* $$TMP_UI/
+cd $$TMP_UI
+npm install
+npm run build
+mkdir -p $(@D)/tauri-ui
+cp -R dist $(@D)/tauri-ui/
+""",
+    target_compatible_with = select({
+        ":tauri_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+genrule(
     name = "tauri_context",
     srcs = [
         "tauri.conf.json",
         "capabilities/default.json",
-        "next_out/404.html",
-        "next_out/builder.html",
-        "next_out/dashboard.html",
+        "tauri-ui/dist",
     ],
     outs = [
         "tauri_out/acl-manifests.json",
@@ -38,13 +57,14 @@ genrule(
     cmd = """
 mkdir -p $(@D)/tauri_out $(@D)/context
 cp $(location capabilities/default.json) $(@D)/tauri_out/capabilities.json
-if [ -s "$(location next_out/dashboard.html)" ]; then
-  cp $(location next_out/dashboard.html) $(@D)/context/index.html
-elif [ -s "$(location next_out/builder.html)" ]; then
-  cp $(location next_out/builder.html) $(@D)/context/index.html
+
+# If there is a dummy index.html needed for build macro context parsing
+if [ -f "$(location tauri-ui/dist)/index.html" ]; then
+    cp $(location tauri-ui/dist)/index.html $(@D)/context/index.html
 else
-  cp $(location next_out/404.html) $(@D)/context/index.html
+    echo "<html></html>" > $(@D)/context/index.html
 fi
+
 cp $(location tauri.conf.json) $(@D)/tauri_config.json
 cat > $(@D)/tauri_out/acl-manifests.json << 'ACL_EOF'
 {
@@ -74,7 +94,6 @@ use std::borrow::Cow;
 
 pub fn tauri_context() -> Context<tauri::Wry> {
     let config: Config = serde_json::from_str(include_str!("tauri_config.json")).expect("failed to parse tauri_config.json");
-    let assets = TauriAssets {};
     let package_info = tauri::PackageInfo {
         name: "OHC".into(),
         version: "0.4.45".parse().expect("invalid version"),
@@ -87,6 +106,9 @@ pub fn tauri_context() -> Context<tauri::Wry> {
         BTreeMap::new(),
         tauri::utils::acl::resolved::Resolved::default(),
     );
+    // When using frontendDist in v2, context macro can typically build with a dummy asset map
+    // because standard filesystem resolution will overlay it.
+    let assets = tauri::utils::assets::EmbeddedAssets::default();
     Context::new(
         config,
         Box::new(assets),
@@ -97,25 +119,6 @@ pub fn tauri_context() -> Context<tauri::Wry> {
         runtime_authority,
         None,
     )
-}
-
-struct TauriAssets;
-impl<R: tauri::Runtime> tauri::Assets<R> for TauriAssets {
-    fn get(&self, key: &tauri::utils::assets::AssetKey) -> Option<Cow<'_, [u8]>> {
-        if key.as_ref() == "index.html" {
-            Some(Cow::Owned(include_bytes!("context/index.html").to_vec()))
-        } else {
-            None
-        }
-    }
-    fn iter(&self) -> Box<dyn Iterator<Item = (Cow<'_, str>, Cow<'_, [u8]>)> + '_> {
-        Box::new(std::iter::empty())
-    }
-    fn setup(&self, _app: &tauri::App<R>) {
-    }
-    fn csp_hashes(&self, _key: &tauri::utils::assets::AssetKey) -> Box<dyn Iterator<Item = tauri::utils::assets::CspHash<'_>> + '_> {
-        Box::new(std::iter::empty())
-    }
 }
 CTX_EOF
 """,
@@ -172,7 +175,7 @@ TAURI_MOBILE_SRCS = glob([
     "src/**/*.rs",
     "capabilities/**",
     "icons/**",
-    "next_out/**",
+    "tauri-ui/**",
 ]) + [
     "//:Cargo.lock",
     "//:Cargo.toml",

@@ -4,8 +4,8 @@
   "version": "0.4.47+1",
   "identifier": "com.onehumancorp.ohc",
   "build": {
-    "frontendDist": "./next_out",
-    "devUrl": "http://localhost:3000"
+    "frontendDist": "./tauri-ui/dist",
+    "devUrl": "http://localhost:5173"
   },
   "bundle": {
     "active": true,

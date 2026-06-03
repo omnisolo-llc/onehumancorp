@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Customer Win-back Campaign Growth Loop', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the new win-back page
-    await page.goto('/win-back');
+    await page.goto('http://localhost:5173/win-back.html');
     await page.waitForLoadState('networkidle');
   });
 
