@@ -567,4 +567,60 @@ mod chaos_tests {
         assert!(res.is_ok());
         assert_eq!(res.unwrap().len(), 0);
     }
+
+    #[tokio::test]
+    async fn test_chaos_dropped_packets_cross_db() {
+        use std::sync::Arc;
+        let db_id1 = uuid::Uuid::new_v4().to_string();
+        let uri1 = format!("sqlite:file:{}?mode=memory&cache=shared", db_id1);
+        let pool1 = sqlx::sqlite::SqlitePoolOptions::new().connect(&uri1).await.unwrap();
+
+        let db_id2 = uuid::Uuid::new_v4().to_string();
+        let uri2 = format!("sqlite:file:{}?mode=memory&cache=shared", db_id2);
+        let pool2 = sqlx::sqlite::SqlitePoolOptions::new().connect(&uri2).await.unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT, payload TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);").execute(&pool1).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS sync_queue (id TEXT PRIMARY KEY, synced BOOLEAN DEFAULT 0);").execute(&pool2).await.unwrap();
+
+        let mission_id = "mission_001";
+
+        // Initial state
+        sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data');")
+            .bind(mission_id).execute(&pool1).await.unwrap();
+
+        sqlx::query("INSERT INTO sync_queue (id, synced) VALUES (?, 0);")
+            .bind(mission_id).execute(&pool2).await.unwrap();
+
+        // Let's use DroppingMockTransport already in scope to inject fault into CentrifugeNode
+        let transport = Arc::new(DroppingMockTransport::new(100)); // 100% drop rate
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+
+        // Start health responder (simulates ack responder)
+        let _ = mesh.start_health_responder().await;
+
+        let mut standalone_tx = pool2.begin().await.unwrap();
+
+        // Simulate local commit
+        sqlx::query("UPDATE sync_queue SET synced = 1 WHERE id = ?").bind(mission_id).execute(&mut *standalone_tx).await.unwrap();
+
+        // Try to commit cross-DB transaction sync using ping which requires ack
+        // This is a stand-in for the mesh sync signal
+        let network_res = mesh.ping().await;
+
+        if network_res.is_err() {
+            // Fail-safe logic: we must rollback the local transaction or mark it as queued/pending.
+            let _ = standalone_tx.rollback().await;
+            // Because we rolled back, the state should remain PENDING.
+        } else {
+            let _ = standalone_tx.commit().await;
+            sqlx::query("UPDATE agent_missions SET status = 'COMMITTED' WHERE id = ?").bind(mission_id).execute(&pool1).await.unwrap();
+        }
+
+        let cloud_status: String = sqlx::query_scalar("SELECT status FROM agent_missions WHERE id = ?").bind(mission_id).fetch_one(&pool1).await.unwrap();
+        let standalone_synced: bool = sqlx::query_scalar("SELECT synced FROM sync_queue WHERE id = ?").bind(mission_id).fetch_one(&pool2).await.unwrap();
+
+        assert_eq!(cloud_status, "PENDING", "Cloud ledger should remain PENDING after a dropped network sync packet");
+        assert_eq!(standalone_synced, false, "Standalone ledger should rollback and remain un-synced upon packet drop");
+    }
+
 }
