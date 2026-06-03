@@ -155,19 +155,27 @@ impl ModeEnforcer for StandaloneModeEnforcer {
             }
         }
 
-        let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
+        let mut sqlite_url = base_sqlite_url.clone();
+        let encryption_key = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
-                base_sqlite_url.clone()
-            } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-                base_sqlite_url.clone()
+                Some(key.clone())
             } else {
-                base_sqlite_url
+                std::env::var("OHC_SQLITE_KEY").ok()
             }
-        } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-            base_sqlite_url.clone()
         } else {
-            base_sqlite_url
+            std::env::var("OHC_SQLITE_KEY").ok()
         };
+
+        if let Some(key) = encryption_key {
+            if !key.is_empty() {
+                let encoded_key = urlencoding::encode(&key);
+                if sqlite_url.contains('?') {
+                    sqlite_url = format!("{}&pragma_key={}", sqlite_url, encoded_key);
+                } else {
+                    sqlite_url = format!("{}?pragma_key={}", sqlite_url, encoded_key);
+                }
+            }
+        }
         cfg.database_url = Some(sqlite_url.clone());
 
         // Set proper file permissions for local storage wrapper in standalone mode atomically
