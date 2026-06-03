@@ -1,9 +1,12 @@
 import { test, expect } from './fixtures';
 
 test.describe('Autonomous Inventory & Fulfillment Engine', () => {
-  test('Non-technical user should view AI restock alerts and stock status', async ({ page }) => {
+  test('Non-technical user should view AI restock alerts and stock status', async ({ page, authenticatedUser }) => {
     // Navigate using relative URL
     await page.goto('/inventory');
+
+    // Wait for the inventory page to load completely by checking the main heading
+    await expect(page.locator('h1', { hasText: 'Inventory' })).toBeVisible();
 
     // Verify AI Alert is present
     await expect(page.locator('text=✨ Heads up Priya')).toBeVisible();
