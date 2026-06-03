@@ -37,4 +37,29 @@ test.describe('Offline-First Tap-to-Pay Omnichannel Inventory Sync Mesh', () => 
     const body = await response.json();
     expect(body.success).toBe(true);
   });
+
+  test('Reject offline sync mutations with invalid or missing Spiffe ID', async ({ request, baseURL }) => {
+    // Attempt offline sync directly against the API endpoint without auth headers
+    const payload = {
+      mutations: [
+        {
+          transaction_id: 'tx-tap-to-pay-invalid',
+          product_id: 'prod-offline-invalid',
+          quantity_deducted: 1
+        }
+      ]
+    };
+
+    const response = await request.post(`${baseURL}/api/v1/sync/offline`, {
+      headers: {
+        'Content-Type': 'application/json'
+        // 'x-spiffe-id' intentionally missing
+      },
+      data: payload
+    });
+
+    expect(response.status()).toBe(401);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+  });
 });

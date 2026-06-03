@@ -64,6 +64,10 @@ impl StripeClient {
     }
 
     pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+        if tenant_id.trim().is_empty() {
+            return Err("tenant_id cannot be empty".to_string());
+        }
+
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             tenant_id,
@@ -149,5 +153,13 @@ mod tests {
         assert!(result.is_ok());
         let token = result.unwrap();
         assert_eq!(token, "tss_mock_token_for_test_tenant");
+    }
+
+    #[tokio::test]
+    async fn test_create_terminal_connection_token_empty_tenant() {
+        let client = StripeClient::new("sk_test_123".to_string());
+        let result = client.create_terminal_connection_token("   ").await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "tenant_id cannot be empty");
     }
 }
