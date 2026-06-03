@@ -18,6 +18,7 @@ export default function SubscriptionsPage() {
           const data = await res.json();
           setPlans(data.plans || []);
           setSubscribers(data.subscribers || []);
+          if (data.batches) setBatches(data.batches);
         } else {
           console.error("Failed to fetch subscriptions");
         }
