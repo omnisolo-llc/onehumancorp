@@ -38,6 +38,14 @@ export default function Dashboard() {
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
+  const [upsellRevenue, setUpsellRevenue] = useState<number>(0);
+  useEffect(() => {
+    try {
+      const rev = parseFloat(localStorage.getItem('ohc_upsell_revenue') || '0');
+      setUpsellRevenue(rev);
+    } catch (e) {}
+  }, []);
+
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
   const [productAdded, setProductAdded] = useState<boolean>(false);

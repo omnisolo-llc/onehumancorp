@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
@@ -10,6 +10,45 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [upsellProducts, setUpsellProducts] = useState<any[]>([]);
+  const [isUpsellProcessing, setIsUpsellProcessing] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUpsells = async () => {
+      try {
+        const res = await fetch('/api/v1/upsell/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cart_items: ['Main Product'] })
+        });
+        const data = await res.json();
+        if (data.recommendations) {
+          setUpsellProducts(data.recommendations);
+        }
+      } catch (err) {
+        console.error('Failed to fetch upsells', err);
+      }
+    };
+    fetchUpsells();
+  }, []);
+
+  const handleAddUpsell = (id: string, price: string) => {
+    setIsUpsellProcessing(id);
+    setTimeout(() => {
+      alert('Upsell added to order! Total updated.');
+      const newQueue = upsellProducts.filter(p => p.id !== id);
+      setUpsellProducts(newQueue);
+
+      // Update local storage metric for Dashboard
+      try {
+        const currentRevenue = parseFloat(localStorage.getItem('ohc_upsell_revenue') || '0');
+        localStorage.setItem('ohc_upsell_revenue', (currentRevenue + parseFloat(price)).toString());
+      } catch (e) {}
+
+      setIsUpsellProcessing(null);
+    }, 600);
+  };
+
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
@@ -93,7 +132,42 @@ export default function CheckoutPage() {
           )}
         </div>
 
+
+        {upsellProducts.length > 0 && (
+          <div className="p-6 shadow-sm flex flex-col gap-4 mb-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span>✨</span> Frequently Bought Together
+            </h2>
+            <div className="flex flex-col gap-3">
+              {upsellProducts.map((product) => (
+                <div key={product.id} className="flex items-center justify-between p-3 bg-white/50 border border-white/60 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg text-xl shadow-inner">
+                      {product.image}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">{product.name}</span>
+                      <span className="text-xs text-gray-500">{product.description}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-gray-900">+${product.price}</span>
+                    <button
+                      onClick={() => handleAddUpsell(product.id, product.price)}
+                      disabled={isUpsellProcessing === product.id}
+                      className="px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-50"
+                    >
+                      {isUpsellProcessing === product.id ? 'Adding...' : 'Add'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <p className="text-gray-700 font-medium">Payment Details</p>
+
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>

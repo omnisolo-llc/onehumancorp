@@ -16,3 +16,4 @@ pub mod syndication_handler;
 pub mod dynamic_workflows;
 
 pub mod catalog;
+pub mod upsell;
