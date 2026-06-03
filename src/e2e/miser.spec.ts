@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Miser Cost Optimizations', () => {
   test('Pricing Page and Select Plan Checkout Flow', async ({ page }) => {
