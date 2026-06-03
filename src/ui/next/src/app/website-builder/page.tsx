@@ -64,6 +64,14 @@ export default function WebsiteBuilderPage() {
     loadSavedState();
   }, []);
 
+
+  const handleInstantBuildSubmit = () => {
+    setStatus('generating');
+    setTimeout(() => {
+      setStatus('live');
+    }, 2000);
+  };
+
   const handleSaveDraft = async () => {
     setStatus("generating"); // Just show some loading state or disable button
     try {
@@ -410,7 +418,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 2 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
-                  <div id="step-3" className="mt-6 flex flex-col gap-4">
+                  <form id="step-3" className="mt-6 flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (businessName.trim()) setWizardStep(3); }}>
                     <input
                       type="text"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
@@ -430,11 +438,11 @@ export default function WebsiteBuilderPage() {
                     <button
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => setWizardStep(3)}
+                      type="submit"
                     >
                       Next
                     </button>
-                  </div>
+                  </form>
                 </>
               )}
 
@@ -473,7 +481,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 4 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
-                  <div id="step-5" className="mt-6 flex flex-col gap-4">
+                  <form id="step-5" className="mt-6 flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (productName.trim() && productPrice.trim()) setWizardStep(5); }}>
                     <input
                       type="text"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
@@ -493,11 +501,11 @@ export default function WebsiteBuilderPage() {
                     <button
                       disabled={!productName.trim() || !productPrice.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => setWizardStep(5)}
+                      type="submit"
                     >
                       Next
                     </button>
-                  </div>
+                  </form>
                 </>
               )}
 
@@ -524,7 +532,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 6 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
-                  <div id="step-7" className="mt-6 flex flex-col gap-4">
+                  <form id="step-7" className="mt-6 flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); if (userName.trim() && userEmail.trim() && userPassword.trim()) setWizardStep(7); }}>
                     <input
                       type="text"
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
@@ -552,11 +560,11 @@ export default function WebsiteBuilderPage() {
                     <button
                       disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => setWizardStep(7)}
+                      type="submit"
                     >
                       Next
                     </button>
-                  </div>
+                  </form>
                 </>
               )}
 
@@ -629,44 +637,41 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 9 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
-                  <div className="flex flex-col gap-4 mt-6">
+                  <form className="flex flex-col gap-4 mt-6" onSubmit={(e) => {
+                    e.preventDefault();
+                    setStatus('generating');
+                    setTimeout(() => {
+                       setStatus('live');
+                    }, 2000);
+                  }}>
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
-                        setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
-                      }}
+                      type="submit"
                     >
                       Publish my business
                     </button>
-                  </div>
+                  </form>
                 </>
               )}
 
               {wizardStep === 'instant-build' && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
-                  <div className="flex flex-col gap-4 mt-6">
+                  <form className="flex flex-col gap-4 mt-6" onSubmit={(e) => { e.preventDefault(); handleInstantBuildSubmit(); }}>
                     <textarea
                       className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleInstantBuildSubmit(); } }}
                     />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
-                        setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
-                      }}
+                      type="submit"
                     >
                       Generate Storefront
                     </button>
-                  </div>
+                  </form>
                 </>
               )}
 

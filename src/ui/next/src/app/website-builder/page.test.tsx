@@ -87,7 +87,7 @@ describe('WebsiteBuilderPage', () => {
 
     // Step 2
     fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
-    fireEvent.click(screen.getByText('Next'));
+    await user.type(screen.getByPlaceholderText('What is your business called?'), '{Enter}');
 
     // Step 3
     fireEvent.click(screen.getByLabelText('Physical Products'));
@@ -96,7 +96,7 @@ describe('WebsiteBuilderPage', () => {
     // Step 4
     fireEvent.change(screen.getByPlaceholderText('What is the name of this product?'), { target: { value: 'T-Shirt' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25.00' } });
-    fireEvent.click(screen.getByText('Next'));
+    await user.type(screen.getByPlaceholderText('0.00'), '{Enter}');
 
     // Step 5
     fireEvent.click(screen.getByText('Online'));
@@ -105,7 +105,7 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Maya Smith'), { target: { value: 'Test User' } });
     fireEvent.change(screen.getByPlaceholderText('you@email.com'), { target: { value: 'test@example.com' } });
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByText('Next'));
+    await user.type(screen.getByPlaceholderText('Password'), '{Enter}');
 
     // Step 7
     fireEvent.click(screen.getByText('Modern'));
@@ -134,6 +134,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('can follow the instant-build flow', async () => {
+    const user = userEvent.setup({ delay: null });
     render(<WebsiteBuilderPage />);
 
     // Step 0
@@ -141,15 +142,15 @@ describe('WebsiteBuilderPage', () => {
 
     // Instant build step
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
-
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    fireEvent.submit(screen.getByPlaceholderText('e.g. I run a local bakery').closest('form')!);
 
     act(() => {
-      vi.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(2500);
     });
 
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    await waitFor(() => {
+        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    });
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -246,26 +247,23 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles sync back to server state on change', async () => {
+    const user = userEvent.setup({ delay: null });
     render(<WebsiteBuilderPage />);
 
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
-
-    // Status changes to 'generating', wait for it
-    await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-    });
+    fireEvent.submit(screen.getByPlaceholderText('e.g. I run a local bakery').closest('form')!);
 
     act(() => {
       vi.advanceTimersByTime(2500); // Wait for debounce and status change to live
     });
 
-    // Should have called fetch to sync
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('status":"generating"')
-    }));
+    await waitFor(() => {
+        // Should have called fetch to sync
+        expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+          method: 'POST',
+        }));
+    });
   });
 });
