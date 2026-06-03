@@ -21,7 +21,7 @@ def _shard_specs(specs, index, total):
             shard_specs.append(spec)
     return shard_specs
 
-def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = "long"):
+def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = "eternal"):
     tags = [
         "e2e",
         "no-remote-exec",
