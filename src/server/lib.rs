@@ -3678,16 +3678,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: var(--shadow-md);
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         .animated-dropdown {
@@ -3717,8 +3717,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -3762,7 +3762,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -3772,8 +3772,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .card { 
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
@@ -3783,8 +3783,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         body.dark-theme .card {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -3867,8 +3867,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .glassmorphism {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
@@ -3947,8 +3947,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(20px) saturate(200%);
-                            -webkit-backdrop-filter: blur(20px) saturate(200%);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -4092,8 +4092,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 375px;
@@ -4104,8 +4104,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(20px) saturate(200%);
-            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -4138,8 +4138,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             @media (prefers-color-scheme: dark) {
                 .glass, .screen {
                     background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(20px) saturate(200%) !important;
-                    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+                    backdrop-filter: blur(30px) saturate(210%) !important;
+                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
                     border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 }
             }
@@ -5059,7 +5059,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
                         </div>
 
-                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
+                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
                             <button onclick="openLegacyDepartment('The Ambassador')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                                 <span>✨ The Ambassador (Omnichannel Inbox)</span>
                                 <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
@@ -5592,12 +5592,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div id="pricing-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Pricing Plans</h1>
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
 
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Free</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$0 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
@@ -5609,7 +5609,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Current Plan</button>
                         </div>
 
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Starter</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$29 / month</p>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 0.9em; opacity: 0.8;">Suggested for growing stores</p>
@@ -5622,7 +5622,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
                         </div>
 
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Pro</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$79 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
@@ -5634,7 +5634,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
                         </div>
 
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Business</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$299 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
@@ -5648,7 +5648,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <p style="font-family: 'Outfit', 'Inter', sans-serif; text-align: center; margin-top: 16px;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 24px;">
+                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 24px;">
                             <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Frequently Asked Questions</h2>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
                                 <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">How do I upgrade, downgrade, or cancel?</h3>
@@ -5662,12 +5662,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">My Plan</h1>
                         <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif;">Plan: Free</p>
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Status: Active</p>
                         <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif;">Estimated Next Bill: $0.00</p>
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Your Current Usage</h3>
                             <p id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">AI Actions Used: 0 / 100</p>
                             <p id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Storage Used: 0MB / 500MB</p>
@@ -5683,10 +5683,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Cost Transparency Dashboard</h1>
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Keep track of your total usage across your One Human Corp setup.</p>
-                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Billing Period</h2>
                             <p id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif;">Period: -</p>
 
@@ -5805,16 +5805,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
@@ -5825,15 +5825,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">Local Business</button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Give your business a name</h1>
                             <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="Business name" style="border-radius: 8px;" />
+                            <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -5844,7 +5844,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Add your first product or service</h1>
                             <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -5852,20 +5852,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Create your account</h1>
-                            <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="Your name" style="border-radius: 8px;" />
+                            <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -5876,24 +5876,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">Connect Custom Domain</button>
                             <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
@@ -5903,13 +5903,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="Describe your business" style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -5918,7 +5918,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
