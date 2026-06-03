@@ -1,4 +1,4 @@
-use crate::types::Message;
+use ohc_builtin_agent_core::types::Message;
 use std::path::Path;
 use tokio::fs;
 

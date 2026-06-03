@@ -78,6 +78,7 @@ rust_library(
         "plugins.rs",
         "progressive_skills.rs",
         "proto.rs",
+        "prompt_construction.rs",
         "provider.rs",
         "ralph_loop.rs",
         "registry.rs",

@@ -397,17 +397,6 @@ impl HierarchicalPromptBuilder {
 
         // 5. Conversation History (happens at run loop outside this builder)
 
-        // Lost in the Middle prevention: High-signal context at the very beginning and very end
-        if self.enable_lost_in_the_middle_prevention {
-            if !self.server_system_message.is_empty() {
-                if !combined_system.is_empty() {
-                    combined_system.push_str("\n\n");
-                }
-                combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
-                combined_system.push_str(&self.server_system_message);
-            }
-        }
-
         combined_system
     }
 }
@@ -2288,31 +2277,12 @@ impl Agent {
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
-            if final_cfg.enable_lost_in_the_middle_prevention {
-                let mut reminder_text = String::new();
-                if !final_cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
-                }
-                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
-                    // Truncate user instructions if it's too long, just to remind the core objective
-                    let mut end_idx = 1000;
-                    if final_cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
-                            end_idx -= 1;
-                        }
-                    } else {
-                        end_idx = final_cfg.user_instructions.len();
-                    }
-                    let summary = &final_cfg.user_instructions[..end_idx];
-                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
-                }
-
-                if !reminder_text.is_empty() {
-                    final_messages.push(Message::user(reminder_text.trim()));
-                }
-            } else if !final_cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
-            }
+            crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
+                &mut final_messages,
+                final_cfg.enable_lost_in_the_middle_prevention,
+                &final_cfg.developer_instructions,
+                &final_cfg.user_instructions,
+            );
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
@@ -7123,8 +7093,7 @@ mod hierarchical_prompt_tests {
         let prompt = builder.build();
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
-        assert!(prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
-        assert!(prompt.ends_with("CRITICAL: Never delete the database."));
+        assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
     }
 
     #[test]
