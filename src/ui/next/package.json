@@ -16,6 +16,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "swagger-ui-react": "^5.32.6",
+    "vite": "^8.0.16",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

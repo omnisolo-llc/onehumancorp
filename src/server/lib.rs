@@ -3061,6 +3061,53 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/settings/delivery", axum::routing::get({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                let settings = settings_store.get();
+                axum::response::Json(serde_json::json!({
+                    "delivery_enabled": settings.delivery_enabled,
+                    "delivery_radius": settings.delivery_radius,
+                    "delivery_fee": settings.delivery_fee,
+                }))
+            }
+        }))
+        .route("/api/settings/delivery", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let enabled = req.get("delivery_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+                let radius = req.get("delivery_radius").and_then(|v| v.as_f64());
+                let fee = req.get("delivery_fee").and_then(|v| v.as_f64());
+
+                if let Err(e) = settings_store.set_delivery_settings(enabled, radius, fee) {
+                    tracing::error!("Failed to save delivery settings: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false }));
+                }
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
+        .route("/api/checkout/delivery-quote", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let settings = settings_store.get();
+                if !settings.delivery_enabled {
+                    return axum::response::Json(serde_json::json!({ "success": false, "message": "Delivery is not enabled." }));
+                }
+
+                // In a real implementation, we would validate the `deliveryAddress` against `settings.delivery_radius` using a mapping service.
+                // We would also call `integrations_registry.get_delivery_quote("doordash", ...)` to get a real quote.
+                // For now, we simulate success and return the configured fee.
+                let _address = req.get("deliveryAddress").and_then(|v| v.as_str()).unwrap_or("");
+                let fee = settings.delivery_fee.unwrap_or(8.50);
+
+                axum::response::Json(serde_json::json!({
+                    "success": true,
+                    "fee": fee,
+                    "dropoff_eta": (chrono::Utc::now() + chrono::Duration::minutes(45)).to_rfc3339(),
+                    "pickup_eta": (chrono::Utc::now() + chrono::Duration::minutes(15)).to_rfc3339()
+                }))
+            }
+        }))
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
