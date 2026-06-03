@@ -1145,26 +1145,29 @@ impl HubService for MyHubService {
         let tenant_id_clone = tenant_id.clone();
 
         let hub_clone = self.hub.clone();
+        let tenant_id_clone_2 = tenant_id_clone.clone();
 
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_total_cost();
-                let rev = auditor.get_total_revenue();
-                (llm, rev)
+                (
+                    auditor.get_tenant_cost(&tenant_id_clone_2),
+                    auditor.get_tenant_revenue(&tenant_id_clone_2),
+                    auditor.get_tenant_payment_fees(&tenant_id_clone_2),
+                    auditor.get_tenant_compute_cost(&tenant_id_clone_2),
+                    auditor.get_tenant_network_cost(&tenant_id_clone_2)
+                )
             }),
             async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
             }
         );
 
-        let (llm_cost_f64, total_revenue_f64) = costs_res.unwrap_or((0.0, 0.0));
+        let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0));
         let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
-
-        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
+        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
@@ -7681,3 +7684,77 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 }
 pub mod crypto;
 // resolves #9690
+
+#[cfg(test)]
+mod get_cost_dashboard_tests {
+    use super::*;
+    use ::server_ohc::orchestration::EmptyRequest;
+    use tonic::Request;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_get_cost_dashboard_tenant_isolation() {
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = Arc::new(crate::Hub::new(tx, db.pool.clone()));
+        hub.set_db(db.clone());
+
+        let auditor = hub.get_cost_auditor();
+        // Setup isolated costs for two tenants
+        auditor.record_event(crate::services::billing::auditor::AuditEvent {
+            agent_id: "agent1".to_string(),
+            tenant_id: "tenant_a".to_string(),
+            input_tokens: 100,
+            output_tokens: 100,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        });
+
+        auditor.record_event(crate::services::billing::auditor::AuditEvent {
+            agent_id: "agent2".to_string(),
+            tenant_id: "tenant_b".to_string(),
+            input_tokens: 200,
+            output_tokens: 200,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        });
+
+        let is_cloud = !crate::is_standalone_runtime();
+        let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
+            std::env::var("REDIS_URL").ok().as_deref(),
+            is_cloud
+        ).await.expect("Failed to create MeshTransport");
+        let mesh_node = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
+        let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), mesh_node.clone()));
+        let orchestration_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone());
+
+        // Request as tenant_a
+        let mut req_a = Request::new(EmptyRequest {});
+        req_a.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            org_id: "tenant_a".to_string(),
+            agent_id: "".to_string(),
+            spiffe_id: "".to_string(),
+        });
+
+        use ::server_ohc::orchestration::hub_service_server::HubService;
+        let res_a = orchestration_service.get_cost_dashboard(req_a).await.unwrap().into_inner();
+
+        let expected_a = auditor.get_tenant_cost("tenant_a");
+        assert_eq!(res_a.llm_cost, (expected_a * 100.0) as i64);
+
+        // Request as tenant_b
+        let mut req_b = Request::new(EmptyRequest {});
+        req_b.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            org_id: "tenant_b".to_string(),
+            agent_id: "".to_string(),
+            spiffe_id: "".to_string(),
+        });
+
+        let res_b = orchestration_service.get_cost_dashboard(req_b).await.unwrap().into_inner();
+
+        let expected_b = auditor.get_tenant_cost("tenant_b");
+        assert_eq!(res_b.llm_cost, (expected_b * 100.0) as i64);
+
+        assert_ne!(res_a.llm_cost, res_b.llm_cost);
+    }
+}

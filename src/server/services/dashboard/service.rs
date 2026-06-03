@@ -47,11 +47,12 @@ impl MyDashboardService {
         }
 
         let hub_clone = self.hub.clone();
+        let org_id_clone = org_id.clone();
         let cost_data = tokio::task::spawn_blocking(move || {
             let cost_auditor = hub_clone.get_cost_auditor();
             (
-                cost_auditor.get_total_cost(),
-                cost_auditor.get_total_tokens(),
+                cost_auditor.get_tenant_cost(&org_id_clone),
+                cost_auditor.get_tenant_tokens(&org_id_clone),
                 cost_auditor.get_agent_costs_snapshot(),
             )
         }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
