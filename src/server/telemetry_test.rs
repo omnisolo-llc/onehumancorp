@@ -39,6 +39,43 @@ mod tests {
     use ::server_telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
+    fn test_redact_interface_pii_cross_mode() {
+        let test_cases = vec![Some("true"), Some("false"), None];
+        for mode in test_cases {
+            temp_env::with_vars(
+                [("OHC_STANDALONE_MODE", mode)],
+                || {
+                    let original_json = json!({
+                        "safe_field": "safe_value",
+                        "nested": {
+                            "password": "my_super_secret_password",
+                            "email": "user@example.com",
+                            "another_safe": "value"
+                        },
+                        "array": [
+                            { "ssn": "123-45-6789" },
+                            { "phone": "555-1234" }
+                        ],
+                        "raw_email": "test@test.com",
+                        "API_KEY": "sk-123456"
+                    });
+
+                    let redacted_json = redact_interface_pii(original_json);
+
+                    assert_eq!(redacted_json["safe_field"], "safe_value");
+                    assert_eq!(redacted_json["nested"]["password"], "[REDACTED]");
+                    assert_eq!(redacted_json["nested"]["email"], "[REDACTED]");
+                    assert_eq!(redacted_json["nested"]["another_safe"], "value");
+                    assert_eq!(redacted_json["array"][0]["ssn"], "[REDACTED]");
+                    assert_eq!(redacted_json["array"][1]["phone"], "[REDACTED]");
+                    assert_eq!(redacted_json["raw_email"], "[REDACTED]");
+                    assert_eq!(redacted_json["API_KEY"], "[REDACTED]");
+                }
+            );
+        }
+    }
+
+    #[test]
     fn test_organization_id_not_redacted() {
         let input = json!({
             "organization_id": "tenant-123",
