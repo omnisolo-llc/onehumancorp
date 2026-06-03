@@ -7,7 +7,9 @@ use crate::orchestration::departments::types::{
 use serde_json::Value;
 use std::collections::HashMap;
 
-// Using the mock LLM client approach for tests but wiring up the structural capability for real ones
+// Note: In actual implementation the OutboundDispatcher and ChatClient would be full featured modules
+// Since we are mocking them here temporarily to not break the build dependencies, they remain here but
+// should be injected via config in a real app.
 #[async_trait::async_trait]
 pub trait ChatClient: Send + Sync {
     async fn generate_response(&self, prompt: &str) -> Result<(String, f64), String>;
@@ -27,18 +29,6 @@ impl ChatClient for DummyGeminiClient {
         } else {
             Ok(("Thank you for your message. We will get back to you shortly.".to_string(), 85.0))
         }
-    }
-}
-
-pub struct ProductionGeminiClient {}
-
-#[async_trait::async_trait]
-impl ChatClient for ProductionGeminiClient {
-    async fn generate_response(&self, _prompt: &str) -> Result<(String, f64), String> {
-        // In full implementation, this uses ohc_builtin_agent::llm::GeminiClient
-        // For the purposes of the architecture outline and avoiding current CI blocks,
-        // it serves as the live endpoint stub that returns a generated response.
-        Ok(("Thank you for your inquiry, we are reviewing your request.".to_string(), 88.0))
     }
 }
 
@@ -67,16 +57,11 @@ pub struct CustomerSuccessAgent {
 
 impl CustomerSuccessAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        let llm: std::sync::Arc<dyn ChatClient> = if cfg!(debug_assertions) {
-            std::sync::Arc::new(DummyGeminiClient {})
-        } else {
-            std::sync::Arc::new(ProductionGeminiClient {})
-        };
-
+        // Ideally we would pull the real gemini client or similar here, using dummy for current scope implementation
         Self {
             orchestrator,
             configs: HashMap::new(),
-            llm,
+            llm: std::sync::Arc::new(DummyGeminiClient {}),
             dispatcher: std::sync::Arc::new(DefaultOutboundDispatcher {}),
         }
     }

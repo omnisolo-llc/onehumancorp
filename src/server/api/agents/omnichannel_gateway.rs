@@ -41,15 +41,17 @@ async fn validate_omnichannel_signature(
 
     // In a real production system, this would check HMAC signatures against the platform secret (e.g. Meta Graph API secret).
     // For this implementation scope, we verify the presence of a signature header that our test/system will send.
-    // X-Test-Bypass is ONLY respected if the app is explicitly built in test/debug profile.
     if !headers.contains_key("X-OHC-Omni-Signature") {
         tracing::warn!("Omnichannel webhook rejected: Missing signature");
 
+        // Ensure this ONLY works if compiled in debug AND explicitly set via env var
         #[cfg(debug_assertions)]
         {
-            if headers.contains_key("X-Test-Bypass") {
-                tracing::info!("Bypassing signature validation for test environment");
-                return Ok(next.run(req).await);
+            if std::env::var("ENABLE_TEST_AUTH_BYPASS").unwrap_or_default() == "true" {
+                if headers.contains_key("X-Test-Bypass") {
+                    tracing::info!("Bypassing signature validation for test environment");
+                    return Ok(next.run(req).await);
+                }
             }
         }
 

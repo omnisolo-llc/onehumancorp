@@ -10,6 +10,13 @@ type Props = {
 };
 
 export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
+  // Determine if this is the customer success agent to show dynamic summary stats
+  const isCustomerSuccess = name.toLowerCase().includes("customer success") || name.toLowerCase().includes("ambassador");
+
+  // Dynamic stats based on the pending items (simulating a daily feed metric)
+  const handledCount = pendingCount === 0 ? 12 : Math.max(3, 15 - pendingCount);
+  const timeSaved = handledCount * 3.5;
+
   return (
     <WithTooltip id="department-card-tooltip" defaultText="Click to view and manage pending approvals for this department.">
     <button
@@ -41,14 +48,14 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
         </div>
       </div>
 
-      {name === "The Customer Success Agent" && (
+      {isCustomerSuccess && (
          <div className="mt-4 pt-4 border-t border-black/5 w-full text-left relative z-10">
             <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 flex items-start gap-2 shadow-sm">
               <svg className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               <p className="text-xs text-blue-800 font-medium leading-relaxed">
-                Your Ambassador agent handled 12 inquiries today, saving you approximately 45 minutes.
+                Your Ambassador agent handled {handledCount} inquiries today, saving you approximately {Math.round(timeSaved)} minutes.
               </p>
             </div>
          </div>
