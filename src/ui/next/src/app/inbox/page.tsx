@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 type Message = {
@@ -13,35 +13,7 @@ type Message = {
 };
 
 export default function InboxPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: 'Facebook User',
-      source: 'Facebook',
-      icon: '📘',
-      content: 'Do you have vegan birthday cake options?',
-      date: '10:00 AM',
-      draft: 'Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.'
-    },
-    {
-      id: 2,
-      sender: 'Instagram User',
-      source: 'Instagram',
-      icon: '📸',
-      content: 'When will my order be shipped?',
-      date: 'Yesterday',
-      draft: 'Your order is currently being prepared and will be shipped within 24 hours. You will receive a tracking link shortly.'
-    },
-    {
-      id: 3,
-      sender: 'WhatsApp User',
-      source: 'WhatsApp',
-      icon: '💬',
-      content: 'Can I change my delivery address?',
-      date: 'Yesterday',
-      draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [replyInput, setReplyInput] = useState('');
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -50,6 +22,20 @@ export default function InboxPage() {
   const [showScheduler, setShowScheduler] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [scheduledPosts, setScheduledPosts] = useState<{id: number, content: string, date: string}[]>([]);
+
+  // Fetch initial messages from the real backend
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/v1/inbox')
+      .then(res => res.json())
+      .then(data => {
+        if (data.messages && isMounted) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(console.error);
+    return () => { isMounted = false; };
+  }, []);
 
   const generateDraft = () => {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
@@ -296,7 +282,7 @@ export default function InboxPage() {
         </div>
       )}
 
-      <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
+      <div id="messages-list" className="bg-white rounded-2xl p-4 mb-4 flex-1 overflow-y-auto text-[#1D1D1F] font-inter" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
         {messages.map(msg => (
           <div key={msg.id} className={`mb-6 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
             <div className={`flex items-center gap-2 ${msg.sender === 'Me' ? 'justify-end' : ''}`}>
@@ -304,16 +290,21 @@ export default function InboxPage() {
               <span className="font-semibold text-sm">{msg.sender}</span>
               <span className="text-xs text-gray-500">{msg.date}</span>
             </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
-              <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+            <div className={`p-3 rounded-2xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-[#0066FF]/10 border border-[#0066FF]/20' : 'bg-white/80 border border-white/60'}`} style={{ backdropFilter: 'blur(10px) saturate(150%)' }}>
+              <p className="text-sm text-[#1D1D1F] leading-relaxed">{msg.content}</p>
             </div>
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (
-               <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
-                  <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
-                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                     AI Replied
+               <div className="mt-3 ml-4 rounded-2xl p-4 shadow-sm relative flex flex-col gap-2" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(20px) saturate(180%)', border: '1px solid rgba(255, 255, 255, 0.5)' }}>
+                  <div className="absolute -top-3 left-4 flex gap-2">
+                     <div className="bg-[#0066FF]/10 text-[#0066FF] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 border border-[#0066FF]/20 backdrop-blur-md">
+                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                       AI Draft
+                     </div>
+                     <div className="bg-[#34C759]/10 text-[#34C759] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1 border border-[#34C759]/20 backdrop-blur-md">
+                       High Confidence
+                     </div>
                   </div>
 
                   {editingId === msg.id ? (
