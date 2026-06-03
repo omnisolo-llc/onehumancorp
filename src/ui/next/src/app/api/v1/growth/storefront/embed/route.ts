@@ -188,7 +188,7 @@ export async function GET(request: Request) {
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html',
-      'Cache-Control': 'public, max-age=60, s-maxage=60',
+      'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
       'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; connect-src 'none'; frame-ancestors *; base-uri 'none'; form-action 'none'",
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'X-Content-Type-Options': 'nosniff'
