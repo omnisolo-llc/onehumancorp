@@ -212,3 +212,27 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct WaitlistCampaign {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub max_capacity: i32,
+    pub drops_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PreOrderEntry {
+    pub id: String,
+    pub tenant_id: String,
+    pub waitlist_campaign_id: String,
+    pub customer_id: String,
+    pub status: String,
+    pub deposit_amount_cents: i64,
+    pub source: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
