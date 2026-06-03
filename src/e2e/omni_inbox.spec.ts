@@ -11,10 +11,12 @@ test.describe('Omni-Inbox Auto-Reply Agent', () => {
     await expect(page.getByText('Are you open today?')).toBeVisible();
 
     // Wait for AI Reply
-    const aiBadge = page.getByText('AI Replied');
-    await expect(aiBadge).toBeVisible({ timeout: 10000 });
+    // Since we are now using a real backend webhook, we poll the page for the incoming reply.
+    // The webhook creates a new 'pending' inbox message with a draft_reply.
+    const aiBadge = page.getByText('AI Replied').first();
+    await expect(aiBadge).toBeVisible({ timeout: 15000 });
 
-    // Verify reply content
-    await expect(page.getByText('Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?')).toBeVisible();
+    // Verify reply content exists (we use a generic check since Minimax generates the actual text)
+    await expect(page.locator('.mt-3.ml-4.bg-\\[\\#f9f5ff\\]')).toBeVisible();
   });
 });
