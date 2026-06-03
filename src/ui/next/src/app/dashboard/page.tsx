@@ -711,7 +711,7 @@ export default function Dashboard() {
 
          {/* Top Action Banner (Stripe Setup) */}
          <section className="mb-6">
-             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
+             <div className="p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-inter" style={{ background: "rgba(255, 59, 48, 0.1)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 59, 48, 0.3)" }}>
                  <div className="flex items-center gap-4">
                      <div>
                          <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
@@ -728,7 +728,7 @@ export default function Dashboard() {
          {/* Plain-Language Weekly Financial Brief */}
          <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
-            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+            <div className="p-6 shadow-sm rounded-2xl relative overflow-hidden mac-glass-container font-inter">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
                 <div className="flex items-start gap-4">
                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
@@ -780,17 +780,17 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${(todaysSales || 0).toFixed(2)}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
@@ -1503,22 +1503,22 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Team Invites Sent</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">{teamInvitesSent}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">${(revenueFromReferrals || 0).toFixed(2)}</div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div className="mac-glass-container rounded-2xl p-6 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">${(pendingRewards || 0).toFixed(2)}</div>
                 </div>
