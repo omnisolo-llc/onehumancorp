@@ -10,6 +10,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.removeItem('ohc_wizard_state');
     }, id);
     await page.goto('/website-builder');
+    await page.waitForTimeout(1000);
 
     await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
