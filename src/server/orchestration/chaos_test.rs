@@ -541,6 +541,41 @@ mod chaos_tests {
     }
 
     #[tokio::test]
+    async fn test_thin_client_fail_safe_degradation() {
+        // We simulate a network drop/severe latency (>2s) for a Thin Client (mobile) operation
+        // and verify that the system gracefully handles the timeout, returning cached/empty data
+        // and ensuring the application fails safely rather than cascading.
+
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(3000)); // 3s latency
+
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        // Initialize state manager with the latency mesh
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+
+        let start = std::time::Instant::now();
+        // The pull_available_tasks function relies on a lock acquisition that will timeout
+        let res = state_manager.pull_available_tasks(10).await;
+        let elapsed = start.elapsed();
+
+        // Operation takes 3s due to LatencyMockMesh, but StateManager has a timeout mechanism.
+        // The default timeout is 2 seconds but can be overridden by env variable
+        assert!(elapsed < std::time::Duration::from_millis(2500));
+
+        // Verify fail-safe behavior: returns empty vector instead of panicking or cascading failure
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().len(), 0);
+    }
+
+    #[tokio::test]
     async fn test_host_memory_exhaustion_degradation() {
         // We simulate host memory exhaustion by synthetically increasing database operation latency
         // and verifying that the 2-second timeout triggers graceful degradation.
