@@ -81,10 +81,7 @@ impl OnboardingAgent {
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = CASE \
-                 WHEN onboarding_state.state_json IS NULL THEN EXCLUDED.state_json \
-                 ELSE onboarding_state.state_json || EXCLUDED.state_json \
-                 END, \
+             SET state_json = EXCLUDED.state_json, \
                  current_step = GREATEST(onboarding_state.current_step, EXCLUDED.current_step), \
                  updated_at = CURRENT_TIMESTAMP"
         )
