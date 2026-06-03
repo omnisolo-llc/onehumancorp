@@ -2288,31 +2288,12 @@ impl Agent {
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
-            if final_cfg.enable_lost_in_the_middle_prevention {
-                let mut reminder_text = String::new();
-                if !final_cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
-                }
-                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
-                    // Truncate user instructions if it's too long, just to remind the core objective
-                    let mut end_idx = 1000;
-                    if final_cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
-                            end_idx -= 1;
-                        }
-                    } else {
-                        end_idx = final_cfg.user_instructions.len();
-                    }
-                    let summary = &final_cfg.user_instructions[..end_idx];
-                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
-                }
-
-                if !reminder_text.is_empty() {
-                    final_messages.push(Message::user(reminder_text.trim()));
-                }
-            } else if !final_cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
-            }
+            ohc_builtin_agent_core::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
+                &mut final_messages,
+                final_cfg.enable_lost_in_the_middle_prevention,
+                &final_cfg.developer_instructions,
+                &final_cfg.user_instructions,
+            );
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
