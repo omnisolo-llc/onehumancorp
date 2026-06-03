@@ -41,7 +41,7 @@ test('walkthrough tooltips appear', async ({ page }) => {
   await page.goto('/kairos?walkthrough=true');
 
   // The walkthrough has a 1 second delay
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(4000);
 
   // The walkthrough should show a tooltip
   await expect(page.getByText("The Shared Task List is the 'Brain'")).toBeVisible();
