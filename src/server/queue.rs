@@ -412,7 +412,7 @@ impl Worker {
                             };
                             match handler_res {
                                 Ok(_) => {
-                                    tracing::info!("Worker successfully processed job: {}", job.id);
+                                    tracing::debug!("Worker successfully processed job: {}", job.id);
                                     let _ = self.queue.complete(&job.id, &job.tenant_id).await;
                                 }
                                 Err(e) => {
@@ -438,7 +438,7 @@ impl Worker {
                     }
                 }
                 _ = shutdown_rx.recv() => {
-                    tracing::info!("Worker shutting down");
+                    tracing::debug!("Worker shutting down");
                     break;
                 }
             }
@@ -516,7 +516,7 @@ impl WorkerPool {
             let mut rx = shutdown_rx.subscribe();
             
             tokio::spawn(async move {
-                tracing::info!("Worker {} starting", i);
+                tracing::debug!("Worker {} starting", i);
                 loop {
                     tokio::select! {
                         res = queue.pop(&topic) => {
@@ -533,7 +533,7 @@ impl WorkerPool {
                             }
                         }
                         _ = rx.recv() => {
-                            tracing::info!("Worker {} shutting down", i);
+                            tracing::debug!("Worker {} shutting down", i);
                             break;
                         }
                     }
@@ -741,7 +741,7 @@ impl QueueManager {
                                 };
                                 match handler_res {
                                     Ok(_) => {
-                                        tracing::info!("Job handler succeeded: {}", job.id);
+                                        tracing::debug!("Job handler succeeded: {}", job.id);
                                         let _ = self.mark_completed(&job.id, &job.tenant_id).await;
                                     }
                                     Err(e) => {
@@ -768,7 +768,7 @@ impl QueueManager {
                     }
                 }
                 _ = shutdown_rx.recv() => {
-                    tracing::info!("QueueManager polling shutting down");
+                    tracing::debug!("QueueManager polling shutting down");
                     break;
                 }
             }

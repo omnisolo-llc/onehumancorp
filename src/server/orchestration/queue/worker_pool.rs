@@ -30,12 +30,12 @@ impl WorkerPool {
             let handler_clone = handler.clone();
 
             let handle = tokio::spawn(async move {
-                tracing::info!("Worker {} started listening for {:?}", i, types_clone);
+                tracing::debug!("Worker {} started listening for {:?}", i, types_clone);
 
                 loop {
                     tokio::select! {
                         _ = shutdown_rx.recv() => {
-                            tracing::info!("Worker {} shutting down", i);
+                            tracing::debug!("Worker {} shutting down", i);
                             break;
                         }
 
@@ -44,7 +44,7 @@ impl WorkerPool {
                             let type_strs: Vec<&str> = types_clone.iter().map(AsRef::as_ref).collect();
                             match queue_clone.dequeue(type_strs).await {
                                 Ok(Some(job)) => {
-                                    tracing::info!("Worker {} processing job {}", i, job.id);
+                                    tracing::debug!("Worker {} processing job {}", i, job.id);
                                     let job_id = job.id.clone();
 
                                     // Process

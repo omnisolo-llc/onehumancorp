@@ -28,7 +28,7 @@ impl InteropProtocol {
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        tracing::info!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff");
+        tracing::debug!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff");
 
         let lock_resource = format!("handoff:{}", mission_id);
 
@@ -219,7 +219,7 @@ impl InteropProtocol {
         use prost::Message as ProstMessage;
         use std::sync::atomic::Ordering;
 
-        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job");
+        tracing::debug!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job");
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
@@ -279,7 +279,7 @@ impl InteropProtocol {
         while start.elapsed().as_millis() < timeout_ms as u128 {
             if received.load(Ordering::SeqCst) {
                 cancel();
-                tracing::info!(job_id = %job_id, "Job dispatch acknowledged");
+                tracing::debug!(job_id = %job_id, "Job dispatch acknowledged");
                 return Ok(true);
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;

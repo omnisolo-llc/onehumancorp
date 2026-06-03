@@ -1111,7 +1111,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
-                tracing::info!("Initialized NatsTransport");
+                tracing::debug!("Initialized NatsTransport");
                 return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
             },
             Err(e) => {
@@ -1124,7 +1124,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
         if let Some(url) = redis_url {
             match RedisPubSubTransport::new(url).await {
                 Ok(t) => {
-                    tracing::info!("Initialized RedisPubSubTransport");
+                    tracing::debug!("Initialized RedisPubSubTransport");
                     return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
                 },
                 Err(e) => {
@@ -1163,7 +1163,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     if let Some(url) = redis_url {
         match RedisPubSubTransport::new(url).await {
             Ok(t) => {
-                tracing::info!("Initialized RedisPubSubTransport (Standalone)");
+                tracing::debug!("Initialized RedisPubSubTransport (Standalone)");
                 return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
             },
             Err(e) => {
@@ -1172,7 +1172,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
         }
     }
 
-    tracing::info!("Initialized InProcessTransport");
+    tracing::debug!("Initialized InProcessTransport");
     Ok(Arc::new(UniversalTransportBridge::new(Arc::new(InProcessTransport::new()))))
 }
 

@@ -15,7 +15,7 @@ mod tests {
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(5000), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => {
-                println!("Failed to connect to db, skipping test");
+                tracing::debug!("Failed to connect to db, skipping test");
                 return;
             }
         };
