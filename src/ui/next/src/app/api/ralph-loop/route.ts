@@ -20,6 +20,9 @@ export async function POST(req: Request) {
   }
 }
 
+import fs from 'fs/promises';
+import path from 'path';
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const taskId = searchParams.get('taskId');
@@ -28,30 +31,18 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'taskId is required' }, { status: 400 });
   }
 
-  const mockProgress = {
-    task_description: "Build a full inventory system",
-    features: [
-      { name: "Step 1: Database Schema Design", status: "completed" },
-      { name: "Step 2: API Endpoint Implementation", status: "in_progress" },
-      { name: "Step 3: Frontend Inventory Dashboard", status: "pending" },
-      { name: "Step 4: Real-time Stock Alerts", status: "pending" },
-    ],
-    current_feature_index: 1,
-    notes: [
-      "Initialized task and broken down into features.",
-      "Completed Database Schema: Created tables for products, categories, and stock_logs.",
-      "Working on API: Implementing CRUD for products."
-    ],
-    architectural_decisions: [
-      "Decision: Use PostgreSQL row-level security for inventory isolation.",
-      "Decision: Use Redis for real-time alert caching."
-    ],
-    unresolved_bugs: [
-      "Bug: Pagination fails on categories with 0 items."
-    ],
-    session_id: taskId,
-    is_complete: false
-  };
+  // Attempt to read the actual progress file from the agent workspace
+  // Default workspace is usually the current directory or OHC_AGENT_WORKSPACE
+  const workspacePath = process.env.OHC_AGENT_WORKSPACE || process.cwd();
+  const progressFilePath = path.join(workspacePath, `.ralph_progress_${taskId}.json`);
 
-  return NextResponse.json(mockProgress);
+  try {
+    const data = await fs.readFile(progressFilePath, 'utf8');
+    return NextResponse.json(JSON.parse(data));
+  } catch (e) {
+    return NextResponse.json({
+      error: 'Mission progress not found',
+      details: `Could not read ${progressFilePath}`
+    }, { status: 404 });
+  }
 }

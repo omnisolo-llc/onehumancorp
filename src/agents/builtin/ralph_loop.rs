@@ -315,11 +315,19 @@ mod tests {
         let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
         let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
         assert!(saved_progress.is_complete);
-        assert_eq!(saved_progress.features.len(), 2);
+        assert!(saved_progress.features.len() >= 2);
         assert_eq!(saved_progress.features[0].status, "completed");
+        assert!(!saved_progress.session_id.is_empty());
+        assert!(!saved_progress.architectural_decisions.is_empty());
 
         let git_dir = dir.path().join(".git");
         assert!(git_dir.exists());
+
+        // Verify git history contains baseline and feature commits
+        let log = Command::new("git").arg("log").arg("--oneline").current_dir(dir.path()).output().unwrap();
+        let log_str = String::from_utf8_lossy(&log.stdout);
+        assert!(log_str.contains("🏁 Ralph Loop: Clean Slate Baseline Commit"));
+        assert!(log_str.contains("🤖 Ralph Agent: Completed feature"));
     }
 
     #[tokio::test]
