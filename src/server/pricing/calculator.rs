@@ -168,6 +168,13 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
     (output_tokens as f64) / cost
 }
 
+pub fn calculate_shadow_price(revenue: f64, tokens: i64) -> f64 {
+    if tokens <= 0 {
+        return 0.0;
+    }
+    revenue / (tokens as f64)
+}
+
 pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
     if days_elapsed == 0 {
         return 0.0;
@@ -296,6 +303,20 @@ mod tests {
 
         let efficiency = calculate_efficiency(cost, output_tokens);
         assert_eq!(efficiency, 25.0); // 250 / 10
+    }
+
+    #[test]
+    fn test_calculate_shadow_price() {
+        let revenue = 15.0;
+        let tokens = 100;
+        let shadow_price = calculate_shadow_price(revenue, tokens);
+        assert_eq!(shadow_price, 0.15); // 15.0 / 100
+
+        let shadow_price_zero = calculate_shadow_price(revenue, 0);
+        assert_eq!(shadow_price_zero, 0.0);
+
+        let shadow_price_neg = calculate_shadow_price(revenue, -10);
+        assert_eq!(shadow_price_neg, 0.0);
     }
 
     #[test]

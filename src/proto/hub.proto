@@ -1238,6 +1238,7 @@ message AgentCostSummary {
   double roi = 3;
   double efficiency = 4;
   float pct = 5;
+  double shadow_price = 6;
 }
 
 message DashboardSnapshot {

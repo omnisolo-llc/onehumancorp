@@ -212,7 +212,7 @@ impl CostAuditor {
         *total_cost
     }
 
-    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
+    pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64, f64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
@@ -224,7 +224,8 @@ impl CostAuditor {
             let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *output_tokens);
-            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes));
+            let shadow_price = self.calculate_shadow_price(*revenue, *output_tokens);
+            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes, shadow_price));
         }
         result
     }
@@ -287,6 +288,10 @@ impl CostAuditor {
 
     pub fn calculate_efficiency(&self, cost: f64, output_tokens: i64) -> f64 {
         calculator::calculate_efficiency(cost, output_tokens)
+    }
+
+    pub fn calculate_shadow_price(&self, revenue: f64, tokens: i64) -> f64 {
+        calculator::calculate_shadow_price(revenue, tokens)
     }
 
     pub fn record_revenue(&self, agent_id: &str, tenant_id: &str, amount: f64) {

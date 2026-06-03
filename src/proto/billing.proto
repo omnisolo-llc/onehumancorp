@@ -32,6 +32,7 @@ message AgentCostSummary {
   double efficiency = 5;
   float pct = 6;
   int64 storage_usage_bytes = 7;
+  double shadow_price = 8;
 }
 
 message BudgetAlert {

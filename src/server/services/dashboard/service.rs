@@ -9,7 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
-static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
+static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64, f64)>)>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -38,7 +38,7 @@ impl MyDashboardService {
         Ok(self.hub.get_meetings().await)
     }
 
-    async fn fetch_cost_summary(&self, org_id: String) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+    async fn fetch_cost_summary(&self, org_id: String) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64, f64)>), String> {
         let cache_key = format!("hub:cost:{}", org_id);
         let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -398,7 +398,7 @@ impl DashboardService for MyDashboardService {
             }
 
             let mut agent_summaries = Vec::new();
-            for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
+            for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage, shadow_price) in _agent_costs_data {
                 agent_summaries.push(::server_ohc::billing::AgentCostSummary {
                     agent_id,
                     cost_usd,
@@ -407,6 +407,7 @@ impl DashboardService for MyDashboardService {
                     efficiency,
                     pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
                     storage_usage_bytes: _storage,
+                    shadow_price,
                 });
             }
 
