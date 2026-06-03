@@ -140,7 +140,9 @@ export default function CheckoutPage() {
                   } catch (e) {}
 
                   queue.push({
-                    id: 'txn_' + Date.now(),
+                    transaction_id: 'txn_' + Date.now(),
+                    product_id: 'custom-pos-amount',
+                    quantity_deducted: 1,
                     amount: parseFloat(amount),
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',

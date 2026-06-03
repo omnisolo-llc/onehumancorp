@@ -173,10 +173,15 @@ export default function Dashboard() {
       try {
         const queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
         if (queue.length > 0) {
+          const mutations = queue.map((q: any) => ({
+            transaction_id: q.transaction_id || q.id || q.idempotency_key || ('txn_' + Date.now()),
+            product_id: q.product_id || 'pos-custom',
+            quantity_deducted: q.quantity_deducted || 1
+          }));
           const res = await fetch("/api/v1/sync/offline", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mutations: queue })
+            body: JSON.stringify({ mutations })
           });
           if (res.ok) {
             localStorage.setItem("ohc_offline_queue", "[]");
