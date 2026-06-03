@@ -71,3 +71,27 @@ test.describe('Video Tutorials in Help Widget', () => {
     expect(result[0].duration).toBeDefined();
   });
 });
+
+test.describe('Tooltips', () => {
+    test('should show tooltips on hover', async ({ page }) => {
+        await page.goto('/website-builder');
+        await page.getByRole('button', { name: /Start My Business/ }).click();
+        await page.getByRole('button', { name: /Online Store/ }).click();
+
+        await page.locator('#bio-input-tooltip').hover();
+        await expect(page.getByText('Describe what you sell, your target audience, and the vibe of your brand.')).toBeVisible();
+
+        await page.locator('#generate-btn-tooltip').hover();
+        await expect(page.getByText('Our AI agents will analyze your description and build a ready-to-launch store for you.')).toBeVisible();
+
+        await page.locator('#launch-btn-tooltip').hover();
+        await expect(page.getByText('Launch your storefront immediately to a live URL.')).toBeVisible();
+    });
+});
+
+test.describe('Walkthrough', () => {
+    test('should show walkthrough on dashboard', async ({ page }) => {
+        await page.goto('/dashboard?test_walkthrough=true');
+        await expect(page.getByText('Quick Guide').first()).toBeVisible();
+    });
+});
