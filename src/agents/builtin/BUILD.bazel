@@ -80,7 +80,6 @@ rust_library(
         "registry.rs",
         "ruflo.rs",
         "openhands.rs",
-        "goose/mod.rs",
         "guardrails/mod.rs",
         "guardrails/openai_hooks.rs",
     "ruflo_plugins.rs",

@@ -39,7 +39,6 @@ pub mod autogen;
 pub mod ralph_loop;
 pub mod ruflo;
 pub mod openhands;
-pub mod goose;
 
 
 pub use ohc_builtin_agent_llm as llm;
