@@ -183,13 +183,13 @@ export default function StorefrontBuilderPage() {
 
   if (status === "idle") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed font-inter">
         <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
 
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1>
-              <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
+              <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome to OHC Smart Builder</h1>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
 
@@ -199,8 +199,7 @@ export default function StorefrontBuilderPage() {
                   id="bio-input"
                   enterKeyHint="done"
                   autoCapitalize="sentences"
-                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
-                  style={{ borderRadius: '8px' }}
+                  className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner rounded-[8px]"
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
                   onKeyDown={(e) => {
@@ -220,12 +219,11 @@ export default function StorefrontBuilderPage() {
                 <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                   <button
                     id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all rounded-[8px] ${
                       bio.trim().length > 5
-                        ? "text-white shadow-md active:scale-[0.98]"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        ? "text-white shadow-md active:scale-[0.98] bg-[#0066FF] hover:bg-[#0052cc]"
+                        : "mac-glass-container text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10"
                     }`}
-                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                     onClick={handleGenerate}
                     disabled={bio.trim().length <= 5}
                   >
@@ -242,10 +240,10 @@ export default function StorefrontBuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed font-inter">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0066FF] mb-4"></div>
+            <p className="text-gray-500 dark:text-[#A1A1A6] font-medium">Agents are building your store...</p>
         </div>
       </div>
     );
@@ -253,22 +251,21 @@ export default function StorefrontBuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed font-inter">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden text-center p-8 justify-center mac-glass-container">
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">You're Live!</h1>
-          <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
+          <h1 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h1>
+          <p className="text-gray-500 dark:text-[#A1A1A6] mb-6 text-sm">Your automated storefront is successfully published.</p>
 
-          <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
-            <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
+          <div className="w-full mac-glass-container backdrop-blur-md p-3 rounded-[8px] border border-white/50 dark:border-white/10 mb-6 flex items-center justify-between shadow-inner">
+            <span className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] truncate mr-2 font-medium">{liveUrl}</span>
+            <button className="text-[#0066FF] font-semibold text-sm hover:underline shrink-0 transition-colors">Copy</button>
           </div>
 
           <button
-            className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
-            style={{ borderRadius: '8px' }}
+            className="w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-white/60 dark:hover:bg-black/40 backdrop-blur-md"
             onClick={() => updateStatus("idle")}
           >
             Go to Dashboard
@@ -279,9 +276,9 @@ export default function StorefrontBuilderPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+    <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed font-inter">
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
-        <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
+        <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center rounded-t-[16px]">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
@@ -322,12 +319,11 @@ export default function StorefrontBuilderPage() {
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
+        <div className="absolute bottom-0 w-full p-4 mac-glass-container backdrop-blur-md border-t border-white/40 dark:border-white/10 z-50 rounded-b-[16px]">
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
-              style={{ borderRadius: '8px' }}
+              className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-lg hover:bg-[#0052cc] active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[8px]"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
