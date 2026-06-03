@@ -1,4 +1,0 @@
-exports_files([
-    "mod.rs",
-    "pgvector_memory.rs"
-], visibility=["//visibility:public"])
