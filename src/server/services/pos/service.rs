@@ -4,6 +4,13 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+<<<<<<< HEAD
+pub struct MyPosService {}
+
+impl MyPosService {
+    pub fn new(_db: Arc<crate::db::DB>) -> Self {
+        Self { }
+=======
 pub struct MyPosService {
     db: Arc<crate::db::DB>,
 }
@@ -11,6 +18,7 @@ pub struct MyPosService {
 impl MyPosService {
     pub fn new(db: Arc<crate::db::DB>) -> Self {
         Self { db }
+>>>>>>> origin/jules-16694998170452612735-ddd41a45
     }
 }
 
