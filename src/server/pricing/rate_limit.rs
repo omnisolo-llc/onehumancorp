@@ -119,13 +119,13 @@ impl RedisRateLimiter {
     pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
-        }).await.map_err(|e| e.to_string())?;
+        }).await.map_err(|e: ::redis::RedisError| e.to_string())?;
         Ok(conn.clone())
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
-        let mut conn = self.get_connection().await?;
-        let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
+        let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e: ::redis::RedisError| e.to_string())?;
 
         match tier.as_deref() {
             Some("Starter") => Ok(PlanTier::Starter),
@@ -136,23 +136,23 @@ impl RedisRateLimiter {
     }
 
     pub async fn get_tenant_actions_used(&self, tenant_id: &str) -> Result<u32, String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-        let used: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
+        let used: Option<u32> = conn.get(&tenant_key).await.map_err(|e: ::redis::RedisError| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
 
     pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
-        let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
+        let used: Option<i64> = conn.get(&storage_key).await.map_err(|e: ::redis::RedisError| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
 
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let tier_str = match tier {
             PlanTier::Free => "Free",
             PlanTier::Starter => "Starter",
@@ -164,10 +164,10 @@ impl RedisRateLimiter {
 
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
         }
 
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let now = chrono::Utc::now();
@@ -176,8 +176,8 @@ impl RedisRateLimiter {
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
         let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
 
-        let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
-        let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
+        let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e: ::redis::RedisError| e.to_string())?;
+        let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e: ::redis::RedisError| e.to_string())?;
 
         // Expire keys after ~2 months to save space
         let _ : () = conn.expire(&tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
@@ -186,7 +186,7 @@ impl RedisRateLimiter {
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
                 if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
                 }
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
@@ -207,7 +207,7 @@ impl RedisRateLimiter {
         if let Some(limit) = tier.agent_action_limit() {
             if agent_used >= limit {
                 if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
                 }
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
@@ -234,20 +234,20 @@ impl RedisRateLimiter {
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
         }
 
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let product_key = format!("tenant:{}:products", tenant_id);
-        let total_products: Option<usize> = conn.get(&product_key).await.map_err(|e| e.to_string())?;
+        let total_products: Option<usize> = conn.get(&product_key).await.map_err(|e: ::redis::RedisError| e.to_string())?;
         let total_products = total_products.unwrap_or(0);
 
         if let Some(limit) = tier.max_products() {
             if total_products >= limit {
                 if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
                 }
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
@@ -273,28 +273,28 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let product_key = format!("tenant:{}:products", tenant_id);
-        let _ : usize = conn.incr(&product_key, 1).await.map_err(|e| e.to_string())?;
+        let _ : usize = conn.incr(&product_key, 1).await.map_err(|e: ::redis::RedisError| e.to_string())?;
         Ok(())
     }
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
         }
 
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let agent_key = format!("tenant:{}:agents", tenant_id);
-        let total_agents: Option<usize> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
+        let total_agents: Option<usize> = conn.get(&agent_key).await.map_err(|e: ::redis::RedisError| e.to_string())?;
         let total_agents = total_agents.unwrap_or(0);
 
         if let Some(limit) = tier.max_agents() {
             if total_agents >= limit {
                 if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
                 }
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
@@ -320,30 +320,30 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let agent_key = format!("tenant:{}:agents", tenant_id);
-        let _ : usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
+        let _ : usize = conn.incr(&agent_key, 1).await.map_err(|e: ::redis::RedisError| e.to_string())?;
         Ok(())
     }
 
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
         }
 
-        let mut conn = self.get_connection().await?;
+        let mut conn: redis::aio::MultiplexedConnection = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
-        let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?;
+        let total_storage: i64 = conn.incr(&storage_key, delta_bytes).await.map_err(|e: ::redis::RedisError| e.to_string())?;
 
         if let Some(store) = &self.telemetry_store {
             store.storage_bytes_counter.add(
                 delta_bytes as u64,
                 &[
-                    opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-                    opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
+                    opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into())),
+                    opentelemetry::KeyValue::new("tier", opentelemetry::Value::String(format!("{:?}", tier).into())),
                 ],
             );
         }
@@ -352,7 +352,7 @@ impl RedisRateLimiter {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;
             if total_storage > limit_bytes {
                 if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tenant_id.to_string().into()))]);
                 }
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
@@ -505,6 +505,39 @@ mod tests {
                 let status = limiter.check_agent_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // Limit is 1 for Free tier
+            }
+        }
+    }
+
+    #[test]
+    fn test_plan_tier_edge_cases() {
+        // Test parsing invalid env vars fallback to default
+        temp_env::with_vars(
+            [
+                ("OHC_FREE_TIER_ACTIONS", Some("invalid")),
+                ("OHC_STARTER_TIER_STORAGE_MB", Some("-50")),
+            ],
+            || {
+                assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+                assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
+            },
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_tenant_tier_missing_key() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-missing-tier-key";
+
+                // Ensure key is missing
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let tier_key = format!("tenant:{}:tier", tenant_id);
+                let _ : () = conn.del(&tier_key).await.unwrap_or(());
+
+                let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
+                assert_eq!(tier, PlanTier::Free); // Fallback is Free
             }
         }
     }

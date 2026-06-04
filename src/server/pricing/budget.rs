@@ -37,7 +37,7 @@ impl BudgetManager {
             if cents > 0 {
                 store.llm_cost_counter.add(
                     cents,
-                    &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+                    &[opentelemetry::KeyValue::new("tenant_id", opentelemetry::Value::String(tid.to_string().into()))],
                 );
             }
         }
@@ -88,5 +88,46 @@ mod tests {
         assert_eq!(manager.record_spend_cents(1000).unwrap(), false); // spend $10
         assert_eq!(manager.get_remaining(), -20.0);
         assert_eq!(manager.get_remaining_cents(), -2000);
+    }
+
+    #[test]
+    fn test_budget_manager_edge_cases() {
+        let manager = BudgetManager::new(100.0);
+
+        // Test zero spend
+        assert_eq!(manager.record_spend(0.0).unwrap(), true);
+        assert_eq!(manager.get_remaining(), 100.0);
+
+        // Test large spend that far exceeds the budget
+        assert_eq!(manager.record_spend(1000000.0).unwrap(), false);
+        assert_eq!(manager.get_remaining(), -999900.0);
+
+        // Test that negative amounts still return error
+        let err = manager.record_spend_cents(-500).unwrap_err();
+        assert_eq!(err, "spend amount cannot be negative");
+    }
+
+    #[test]
+    fn test_budget_manager_concurrent_spend() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let manager = Arc::new(BudgetManager::new(1000.0));
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let mgr = Arc::clone(&manager);
+            handles.push(thread::spawn(move || {
+                for _ in 0..100 {
+                    let _ = mgr.record_spend(1.0);
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        assert_eq!(manager.get_remaining(), 0.0);
     }
 }

@@ -203,6 +203,25 @@ mod tests {
     }
 
     #[test]
+    fn test_calculate_cost_negative_tokens() {
+        // Negative tokens should be treated gracefully if somehow passed, though usually type is i64 or u64.
+        // We do not clamp them in `calculate_cost`, so they would technically produce negative cost.
+        let cost = calculate_cost("claude-3-opus", -1000000, -1000000, 0);
+        assert_eq!(cost, -90.0);
+    }
+
+    #[test]
+    fn test_calculate_cost_edge_case_models() {
+        // Test Gemini Flash Lite which has fractional pricing
+        let cost = calculate_cost("gemini-2.0-flash-lite", 1000000, 1000000, 0);
+        assert_eq!(cost, 0.375); // 0.075 + 0.30
+
+        // Test caching with fraction
+        let cost2 = calculate_cost("gpt-4o-mini", 1000000, 1000000, 1000000);
+        assert_eq!(cost2, 0.15 + 0.60 + 0.075);
+    }
+
+    #[test]
     fn test_calculate_cost_cents() {
         // Test with a known model
         let cost = calculate_cost_cents("claude-3-opus", 1000000, 1000000, 0);

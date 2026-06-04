@@ -144,4 +144,33 @@ mod tests {
         thread::sleep(Duration::from_millis(20));
         assert!(cache.get("What is the capital of France?").is_none());
     }
+
+    #[test]
+    fn test_prompt_cache_high_load_eviction() {
+        let cache = Arc::new(PromptCache::new(Duration::from_millis(10)));
+        let mut handles = vec![];
+
+        // Insert many keys
+        for i in 0..100 {
+            let c = cache.clone();
+            handles.push(thread::spawn(move || {
+                let prompt = format!("Prompt {}", i);
+                let text = format!("Response {}", i);
+                c.set(&prompt, &text, 10);
+            }));
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // Wait for TTL to expire
+        thread::sleep(Duration::from_millis(15));
+
+        // Attempting to get one should evict it
+        assert!(cache.get("Prompt 50").is_none());
+
+        // Cache still holds the other expired elements until they are accessed,
+        // since we only remove_if on get().
+    }
 }
