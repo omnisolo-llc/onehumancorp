@@ -36,6 +36,7 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
@@ -873,12 +874,26 @@ pub async fn advisory_insights_handler(
 
     let active_orders = orders_data.unwrap_or(0);
 
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(format!("{}:{}:{}", business_name, industry, active_orders).as_bytes());
+    let stats_hash = format!("{:x}", hasher.finalize());
+    let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
+
+    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(insight) = insight_cache.get(&insight_cache_key).await {
+        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
+    }
+
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            insight_cache.set(&insight_cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        }
         Err(e) => {
             ::server_telemetry::record_error_signal("MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
