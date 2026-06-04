@@ -419,8 +419,14 @@ describe('OnboardingWizard', () => {
     await user.click(salesAgent);
 
     // Toggle auto respond
-    const toggleLabel = screen.getByText('Allow AI to Auto-Respond');
-    await user.click(toggleLabel);
+    // Since the checkbox is visually hidden via `sr-only`, `userEvent.click(toggle)` might not work directly.
+    // Instead we can click the label containing it.
+    const toggleLabel = screen.getByText('Allow AI to Auto-Respond').closest('label');
+    if (toggleLabel) {
+      await user.click(toggleLabel);
+    } else {
+      await user.click(toggle);
+    }
 
     await waitFor(() => {
       const state = useOnboardingStore.getState();

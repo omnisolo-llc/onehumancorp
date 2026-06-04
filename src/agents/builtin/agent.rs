@@ -12,6 +12,14 @@ use ohc_builtin_agent_llm::LlmClient;
 use crate::tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
+pub(crate) fn agent_task_timeout() -> std::time::Duration {
+    let secs = std::env::var("OHC_AGENT_TASK_TIMEOUT_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(60);
+    std::time::Duration::from_secs(secs)
+}
 
 /// Default computational guide using bash commands
 /// Default visual verifier using bash commands
@@ -1404,7 +1412,7 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
-        let timeout_duration = std::time::Duration::from_secs(60);
+        let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -1788,7 +1796,7 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
-        let timeout_duration = std::time::Duration::from_secs(60);
+        let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -1928,7 +1936,7 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
-        let timeout_duration = std::time::Duration::from_secs(60);
+        let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
