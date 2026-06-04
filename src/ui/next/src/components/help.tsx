@@ -383,16 +383,33 @@ export function HelpWidget() {
               </button>
             </div>
 
-            {/* Real Video Player area */}
-            <div className="flex-1 flex items-center justify-center relative bg-black">
-               <video
-                 controls
-                 className="w-full h-full object-contain"
-                 src={`/videos/${activeVideo.id}.mp4`}
-                 autoPlay
-               >
-                 Your browser does not support the video tag.
-               </video>
+            {/* Fake Video Player area */}
+            <div className="flex-1 flex items-center justify-center relative bg-gradient-to-br from-gray-800 to-black">
+               {/* Simulating a video placeholder background */}
+               <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full scale-150 mix-blend-screen pointer-events-none"></div>
+               <button className="w-16 h-16 bg-white/20 hover:bg-white/30 backdrop-blur-[20px] saturate-200 border border-white/30 rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all active:scale-95 group z-20">
+                  <svg className="w-8 h-8 text-white ml-1 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+               </button>
+            </div>
+
+            {/* Controls */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <button className="text-white/80 hover:text-white transition-colors">
+                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                </button>
+                <div className="h-1.5 flex-1 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden cursor-pointer relative group">
+                  <div className="h-full bg-blue-500 w-1/3 relative shadow-[0_0_10px_rgba(59,130,246,0.8)]">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full scale-0 group-hover:scale-100 transition-transform shadow-md"></div>
+                  </div>
+                </div>
+                <div className="text-white/80 text-[10px] font-medium font-inter tabular-nums">
+                  0:00 / {activeVideo.duration}
+                </div>
+                <button className="text-white/80 hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>

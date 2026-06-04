@@ -47,11 +47,13 @@ function KairosContent() {
 
   useEffect(() => {
     if (searchParams.get("walkthrough") === "true") {
-      startWalkthrough([
-        { targetId: "kairos-brain", message: "Shared tasks appear here when the orchestration backend returns active work." },
-        { targetId: "kairos-nerves", message: "Mesh nodes appear here when live mesh status is available." },
-        { targetId: "kairos-memory", message: "AutoDream memory statistics appear here when the backend exposes them." },
-      ]);
+      setTimeout(() => {
+        startWalkthrough([
+          { targetId: "kairos-brain", message: "Shared tasks appear here when the orchestration backend returns active work." },
+          { targetId: "kairos-nerves", message: "Mesh nodes appear here when live mesh status is available." },
+          { targetId: "kairos-memory", message: "AutoDream memory statistics appear here when the backend exposes them." },
+        ]);
+      }, 1000);
     }
   }, [searchParams, startWalkthrough]);
 

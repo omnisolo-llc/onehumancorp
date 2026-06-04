@@ -10,12 +10,16 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE INDEX IF NOT EXISTS idx_subscription_plans_tenant ON subscription_plans(tenant_id);
+
 ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_subscription_plans ON subscription_plans;
 CREATE POLICY tenant_isolation_subscription_plans
 ON subscription_plans
-USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+USING (tenant_id = current_setting('app.current_tenant', true));
+
+
 CREATE TABLE IF NOT EXISTS subscribers (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
@@ -26,13 +30,17 @@ CREATE TABLE IF NOT EXISTS subscribers (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE INDEX IF NOT EXISTS idx_subscribers_tenant ON subscribers(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_subscribers_plan ON subscribers(subscription_plan_id);
+
 ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_subscribers ON subscribers;
 CREATE POLICY tenant_isolation_subscribers
 ON subscribers
-USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+USING (tenant_id = current_setting('app.current_tenant', true));
+
+
 CREATE TABLE IF NOT EXISTS fulfillment_batches (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
@@ -43,10 +51,12 @@ CREATE TABLE IF NOT EXISTS fulfillment_batches (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE INDEX IF NOT EXISTS idx_fulfillment_batches_tenant ON fulfillment_batches(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_fulfillment_batches_plan ON fulfillment_batches(subscription_plan_id);
+
 ALTER TABLE fulfillment_batches ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_fulfillment_batches ON fulfillment_batches;
 CREATE POLICY tenant_isolation_fulfillment_batches
 ON fulfillment_batches
-USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+USING (tenant_id = current_setting('app.current_tenant', true));
