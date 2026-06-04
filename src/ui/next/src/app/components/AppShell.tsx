@@ -40,6 +40,7 @@ type NavItem = {
 
 const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Agent Feed", href: "/unified-agent-feed", icon: "activity" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
   { label: "Orders", href: "/orders", icon: "orders" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
