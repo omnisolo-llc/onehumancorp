@@ -502,6 +502,7 @@ impl DB {
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,
+                        base_currency TEXT DEFAULT 'USD',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
