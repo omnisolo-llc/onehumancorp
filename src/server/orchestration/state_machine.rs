@@ -83,10 +83,11 @@ impl StateMachine {
 
                 for dep in dependencies {
                     sqlx::query(
-                        "INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)"
+                        "INSERT INTO shared_task_dependencies (task_id, depends_on_task_id, organization_id) VALUES ($1, $2, $3)"
                     )
                     .bind(&tid)
                     .bind(&dep)
+                    .bind(organization_id)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -113,10 +114,11 @@ impl StateMachine {
 
                 for dep in dependencies {
                     sqlx::query(
-                        "INSERT INTO shared_task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)"
+                        "INSERT INTO shared_task_dependencies (task_id, depends_on_task_id, organization_id) VALUES (?, ?, ?)"
                     )
                     .bind(&tid)
                     .bind(&dep)
+                    .bind(organization_id)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;

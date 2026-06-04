@@ -156,13 +156,14 @@ impl TaskRepository {
             DbStore::Postgres => {
                 sqlx::query(
                     r#"
-                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
-                    VALUES ($1, $2)
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id, tenant_id)
+                    VALUES ($1, $2, $3)
                     ON CONFLICT DO NOTHING
                     "#
                 )
                 .bind(&dependency.task_id)
                 .bind(&dependency.depends_on_task_id)
+                .bind(&dependency.tenant_id)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -170,13 +171,14 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     r#"
-                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
-                    VALUES (?, ?)
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id, tenant_id)
+                    VALUES (?, ?, ?)
                     ON CONFLICT DO NOTHING
                     "#
                 )
                 .bind(&dependency.task_id)
                 .bind(&dependency.depends_on_task_id)
+                .bind(&dependency.tenant_id)
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -190,7 +192,7 @@ impl TaskRepository {
             DbStore::Postgres => {
                 sqlx::query_as::<_, TaskDependency>(
                     r#"
-                    SELECT task_id, depends_on_task_id
+                    SELECT task_id, depends_on_task_id, tenant_id
                     FROM task_dependencies
                     WHERE task_id = $1
                     "#
@@ -203,7 +205,7 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, TaskDependency>(
                     r#"
-                    SELECT task_id, depends_on_task_id
+                    SELECT task_id, depends_on_task_id, tenant_id
                     FROM task_dependencies
                     WHERE task_id = ?
                     "#
@@ -386,6 +388,7 @@ mod tests {
             CREATE TABLE task_dependencies (
                 task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                tenant_id TEXT,
                 PRIMARY KEY (task_id, depends_on_task_id)
             );
             "#
@@ -404,6 +407,7 @@ mod tests {
             CREATE TABLE IF NOT EXISTS task_dependencies (
                 task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                tenant_id TEXT,
                 PRIMARY KEY (task_id, depends_on_task_id)
             );
             "#
@@ -516,6 +520,7 @@ mod tests {
         repo.create_task_dependency(TaskDependency {
             task_id: "task_2".to_string(),
             depends_on_task_id: "task_1".to_string(),
+            tenant_id: org_id.clone(),
         }).await.unwrap();
 
         let deps = repo.get_task_dependencies("task_2").await.unwrap();
@@ -559,6 +564,7 @@ mod tests {
         repo.create_task_dependency(TaskDependency {
             task_id: "task_2".to_string(),
             depends_on_task_id: "task_1".to_string(),
+            tenant_id: org_id.clone(),
         }).await.unwrap();
 
         // task_2 cannot be claimed because task_1 is not DONE
