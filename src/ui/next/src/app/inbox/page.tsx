@@ -58,6 +58,47 @@ export default function InboxPage() {
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
 
+  async function handleApproveAndSend(inboxMessageId: string) {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/agents/approvals?limit=50`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch approvals");
+      const data = await res.json();
+      const pendingApprovals = data.pending_approvals || [];
+
+      const approval = pendingApprovals.find((a: any) => {
+        try {
+          const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
+          return payload && payload.inbox_message_id === inboxMessageId;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      if (!approval) {
+        alert("Could not find a pending approval for this message.");
+        return;
+      }
+
+      const approveRes = await fetch(`/api/agents/approvals/${approval.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ approved: true })
+      });
+
+      if (approveRes.ok) {
+        setMessages((prev) => prev.map((m) => m.id === inboxMessageId ? { ...m, status: "sent" } : m));
+      } else {
+        alert("Failed to approve and send message.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error approving message.");
+    }
+  }
+
   return (
     <AppShell
       title="Inbox"
@@ -132,6 +173,14 @@ export default function InboxPage() {
                   <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
                 </div>
               </div>
+              {badgeTone(selected.status) === "warn" && (
+                <div className="mt-6">
+                  <button
+                    className="app-btn-primary w-full"
+                    onClick={() => handleApproveAndSend(selected.id)}
+                  >✨ Approve &amp; Send Draft</button>
+                </div>
+              )}
             </div>
           )}
         </section>
