@@ -224,7 +224,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         // Insert unsynced embedding
         sqlx::query(
@@ -235,7 +235,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         // Insert synced embedding
         sqlx::query(
@@ -246,7 +246,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         // Insert unsynced mission
         sqlx::query(
@@ -257,7 +257,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         let db = Arc::new(DB {
             pool: crate::db::get_pool(), // Fake PG pool
@@ -265,32 +265,32 @@ mod tests {
         });
 
         // Run sync
-        process_forecast_tick(db).await.expect("Database URL or operation failed in test");
+        process_forecast_tick(db).await.unwrap();
 
         // Verify embeddings
         let unsynced_embeddings: i64 = sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 0")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(unsynced_embeddings, 0);
 
         let synced_embeddings: i64 = sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 1")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(synced_embeddings, 2);
 
         // Verify missions
         let unsynced_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 0")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(unsynced_missions, 0);
 
         let synced_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 1")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(synced_missions, 1);
     }
 }
