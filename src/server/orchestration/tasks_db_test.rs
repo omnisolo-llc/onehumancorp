@@ -60,3 +60,109 @@ async fn test_tasks_db_claim_task_sqlite() {
     let task2 = service.claim_task("agent2").await.unwrap();
     assert!(task2.is_none());
 }
+
+#[tokio::test]
+async fn test_tasks_db_claim_task_sqlite_null_dates() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_plan_id TEXT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            assigned_agent_id TEXT,
+            dependencies TEXT DEFAULT '[]',
+            created_at TEXT,
+            updated_at TEXT,
+            locked_until TEXT,
+            _sync_status TEXT DEFAULT 'pending',
+            version INTEGER DEFAULT 1
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://dummy")
+        .unwrap();
+
+    let db = std::sync::Arc::new(crate::db::DB {
+        pool: dummy_pg,
+        store: crate::db::DbStore::Sqlite(pool.clone()),
+    });
+
+    let service = TaskDbService::new(db);
+
+    sqlx::query(
+        "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('1', 'org1', 'Task 1', 'PENDING')"
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let task = service.claim_task("agent1").await.unwrap();
+    assert!(task.is_some());
+}
+
+#[tokio::test]
+async fn test_tasks_db_claim_task_sqlite_with_locked_until() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_plan_id TEXT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            assigned_agent_id TEXT,
+            dependencies TEXT DEFAULT '[]',
+            created_at TEXT,
+            updated_at TEXT,
+            locked_until TEXT,
+            _sync_status TEXT DEFAULT 'pending',
+            version INTEGER DEFAULT 1
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://dummy")
+        .unwrap();
+
+    let db = std::sync::Arc::new(crate::db::DB {
+        pool: dummy_pg,
+        store: crate::db::DbStore::Sqlite(pool.clone()),
+    });
+
+    let service = crate::orchestration::tasks_db::TaskDbService::new(db);
+
+    sqlx::query(
+        "INSERT INTO shared_tasks (id, organization_id, title, status, locked_until) VALUES ('1', 'org1', 'Task 1', 'PENDING', '2025-01-01T00:00:00Z')"
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let task = service.claim_task("agent1").await.unwrap();
+    assert!(task.is_some());
+    let task = task.unwrap();
+    assert!(task.locked_until.is_some());
+}
