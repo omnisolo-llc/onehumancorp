@@ -669,7 +669,7 @@ pub async fn bench_advisory_insights_latency() {
     }
 
     fetch_times_sqlite.sort();
-    println!(
+    tracing::info!(
         "Advisory Insights Standalone (Parallel): p50: {} us, p95: {} us, p99: {} us",
         fetch_times_sqlite[iterations / 2],
         fetch_times_sqlite[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
