@@ -1,0 +1,15 @@
+[package]
+name = "server_integrations_taxjar"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+server_telemetry = { path = "../../telemetry" }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+
+[lib]
+path = "lib.rs"

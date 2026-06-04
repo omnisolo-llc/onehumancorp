@@ -1,0 +1,34 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "taxjar",
+    srcs = [
+        "lib.rs",
+        "client.rs",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/telemetry:server_telemetry",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:reqwest",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+    ],
+)
+
+rust_test(
+    name = "taxjar_test",
+    crate = ":taxjar",
+    deps = [
+        "@crates//:tokio",
+    ],
+)
+
+exports_files(
+    [
+        "client.rs",
+        "mod.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
