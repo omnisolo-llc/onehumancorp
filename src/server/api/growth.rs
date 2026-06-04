@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
 use crate::hub::Hub;
-use chrono::Utc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
