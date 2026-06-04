@@ -73,12 +73,12 @@ export default function MyPlanPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
-                    <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
+                    <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan || 'Free'}</p>
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded mt-2">Active</span>
                 </div>
                 <div>
                     <h2 id="my-plan-next-bill" className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill:</h2>
-                    <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
+                    <p className="text-3xl font-bold font-outfit text-gray-900">${(planData?.next_bill_estimated || 0).toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
                     <button onClick={() => router.push('/pricing')} className="w-full py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
@@ -98,16 +98,16 @@ export default function MyPlanPage() {
                     <div className="flex justify-between items-center mb-2">
                         <span className="font-medium text-gray-700">AI Actions Used</span>
                         <span className="text-sm font-medium text-gray-500">
-                            {planData?.ai_actions_used} / {planData?.ai_actions_limit === null ? 'Unlimited' : planData?.ai_actions_limit}
+                            {planData?.ai_actions_used} / {planData?.ai_actions_limit === null || planData?.ai_actions_limit === undefined ? 'Unlimited' : planData?.ai_actions_limit}
                         </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
                             className="bg-blue-600 h-2.5 rounded-full"
                             style={{
-                                width: planData?.ai_actions_limit ?
+                                width: (planData?.ai_actions_limit === null || planData?.ai_actions_limit === undefined) ?
+                                    '100%' :
                                     `${Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100)}%`
-                                    : '100%'
                             }}
                         ></div>
                     </div>
@@ -124,16 +124,16 @@ export default function MyPlanPage() {
                     <div className="flex justify-between items-center mb-2">
                         <span className="font-medium text-gray-700">Storage Used</span>
                         <span className="text-sm font-medium text-gray-500">
-                            {formatStorage(planData?.storage_used_bytes || 0)} / {planData?.storage_limit_bytes === null ? 'Unlimited' : formatStorage(planData?.storage_limit_bytes || 0)}
+                            {formatStorage(planData?.storage_used_bytes || 0)} / {planData?.storage_limit_bytes === null || planData?.storage_limit_bytes === undefined ? 'Unlimited' : formatStorage(planData?.storage_limit_bytes || 0)}
                         </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
                             className="bg-green-500 h-2.5 rounded-full"
                             style={{
-                                width: planData?.storage_limit_bytes ?
+                                width: (planData?.storage_limit_bytes === null || planData?.storage_limit_bytes === undefined) ?
+                                    '100%' :
                                     `${Math.min(((planData.storage_used_bytes || 0) / planData.storage_limit_bytes) * 100, 100)}%`
-                                    : '100%'
                             }}
                         ></div>
                     </div>

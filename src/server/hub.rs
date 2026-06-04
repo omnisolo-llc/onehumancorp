@@ -61,36 +61,70 @@ impl Hub {
             None
         };
 
-        let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
+        let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::BillingEvent>();
         let pool_clone = pool.clone();
         let cost_auditor = Arc::new({
-            let mut a = CostAuditor::new(CostConfig::default());
+            let mut config = CostConfig::default();
+            // Miser cost optimization: Set realistic market-rate defaults for storage, network, and compute.
+            config.cost_per_gb_month = 0.10; // $0.10 per GB per month
+            config.cost_per_network_gb = 0.05; // $0.05 per GB network egress
+            config.cost_per_compute_hour = 0.02; // $0.02 per compute hour
+
+            let mut a = CostAuditor::new(config);
             a.set_telemetry_tx(telemetry_tx.clone());
             a
         });
 
         let cost_auditor_clone = cost_auditor.clone();
         tokio::spawn(async move {
-            while let Some(event) = telemetry_rx.recv().await {
-                let cost = cost_auditor_clone.record_event(event.clone());
+            use crate::services::billing::auditor::BillingEvent;
+            while let Some(billing_event) = telemetry_rx.recv().await {
+                match billing_event {
+                    BillingEvent::Token(event) => {
+                        let cost = cost_auditor_clone.record_event(event.clone());
 
-                let labels = serde_json::json!({
-                    "agent_id": event.agent_id,
-                    "organization_id": event.tenant_id,
-                    "input_tokens": event.input_tokens,
-                    "output_tokens": event.output_tokens,
-                    "cached_input_tokens": event.cached_input_tokens,
-                    "local_embedding_tokens": event.local_embedding_tokens,
-                    "cost_usd": cost,
-                });
+                        let labels = serde_json::json!({
+                            "agent_id": event.agent_id,
+                            "organization_id": event.tenant_id,
+                            "input_tokens": event.input_tokens,
+                            "output_tokens": event.output_tokens,
+                            "cached_input_tokens": event.cached_input_tokens,
+                            "local_embedding_tokens": event.local_embedding_tokens,
+                            "cost_usd": cost,
+                        });
 
-                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
+                        let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
-                // Blueprint: track cost in cents
-                let cost_cents = (cost * 100.0) as f32;
-                let mut labels_cents = labels.clone();
-                labels_cents["cost_cents"] = serde_json::json!(cost_cents);
-                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                        // Miser cost optimization: track cost in cents for LLM usage.
+                        let cost_cents = (cost * 100.0) as f32;
+                        let mut labels_cents = labels.clone();
+                        labels_cents["cost_cents"] = serde_json::json!(cost_cents);
+                        let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                    }
+                    BillingEvent::Compute(event) => {
+                        let compute_cost = ::server_pricing::calculator::calculate_compute_cost(event.compute_hours, cost_auditor_clone.config());
+                        let network_cost = ::server_pricing::calculator::calculate_network_cost(event.network_egress_bytes, cost_auditor_clone.config());
+
+                        let common_labels = serde_json::json!({
+                            "agent_id": event.agent_id,
+                            "organization_id": event.tenant_id,
+                        });
+
+                        // Miser cost optimization: Record compute cost in cents.
+                        let compute_cents = (compute_cost * 100.0) as f32;
+                        let mut compute_labels = common_labels.clone();
+                        compute_labels["compute_hours"] = serde_json::json!(event.compute_hours);
+                        compute_labels["cost_cents"] = serde_json::json!(compute_cents);
+                        let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_compute_cost_cents", "counter", compute_cents, compute_labels).await;
+
+                        // Miser cost optimization: Record network cost in cents.
+                        let network_cents = (network_cost * 100.0) as f32;
+                        let mut network_labels = common_labels.clone();
+                        network_labels["egress_bytes"] = serde_json::json!(event.network_egress_bytes);
+                        network_labels["cost_cents"] = serde_json::json!(network_cents);
+                        let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_network_cost_cents", "counter", network_cents, network_labels).await;
+                    }
+                }
             }
         });
 

@@ -5,6 +5,13 @@
 
 ## Getting Started (Day 1 Onboarding)
 
+> [!WARNING]
+> **Environment Blockers Note (Miser Domain):** During the implementation of cost-tracking features, live verification and UI audits were blocked by the following environment issues:
+> - `bazelisk`/`bazel` were unavailable in the environment.
+> - Docker Hub rate limits and missing local images prevented starting the full service stack via Docker Compose.
+> - Rust build errors related to `ohc_builtin_agent_core` prevented running the server binary directly via `cargo`.
+> Consequently, changes were implemented based on static analysis and verified through unit tests where possible.
+
 To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
 
 From the root of the repository, you must explicitly run the onboarding CLI:

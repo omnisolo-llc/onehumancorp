@@ -15,11 +15,18 @@ pub struct AuditEvent {
     pub local_embedding_tokens: i64,
 }
 
+#[derive(Clone)]
 pub struct ComputeEvent {
     pub agent_id: String,
     pub tenant_id: String,
     pub compute_hours: f64,
     pub network_egress_bytes: i64,
+}
+
+#[derive(Clone)]
+pub enum BillingEvent {
+    Token(AuditEvent),
+    Compute(ComputeEvent),
 }
 
 pub struct CostAuditor {
@@ -42,7 +49,7 @@ pub struct CostAuditor {
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
-    telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
+    telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<BillingEvent>>,
     llm_cost_counter: Counter<u64>,
     storage_savings_counter: Counter<u64>,
     bandwidth_savings_counter: Counter<u64>,
@@ -85,8 +92,12 @@ impl CostAuditor {
         }
     }
 
-    pub fn set_telemetry_tx(&mut self, tx: tokio::sync::mpsc::UnboundedSender<AuditEvent>) {
+    pub fn set_telemetry_tx(&mut self, tx: tokio::sync::mpsc::UnboundedSender<BillingEvent>) {
         self.telemetry_tx = Some(tx);
+    }
+
+    pub fn config(&self) -> &CostConfig {
+        &self.config
     }
 
     pub fn record_event(&self, event: AuditEvent) -> f64 {
@@ -126,7 +137,7 @@ impl CostAuditor {
         self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
-            let _ = tx.send(event.clone());
+            let _ = tx.send(BillingEvent::Token(event.clone()));
         }
 
         cost
@@ -340,6 +351,10 @@ impl CostAuditor {
 
         let total_cents = (total * 100.0).round() as u64;
         self.compute_cost_counter.add(total_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+
+        if let Some(tx) = &self.telemetry_tx {
+            let _ = tx.send(BillingEvent::Compute(event.clone()));
+        }
 
         total
     }

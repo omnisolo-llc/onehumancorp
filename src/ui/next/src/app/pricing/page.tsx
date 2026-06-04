@@ -2,119 +2,145 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { WithTooltip } from '../../components/TooltipRegistry';
+
+const tiers = [
+  {
+    name: 'Free',
+    price: '$0',
+    description: 'Perfect for exploring and starting your journey.',
+    features: [
+      '100 AI actions / month',
+      '500 MB Storage',
+      '1 AI Agent',
+      '10 Products',
+      'Basic Analytics',
+    ],
+    buttonText: 'Current Plan',
+    buttonClass: 'bg-gray-100 text-gray-800 cursor-default',
+  },
+  {
+    name: 'Starter',
+    price: '$29',
+    unit: '/mo',
+    description: 'Grow your business with more power and scale.',
+    features: [
+      '1,000 AI actions / month',
+      '5 GB Storage',
+      '3 AI Agents',
+      '100 Products',
+      'Standard Analytics',
+      'Custom Domain Support',
+    ],
+    buttonText: 'Upgrade to Starter',
+    buttonClass: 'bg-indigo-600 text-white hover:bg-indigo-700',
+    highlight: true,
+  },
+  {
+    name: 'Pro',
+    price: '$79',
+    unit: '/mo',
+    description: 'For established businesses needing full automation.',
+    features: [
+      'Unlimited AI actions',
+      '50 GB Storage',
+      '10 AI Agents',
+      'Unlimited Products',
+      'Advanced Analytics & ROI',
+      'Priority Support',
+    ],
+    buttonText: 'Upgrade to Pro',
+    buttonClass: 'bg-indigo-600 text-white hover:bg-indigo-700',
+  },
+  {
+    name: 'Business',
+    price: '$299',
+    unit: '/mo',
+    description: 'Maximum scale for high-volume enterprises.',
+    features: [
+      'Unlimited AI actions',
+      '500 GB Storage',
+      'Unlimited AI Agents',
+      'Unlimited Products',
+      'White-label options',
+      '24/7 Dedicated Concierge',
+    ],
+    buttonText: 'Upgrade to Business',
+    buttonClass: 'bg-indigo-600 text-white hover:bg-indigo-700',
+  },
+];
 
 export default function PricingPage() {
   const router = useRouter();
 
-  const handleUpgrade = (tier: string) => {
-    router.push('/checkout?tier=' + tier);
+  const handleUpgrade = (tierName: string) => {
+    // In a real scenario, this would redirect to a Stripe checkout session or a checkout page
+    console.log(`Upgrading to ${tierName}`);
+    router.push(`/checkout?plan=${tierName.toLowerCase()}`);
   };
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <WithTooltip id="pricing-tier-tooltip" defaultText="Select the plan that best fits your business needs.">
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Pricing Plans</h1>
-        </WithTooltip>
-        <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
-          Back to Dashboard
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Choose Your Plan</h1>
+        <button onClick={() => router.back()} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+          Go Back
         </button>
       </header>
 
-      <main id="pricing-screen" className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-8">
-        <div className="text-center mb-8">
-          <p className="text-lg" style={{ color: '#86868B' }}>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
+      <main className="p-6 md:p-12 flex-1 max-w-7xl mx-auto w-full">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold font-outfit text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+          <p className="text-xl text-gray-600">No hidden fees. AI-powered infrastructure at every scale.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Free Tier */}
-          <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Free</h3>
-              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 1 Agent Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500MB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
-              </ul>
-            </div>
-            <button className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors" disabled>
-              Current Plan
-            </button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {tiers.map((tier) => (
+            <div
+              key={tier.name}
+              className={`flex flex-col p-8 shadow-sm transition-transform hover:scale-105 ${tier.highlight ? 'ring-2 ring-indigo-600' : ''}`}
+              style={{
+                background: 'rgba(255, 255, 255, 0.65)',
+                backdropFilter: 'blur(20px) saturate(200%)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                borderRadius: '24px',
+              }}
+            >
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold font-outfit text-gray-900">{tier.name}</h3>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-5xl font-extrabold font-outfit text-gray-900">{tier.price}</span>
+                  {tier.unit && <span className="ml-1 text-xl font-medium text-gray-500">{tier.unit}</span>}
+                </div>
+                <p className="mt-4 text-gray-600 leading-relaxed">{tier.description}</p>
+              </div>
 
-          {/* Starter Tier */}
-          <div className="p-6 shadow-sm flex flex-col justify-between relative" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px) saturate(200%)', border: '2px solid #4f46e5', borderRadius: '16px' }}>
-            <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Recommended</div>
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Starter</h3>
-              <p className="text-xl font-semibold mb-2" style={{ color: '#1D1D1F' }}>$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 3 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 1,000 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 5GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
+              <ul className="flex-1 space-y-4 mb-8">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span className="text-gray-700 text-sm font-medium">{feature}</span>
+                  </li>
+                ))}
               </ul>
-            </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
-              Upgrade to Starter via Stripe
-            </button>
-          </div>
 
-          {/* Pro Tier */}
-          <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Pro</h3>
-              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 10 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 50GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
-              </ul>
+              <button
+                onClick={() => tier.name !== 'Free' && handleUpgrade(tier.name)}
+                className={`w-full py-4 rounded-xl font-bold transition-colors ${tier.buttonClass}`}
+              >
+                {tier.buttonText}
+              </button>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
-              Upgrade to Pro via Stripe
-            </button>
-          </div>
-
-          {/* Business Tier */}
-          <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Business</h3>
-              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Agents</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
-              </ul>
-            </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
-              Upgrade to Business via Stripe
-            </button>
-          </div>
+          ))}
         </div>
 
-        <div className="text-center mt-4">
-            <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
+        <div className="mt-16 text-center">
+            <p className="text-gray-500 text-sm">
+                * All plans include our OHC Premium Token library design system and real-time observability dashboards.<br/>
+                Payments processed securely via Stripe. Automated WebP compression applied to all images.
+            </p>
         </div>
-
-        <div className="mt-8 p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-            <h2 className="text-xl font-bold font-outfit mb-4">Frequently Asked Questions</h2>
-            <div className="mb-4">
-                <h3 className="font-semibold">How do I upgrade, downgrade, or cancel?</h3>
-                <p className="text-gray-700 text-sm mt-1">Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
-            </div>
-            <div>
-                <h3 className="font-semibold">What is the storage limit?</h3>
-                <p className="text-gray-700 text-sm mt-1">Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
-            </div>
-        </div>
-
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

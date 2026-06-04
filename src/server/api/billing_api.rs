@@ -151,7 +151,7 @@ pub async fn cost_dashboard_handler(
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
 
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
+    let storage_cost_f64 = storage_gb * auditor.config().cost_per_gb_month;
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
 

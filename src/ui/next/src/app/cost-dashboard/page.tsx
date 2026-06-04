@@ -13,6 +13,14 @@ interface CostDashboardData {
   bandwidth_savings: number;
   period_start: string;
   period_end: string;
+  trend: Array<{
+    date: string;
+    total_cost: number;
+    llm_cost: number;
+    storage_cost: number;
+    network_cost: number;
+    compute_cost: number;
+  }>;
 }
 
 export default function CostDashboardPage() {
@@ -138,6 +146,60 @@ export default function CostDashboardPage() {
                     </div>
                     <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
                 </div>
+            </div>
+        </section>
+
+        {/* Trend Section */}
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">7-Day Cost Trend</h2>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="text-gray-500 text-sm border-b border-gray-200">
+                            <th className="pb-4 font-medium">Date</th>
+                            <th className="pb-4 font-medium">LLM</th>
+                            <th className="pb-4 font-medium">Storage</th>
+                            <th className="pb-4 font-medium">Compute</th>
+                            <th className="pb-4 font-medium text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {data?.trend && data.trend.length > 0 ? (
+                            data.trend.map((day) => (
+                                <tr key={day.date} className="text-sm">
+                                    <td className="py-4 text-gray-900 font-medium">{day.date}</td>
+                                    <td className="py-4 text-gray-600">{formatCurrency(day.llm_cost)}</td>
+                                    <td className="py-4 text-gray-600">{formatCurrency(day.storage_cost)}</td>
+                                    <td className="py-4 text-gray-600">{formatCurrency(day.compute_cost)}</td>
+                                    <td className="py-4 text-gray-900 font-bold text-right">{formatCurrency(day.total_cost)}</td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={5} className="py-8 text-center text-gray-500">No trend data available for this period.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Visual Bar simulation */}
+            <div className="mt-8 flex items-end gap-2 h-32 px-2">
+                {data?.trend?.map((day, idx) => {
+                    const maxCost = Math.max(...data.trend.map(d => d.total_cost), 1);
+                    const height = (day.total_cost / maxCost) * 100;
+                    return (
+                        <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                            <div
+                                className="w-full bg-indigo-500 rounded-t-md opacity-80 hover:opacity-100 transition-opacity"
+                                style={{ height: `${Math.max(height, 5)}%`, minHeight: '4px' }}
+                                title={`${day.date}: ${formatCurrency(day.total_cost)}`}
+                            ></div>
+                            <span className="text-[10px] text-gray-400 rotate-45 mt-2">{day.date.split('-').slice(1).join('/')}</span>
+                        </div>
+                    );
+                })}
             </div>
         </section>
 
