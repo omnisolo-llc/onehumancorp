@@ -22,6 +22,7 @@ pub struct HubEvent {
 }
 
 pub struct Hub {
+    pub semantic_router: crate::orchestration::router::SemanticRouter,
     telemetry_tx: tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent>,
     agents: RwLock<HashMap<String, Agent>>,
     meetings: RwLock<HashMap<String, MeetingRoom>>,
@@ -94,6 +95,7 @@ impl Hub {
         });
 
         Hub {
+            semantic_router: crate::orchestration::router::SemanticRouter::new(),
             telemetry_tx: telemetry_tx.clone(),
             agents: RwLock::new(HashMap::new()),
             agent_cache: RwLock::new(None),
