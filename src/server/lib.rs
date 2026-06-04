@@ -5714,6 +5714,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </li>
                             </ul>
                         </div>
+
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h3>7-Day Trend</h3>
+                            <ul id="cost-dashboard-trend" style="list-style: none; padding: 0; margin: 0; font-family: 'Outfit', 'Inter', sans-serif;">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+
                         <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
                     </div>
 
@@ -7756,6 +7764,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
+
+                                        const trendList = document.getElementById('cost-dashboard-trend');
+                                        trendList.innerHTML = '';
+                                        if (data.trend && data.trend.length > 0) {
+                                            data.trend.forEach(item => {
+                                                const li = document.createElement('li');
+                                                li.style.display = 'flex';
+                                                li.style.justifyContent = 'space-between';
+                                                li.style.borderBottom = '1px solid var(--border)';
+                                                li.style.padding = '8px 0';
+                                                li.innerHTML = `<span>${item.date}</span><strong>$${(item.total_cost / 100).toFixed(2)}</strong>`;
+                                                trendList.appendChild(li);
+                                            });
+                                        } else {
+                                            trendList.innerHTML = '<li style="padding: 8px 0; color: var(--text-secondary);">No trend data available yet.</li>';
+                                        }
                                     })
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
