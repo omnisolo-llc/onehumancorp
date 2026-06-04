@@ -122,4 +122,52 @@ mod tests {
         assert_eq!(today_data.compute_cost, 200);
         assert_eq!(today_data.total_cost, 700);
     }
+
+    #[test]
+    fn test_process_storage_and_network() {
+        let today = chrono::Utc::now().date_naive();
+        let rows = vec![
+            TelemetryRow {
+                date: Some(today),
+                metric_name: "ohc_storage_rw_cost".to_string(),
+                total: Some(100000000.0), // Should become 1 after mult with 0.00000001
+            },
+            TelemetryRow {
+                date: Some(today),
+                metric_name: "ohc_network_cost_cents".to_string(),
+                total: Some(150.0), // Should be 150
+            },
+            TelemetryRow {
+                date: Some(today),
+                metric_name: "unrelated_metric".to_string(),
+                total: Some(999.0),
+            },
+        ];
+        let res = process_telemetry_rows(rows);
+        let today_str = today.format("%Y-%m-%d").to_string();
+        let today_data = res.iter().find(|r| r.date == today_str).unwrap();
+
+        assert_eq!(today_data.storage_cost, 1);
+        assert_eq!(today_data.network_cost, 150);
+        assert_eq!(today_data.llm_cost, 0);
+        assert_eq!(today_data.compute_cost, 0);
+        assert_eq!(today_data.total_cost, 151);
+    }
+
+    #[test]
+    fn test_process_missing_date() {
+        let rows = vec![
+            TelemetryRow {
+                date: None,
+                metric_name: "ohc_mission_cost_cents".to_string(),
+                total: Some(500.0),
+            },
+        ];
+        let res = process_telemetry_rows(rows);
+
+        // Ensure no cost was added to any date since the date was missing
+        for item in res {
+            assert_eq!(item.total_cost, 0);
+        }
+    }
 }

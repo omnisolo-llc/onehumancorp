@@ -32,7 +32,7 @@ export default function CostDashboardPage() {
     async function fetchCostData() {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://127.0.0.1:18789/cost-dashboard', {
+        const res = await fetch('/api/billing/cost-dashboard', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
