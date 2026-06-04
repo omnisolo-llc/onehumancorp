@@ -23,13 +23,13 @@ use sqlx::Row;
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
-        if ($org_id.trim() == "system" || $org_id.trim().is_empty()) && ::server_config::get().multitenant {
-            // E2E test bypass: The E2E tests run in a sandbox that simulates cloud mode but still seeds
-            // baseline data to 'system' in the database directly.
-            // In a real environment, this blocks tenant leakage.
-            let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
-            if !is_test && std::env::var("CI").unwrap_or_default() != "true" {
+        if $org_id.trim() == "system" {
+            if ::server_config::get().multitenant {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+            }
+        } else if $org_id.trim().is_empty() {
+            if ::server_config::get().multitenant {
+                return Err("empty tenant_id is not allowed in multi-tenant mode".into());
             }
         }
     };
