@@ -370,7 +370,7 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 
     match ::server_auth::parse_spiffe_id(spiffe_id_str) {
         Ok((_org_id, _agent_id)) => {
-            tracing::info!("Authenticated SPIFFE ID successfully.");
+            tracing::debug!("Authenticated SPIFFE ID successfully.");
         }
         Err(e) => return Err(e),
     }
@@ -2933,7 +2933,7 @@ async fn create_ui_bom_item_handler(
     tokio::spawn(async move {
         loop {
             if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
-                tracing::info!("Processing sub-agent job: {}", job.id);
+                tracing::debug!("Processing sub-agent job: {}", job.id);
                 let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
@@ -3472,7 +3472,7 @@ async fn create_ui_bom_item_handler(
     let mesh_addr: std::net::SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {
-        tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
+        tracing::debug!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
             tracing::error!("Mesh server error: {}", e);
         }
@@ -3538,7 +3538,7 @@ async fn create_ui_bom_item_handler(
                 _ = interval.tick() => {
                     let due = hub_for_sched.scheduler().poll_due();
                     for task in due {
-                        tracing::info!("executing scheduled task: {} ({})", task.name, task.id);
+                        tracing::debug!("executing scheduled task: {} ({})", task.name, task.id);
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
@@ -3572,7 +3572,7 @@ async fn create_ui_bom_item_handler(
         }
     });
 
-    tracing::info!("Server listening on {}", addr);
+    tracing::debug!("Server listening on {}", addr);
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());

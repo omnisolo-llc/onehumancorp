@@ -1256,7 +1256,7 @@ pub async fn start_builtin_agent(
         Box::new(move |msg: crate::mesh::transport::Message| {
             use prost::Message;
             if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
-                tracing::info!("Received job from mesh: {}", req.task_id);
+                tracing::debug!("Received job from mesh: {}", req.task_id);
                 let svc = svc.clone();
                 let transport = transport.clone();
                 tokio::spawn(async move {
@@ -1299,7 +1299,7 @@ pub async fn start_builtin_agent(
         Box::new(move |msg: crate::mesh::transport::Message| {
             use prost::Message;
             if let Ok(shared_task) = crate::proto::hub::SharedTask::decode(&msg.payload[..]) {
-                tracing::info!("Received SharedTask from mesh (task.assigned): {}", shared_task.id);
+                tracing::debug!("Received SharedTask from mesh (task.assigned): {}", shared_task.id);
 
                 // Decode metadata payload to extract overriding config
                 let mut system_prompt = String::new();
@@ -1386,7 +1386,7 @@ pub async fn start_builtin_agent(
         Box::new(move |msg: crate::mesh::transport::Message| {
             use prost::Message;
             if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
-                tracing::info!("Received Ralph job from mesh: {}", req.task_id);
+                tracing::debug!("Received Ralph job from mesh: {}", req.task_id);
                 let svc = svc.clone();
                 tokio::spawn(async move {
                     svc.run_ralph_loop(req).await;

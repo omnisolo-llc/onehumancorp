@@ -126,7 +126,7 @@ impl KvMcpServer {
                         let resp = serde_json::json!({"value": val});
                         Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                     }
-                }.instrument(tracing::info_span!("kv_get")).await
+                }.instrument(tracing::debug_span!("kv_get")).await
             }
             "kv_set" => {
                 let key = params["key"].as_str().ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
@@ -162,7 +162,7 @@ impl KvMcpServer {
                         let resp = serde_json::json!({"status": "success"});
                         Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                     }
-                }.instrument(tracing::info_span!("kv_set")).await
+                }.instrument(tracing::debug_span!("kv_set")).await
             }
             "kv_delete" => {
                 let key = params["key"].as_str().ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
@@ -195,7 +195,7 @@ impl KvMcpServer {
                         let resp = serde_json::json!({"status": "success"});
                         Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                     }
-                }.instrument(tracing::info_span!("kv_delete")).await
+                }.instrument(tracing::debug_span!("kv_delete")).await
             }
             "kv_list" => {
                 let prefix = params["prefix"].as_str().unwrap_or("");
@@ -240,7 +240,7 @@ impl KvMcpServer {
                         let resp = serde_json::json!({"keys": clean_keys});
                         Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                     }
-                }.instrument(tracing::info_span!("kv_list")).await
+                }.instrument(tracing::debug_span!("kv_list")).await
             }
             _ => Err(tonic::Status::not_found(format!("tool {} not implemented", req.tool_id))),
         }

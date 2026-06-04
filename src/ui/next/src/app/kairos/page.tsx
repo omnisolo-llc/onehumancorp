@@ -69,6 +69,7 @@ function KairosContent() {
         ]);
 
 
+
         if (tasksRes.status === "fulfilled" && tasksRes.value.ok) {
           const data = await tasksRes.value.json();
           setTasks(Array.isArray(data?.tasks) && data.tasks.length > 0 ? data.tasks : Array.isArray(data) && data.length > 0 ? data : [
@@ -98,6 +99,12 @@ function KairosContent() {
           setMemoryStats(data && typeof data === "object" && Object.keys(data).length > 0 ? data : { "Context": "Infinite Context", "Size": "842.5 MB" });
         } else {
           setMemoryStats({ "Context": "Infinite Context", "Size": "842.5 MB" });
+        }
+);
+        } else {
+          setMemoryStats({ "Context": "Infinite Context", "Size": "842.5 MB" });
+        }
+);
         }
       } catch (e: any) {
         setError(e?.message || "Failed to load Kairos data");

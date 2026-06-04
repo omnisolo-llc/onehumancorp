@@ -69,7 +69,7 @@ impl HybridFSMcpServer {
                         Err(e) => Err(tonic::Status::internal(format!("failed to read file: {}", e))),
                     }
                 }
-                .instrument(tracing::info_span!("fs_hybrid_read"))
+                .instrument(tracing::debug_span!("fs_hybrid_read"))
                 .await
             }
             "fs_hybrid_write" => {
@@ -85,7 +85,7 @@ impl HybridFSMcpServer {
                         Err(e) => Err(tonic::Status::internal(format!("failed to write file: {}", e))),
                     }
                 }
-                .instrument(tracing::info_span!("fs_hybrid_write"))
+                .instrument(tracing::debug_span!("fs_hybrid_write"))
                 .await
             }
             "fs_list_dir" => {
@@ -144,7 +144,7 @@ impl HybridFSMcpServer {
                     let resp = serde_json::json!({"status": "success", "sync_id": id, "message": "file queued for sync"});
                     Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                 }
-                .instrument(tracing::info_span!("fs_hybrid_sync"))
+                .instrument(tracing::debug_span!("fs_hybrid_sync"))
                 .await
             }
             _ => Err(tonic::Status::not_found(format!("tool {} not implemented", req.tool_id))),
