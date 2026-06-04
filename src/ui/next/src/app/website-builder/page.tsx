@@ -196,13 +196,12 @@ export default function WebsiteBuilderPage() {
   const moveBlock = (fromIndex: number, toIndex: number) => {
     if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
 
-    setBlocks(prev => {
-      const newBlocks = [...prev];
-      const [moved] = newBlocks.splice(fromIndex, 1);
-      newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
-      return newBlocks;
-    });
+    const newBlocks = [...blocks];
+    const [moved] = newBlocks.splice(fromIndex, 1);
+    newBlocks.splice(toIndex, 0, moved);
+    localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+    setBlocks(newBlocks);
+
 
     if (selectedBlockIndex === fromIndex) {
       setSelectedBlockIndex(toIndex);

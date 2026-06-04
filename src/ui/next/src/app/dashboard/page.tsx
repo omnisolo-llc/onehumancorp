@@ -42,6 +42,16 @@ type SupplyPayload = {
   bom_items: unknown[];
 };
 
+type AgentProposal = {
+  id: string;
+  department: string;
+  title: string;
+  actionLabel: string;
+  status: string;
+  expandedContent?: string;
+  expandedActionLabel?: string;
+};
+
 const emptyMetrics: DashboardMetrics = {
   active_customers: 0,
   pending_orders: 0,
@@ -71,6 +81,8 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [proposals, setProposals] = useState<AgentProposal[]>([]);
+  const [expandedProposalId, setExpandedProposalId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
@@ -93,22 +105,24 @@ export default function Dashboard() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, proposalsRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
+          fetch(`/api/agents/proposals?tenant_id=${tenant}`),
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok || !proposalsRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, proposalsData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
+          proposalsRes.json(),
         ]);
 
         setMetrics({ ...emptyMetrics, ...metricsData });
@@ -119,6 +133,7 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
+        setProposals(Array.isArray(proposalsData) ? proposalsData : []);
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -138,6 +153,13 @@ export default function Dashboard() {
       window.removeEventListener("storage", updateOfflineStatus);
     };
   }, []);
+
+  const handleApproveProposal = (id: string) => {
+    setProposals(prev => prev.map(p => p.id === id ? { ...p, status: 'approved' } : p));
+    setTimeout(() => {
+      setProposals(prev => prev.filter(p => p.id !== id));
+    }, 1000);
+  };
 
   const lowStockCount = useMemo(
     () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length,
@@ -199,6 +221,54 @@ export default function Dashboard() {
       </div>
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+        {proposals.length > 0 && (
+          <section className="mb-6">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="app-panel-title">Unified Agent Feed</h2>
+                <p className="app-list-subtitle">Proposals from your AI Assistants.</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-4">
+              {proposals.map(proposal => (
+                <div key={proposal.id} className={`app-card flex flex-col gap-3 transition-all duration-300 ${proposal.status === 'approved' ? 'opacity-50' : ''}`}>
+                  <div className="flex justify-between items-start">
+                    <span className={`app-badge ${proposal.department === 'Operations' ? 'good' : proposal.department === 'Advisory' ? 'neutral' : 'warn'}`}>{proposal.department}</span>
+                    {proposal.status === 'approved' && <span className="text-green-600 text-sm font-semibold">Approved</span>}
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{proposal.title}</p>
+
+                  {expandedProposalId === proposal.id && proposal.expandedContent ? (
+                    <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <pre className="text-sm whitespace-pre-wrap font-sans text-gray-700 dark:text-gray-300">{proposal.expandedContent}</pre>
+                      <button
+                        className="app-button w-full mt-4 min-h-[44px] justify-center"
+                        onClick={() => handleApproveProposal(proposal.id)}
+                        disabled={proposal.status === 'approved'}
+                      >
+                        {proposal.expandedActionLabel || 'Approve'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="app-button w-full mt-2 min-h-[44px] justify-center"
+                      onClick={() => {
+                        if (proposal.expandedContent) {
+                          setExpandedProposalId(proposal.id);
+                        } else {
+                          handleApproveProposal(proposal.id);
+                        }
+                      }}
+                      disabled={proposal.status === 'approved'}
+                    >
+                      {proposal.actionLabel}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
