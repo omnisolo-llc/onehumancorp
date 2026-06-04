@@ -21,7 +21,7 @@ pub struct PaymentIntentResponse {
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
-        .route("/token", axum::routing::get(get_terminal_connection_token_handler))
+        .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .with_state(hub)
 }
@@ -43,6 +43,8 @@ pub async fn get_terminal_connection_token_handler(
         None => return Json(Err("Unauthenticated".to_string()))
     };
 
+    tracing::info!("Generating Stripe Terminal connection token for tenant: {}", tenant_id);
+
     let stripe_key = match std::env::var("STRIPE_API_KEY") {
         Ok(k) => k,
         Err(_) => "sk_test_123".to_string(), // Fallback for dev/test
@@ -50,8 +52,14 @@ pub async fn get_terminal_connection_token_handler(
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     match client.create_terminal_connection_token(&tenant_id).await {
-        Ok(token) => Json(Ok(TerminalTokenResponse { token })),
-        Err(e) => Json(Err(e)),
+        Ok(token) => {
+            tracing::info!("Successfully generated Terminal token for tenant: {}", tenant_id);
+            Json(Ok(TerminalTokenResponse { token }))
+        },
+        Err(e) => {
+            tracing::error!("Failed to generate Terminal token for tenant {}: {}", tenant_id, e);
+            Json(Err(e))
+        },
     }
 }
 
