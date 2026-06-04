@@ -83,7 +83,7 @@ impl GrowthService for MyGrowthService {
         .await
         .map_err(|e| Status::internal(format!("failed to insert review: {}", e)))?;
 
-        let row = sqlx::query(
+        let _row = sqlx::query(
             "INSERT INTO reputation_profiles (id, tenant_id, average_rating, total_reviews)
              VALUES ($1, $2, $3, 1)
              ON CONFLICT (tenant_id)
@@ -131,7 +131,7 @@ impl GrowthService for MyGrowthService {
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let row = sqlx::query("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+        let _row = sqlx::query("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
             .bind(&tenant_id)
             .fetch_optional(&mut *tx)
             .await
@@ -139,7 +139,7 @@ impl GrowthService for MyGrowthService {
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
-        if let Some(r) = row {
+        if let Some(r) = _row {
             use sqlx::Row;
             Ok(Response::new(GetReputationResponse {
                 average_rating: r.get("average_rating"),
@@ -365,7 +365,7 @@ impl GrowthService for MyGrowthService {
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+        let _row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
             .bind(&req.id)
             .fetch_one(&mut *tx)
             .await
@@ -374,12 +374,12 @@ impl GrowthService for MyGrowthService {
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            referral_code: row.get("referral_code"),
-            clicks: row.get("clicks"),
-            conversions: row.get("conversions"),
-            created_at_unix: row.get("created_at_unix"),
+            id: _row.get("id"),
+            user_id: _row.get("user_id"),
+            referral_code: _row.get("referral_code"),
+            clicks: _row.get("clicks"),
+            conversions: _row.get("conversions"),
+            created_at_unix: _row.get("created_at_unix"),
         }))
     }
 
@@ -393,7 +393,7 @@ impl GrowthService for MyGrowthService {
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+        let _row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
             .bind(&req.id)
             .fetch_one(&mut *tx)
             .await
@@ -414,7 +414,7 @@ impl GrowthService for MyGrowthService {
             "description": "Referral conversion credit allocated"
         });
 
-        let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, $3, $4, $5)")
+        let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, event_type, payload) VALUES ($1, $2, $3, $4, $5)")
             .bind(&ledger_id)
             .bind(&org_id)
             .bind("Growth")
@@ -426,12 +426,12 @@ impl GrowthService for MyGrowthService {
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            referral_code: row.get("referral_code"),
-            clicks: row.get("clicks"),
-            conversions: row.get("conversions"),
-            created_at_unix: row.get("created_at_unix"),
+            id: _row.get("id"),
+            user_id: _row.get("user_id"),
+            referral_code: _row.get("referral_code"),
+            clicks: _row.get("clicks"),
+            conversions: _row.get("conversions"),
+            created_at_unix: _row.get("created_at_unix"),
         }))
     }
 
