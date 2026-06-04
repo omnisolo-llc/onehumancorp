@@ -41,7 +41,7 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                 let val = row.total.unwrap_or(0.0) as i64;
                 match row.metric_name.as_str() {
                     "ohc_mission_cost_cents" => daily.llm_cost += val,
-                    "ohc_storage_rw_cost" => daily.storage_cost += (val as f64 * 0.0000000001).round() as i64,
+                    "ohc_storage_rw_cost" => daily.storage_cost += (val as f64 * 0.00000001).round() as i64,
                     "ohc_network_cost_cents" => daily.network_cost += val,
                     "ohc_compute_cost_cents" => daily.compute_cost += val,
                     _ => {}
