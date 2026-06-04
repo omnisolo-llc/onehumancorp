@@ -34,39 +34,9 @@ export default function CostDashboardPage() {
           setData(fetchedData);
         } else {
             console.error("Failed to fetch cost data:", res.status);
-            // Fallback for UI
-            const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-            setData({
-                total_revenue: 0,
-                total_costs: 0,
-                llm_cost: 0,
-                storage_cost: 0,
-                payment_fees: 0,
-                network_cost: 0,
-                bandwidth_savings: 0,
-                period_start: startOfMonth.toLocaleDateString('en-CA'),
-                period_end: endOfMonth.toLocaleDateString('en-CA'),
-            });
         }
       } catch (err) {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         console.error("Error fetching cost data", err);
-        setData({
-            total_revenue: 0,
-            total_costs: 0,
-            llm_cost: 0,
-            storage_cost: 0,
-            payment_fees: 0,
-            network_cost: 0,
-            bandwidth_savings: 0,
-            period_start: startOfMonth.toLocaleDateString('en-CA'),
-            period_end: endOfMonth.toLocaleDateString('en-CA'),
-        });
       } finally {
         setLoading(false);
       }
