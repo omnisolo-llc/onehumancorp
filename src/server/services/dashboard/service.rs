@@ -170,6 +170,7 @@ impl MyDashboardService {
                             amount_cents: (amount_real * 100.0) as i64,
                             status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                             created_at_unix: 0,
+                            payment_source: ::server_ohc::app::order::PaymentSource::Unspecified as i32,
                         };
                         results.push(o);
                     }
@@ -186,6 +187,7 @@ impl MyDashboardService {
                             amount_cents: (amount_real * 100.0) as i64,
                             status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                             created_at_unix: 0,
+                            payment_source: ::server_ohc::app::order::PaymentSource::Unspecified as i32,
                         };
                         results.push(o);
                     }
