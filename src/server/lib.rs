@@ -1264,7 +1264,7 @@ impl HubService for MyHubService {
 
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
-        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        let client = crate::integrations::stripe::terminal::StripeTerminalClient::new(stripe_key);
 
         let token = client.create_terminal_connection_token(&tenant_id).await
             .map_err(|e| tonic::Status::internal(e))?;
@@ -3373,6 +3373,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest("/api/v1/payments", api::payments::router(hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
