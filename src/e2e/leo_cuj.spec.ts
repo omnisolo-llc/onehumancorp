@@ -20,8 +20,8 @@ test.describe('Leo CUJ', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     // 2. Add a new service using the dashboard modal (as seen in dashboard/page.tsx)
-    const addItemBtn = page.getByText('+ Add Item', { exact: true }).first();
-    await expect(addItemBtn).toBeVisible({ timeout: 10000 });
+    const addItemBtn = page.locator('button:has-text("+ Add Item")').first();
+    await addItemBtn.waitFor({ state: 'visible', timeout: 10000 });
     await addItemBtn.click();
 
     // Select 'Service' type
