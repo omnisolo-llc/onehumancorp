@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -57,29 +57,29 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
 }
 
 pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyCost> {
-    let raw_rows = sqlx::query!(
+    let raw_rows = sqlx::query(
         r#"
         SELECT
             DATE(timestamp) as date,
             metric_name,
-            SUM(value) as total
+            SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
         WHERE json_extract_path_text(labels_json::json, 'tenant_id') = $1
           AND metric_name IN ('ohc_mission_cost_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents')
-          AND timestamp >= CURRENT_DATE - INTERVAL '7 days'
+          AND timestamp >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(timestamp), metric_name
         ORDER BY DATE(timestamp) ASC
-        "#,
-        tenant_id
+        "#
     )
+    .bind(tenant_id)
     .fetch_all(pool)
     .await
     .unwrap_or_else(|_| vec![]);
 
     let rows = raw_rows.into_iter().map(|r| TelemetryRow {
-        date: r.date,
-        metric_name: r.metric_name,
-        total: r.total,
+        date: r.try_get::<Option<chrono::NaiveDate>, _>("date").unwrap_or(None),
+        metric_name: r.try_get::<String, _>("metric_name").unwrap_or_default(),
+        total: r.try_get::<Option<f64>, _>("total").unwrap_or(None),
     }).collect();
 
     process_telemetry_rows(rows)

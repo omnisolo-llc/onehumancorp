@@ -32,6 +32,7 @@ rust_library(
         "@crates//:opentelemetry",
         "@crates//:hex",
         "@crates//:image",
+        "@crates//:sqlx",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
