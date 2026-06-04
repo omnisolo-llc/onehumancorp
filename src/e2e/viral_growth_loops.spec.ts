@@ -11,7 +11,7 @@ test.describe('Customer Referral Program Growth Loop', () => {
     test.setTimeout(90000);
 
     // 1. Wait for page to fully load - wait for the header specifically, avoiding wait for navigation failure if possible
-    await expect(page.locator('h1').filter({ hasText: 'Customer Referral Program 🚀' })).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('h1', { hasText: 'Customer Referral Program 🚀' })).toBeVisible({ timeout: 20000 });
 
     // 2. Fill in the program details
     await page.getByLabel('Store Name (Optional)').fill('Maya Cakes');
@@ -58,10 +58,9 @@ test.describe('Customer Referral Program Growth Loop', () => {
     // 8. Test sending the campaign
     const sendBtn = page.locator('button', { hasText: 'Launch Program to' });
 
-    // Check if the button is enabled (customerCount > 0 from the simulated fetch)
-    if (await sendBtn.isEnabled()) {
-        await sendBtn.click();
-        await expect(page.getByText(/✅ Referral program launched to/i)).toBeVisible({ timeout: 15000 });
-    }
+    // In e2e-seed.sql we have 2 customers, wait for it to be enabled then click
+    await expect(sendBtn).toBeEnabled({ timeout: 15000 });
+    await sendBtn.click();
+    await expect(page.getByText(/✅ Referral program launched to/i)).toBeVisible({ timeout: 15000 });
   });
 });
