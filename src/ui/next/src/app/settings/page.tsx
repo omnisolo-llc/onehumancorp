@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 
@@ -15,6 +15,39 @@ export default function SettingsPage() {
     failed_payment: false,
     new_order: false,
   });
+
+  const [deliverySettings, setDeliverySettings] = useState({
+    delivery_enabled: false,
+    delivery_radius: 5.0,
+    delivery_fee: 8.50,
+  });
+
+  useEffect(() => {
+    fetch("/api/settings/delivery")
+      .then(res => res.json())
+      .then(data => {
+         setDeliverySettings({
+           delivery_enabled: data.delivery_enabled || false,
+           delivery_radius: data.delivery_radius || 5.0,
+           delivery_fee: data.delivery_fee || 8.50,
+         });
+      })
+      .catch(e => console.error("Failed to load delivery settings", e));
+  }, []);
+
+  const handleDeliverySettingChange = async (key: string, value: any) => {
+    const newSettings = { ...deliverySettings, [key]: value };
+    setDeliverySettings(newSettings);
+    try {
+      await fetch("/api/settings/delivery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSettings),
+      });
+    } catch (e) {
+      console.error("Failed to save delivery settings", e);
+    }
+  };
 
   const handleVerify = async () => {
     setIsVerifying(true);
@@ -174,6 +207,53 @@ export default function SettingsPage() {
                     />
                   </label>
                 ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Local Delivery (DoorDash Drive)</div>
+              <div className="app-list-subtitle">Configure white-label delivery powered by DoorDash.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+            <div className="space-y-4">
+              <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
+                <span>Enable Local Delivery</span>
+                <input
+                  type="checkbox"
+                  checked={deliverySettings.delivery_enabled}
+                  onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}
+                  className="rounded"
+                />
+              </label>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="app-metric-label">Delivery Radius (miles)</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={deliverySettings.delivery_radius}
+                    onChange={(e) => handleDeliverySettingChange('delivery_radius', parseFloat(e.target.value))}
+                    disabled={!deliverySettings.delivery_enabled}
+                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="app-metric-label">Flat Delivery Fee ($)</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={deliverySettings.delivery_fee}
+                    onChange={(e) => handleDeliverySettingChange('delivery_fee', parseFloat(e.target.value))}
+                    disabled={!deliverySettings.delivery_enabled}
+                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
+                  />
+                </label>
               </div>
             </div>
           </div>
