@@ -27,7 +27,6 @@ pub struct CostAuditor {
     agent_costs: Mutex<HashMap<String, f64>>,
     tenant_costs: Mutex<HashMap<String, f64>>,
     agent_budgets: Mutex<HashMap<String, f64>>,
-    tenant_budgets: Mutex<HashMap<String, f64>>,
     total_cost: Mutex<f64>,
     caching_savings: Mutex<f64>,
     storage_savings: Mutex<f64>,
@@ -63,7 +62,6 @@ impl CostAuditor {
             agent_costs: Mutex::new(HashMap::new()),
             tenant_costs: Mutex::new(HashMap::new()),
             agent_budgets: Mutex::new(HashMap::new()),
-            tenant_budgets: Mutex::new(HashMap::new()),
             total_cost: Mutex::new(0.0),
             caching_savings: Mutex::new(0.0),
             storage_savings: Mutex::new(0.0),
@@ -115,8 +113,6 @@ impl CostAuditor {
             tracing::warn!("Anomaly detected: High token usage cost ({})", cost);
         }
         *total_cost += cost;
-
-        drop(tenant_costs); // Drop the lock
 
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
@@ -418,29 +414,6 @@ impl CostAuditor {
             false
         }
     }
-
-    pub fn set_tenant_budget(&self, tenant_id: &str, budget: f64) {
-        let mut tenant_budgets = self.tenant_budgets.lock().unwrap();
-        tenant_budgets.insert(tenant_id.to_string(), budget);
-    }
-
-    pub fn get_tenant_budget(&self, tenant_id: &str) -> Option<f64> {
-        let tenant_budgets = self.tenant_budgets.lock().unwrap();
-        tenant_budgets.get(tenant_id).copied()
-    }
-
-    pub fn is_tenant_over_budget(&self, tenant_id: &str) -> bool {
-        let tenant_costs = self.tenant_costs.lock().unwrap();
-        let tenant_budgets = self.tenant_budgets.lock().unwrap();
-
-        let cost = tenant_costs.get(tenant_id).unwrap_or(&0.0);
-        let budget = tenant_budgets.get(tenant_id);
-        if let Some(b) = budget {
-            cost > b
-        } else {
-            false
-        }
-    }
 }
 
 #[cfg(test)]
@@ -481,32 +454,6 @@ mod tests {
         
         let report = auditor.generate_report();
         assert!(report.contains("OVER BUDGET"));
-    }
-
-    #[test]
-    fn test_tenant_budget() {
-        let config = CostConfig {
-            cost_per_input_token: 0.001,
-            cost_per_output_token: 0.002,
-            ..Default::default()
-        };
-        let auditor = CostAuditor::new(config);
-
-        auditor.set_tenant_budget("tenant_a", 10.0);
-        assert_eq!(auditor.get_tenant_budget("tenant_a"), Some(10.0));
-        assert!(!auditor.is_tenant_over_budget("tenant_a"));
-
-        let event = AuditEvent {
-            agent_id: "agent1".to_string(),
-            tenant_id: "tenant_a".to_string(),
-            input_tokens: 5000,
-            output_tokens: 5000, // Cost = 5 + 10 = 15 > 10 budget
-            cached_input_tokens: 0,
-            local_embedding_tokens: 0,
-        };
-
-        auditor.record_event(event);
-        assert!(auditor.is_tenant_over_budget("tenant_a"));
     }
 
     #[test]

@@ -31,7 +31,7 @@ impl BillingService for MyBillingService {
 
         let event = AuditEvent {
             agent_id: req.agent_id.clone(),
-            tenant_id: tenant_id.clone(),
+            tenant_id,
             input_tokens: req.prompt_tokens,
             output_tokens: req.completion_tokens,
             cached_input_tokens: req.cached_tokens,
@@ -39,10 +39,6 @@ impl BillingService for MyBillingService {
         };
 
         self.auditor.record_event(event);
-
-        if self.auditor.is_tenant_over_budget(&tenant_id) {
-            tracing::warn!("Tenant {} is over budget limit!", tenant_id);
-        }
 
         Ok(Response::new(req))
     }
@@ -56,7 +52,6 @@ impl BillingService for MyBillingService {
 
         let total_cost = self.auditor.get_total_cost();
         let total_tokens = self.auditor.get_total_tokens();
-        let is_over_budget = self.auditor.is_tenant_over_budget(&org_id);
 
         let mut agents = Vec::new();
         for (agent_id, cost, token_used, roi, eff, storage_bytes) in self.auditor.get_agent_costs_snapshot() {
@@ -78,7 +73,6 @@ impl BillingService for MyBillingService {
             total_tokens,
             projected_monthly_usd: total_cost * 30.0, // Rough estimate
             agents,
-            is_over_budget,
         }))
     }
 }
@@ -179,49 +173,5 @@ mod tests {
         assert_eq!(agent_summary.cost_usd, 2.0);
         assert_eq!(agent_summary.token_used, 500);
         assert_eq!(agent_summary.pct, 1.0);
-    }
-
-    #[tokio::test]
-    async fn test_track_token_usage_over_budget() {
-        let config = CostConfig {
-            cost_per_input_token: 0.001,
-            cost_per_output_token: 0.002,
-            ..Default::default()
-        };
-        let auditor = Arc::new(CostAuditor::new(config));
-        let service = MyBillingService::new(auditor.clone());
-
-        auditor.set_tenant_budget("org_y", 1.0);
-
-        let req = TokenUsage {
-            agent_id: "agent_x".to_string(),
-            organization_id: "org_y".to_string(),
-            model: "model_z".to_string(),
-            prompt_tokens: 1000,
-            completion_tokens: 500, // Cost 2.0
-            cost_usd: 0.0,
-            occurred_at_unix: 0,
-            cached_tokens: 0,
-        };
-
-        let request = Request::new(req);
-        let _ = service.track_token_usage(request).await;
-
-        let req_summary = TokenUsage {
-            agent_id: "".to_string(),
-            organization_id: "org_y".to_string(),
-            model: "".to_string(),
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            cost_usd: 0.0,
-            occurred_at_unix: 0,
-            cached_tokens: 0,
-        };
-
-        let response = service.get_cost_summary(Request::new(req_summary)).await;
-        assert!(response.is_ok());
-        let summary = response.unwrap().into_inner();
-
-        assert!(summary.is_over_budget);
     }
 }
