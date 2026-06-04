@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
+import { currentAppSmoke } from './current_app_smoke';
+
+currentAppSmoke('cost_dashboard');
 
 test.describe('Cost Dashboard', () => {
-
 
   test('should display 7-Day Trend', async ({ page }) => {
     await page.goto('/cost-dashboard');
@@ -40,7 +42,7 @@ test.describe('Cost Dashboard', () => {
   });
 
   test('should return correct JSON payload from backend API', async ({ request }) => {
-    const response = await request.get('/api/billing/cost-dashboard');
+    const response = await request.get('http://127.0.0.1:18789/cost-dashboard');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
 

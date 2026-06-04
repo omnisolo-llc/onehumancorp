@@ -75,6 +75,13 @@ export default function CostDashboardPage() {
             </p>
         </section>
 
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">7-Day Trend</h2>
+            <ul id="cost-dashboard-trend" className="space-y-2">
+              <li className="flex justify-between items-center"><span className="text-gray-700">Today</span><span className="font-semibold text-gray-900">$2.40</span></li>
+            </ul>
+        </section>
+
         {/* Overview Section */}
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="flex justify-between items-center mb-6">
