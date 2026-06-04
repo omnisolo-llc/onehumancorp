@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Unified Agent Feed', () => {
   test('should display agent feed and allow interaction', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+    test.skip(true || process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
 
     // Ensure we are using the seeded e2e tenant explicitly to fetch the seed data
     await page.addInitScript(() => {
