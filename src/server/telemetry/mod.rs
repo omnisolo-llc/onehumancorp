@@ -1341,7 +1341,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
-    // use super::*;
+    use super::*;
 
 
     #[test]

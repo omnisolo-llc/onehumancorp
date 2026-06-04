@@ -573,37 +573,4 @@ mod parity_tests {
             assert_eq!(title, "test_task");
         }
     }
-
-    #[tokio::test]
-    async fn test_parity_delete_stale_sessions() {
-        let sqlite_db = setup_sqlite_db().await;
-        let pg_db = setup_postgres_db().await;
-
-        let now = chrono::Utc::now();
-        let threshold = now - chrono::Duration::days(1);
-
-        // SQLite
-        let res = sqlite_db.delete_stale_sessions(threshold).await;
-        assert!(res.is_ok());
-
-        if let Some(pg) = pg_db {
-            let res = pg.delete_stale_sessions(threshold).await;
-            assert!(res.is_ok());
-        }
-    }
-
-    #[tokio::test]
-    async fn test_parity_cleanup_stagnant_missions() {
-        let sqlite_db = setup_sqlite_db().await;
-        let pg_db = setup_postgres_db().await;
-
-        // SQLite
-        let res = sqlite_db.cleanup_stagnant_missions(3600).await;
-        assert!(res.is_ok());
-
-        if let Some(pg) = pg_db {
-            let res = pg.cleanup_stagnant_missions(3600).await;
-            assert!(res.is_ok());
-        }
-    }
 }

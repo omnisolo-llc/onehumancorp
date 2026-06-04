@@ -11,7 +11,6 @@ static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organi
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 
-#[derive(Clone)]
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
@@ -267,28 +266,21 @@ impl DashboardService for MyDashboardService {
         let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
-        let self_clone1 = self.clone();
-        let self_clone2 = self.clone();
-        let self_clone3 = self.clone();
-        let self_clone4 = self.clone();
-        let self_clone5 = self.clone();
-        let self_clone6 = self.clone();
-
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::spawn(async move { self_clone1.fetch_agents(org_id_agents, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone2.fetch_meetings().await }),
-            tokio::spawn(async move { self_clone3.fetch_cost_summary(org_id4).await }),
-            tokio::spawn(async move { self_clone4.fetch_products(org_id1, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone5.fetch_orders(org_id2, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone6.fetch_org(org_id3, mobile_optimized).await })
+            self.fetch_agents(org_id_agents, mobile_optimized),
+            self.fetch_meetings(),
+            self.fetch_cost_summary(org_id4),
+            self.fetch_products(org_id1, mobile_optimized),
+            self.fetch_orders(org_id2, mobile_optimized),
+            self.fetch_org(org_id3, mobile_optimized)
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
 
 
