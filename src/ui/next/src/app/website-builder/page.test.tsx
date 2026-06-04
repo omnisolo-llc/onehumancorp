@@ -3,6 +3,11 @@ import WebsiteBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() })
+}));
+
+
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>
