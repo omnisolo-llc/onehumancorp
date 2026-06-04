@@ -381,11 +381,11 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select Web Address, AI agents, Brand Tone and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain', brandTone: 'Professional' });
     });
 
     render(<OnboardingWizard />);
@@ -398,6 +398,15 @@ describe('OnboardingWizard', () => {
 
     // Select Custom Domain
     await user.click(customOption);
+
+    // Verify Brand Tone options
+    const professionalTone = screen.getByText('Professional');
+    const casualTone = screen.getByText('Casual');
+    expect(professionalTone).toBeInTheDocument();
+    expect(casualTone).toBeInTheDocument();
+
+    // Select Casual Tone
+    await user.click(casualTone);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -418,6 +427,7 @@ describe('OnboardingWizard', () => {
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
       expect(state.domainChoice).toBe('custom');
+      expect(state.brandTone).toBe('Casual');
     });
   });
 
