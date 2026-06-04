@@ -2,9 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Documentation Feature E2E', () => {
   test('should display and navigate the help center properly', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // Navigate to homepage or dashboard
-    await page.goto('/dashboard');
+    await page.goto('/dashboard?test_chat=true');
 
     // Check if the Help Widget is present
     const askButton = page.getByRole('button', { name: 'Ask anything' });
@@ -18,7 +17,7 @@ test.describe('Documentation Feature E2E', () => {
 
     // Close the chat
     // The close button is the SVG inside a button in the header
-    await page.locator('#ai-chat-header').getByText('✕').click();
+    await page.locator('#ai-chat-header').getByRole('button').click();
 
     // For this e2e CUJ, we expect the user to navigate to the help center via UI
     // Let's use the layout menu to navigate to help if it is available, otherwise we use goto

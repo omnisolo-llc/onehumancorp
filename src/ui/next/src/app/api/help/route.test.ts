@@ -1,34 +1,54 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
+import { NextRequest } from 'next/server';
 
 describe('/api/help GET', () => {
-  it('returns the help articles list with specific content', async () => {
-    const response = await GET();
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('fetches help articles from the backend and returns them', async () => {
+    const mockArticles = [
+      { title: 'Getting Started', desc: 'Welcome', link: '/help/getting-started' },
+    ];
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockArticles),
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/help');
+    const response = await GET(request);
+
     expect(response.status).toBe(200);
     const data = await response.json();
 
-    expect(Array.isArray(data)).toBe(true);
-    expect(data.length).toBe(6); // We know there are 6 items
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8080/api/help');
+    expect(data).toEqual(mockArticles);
+  });
 
-    // Check specific items to ensure content is correct
-    const gettingStarted = data.find((item: any) => item.link === '/help/getting-started-1');
-    expect(gettingStarted).toBeDefined();
-    expect(gettingStarted.title).toBe('Getting Started');
-    expect(gettingStarted.desc).toContain('easily set up your store');
-
-    const myStore = data.find((item: any) => item.link === '/help/my-store');
-    expect(myStore).toBeDefined();
-    expect(myStore.title).toBe('My Store');
-    expect(myStore.desc).toContain('Add products');
-
-    // Ensure all items have the required fields
-    data.forEach((item: any) => {
-      expect(item).toHaveProperty('title');
-      expect(typeof item.title).toBe('string');
-      expect(item).toHaveProperty('desc');
-      expect(typeof item.desc).toBe('string');
-      expect(item).toHaveProperty('link');
-      expect(typeof item.link).toBe('string');
+  it('returns an empty array and correct status on backend error', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
     });
+
+    const request = new NextRequest('http://localhost:3000/api/help');
+    const response = await GET(request);
+
+    expect(response.status).toBe(404);
+    const data = await response.json();
+    expect(data).toEqual([]);
+  });
+
+  it('handles fetch exceptions gracefully', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    const request = new NextRequest('http://localhost:3000/api/help');
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data).toEqual([]);
   });
 });
