@@ -85,6 +85,7 @@ rust_library(
         "openhands.rs",
         "goose/mod.rs",
         "guardrails/mod.rs",
+        "guardrails/anthropic_hooks.rs",
         "guardrails/openai_hooks.rs",
     "ruflo_plugins.rs",
         "agentic_seek.rs",
