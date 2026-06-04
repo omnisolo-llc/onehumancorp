@@ -58,6 +58,8 @@ export default function OnboardingWizard() {
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const handleSaveDraft = async () => {
     setIsLoading(true);
@@ -718,20 +720,36 @@ export default function OnboardingWizard() {
                       <input
                         type="email"
                         value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
+                        onChange={(e) => {
+                          setAdminEmail(e.target.value);
+                          if (e.target.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.target.value)) {
+                            setEmailError("Invalid email address.");
+                          } else {
+                            setEmailError("");
+                          }
+                        }}
                         placeholder="you@example.com"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] ${emailError ? 'border-red-500 focus:border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
+                      {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
                       <input
                         type="password"
                         value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
+                        onChange={(e) => {
+                          setAdminPassword(e.target.value);
+                          if (e.target.value && e.target.value.length < 8) {
+                            setPasswordError("Must be at least 8 characters.");
+                          } else {
+                            setPasswordError("");
+                          }
+                        }}
                         placeholder="••••••••"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] ${passwordError ? 'border-red-500 focus:border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
+                      {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
                     </div>
                   </div>
                 </div>
@@ -782,7 +800,7 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={handleStartOnboarding}
-                  disabled={isLoading}
+                  disabled={isLoading || !!emailError || !!passwordError || !adminEmail || !adminPassword}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
