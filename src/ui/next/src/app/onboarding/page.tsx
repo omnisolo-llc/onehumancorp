@@ -45,6 +45,7 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    adminName, setAdminName,
     adminEmail, setAdminEmail,
     adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
@@ -80,6 +81,7 @@ export default function OnboardingWizard() {
         domainChoice,
         firstProductName,
         firstProductPrice,
+        adminName,
         adminEmail,
         adminPassword,
         aiAgents,
@@ -133,6 +135,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
         if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
         if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
@@ -166,6 +169,7 @@ export default function OnboardingWizard() {
       domainChoice,
       firstProductName,
       firstProductPrice,
+      adminName,
       adminEmail,
       adminPassword,
       aiAgents,
@@ -184,7 +188,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
+    adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -252,7 +256,7 @@ export default function OnboardingWizard() {
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: adminEmail || 'admin@ohc.app',
-          admin_name: businessName + ' Admin',
+          admin_name: adminName || businessName + ' Admin',
           admin_password: adminPassword || 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
@@ -713,6 +717,16 @@ export default function OnboardingWizard() {
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
                   <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
+                      <input
+                        type="text"
+                        value={adminName}
+                        onChange={(e) => setAdminName(e.target.value)}
+                        placeholder="e.g. Maya Smith"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                    </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
