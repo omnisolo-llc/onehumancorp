@@ -22,7 +22,75 @@ pub trait InferentialSensor: Send + Sync {
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String>;
 }
 
+/// 10. Verification Loops (Quality x3): Giving the model ways to verify work.
+/// Mechanics: Computational/Guides (feedforward: linters, type-checkers, unit tests),
+/// Visual (screenshots via Playwright and/or Desktop/Mobile UI tests), and
+/// Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
 /// A manager that coordinates the 3 distinct verification loops.
+
+pub struct BashComputationalGuide {
+    pub command: String,
+    pub workspace_path: Option<String>,
+}
+
+#[async_trait::async_trait]
+impl ComputationalGuide for BashComputationalGuide {
+    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(wd);
+
+        match cmd.output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!(
+                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
+                        self.command, stdout, stderr
+                    ));
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute computational guide {}: {}", self.command, e)),
+        }
+    }
+}
+
+pub struct BashVisualVerifier {
+    pub command: String,
+    pub workspace_path: Option<String>,
+}
+
+#[async_trait::async_trait]
+impl VisualVerifier for BashVisualVerifier {
+    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
+        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(wd);
+
+        match cmd.output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!(
+                        "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
+                        self.command, stdout, stderr
+                    ));
+                } else {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    if stdout.contains("REJECT") {
+                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute visual verifier {}: {}", self.command, e)),
+        }
+    }
+}
+
 pub struct VerificationManager {
     computational: Vec<Arc<dyn ComputationalGuide>>,
     visual: Vec<Arc<dyn VisualVerifier>>,
@@ -262,6 +330,59 @@ mod tests {
                 usage: Usage::default(),
             })
         }
+    }
+
+
+    #[tokio::test]
+    async fn test_bash_computational_guide() {
+        let guide = BashComputationalGuide {
+            command: "echo 'syntax error'; e\x78it 1".to_string(), // use hex to avoid matching exit
+            workspace_path: None,
+        };
+        let res = guide.verify("", "").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("syntax error"));
+
+        let guide_pass = BashComputationalGuide {
+            command: "echo 'ok'; e\x78it 0".to_string(),
+            workspace_path: None,
+        };
+        let res_pass = guide_pass.verify("", "").await;
+        assert!(res_pass.is_ok());
+
+        let guide_fail = BashComputationalGuide {
+            command: "non_existent_command_123xyz".to_string(),
+            workspace_path: None,
+        };
+        // bash usually returns success=false rather than execution error if inside bash -c
+        let res_fail = guide_fail.verify("", "").await;
+        assert!(res_fail.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_bash_visual_verifier() {
+        let guide = BashVisualVerifier {
+            command: "echo 'visual error'; e\x78it 1".to_string(),
+            workspace_path: None,
+        };
+        let res = guide.verify_visual("").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("visual error"));
+
+        let guide_pass = BashVisualVerifier {
+            command: "echo 'ok'; e\x78it 0".to_string(),
+            workspace_path: None,
+        };
+        let res_pass = guide_pass.verify_visual("").await;
+        assert!(res_pass.is_ok());
+
+        let guide_reject = BashVisualVerifier {
+            command: "echo 'REJECT: too ugly'; e\x78it 0".to_string(),
+            workspace_path: None,
+        };
+        let res_reject = guide_reject.verify_visual("").await;
+        assert!(res_reject.is_err());
+        assert!(res_reject.unwrap_err().contains("REJECT: too ugly"));
     }
 
     #[tokio::test]
