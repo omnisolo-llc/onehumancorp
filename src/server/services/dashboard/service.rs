@@ -24,7 +24,7 @@ impl MyDashboardService {
         Self { db, hub }
     }
 
-    async fn fetch_agents(&self, org_id: String, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+    async fn fetch_agents(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
         let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
         let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -55,7 +55,7 @@ impl MyDashboardService {
         Ok(meetings)
     }
 
-    async fn fetch_cost_summary(&self, org_id: String) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+    async fn fetch_cost_summary(&self, org_id: &str) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let cache_key = format!("hub:cost:{}", org_id);
         let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -77,7 +77,7 @@ impl MyDashboardService {
         Ok(cost_data)
     }
 
-    async fn fetch_products(&self, org_id: String, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
+    async fn fetch_products(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
         let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
         let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -143,7 +143,7 @@ impl MyDashboardService {
         Ok(results)
     }
 
-    async fn fetch_orders(&self, org_id: String, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
+    async fn fetch_orders(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
         let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
         let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -197,7 +197,7 @@ impl MyDashboardService {
         Ok(results)
     }
 
-    async fn fetch_org(&self, org_id: String, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
+    async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
         let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -276,27 +276,39 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
-        let org_id1 = req.organization_id.clone();
-        let org_id2 = req.organization_id.clone();
-        let org_id3 = req.organization_id.clone();
-        let org_id4 = req.organization_id.clone();
-        let org_id_agents = req.organization_id.clone();
+        let org_id = std::sync::Arc::new(req.organization_id);
         let mobile_optimized = req.mobile_optimized;
 
-        let self_clone1 = self.clone();
-        let self_clone2 = self.clone();
-        let self_clone3 = self.clone();
-        let self_clone4 = self.clone();
-        let self_clone5 = self.clone();
-        let self_clone6 = self.clone();
-
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::spawn(async move { self_clone1.fetch_agents(org_id_agents, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone2.fetch_meetings().await }),
-            tokio::spawn(async move { self_clone3.fetch_cost_summary(org_id4).await }),
-            tokio::spawn(async move { self_clone4.fetch_products(org_id1, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone5.fetch_orders(org_id2, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone6.fetch_org(org_id3, mobile_optimized).await })
+            {
+                let s = self.clone();
+                let o = org_id.clone();
+                tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
+            },
+            {
+                let s = self.clone();
+                tokio::spawn(async move { s.fetch_meetings().await })
+            },
+            {
+                let s = self.clone();
+                let o = org_id.clone();
+                tokio::spawn(async move { s.fetch_cost_summary(&o).await })
+            },
+            {
+                let s = self.clone();
+                let o = org_id.clone();
+                tokio::spawn(async move { s.fetch_products(&o, mobile_optimized).await })
+            },
+            {
+                let s = self.clone();
+                let o = org_id.clone();
+                tokio::spawn(async move { s.fetch_orders(&o, mobile_optimized).await })
+            },
+            {
+                let s = self.clone();
+                let o = org_id.clone();
+                tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
+            }
         );
 
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
@@ -340,8 +352,8 @@ impl DashboardService for MyDashboardService {
         let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
             .iter()
             .filter(|a| {
-                a.organization_id == req.organization_id
-                    || a.id.starts_with(&format!("{}-", req.organization_id))
+                a.organization_id == *org_id
+                    || a.id.starts_with(&format!("{}-", *org_id))
             })
             .cloned()
             .collect();
@@ -435,7 +447,7 @@ impl DashboardService for MyDashboardService {
             }
 
             final_cost_summary = Some(::server_ohc::billing::CostSummary {
-                organization_id: req.organization_id.clone(),
+                organization_id: (*org_id).clone(),
                 total_cost_usd: total_cost,
                 total_tokens: optimized_total_tokens,
                 projected_monthly_usd: 0.0,
