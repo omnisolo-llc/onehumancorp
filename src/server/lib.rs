@@ -3332,7 +3332,10 @@ async fn create_ui_bom_item_handler(
         )
         .route(
             "/api/meetings",
-            axum::routing::get(|| async { axum::Json(serde_json::json!([])) }),
+            axum::routing::get({ let hub = hub.clone(); move || async move {
+                let meetings = hub.get_meetings().await;
+                axum::Json(meetings.as_ref().clone())
+            } }),
         )
         .route(
             "/api/costs",
