@@ -16,11 +16,11 @@ test.describe('Storefront QR Code Generator', () => {
         // Check for the actual QR Code SVG
         await expect(page.getByTestId('qr-code-svg')).toBeVisible();
 
-        // Check for the Powered by OHC viral branding
-        await expect(page.getByText('Powered by OHC', { exact: true })).toBeVisible();
+        // Check for the Powered by OHC viral branding inside the QR code component
+        await expect(qrCodeContainer.getByText('Powered by OHC', { exact: true })).toBeVisible();
 
         // Set a custom store name and check if the QR code text updates
-        await page.getByLabel('Store Name').fill('Fatimas Halal Cart');
-        await expect(page.getByText('Scan to visit Fatimas Halal Cart')).toBeVisible();
+        await page.locator('input[type="text"]').first().fill('Fatimas Halal Cart');
+        await expect(qrCodeContainer.getByText('Scan to visit Fatimas Halal Cart')).toBeVisible();
     });
 });
