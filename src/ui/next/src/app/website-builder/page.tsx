@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useWebsiteBuilderStore } from "./store";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function WebsiteBuilderPage() {
-  const router = useRouter();
 
   const {
     wizardStep, setWizardStep,
@@ -26,17 +24,45 @@ export default function WebsiteBuilderPage() {
     bio, setBio,
     domainChoice, setDomainChoice,
     aiAgents, setAiAgents,
-    aiAutoRespond, setAiAutoRespond,
-    blocks, setBlocks,
-    status, setStatus,
-    liveUrl, setLiveUrl
+    aiAutoRespond, setAiAutoRespond
   } = useWebsiteBuilderStore();
 
 
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [blocks, setBlocks] = useState<any[]>([]);
+  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
+
+  const [liveUrl, setLiveUrl] = useState("");
+
+
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
+
+  useEffect(() => {
+    // Load from backend for cross-device resume
+    const loadSavedState = async () => {
+      try {
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'x-tenant-id': tenant,
+            'x-user-id': user
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0 && data.wizardState) {
+            useWebsiteBuilderStore.setState(data.wizardState);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load saved state', e);
+      }
+    };
+    loadSavedState();
+  }, []);
 
   const handleSaveDraft = async () => {
     setStatus("generating"); // Just show some loading state or disable button
@@ -81,48 +107,33 @@ export default function WebsiteBuilderPage() {
 
   const { startWalkthrough } = useWalkthrough();
 
-  // Read state from server on mount
   useEffect(() => {
-    const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-    setTenantId(tenantIdStr);
-    const userId = localStorage.getItem('user_id') || 'test-user';
-    fetch('/api/onboarding/state', {
-      headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId }
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.builderState) {
-        if (data.builderState.bio) setBio(data.builderState.bio);
-        if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
-        if (data.builderState.status) setStatus(data.builderState.status);
+    const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
+    setTenantId(savedTenantId);
+
+
+    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
+    if (savedStatus) setStatus(savedStatus);
+
+    const savedBlocks = localStorage.getItem("ohc_builder_blocks");
+    if (savedBlocks) {
+      try {
+        setBlocks(JSON.parse(savedBlocks));
+      } catch (e) {
+        console.error("Failed to parse saved blocks", e);
       }
-      if (data && data.wizardState) {
-        if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
-        if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
-        if (data.wizardState.productName) setProductName(data.wizardState.productName);
-        if (data.wizardState.productPrice) setProductPrice(data.wizardState.productPrice);
-        if (data.wizardState.paymentMethod) setPaymentMethod(data.wizardState.paymentMethod);
-        if (data.wizardState.userName) setUserName(data.wizardState.userName);
-        if (data.wizardState.userEmail) setUserEmail(data.wizardState.userEmail);
-        if (data.wizardState.userPassword) setUserPassword(data.wizardState.userPassword);
-        if (data.wizardState.template) setTemplate(data.wizardState.template);
-        if (data.wizardState.bio) setBio(data.wizardState.bio);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
-      }
-    })
-    .catch(err => console.error('Failed to load builder state', err));
+    }
+
+    const savedLiveUrl = localStorage.getItem("ohc_builder_liveUrl");
+    if (savedLiveUrl) setLiveUrl(savedLiveUrl);
   }, []);
+
 
   // Sync full state to backend
   useEffect(() => {
     // Only save if there's actual state
     if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
-      const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
       const userId = localStorage.getItem('user_id') || 'test-user';
 
       const wizardState = {
@@ -152,7 +163,7 @@ export default function WebsiteBuilderPage() {
       const timer = setTimeout(() => {
         fetch('/api/onboarding/state', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId },
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
           body: JSON.stringify(payload)
         }).catch(err => console.error('Failed to sync builder state', err));
       }, 1000); // debounce 1s
@@ -160,6 +171,44 @@ export default function WebsiteBuilderPage() {
       return () => clearTimeout(timer);
     }
   }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
+
+
+
+  // Read state from server on mount
+  useEffect(() => {
+    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+    const userId = localStorage.getItem('user_id') || 'test-user';
+    fetch('/api/onboarding/state', {
+      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.builderState) {
+        if (data.builderState.bio) setBio(data.builderState.bio);
+        if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
+        if (data.builderState.status) setStatus(data.builderState.status);
+      }
+      if (data && data.wizardState) {
+        if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
+        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
+        if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
+        if (data.wizardState.productName) setProductName(data.wizardState.productName);
+        if (data.wizardState.productPrice) setProductPrice(data.wizardState.productPrice);
+        if (data.wizardState.paymentMethod) setPaymentMethod(data.wizardState.paymentMethod);
+        if (data.wizardState.userName) setUserName(data.wizardState.userName);
+        if (data.wizardState.userEmail) setUserEmail(data.wizardState.userEmail);
+        if (data.wizardState.userPassword) setUserPassword(data.wizardState.userPassword);
+        if (data.wizardState.template) setTemplate(data.wizardState.template);
+        if (data.wizardState.bio) setBio(data.wizardState.bio);
+        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+      }
+    })
+    .catch(err => console.error('Failed to load builder state', err));
+  }, []);
 
 
 
@@ -283,7 +332,7 @@ export default function WebsiteBuilderPage() {
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
 
 
-        <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
+        <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
 
           <div className="px-8 pb-8 pt-8 flex flex-col flex-1 justify-start overflow-y-auto relative">
             {wizardStep !== 0 && (
@@ -343,13 +392,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
                     >
                       Online Store
                     </button>
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
                     >
                       Restaurant
@@ -364,7 +413,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-3" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="What is your business called?"
                       value={businessName}
@@ -372,7 +421,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
@@ -393,7 +442,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
                   <div id="step-4" className="mt-6 flex flex-col gap-4">
-                    <label className="flex items-center gap-3 p-4 mac-glass-container rounded-[8px] cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0071E3]"
@@ -402,7 +451,7 @@ export default function WebsiteBuilderPage() {
                       />
                       <span className="font-semibold text-gray-800">Physical Products</span>
                     </label>
-                    <label className="flex items-center gap-3 p-4 mac-glass-container rounded-[8px] cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-[8px] cursor-pointer hover:bg-gray-50 bg-white">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0071E3]"
@@ -427,7 +476,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-5" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="What is the name of this product?"
                       value={productName}
@@ -435,7 +484,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="0.00"
                       value={productPrice}
@@ -457,13 +506,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setPaymentMethod('Online'); setWizardStep(6); }}
                     >
                       Online
                     </button>
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setPaymentMethod('In Person'); setWizardStep(6); }}
                     >
                       In Person
@@ -478,7 +527,7 @@ export default function WebsiteBuilderPage() {
                   <div id="step-7" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. Maya Smith"
                       value={userName}
@@ -486,7 +535,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="email"
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="you@email.com"
                       value={userEmail}
@@ -494,7 +543,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="password"
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="Password"
                       value={userPassword}
@@ -516,13 +565,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
                   <div id="step-8" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
                     >
                       Modern
                     </button>
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setTemplate('Bold'); setWizardStep('7.5'); }}
                     >
                       Bold
@@ -601,52 +650,18 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
-                      disabled={!bio.trim()}
-                      onClick={async () => {
-                        if (!bio.trim()) return;
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      onClick={() => {
                         setStatus('generating');
-                        try {
-                          const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                          const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
-                          const res = await fetch('/api/onboarding/intake', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'X-Tenant-ID': tenantIdStr,
-                              'X-User-ID': userIdStr,
-                            },
-                            body: JSON.stringify({ description: bio })
-                          });
-
-                          const data = await res.json();
-                          if (res.ok) {
-                            setBusinessName(data.business_name || 'My Business');
-                            setBusinessType(data.business_type || 'Online Store');
-                            setProductName(data.initial_products?.[0]?.name || 'First Product');
-                            setProductPrice(data.initial_products?.[0]?.price || '10.00');
-
-                            // Let the debounce save it
-                            setTimeout(() => setStatus('live'), 2000);
-                          } else {
-                            console.error('Failed to generate storefront:', data);
-                            setStatus('idle');
-                            alert('Failed to generate storefront. Please try again.');
-                          }
-                        } catch (err) {
-                          console.error(err);
-                          setStatus('idle');
-                          alert('Failed to generate storefront. Please try again.');
-                        }
+                        setTimeout(() => {
+                           setStatus('live');
+                        }, 2000);
                       }}
                     >
                       Generate Storefront
@@ -665,7 +680,7 @@ export default function WebsiteBuilderPage() {
   if (status === "generating") {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-        <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
         </div>
@@ -676,7 +691,7 @@ export default function WebsiteBuilderPage() {
   if (status === "live") {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-        <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden text-center p-8 justify-center mac-glass-container">
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden text-center p-8 justify-center mac-glass-container">
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
@@ -692,7 +707,6 @@ export default function WebsiteBuilderPage() {
           <button
             className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
             style={{ borderRadius: '8px' }}
-            onClick={() => router.push('/dashboard')}
           >
             View Welcome Checklist
           </button>
@@ -703,14 +717,14 @@ export default function WebsiteBuilderPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-      <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
-          {Array.isArray(blocks) && blocks.map((b, i) => (
+          {blocks.map((b, i) => (
             <DraggableBlock
               key={b.type + i}
               isSelected={selectedBlockIndex === i}

@@ -17,7 +17,6 @@ impl MaintenanceWorker {
             loop {
                 interval.tick().await;
                 if let Err(e) = self.db.cleanup_stagnant_missions(3600).await { // 1 hour timeout
-                    ::server_telemetry::record_error_signal("MaintenanceWorker: Failed to cleanup stagnant missions");
                     tracing::error!("MaintenanceWorker: Failed to cleanup stagnant missions: {}", e);
                 }
             }

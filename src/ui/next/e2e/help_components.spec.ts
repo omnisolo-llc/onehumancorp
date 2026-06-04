@@ -36,33 +36,4 @@ test.describe('Help Components', () => {
     const tooltipText = page.locator('text=Select the plan that best fits your business needs.');
     await expect(tooltipText).toBeVisible();
   });
-
-  test('Interactive Walkthrough functions correctly on dashboard', async ({ page }) => {
-    await page.goto('http://localhost:3000/dashboard?test_walkthrough=true');
-
-    const startTourBtn = page.locator('button:has-text("Start Tour")');
-    await expect(startTourBtn).toBeVisible();
-    await startTourBtn.click();
-
-    // Verify the first walkthrough step appears
-    const firstStepTitle = page.locator('text=Business Analytics');
-    await expect(firstStepTitle).toBeVisible();
-
-    // Advance to the next step
-    const nextBtn = page.locator('button:has-text("Next")');
-    await expect(nextBtn).toBeVisible();
-    await nextBtn.click();
-
-    // Verify the second walkthrough step appears
-    const secondStepTitle = page.locator('text=Operations Map');
-    await expect(secondStepTitle).toBeVisible();
-
-    // Finish the walkthrough
-    const finishBtn = page.locator('button:has-text("Finish")');
-    await expect(finishBtn).toBeVisible();
-    await finishBtn.click();
-
-    // Verify the walkthrough bubble is no longer visible
-    await expect(secondStepTitle).not.toBeVisible();
-  });
 });

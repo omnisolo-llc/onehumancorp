@@ -324,7 +324,6 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:serde_json",
-        "@crates//:serde",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",

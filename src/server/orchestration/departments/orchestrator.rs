@@ -198,7 +198,6 @@ impl DepartmentOrchestrator {
                         }
 
                         if !success {
-                            ::server_telemetry::record_error_signal("Dead-letter logging for event  after 3 failed retries. Error");
                             tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
                             let dl_id = Uuid::new_v4().to_string();
                             let redacted_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
@@ -218,7 +217,6 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await;
                                     if let Err(err) = res {
-                                        ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
                                 }
@@ -235,7 +233,6 @@ impl DepartmentOrchestrator {
                                     .execute(pool)
                                     .await;
                                     if let Err(err) = res {
-                                        ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
                                 }

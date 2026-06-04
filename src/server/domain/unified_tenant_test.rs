@@ -21,12 +21,12 @@ mod tests {
         let product_id = uuid::Uuid::new_v4().to_string();
         let order_id = uuid::Uuid::new_v4().to_string();
 
-        // First, insert data
+        // First, insert data as system
         match pool.begin().await {
             Ok(mut tx) => {
                 use sqlx::Executor;
-                // Set the session context inside the transaction block to tenant_2 to allow inserts
-                tx.execute(format!("SET LOCAL app.current_tenant = '{}'", tenant_2).as_str()).await.expect("Failed to set tenant context");
+                // Set the session context inside the transaction block to system to allow inserts
+                tx.execute("SET LOCAL app.current_tenant = 'system'").await.expect("Failed to set system context");
 
                 // Ensure the tenant exists
                 let _ = sqlx::query("INSERT INTO tenants (id, business_name) VALUES ($1, 'Test Business') ON CONFLICT DO NOTHING")

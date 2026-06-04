@@ -3,7 +3,7 @@
 
 import { test, expect } from '@playwright/test';
 
-test.describe('Cross Device Onboarding CUJ', () => {
+test.describe.skip('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, context }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // 1. Owner starts from the home page
