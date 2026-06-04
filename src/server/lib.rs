@@ -36,7 +36,11 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
@@ -599,6 +603,7 @@ async fn http_login_handler(
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to start login transaction");
             tracing::error!("failed to start login transaction: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -609,6 +614,7 @@ async fn http_login_handler(
     };
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        ::server_telemetry::record_error_signal("failed to set tenant context for login");
         tracing::error!("failed to set tenant context for login: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -632,6 +638,7 @@ async fn http_login_handler(
     {
         Ok(row) => row,
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to query login user");
             tracing::error!("failed to query login user: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -657,6 +664,7 @@ async fn http_login_handler(
         match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
             Ok(res) => res,
             Err(e) => {
+                ::server_telemetry::record_error_signal("spawn_blocking failed for bcrypt");
                 tracing::error!("spawn_blocking failed for bcrypt: {}", e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -677,6 +685,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to verify auth credential");
             tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -708,6 +717,7 @@ async fn http_login_handler(
     let token = match store.issue_token(&user) {
         Ok(t) => t,
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to issue login token");
             tracing::error!("failed to issue login token: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -867,13 +877,28 @@ pub async fn advisory_insights_handler(
 
     let active_orders = orders_data.unwrap_or(0);
 
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(format!("{}:{}:{}", business_name, industry, active_orders).as_bytes());
+    let stats_hash = format!("{:x}", hasher.finalize());
+    let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
+
+    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(insight) = insight_cache.get(&insight_cache_key).await {
+        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
+    }
+
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            insight_cache.set(&insight_cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        }
         Err(e) => {
+            ::server_telemetry::record_error_signal("MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -954,6 +979,7 @@ async fn draft_reply_handler(
     match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("MiniMax draft reply failed");
             tracing::error!("MiniMax draft reply failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -966,6 +992,27 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+
+    async fn route_semantic(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::SemanticRoutingRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::SemanticRoutingResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let internal_req = crate::orchestration::router::SemanticRoutingRequest {
+            tenant_id: req.tenant_id,
+            prompt: req.prompt,
+            embedding: if req.embedding.is_empty() { None } else { Some(req.embedding) },
+        };
+
+        match self.hub.semantic_router.route(&internal_req) {
+            Ok(res) => Ok(tonic::Response::new(::server_ohc::orchestration::SemanticRoutingResponse {
+                tenant_id: res.tenant_id,
+                target_department: res.target_department.to_string(),
+                confidence_score: res.confidence_score,
+            })),
+            Err(e) => Err(tonic::Status::internal(e)),
+        }
+    }
     type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
     async fn stream_messages(
@@ -1441,18 +1488,39 @@ impl HubService for MyHubService {
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
+        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+            .bind(&tenant_id)
+            .bind(&user_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let (mut merged_state, prev_step) = if let Some(record) = row {
+            use sqlx::Row;
+            let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
+            (existing_json, existing_step)
+        } else {
+            (serde_json::json!({}), 0)
+        };
+
+        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), state_json.as_object()) {
+            for (k, v) in new_obj {
+                existing_obj.insert(k.clone(), v.clone());
+            }
+        } else {
+            merged_state = state_json.clone();
+        }
+
+        let new_step = std::cmp::max(prev_step, current_step);
+
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4) \
-             ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
-                 current_step = EXCLUDED.current_step, \
-                 updated_at = CURRENT_TIMESTAMP"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)              ON CONFLICT (tenant_id, user_id) DO UPDATE              SET state_json = EXCLUDED.state_json,                  current_step = EXCLUDED.current_step,                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
         .bind(&user_id)
-        .bind(current_step)
-        .bind(&state_json)
+        .bind(new_step)
+        .bind(&merged_state)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1476,15 +1544,16 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can read wizard state"));
         }
         let tenant_id = org_id.clone();
+        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1523,15 +1592,16 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can reset wizard state"));
         }
         let tenant_id = org_id.clone();
+        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -2214,6 +2284,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = agent_memory_pipeline_clone.run().await {
+                ::server_telemetry::record_error_signal("Agent Memory Pipeline error");
                 tracing::error!("Agent Memory Pipeline error: {}", e);
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
@@ -2246,13 +2317,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _ = sqlx::query(
                 "CREATE TABLE IF NOT EXISTS onboarding_state (
                     tenant_id TEXT NOT NULL,
-                    organization_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
                     state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (tenant_id, organization_id)
+                    PRIMARY KEY (tenant_id, user_id)
                 );"
             )
             .execute(pool)
@@ -2296,6 +2366,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
@@ -2346,6 +2417,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let payload = match serde_json::to_string(&task) {
             Ok(p) => p,
             Err(e) => {
+                ::server_telemetry::record_error_signal("Failed to serialize task");
                 tracing::error!("Failed to serialize task: {}", e);
                 return;
             }
@@ -2369,6 +2441,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     );
     if let Err(e) = handoff_manager.start_listener().await {
+        ::server_telemetry::record_error_signal("Failed to start handoff listener");
         tracing::error!("Failed to start handoff listener: {}", e);
     }
 
@@ -2406,6 +2479,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&heartbeat_agent_id, "online", 60)
                         .await
                     {
+                        ::server_telemetry::record_error_signal("Failed to register builtin agent presence");
                         tracing::error!("Failed to register builtin agent presence: {}", e);
                     }
                 }
@@ -2461,6 +2535,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&agent_id_clone, "active", 30)
                         .await
                     {
+                        ::server_telemetry::record_error_signal("Failed to register presence");
                         tracing::error!("Failed to register presence: {}", e);
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(15)).await;
@@ -2523,6 +2598,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to begin transaction");
             tracing::error!("Failed to begin transaction: {}", e);
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
         }
@@ -2530,6 +2606,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let org_id = user.organization_id.unwrap_or_default();
     if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
+        ::server_telemetry::record_error_signal("Failed to set org context");
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
@@ -2557,6 +2634,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         }
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch inbox messages");
             tracing::error!("Failed to fetch inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2587,6 +2665,12 @@ async fn list_ui_orders_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_orders:{}", tenant_id);
+    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let orders = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2630,8 +2714,12 @@ async fn list_ui_orders_handler(
     };
 
     match orders {
-        Ok(orders) => (axum::http::StatusCode::OK, axum::Json(orders)).into_response(),
+        Ok(orders) => {
+            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
+        },
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2645,6 +2733,12 @@ async fn list_ui_inbox_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_inbox:{}", tenant_id);
+    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2682,8 +2776,12 @@ async fn list_ui_inbox_handler(
     };
 
     match messages {
-        Ok(messages) => (axum::http::StatusCode::OK, axum::Json(messages)).into_response(),
+        Ok(messages) => {
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        },
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch UI inbox messages");
             tracing::error!("Failed to fetch UI inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2696,6 +2794,12 @@ async fn ui_dashboard_metrics_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
+    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let metrics = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2726,14 +2830,17 @@ async fn ui_dashboard_metrics_handler(
 
     match metrics {
         Ok((active_customers, pending_orders, total_sales)) => {
-            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+            let res = serde_json::json!({
                 "active_customers": active_customers,
                 "pending_orders": pending_orders,
                 "total_sales": total_sales,
                 "total_campaigns_sent": 0
-            }))).into_response()
+            });
+            cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
+            (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch UI dashboard metrics");
             tracing::error!("Failed to fetch UI dashboard metrics: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "active_customers": 0,
@@ -2866,6 +2973,7 @@ async fn create_ui_supply_vendor_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "contact_info": contact_info}))).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to create UI supply vendor");
             tracing::error!("Failed to create UI supply vendor: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -2893,6 +3001,7 @@ async fn create_ui_raw_material_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "current_quantity": current_quantity, "reorder_threshold": reorder_threshold}))).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to create UI raw material");
             tracing::error!("Failed to create UI raw material: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -2920,6 +3029,7 @@ async fn create_ui_bom_item_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "finished_good_id": finished_good_id, "raw_material_id": raw_material_id, "quantity_required": quantity_required}))).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to create UI BOM item");
             tracing::error!("Failed to create UI BOM item: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -3064,6 +3174,7 @@ async fn create_ui_bom_item_handler(
                 let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
 
                 if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
+                    ::server_telemetry::record_error_signal("Failed to save SMS preferences");
                     tracing::error!("Failed to save SMS preferences: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -3089,6 +3200,7 @@ async fn create_ui_bom_item_handler(
                 let fee = req.get("delivery_fee").and_then(|v| v.as_f64());
 
                 if let Err(e) = settings_store.set_delivery_settings(enabled, radius, fee) {
+                    ::server_telemetry::record_error_signal("Failed to save delivery settings");
                     tracing::error!("Failed to save delivery settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -3315,6 +3427,7 @@ async fn create_ui_bom_item_handler(
                         }).await;
 
                         if let Err(e) = result {
+                            ::server_telemetry::record_error_signal("Failed to seed data");
                             tracing::error!("Failed to seed data: {}", e);
                             return axum::Json(serde_json::json!({ "ok": false, "error": e }));
                         }
@@ -3434,7 +3547,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
-        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
+        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
@@ -3534,6 +3647,7 @@ async fn create_ui_bom_item_handler(
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
+            ::server_telemetry::record_error_signal("Mesh server error");
             tracing::error!("Mesh server error: {}", e);
         }
     });
@@ -3572,9 +3686,11 @@ async fn create_ui_bom_item_handler(
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
+                    ::server_telemetry::record_error_signal("failed to push pending missions");
                     tracing::error!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
+                    ::server_telemetry::record_error_signal("failed to pull mission updates");
                     tracing::error!("failed to pull mission updates: {}", e);
                 }
             }
@@ -3592,6 +3708,7 @@ async fn create_ui_bom_item_handler(
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
+                        ::server_telemetry::record_error_signal("failed to prune stale missions");
                         tracing::error!("failed to prune stale missions: {}", e);
                     }
                 }
@@ -3602,6 +3719,7 @@ async fn create_ui_bom_item_handler(
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
+                            ::server_telemetry::record_error_signal("failed to mark task as running");
                             tracing::error!("failed to mark task as running: {}", e);
                             continue;
                         }
@@ -3622,6 +3740,7 @@ async fn create_ui_bom_item_handler(
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
                             Err(e) => {
+                                ::server_telemetry::record_error_signal("failed to publish scheduled task message");
                                 tracing::error!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }
@@ -5782,6 +5901,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span>Payment Processor Fees</span>
                                     <strong id="cost-dashboard-payment-fees">$0.00</strong>
                                 </li>
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
+                                    <span>Network & Bandwidth</span>
+                                    <strong id="cost-dashboard-network">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
+                                    <span style="color: var(--accent-green);">Bandwidth Savings</span>
+                                    <strong id="cost-dashboard-bandwidth-savings" style="color: var(--accent-green);">-$0.00</strong>
+                                </li>
                                 <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary); font-family: 'Outfit', 'Inter', sans-serif;">
                                     <strong>Total Costs</strong>
                                     <strong id="cost-dashboard-total">$0.00</strong>
@@ -7814,9 +7941,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
-                                fetchMilestones();
-                                fetchApprovals();
-                                fetchActivityFeed();
+                                Promise.all([
+                                    fetchMilestones(),
+                                    fetchApprovals(),
+                                    fetchActivityFeed()
+                                ]).catch(err => console.error('Error loading dashboard components:', err));
                             }
 
                             if (id === 'my-plan-screen') {
@@ -7846,6 +7975,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-network').textContent = '$' + (data.network_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-bandwidth-savings').textContent = '-$' + (data.bandwidth_savings / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
 
                                         const trendList = document.getElementById('cost-dashboard-trend');

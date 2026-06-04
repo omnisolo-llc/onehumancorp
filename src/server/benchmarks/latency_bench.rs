@@ -81,9 +81,9 @@ pub async fn bench_api_response_time() {
 
         let mut cloud_times = Vec::new();
         for _ in 0..iterations {
-            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
             let mut request = tonic::Request::new(req);
-            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
             let start = Instant::now();
 
 
@@ -107,9 +107,9 @@ pub async fn bench_api_response_time() {
 
     let mut standalone_times = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
 
 
@@ -121,9 +121,9 @@ pub async fn bench_api_response_time() {
 
     let mut standalone_mobile_times = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
         let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
         let start = Instant::now();
 
         let _ = dashboard_service_standalone.get_dashboard(request).await;
@@ -187,7 +187,7 @@ pub async fn bench_agent_snapshot() {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
-            organization_id: "system".to_string(),
+            organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         });
@@ -199,11 +199,11 @@ pub async fn bench_agent_snapshot() {
         let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-            org_id: "system".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+            org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
-        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
+        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap());
 
         use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
         let _res = agent_service.get_dashboard_snapshot(request).await.unwrap().into_inner();
@@ -273,7 +273,7 @@ pub async fn bench_dashboard_snapshot() {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
-            organization_id: "system".to_string(),
+            organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         });
@@ -282,14 +282,14 @@ pub async fn bench_dashboard_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
 
         let db_arc = std::sync::Arc::new(db.clone());
         let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
         let mut request = tonic::Request::new(req_desktop);
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-            org_id: "system".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+            org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
 
@@ -301,8 +301,8 @@ pub async fn bench_dashboard_snapshot() {
     fetch_times.sort();
     tracing::info!("Parallel Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
 
-    let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
-    let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+    let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
+    let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
 
 
     let db_arc = std::sync::Arc::new(db.clone());
@@ -310,14 +310,14 @@ pub async fn bench_dashboard_snapshot() {
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
     req_mobile_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-        spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-        org_id: "system".to_string(),
+        spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+        org_id: "test_org".to_string(),
         agent_id: "test".to_string(),
     });
     let mut req_desktop_t = tonic::Request::new(req_desktop);
     req_desktop_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-        spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-        org_id: "system".to_string(),
+        spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+        org_id: "test_org".to_string(),
         agent_id: "test".to_string(),
     });
 
@@ -591,7 +591,7 @@ pub async fn bench_advisory_insights_latency() {
             // For now, since the handler fails fast on auth, the latency benchmark only measures auth failure.
             // Let's at least test the db calls directly.
 
-            let tenant_id = "system".to_string();
+            let tenant_id = "test_org".to_string();
 
             let start = std::time::Instant::now();
             let db_org = db.clone();
@@ -639,7 +639,7 @@ pub async fn bench_advisory_insights_latency() {
     sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await.unwrap();
 
     let mut fetch_times_sqlite = Vec::with_capacity(iterations);
-    let tenant_id = "system".to_string();
+    let tenant_id = "test_org".to_string();
 
     for _ in 0..iterations {
         let start = std::time::Instant::now();
@@ -669,7 +669,7 @@ pub async fn bench_advisory_insights_latency() {
     }
 
     fetch_times_sqlite.sort();
-    println!(
+    tracing::info!(
         "Advisory Insights Standalone (Parallel): p50: {} us, p95: {} us, p99: {} us",
         fetch_times_sqlite[iterations / 2],
         fetch_times_sqlite[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],

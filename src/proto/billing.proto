@@ -22,6 +22,7 @@ message CostSummary {
   int64 total_tokens = 3;
   double projected_monthly_usd = 4;
   repeated AgentCostSummary agents = 5;
+  bool is_over_budget = 6;
 }
 
 message AgentCostSummary {
