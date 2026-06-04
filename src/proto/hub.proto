@@ -1106,11 +1106,15 @@ message DomainsResponse {
 message SettingsResponse {
   string minimax_api_key = 1;
   map<string, string> extras = 2;
+  double delivery_radius = 3;
+  double flat_delivery_fee = 4;
 }
 
 message UpdateSettingsRequest {
   string minimax_api_key = 1;
   map<string, string> extras = 2;
+  double delivery_radius = 3;
+  double flat_delivery_fee = 4;
 }
 
 message MarketplaceItemProto {

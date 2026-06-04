@@ -20,12 +20,24 @@ export default function CheckoutPage() {
     if (!deliveryAddress) return;
     setIsCheckingDelivery(true);
 
-    // Simulate checking if address is within radius
-    setTimeout(() => {
-      // Mock DoorDash Drive API call
-      setDeliveryFee(8.50); // Flat fee from DoorDash
+    try {
+      const res = await fetch("/api/v1/fulfillment/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delivery_address: deliveryAddress }),
+      });
+      const data = await res.json();
+      if (data.eligible && data.fee !== null) {
+        setDeliveryFee(data.fee);
+      } else {
+        alert("Delivery is not available for this address.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to fetch delivery quote.");
+    } finally {
       setIsCheckingDelivery(false);
-    }, 800);
+    }
   };
 
   const [isSubscription, setIsSubscription] = useState(false);

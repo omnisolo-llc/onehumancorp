@@ -28,6 +28,8 @@ pub struct AppSettings {
     pub sms_alert_urgent_booking: bool,
     pub sms_alert_failed_payment: bool,
     pub sms_alert_new_order: bool,
+    pub delivery_radius: f64,
+    pub flat_delivery_fee: f64,
 }
 
 #[allow(dead_code)]
@@ -46,6 +48,8 @@ impl AppSettings {
             sms_alert_urgent_booking: false,
             sms_alert_failed_payment: false,
             sms_alert_new_order: false,
+            delivery_radius: 5.0,
+            flat_delivery_fee: 4.99,
         }
     }
 }

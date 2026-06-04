@@ -24,6 +24,8 @@ impl MyOrgService {
             settings: RwLock::new(SettingsResponse {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
+                delivery_radius: 5.0,
+                flat_delivery_fee: 4.99,
             }),
             analytics_cache: ::server_utils::cache::HybridCache::new(redis_client),
         }
@@ -70,6 +72,8 @@ impl OrgService for MyOrgService {
         let mut settings = self.settings.write().unwrap();
         settings.minimax_api_key = req.minimax_api_key;
         settings.extras = req.extras;
+        settings.delivery_radius = req.delivery_radius;
+        settings.flat_delivery_fee = req.flat_delivery_fee;
         Ok(Response::new(settings.clone()))
     }
 
