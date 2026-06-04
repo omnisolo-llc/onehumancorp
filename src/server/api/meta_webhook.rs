@@ -9,6 +9,10 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
 use crate::hub::{Hub, HubEvent};
+use crate::orchestration::departments::types::DepartmentType;
+use crate::orchestration::departments::types::ActionRisk;
+use uuid::Uuid;
+use crate::db::get_pool;
 use chrono::Utc;
 
 #[derive(Deserialize)]
@@ -43,7 +47,7 @@ pub async fn meta_webhook_get_handler(
 }
 
 pub async fn meta_webhook_post_handler(
-    State(hub): State<Arc<Hub>>,
+    State(orchestrator): State<Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>>,
     headers: HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
@@ -103,15 +107,57 @@ pub async fn meta_webhook_post_handler(
 
                         if !text.is_empty() {
                             tracing::info!("Received Meta message from {}: {}", sender_id, text);
-                            hub.append_recent_event(HubEvent {
-                                r#type: "incoming_meta_message".to_string(),
-                                payload: serde_json::json!({
-                                    "platform": "instagram",
-                                    "sender_id": sender_id,
-                                    "text": text,
-                                }).to_string(),
-                                occurred_at: Utc::now(),
-                            });
+                            let payload_tenant_id = "default".to_string(); // In a real app we map sender_id/page_id to tenant_id
+                            let source = "instagram".to_string();
+                            let message = text.to_string();
+
+                            // Generate draft reply (same as in webhook.rs)
+                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                            let draft_reply = if !api_key.is_empty() {
+                                let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
+                                let prompt = format!(
+                                    "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
+                                    business_context, message
+                                );
+                                let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+                                let client = crate::minimax::MinimaxClient::new(api_key);
+                                client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
+                            } else {
+                                "Thank you for reaching out! We will get back to you shortly.".to_string()
+                            };
+
+                            let id = Uuid::new_v4().to_string();
+                            let status = "pending";
+                            let pool = get_pool();
+                            if let Ok(mut tx) = pool.begin().await {
+                                let _ = crate::common::auth_utils::set_org_context(&mut *tx, &payload_tenant_id).await;
+                                let _ = sqlx::query(
+                                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                                )
+                                .bind(&id)
+                                .bind(&payload_tenant_id)
+                                .bind(&source)
+                                .bind(&message)
+                                .bind(&draft_reply)
+                                .bind(&status)
+                                .execute(&mut *tx)
+                                .await;
+                                let _ = tx.commit().await;
+                            }
+
+                            let description = format!("Incoming message from {}: {}", source, message);
+                            let _ = orchestrator.execute_action(
+                                DepartmentType::CustomerSuccess,
+                                description,
+                                payload_tenant_id,
+                                ActionRisk::DraftForReview,
+                                serde_json::json!({
+                                    "source": source,
+                                    "message": message,
+                                    "draft_reply": draft_reply,
+                                    "inbox_message_id": id,
+                                }),
+                            ).await;
                         }
                     }
                 }
@@ -125,15 +171,57 @@ pub async fn meta_webhook_post_handler(
 
                                   if !text.is_empty() {
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-                                      hub.append_recent_event(HubEvent {
-                                          r#type: "incoming_meta_message".to_string(),
-                                          payload: serde_json::json!({
-                                              "platform": "whatsapp",
-                                              "sender_id": sender_id,
-                                              "text": text,
-                                          }).to_string(),
-                                          occurred_at: Utc::now(),
-                                      });
+                                      let payload_tenant_id = "default".to_string(); // In a real app we map sender_id/page_id to tenant_id
+                                      let source = "whatsapp".to_string();
+                                      let message = text.to_string();
+
+                                      // Generate draft reply
+                                      let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                                      let draft_reply = if !api_key.is_empty() {
+                                          let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
+                                          let prompt = format!(
+                                              "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
+                                              business_context, message
+                                          );
+                                          let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+                                          let client = crate::minimax::MinimaxClient::new(api_key);
+                                          client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
+                                      } else {
+                                          "Thank you for reaching out! We will get back to you shortly.".to_string()
+                                      };
+
+                                      let id = Uuid::new_v4().to_string();
+                                      let status = "pending";
+                                      let pool = get_pool();
+                                      if let Ok(mut tx) = pool.begin().await {
+                                          let _ = crate::common::auth_utils::set_org_context(&mut *tx, &payload_tenant_id).await;
+                                          let _ = sqlx::query(
+                                              "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                                          )
+                                          .bind(&id)
+                                          .bind(&payload_tenant_id)
+                                          .bind(&source)
+                                          .bind(&message)
+                                          .bind(&draft_reply)
+                                          .bind(&status)
+                                          .execute(&mut *tx)
+                                          .await;
+                                          let _ = tx.commit().await;
+                                      }
+
+                                      let description = format!("Incoming message from {}: {}", source, message);
+                                      let _ = orchestrator.execute_action(
+                                          DepartmentType::CustomerSuccess,
+                                          description,
+                                          payload_tenant_id,
+                                          ActionRisk::DraftForReview,
+                                          serde_json::json!({
+                                              "source": source,
+                                              "message": message,
+                                              "draft_reply": draft_reply,
+                                              "inbox_message_id": id,
+                                          }),
+                                      ).await;
                                   }
                              }
                          }

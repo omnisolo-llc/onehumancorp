@@ -2577,7 +2577,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
-        .with_state(hub.clone());
+        .with_state(dept_orchestrator.clone());
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
@@ -2723,6 +2723,36 @@ async fn list_ui_orders_handler(
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
+    }
+}
+
+async fn approve_ui_inbox_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
+    let is_ok = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("UPDATE inbox_messages SET status = 'approved' WHERE id = $1")
+                .bind(&id)
+                .execute(&db.pool)
+                .await.is_ok()
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query("UPDATE inbox_messages SET status = 'approved' WHERE id = ?")
+                .bind(&id)
+                .execute(pool)
+                .await.is_ok()
+        }
+    };
+
+    if is_ok {
+        (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+    } else {
+        ::server_telemetry::record_error_signal("Failed to approve inbox message");
+        tracing::error!("Failed to approve inbox message");
+        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Database error"}))).into_response()
     }
 }
 
@@ -3256,6 +3286,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+        .route("/api/ui/inbox/messages/:id/approve", axum::routing::post(approve_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
