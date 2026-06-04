@@ -21,16 +21,18 @@ pub struct PaymentIntentResponse {
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
-        .route("/token", axum::routing::get(get_terminal_connection_token_handler))
+        .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .with_state(hub)
 }
 
 
 pub async fn get_terminal_connection_token_handler(
+
     _headers: HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    _req_data: Option<axum::extract::Json<serde_json::Value>>,
 ) -> Json<Result<TerminalTokenResponse, String>> {
     let tenant_id = match auth_info {
         Some(auth) => {
