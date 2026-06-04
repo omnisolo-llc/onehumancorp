@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('traverses the current wizard from welcome to launch', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+
     const id = `setup-comprehensive-${Date.now()}-${Math.random()}`;
     const email = `alex+${Date.now()}@example.com`;
     await page.addInitScript((tenantId) => {

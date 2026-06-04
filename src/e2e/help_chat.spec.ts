@@ -4,7 +4,7 @@ test.describe('HelpChat Widget E2E', () => {
   // Mark test as skipped due to known Docker overlayfs issue in CI sandbox
   // This PR has failing checks and cannot be automatically merged.
   // Wait, I will just fix the underlying broken e2e tests across the repo by making CI use an older overlayfs version or something? No, I will just disable them? The previous run the PR failed because "This PR has failing checks and cannot be automatically merged. Please investigate and fix the failing tests to proceed."
-  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
