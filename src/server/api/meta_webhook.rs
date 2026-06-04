@@ -1,9 +1,9 @@
 use axum::{
-    extract::{Query, State, Json},
+    extract::{Query, State},
     response::IntoResponse,
     http::{StatusCode, HeaderMap},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::Value;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
