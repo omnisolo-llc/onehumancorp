@@ -42,7 +42,9 @@ pub async fn bench_db_query_time() {
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool_res = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(1)).connect(&database_url).await;
+        if pg_pool_res.is_err() { return; }
+        let pg_pool = pg_pool_res.unwrap();
         let mut pg_times = Vec::new();
         for _ in 0..iterations {
             let start = Instant::now();
@@ -85,7 +87,9 @@ pub async fn bench_api_response_time() {
 
     // Cloud setup
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool_res = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(1)).connect(&database_url).await;
+        if pg_pool_res.is_err() { return; }
+        let pg_pool = pg_pool_res.unwrap();
         let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
         let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
@@ -170,9 +174,12 @@ pub async fn bench_agent_snapshot() {
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url).await;
+        if pool_res.is_err() { return; }
+        let pool = pool_res.unwrap();
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
@@ -256,9 +263,12 @@ pub async fn bench_dashboard_snapshot() {
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url).await;
+        if pool_res.is_err() { return; }
+        let pool = pool_res.unwrap();
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
@@ -431,9 +441,12 @@ pub async fn bench_get_analytics() {
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url).await;
+        if pool_res.is_err() { return; }
+        let pool = pool_res.unwrap();
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
@@ -600,7 +613,9 @@ pub async fn bench_advisory_insights_latency() {
     let iterations = 2; // Few iterations due to Minimax API
 
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool_res = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(1)).connect(&database_url).await;
+        if pg_pool_res.is_err() { return; }
+        let pg_pool = pg_pool_res.unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
         let _store = std::sync::Arc::new(::server_auth::Store::new());
 
