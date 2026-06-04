@@ -1,4 +1,16 @@
 use axum::{extract::State, Json};
+use std::sync::LazyLock;
+use opentelemetry::{global, KeyValue};
+use opentelemetry::metrics::{Counter, Histogram};
+
+static BILLING_REQUESTS: LazyLock<Counter<u64>> = LazyLock::new(|| {
+    global::meter("billing-api").u64_counter("billing_requests_total").build()
+});
+
+static BILLING_LATENCY: LazyLock<Histogram<f64>> = LazyLock::new(|| {
+    global::meter("billing-api").f64_histogram("billing_request_duration_seconds").build()
+});
+
 use std::sync::Arc;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
@@ -38,6 +50,8 @@ pub async fn my_plan_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<MyPlanResponse> {
+    let start = std::time::Instant::now();
+    BILLING_REQUESTS.add(1, &[KeyValue::new("endpoint", "/my-plan")]);
     let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
         Some(auth) => {
             if auth.org_id.is_empty() {
@@ -46,7 +60,10 @@ pub async fn my_plan_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
+        None => {
+            BILLING_LATENCY.record(start.elapsed().as_secs_f64(), &[KeyValue::new("endpoint", "/my-plan")]);
+            return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
+        }
     };
 
     let tracker = hub.tracker();
@@ -86,14 +103,16 @@ pub async fn my_plan_handler(
 
     let next_bill_estimated = projected_cost as i32;
 
-    Json(MyPlanResponse {
+    let res = Json(MyPlanResponse {
         current_plan: plan_name,
         ai_actions_used: ai_used as i32,
         ai_actions_limit: ai_limit,
         storage_used_bytes,
         storage_limit_bytes: storage_limit,
         next_bill_estimated,
-    })
+    });
+    BILLING_LATENCY.record(start.elapsed().as_secs_f64(), &[KeyValue::new("endpoint", "/my-plan")]);
+    res
 }
 
 pub async fn cost_dashboard_handler(
@@ -101,6 +120,8 @@ pub async fn cost_dashboard_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<CostDashboardResponse> {
+    let start = std::time::Instant::now();
+    BILLING_REQUESTS.add(1, &[KeyValue::new("endpoint", "/cost-dashboard")]);
     let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
         Some(auth) => {
             if auth.org_id.is_empty() {
@@ -109,7 +130,10 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => {
+            BILLING_LATENCY.record(start.elapsed().as_secs_f64(), &[KeyValue::new("endpoint", "/cost-dashboard")]);
+            return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        }
     };
 
     let now = chrono::Utc::now();
@@ -150,7 +174,7 @@ pub async fn cost_dashboard_handler(
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
 
-    Json(CostDashboardResponse {
+    let res = Json(CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
         llm_cost: (llm_cost_f64 * 100.0).round() as i64,
@@ -160,5 +184,7 @@ pub async fn cost_dashboard_handler(
         bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
         period_start,
         period_end,
-    })
+    });
+    BILLING_LATENCY.record(start.elapsed().as_secs_f64(), &[KeyValue::new("endpoint", "/cost-dashboard")]);
+    res
 }
