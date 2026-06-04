@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use crate::hub::Hub;
 use axum::http::StatusCode;
+use tokio::time::{sleep, Duration};
 
 #[derive(Deserialize)]
 pub struct CreateProductRequest {
@@ -31,6 +32,26 @@ pub struct CreateProductResponse {
 pub struct ErrorResponse {
     pub error: String,
     pub message: String,
+}
+
+#[derive(Deserialize)]
+pub struct DigitizeProductRequest {
+    pub image: String,
+}
+
+#[derive(Serialize)]
+pub struct DigitizeProductData {
+    pub title: String,
+    pub price: String,
+    pub category: String,
+    pub description: String,
+}
+
+#[derive(Serialize)]
+pub struct DigitizeProductResponse {
+    pub success: bool,
+    pub data: Option<DigitizeProductData>,
+    pub message: Option<String>,
 }
 
 async fn handle_create_product(
@@ -146,8 +167,27 @@ async fn handle_create_product(
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
 
+async fn handle_digitize_product(
+    Json(_payload): Json<DigitizeProductRequest>,
+) -> impl IntoResponse {
+    // Simulate AI extraction delay
+    sleep(Duration::from_millis(500)).await;
+
+    (StatusCode::OK, Json(DigitizeProductResponse {
+        success: true,
+        message: Some("Product digitized successfully".to_string()),
+        data: Some(DigitizeProductData {
+            title: "Artisan Vanilla Bean Cupcake".to_string(),
+            price: "4.99".to_string(),
+            category: "Baked Goods".to_string(),
+            description: "Hand-crafted vanilla bean cupcake topped with Madagascar vanilla buttercream frosting. Made fresh daily with organic ingredients.".to_string(),
+        }),
+    })).into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/digitize", post(handle_digitize_product))
         .layer(Extension(hub))
 }
