@@ -20,11 +20,21 @@ test.describe('Unified Agent Feed', () => {
     await expect(page.getByText('Draft email for review')).toBeVisible();
     await expect(page.getByText('Abandoned cart recovery: 10% discount for Sarah')).toBeVisible();
 
-    // Click to approve the email draft
-    const approveBtn = page.locator('button[aria-label="Approve proposal"]').first();
-    await approveBtn.click();
+    // Check context data display
+    await expect(page.getByText('Abandoned Carts:')).toBeVisible();
+    await expect(page.getByText('3', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Potential Revenue:')).toBeVisible();
+    await expect(page.getByText('$120.00')).toBeVisible();
+
+    // Verify Edit button exists
+    const editBtn = page.locator('button[aria-label="Edit proposal"]').first();
+    await expect(editBtn).toBeVisible();
+
+    // Click to decline the abandoned cart proposal
+    const declineBtn = page.locator('button[aria-label="Reject proposal"]').last();
+    await declineBtn.click();
 
     // Verify it was optimistically removed from the UI
-    await expect(page.getByText('Draft email for review')).not.toBeVisible();
+    await expect(page.getByText('Abandoned cart recovery: 10% discount for Sarah')).not.toBeVisible();
   });
 });
