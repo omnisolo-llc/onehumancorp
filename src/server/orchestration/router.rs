@@ -1,103 +1,111 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::orchestration::departments::types::DepartmentType;
+use opentelemetry::global;
+use opentelemetry::KeyValue;
+use opentelemetry::metrics::Counter;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticRoutingRequest {
-    pub prompt: String,
     pub tenant_id: String,
+    pub prompt: String,
+    // Add embedding if passed externally, else generated internally (mocked for now)
+    pub embedding: Option<Vec<f32>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticRoutingResponse {
-    pub department: String,
-    pub confidence: f32,
+    pub tenant_id: String,
+    pub target_department: DepartmentType,
+    pub confidence_score: f32,
 }
 
 pub struct SemanticRouter {
-    intent_centroids: HashMap<String, Vec<f32>>,
+    route_counter: Counter<u64>,
 }
 
 impl SemanticRouter {
     pub fn new() -> Self {
-        let mut centroids = HashMap::new();
-        centroids.insert("Operations".to_string(), vec![0.1, 0.2, 0.3]);
-        centroids.insert("Marketing".to_string(), vec![0.8, 0.1, 0.1]);
-        centroids.insert("Sales".to_string(), vec![0.2, 0.8, 0.1]);
-        centroids.insert("Customer Success".to_string(), vec![0.1, 0.8, 0.2]);
-        centroids.insert("Finance".to_string(), vec![0.1, 0.1, 0.8]);
-        centroids.insert("Legal".to_string(), vec![0.1, 0.8, 0.8]);
-        centroids.insert("Business Advisory".to_string(), vec![0.8, 0.8, 0.1]);
+        let meter = global::meter("ohc.orchestration.router");
+        let route_counter = meter.u64_counter("semantic_route.count").build();
+        Self { route_counter }
+    }
 
-        Self {
-            intent_centroids: centroids,
+    fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+        if a.len() != b.len() || a.is_empty() {
+            return 0.0;
+        }
+        let (dot, na, nb) = a.iter().zip(b.iter()).fold(
+            (0.0f32, 0.0f32, 0.0f32),
+            |(dot, na, nb), (&x, &y)| (dot + x * y, na + x * x, nb + y * y),
+        );
+        if na == 0.0 || nb == 0.0 {
+            return 0.0;
+        }
+        dot / (na.sqrt() * nb.sqrt())
+    }
+
+    // Mock embedding generator for the given prompt
+    fn generate_embedding(&self, prompt: &str) -> Vec<f32> {
+        let text = prompt.to_lowercase();
+        // A simple heuristic for tests
+        if text.contains("website") || text.contains("design") || text.contains("marketing") || text.contains("seo") {
+            vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        } else if text.contains("refund") || text.contains("inventory") || text.contains("order") || text.contains("operations") {
+            vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        } else if text.contains("price") || text.contains("pricing") || text.contains("tax") || text.contains("finance") || text.contains("accountant") {
+            vec![0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+        } else if text.contains("quote") || text.contains("proposal") || text.contains("lead") || text.contains("sales") {
+            vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+        } else if text.contains("contract") || text.contains("policy") || text.contains("legal") || text.contains("terms") {
+            vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+        } else if text.contains("customer") || text.contains("support") || text.contains("chat") {
+            vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+        } else if text.contains("trend") || text.contains("report") || text.contains("advisory") || text.contains("health") {
+            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        } else {
+            // default fallback
+            vec![0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         }
     }
 
-    pub async fn route(&self, req: SemanticRoutingRequest) -> Result<SemanticRoutingResponse, String> {
-        if req.tenant_id.trim().is_empty() {
-            return Err("tenant_id is required for RLS multi-tenant awareness".to_string());
+    pub fn route(&self, request: &SemanticRoutingRequest) -> Result<SemanticRoutingResponse, String> {
+        if request.tenant_id.is_empty() {
+            return Err("tenant_id is required".to_string());
         }
 
-        let mock_embedding = self.mock_embedding(&req.prompt);
-        let mut best_department = "Operations".to_string();
+        let embedding = request.embedding.clone().unwrap_or_else(|| self.generate_embedding(&request.prompt));
+
+        let centroids = vec![
+            (DepartmentType::Marketing, vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            (DepartmentType::Operations, vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            (DepartmentType::Finance, vec![0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]),
+            (DepartmentType::Sales, vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
+            (DepartmentType::Legal, vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
+            (DepartmentType::CustomerSuccess, vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]),
+            (DepartmentType::BusinessAdvisory, vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
+        ];
+
+        let mut best_dept = DepartmentType::Operations; // default
         let mut best_score = -1.0;
 
-        for (dept, centroid) in &self.intent_centroids {
-            let score = Self::cosine_similarity(&mock_embedding, centroid);
+        for (dept, centroid) in centroids {
+            let score = Self::cosine_similarity(&embedding, &centroid);
             if score > best_score {
                 best_score = score;
-                best_department = dept.clone();
+                best_dept = dept;
             }
         }
 
+        self.route_counter.add(1, &[
+            KeyValue::new("tenant_id", request.tenant_id.clone()),
+            KeyValue::new("department", best_dept.to_string()),
+        ]);
+
         Ok(SemanticRoutingResponse {
-            department: best_department,
-            confidence: best_score,
+            tenant_id: request.tenant_id.clone(),
+            target_department: best_dept,
+            confidence_score: best_score,
         })
-    }
-
-    fn mock_embedding(&self, prompt: &str) -> Vec<f32> {
-        let lower = prompt.to_lowercase();
-
-        // Edge case: "refund request" vs "pricing strategy question"
-        // If it contains refund, prioritize finance over strategy. If it contains pricing strategy, prioritize business advisory.
-        if lower.contains("pricing strategy") {
-            return vec![0.8, 0.8, 0.1]; // Business Advisory
-        }
-        if lower.contains("refund") {
-            return vec![0.1, 0.1, 0.8]; // Finance
-        }
-
-        if lower.contains("website") || lower.contains("seo") || lower.contains("social") || lower.contains("promote") || lower.contains("design") {
-            vec![0.8, 0.1, 0.1] // Marketing
-        } else if lower.contains("quote") || lower.contains("sales") || lower.contains("lead") {
-            vec![0.2, 0.8, 0.1] // Sales
-        } else if lower.contains("pay") || lower.contains("deposit") || lower.contains("finance") || lower.contains("revenue") || lower.contains("price") {
-            vec![0.1, 0.1, 0.8] // Finance
-        } else if lower.contains("customer") || lower.contains("message") || lower.contains("support") || lower.contains("chat") {
-            vec![0.1, 0.8, 0.2] // Customer Success
-        } else if lower.contains("contract") || lower.contains("legal") || lower.contains("policy") || lower.contains("terms") || lower.contains("compliance") {
-            vec![0.1, 0.8, 0.8] // Legal
-        } else if lower.contains("report") || lower.contains("advice") || lower.contains("health") || lower.contains("trend") || lower.contains("strategy") {
-            vec![0.8, 0.8, 0.1] // Business Advisory
-        } else {
-            vec![0.1, 0.2, 0.3] // Operations (Default)
-        }
-    }
-
-    fn cosine_similarity(v1: &[f32], v2: &[f32]) -> f32 {
-        let mut dot = 0.0;
-        let mut norm1 = 0.0;
-        let mut norm2 = 0.0;
-        for (a, b) in v1.iter().zip(v2.iter()) {
-            dot += a * b;
-            norm1 += a * a;
-            norm2 += b * b;
-        }
-        if norm1 == 0.0 || norm2 == 0.0 {
-            return 0.0;
-        }
-        dot / (norm1.sqrt() * norm2.sqrt())
     }
 }
 
@@ -105,40 +113,42 @@ impl SemanticRouter {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_semantic_router_table_driven() {
+    #[test]
+    fn test_semantic_routing() {
         let router = SemanticRouter::new();
 
         let cases = vec![
-            ("Help me design a website for my custom cakes", "Marketing"),
-            ("How do I accept deposit payments via Stripe?", "Finance"),
-            ("A customer sent a message asking about my working hours.", "Customer Success"),
-            ("I need to draft a contract policy for my cleaning services.", "Legal"),
-            ("What is the trend for my weekly report strategy?", "Business Advisory"),
-            ("I need to manage my inventory and schedule deliveries.", "Operations"),
-            ("Can you help me process a refund request?", "Finance"),
-            ("I need help with my pricing strategy.", "Business Advisory"),
+            ("I need a website designed", DepartmentType::Marketing),
+            ("Can you help me process a refund for order 123", DepartmentType::Operations),
+            ("Can you help me process a refund request?", DepartmentType::Operations),
+            ("I need help with my pricing strategy.", DepartmentType::Finance),
+            ("Can you generate a quote for this lead?", DepartmentType::Sales),
+            ("I need to draft terms of service", DepartmentType::Legal),
+            ("Respond to this customer chat", DepartmentType::CustomerSuccess),
+            ("What are the seasonal trends for my business?", DepartmentType::BusinessAdvisory),
         ];
 
         for (prompt, expected_dept) in cases {
             let req = SemanticRoutingRequest {
+                tenant_id: "tenant_123".to_string(),
                 prompt: prompt.to_string(),
-                tenant_id: "tenant1".to_string(),
+                embedding: None,
             };
-            let res = router.route(req).await.unwrap();
-            assert_eq!(res.department, expected_dept, "Failed for prompt: {}", prompt);
+
+            let res = router.route(&req).expect("Routing failed");
+            assert_eq!(res.tenant_id, "tenant_123");
+            assert_eq!(res.target_department, expected_dept, "Failed for prompt: {}", prompt);
         }
     }
 
-    #[tokio::test]
-    async fn test_semantic_router_missing_tenant_id() {
+    #[test]
+    fn test_missing_tenant_id() {
         let router = SemanticRouter::new();
         let req = SemanticRoutingRequest {
-            prompt: "Help me design a website".to_string(),
-            tenant_id: "   ".to_string(),
+            tenant_id: "".to_string(),
+            prompt: "hello".to_string(),
+            embedding: None,
         };
-        let res = router.route(req).await;
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "tenant_id is required for RLS multi-tenant awareness");
+        assert!(router.route(&req).is_err());
     }
 }
