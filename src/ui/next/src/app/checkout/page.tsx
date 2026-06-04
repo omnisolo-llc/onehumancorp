@@ -3,8 +3,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+import { useSyncStore } from '../../lib/sync/syncStore';
+
 
 export default function CheckoutPage() {
+  const addMutation = useSyncStore((state) => state.addMutation);
+
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -153,21 +157,12 @@ export default function CheckoutPage() {
                   alert(`Payment of ${amount} successful!`);
                   router.push('/dashboard');
                 } else {
-                  let queue = [];
-                  try {
-                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                  } catch (e) {}
-
-                  queue.push({
-                    id: 'txn_' + Date.now(),
-                    amount: parseFloat(amount),
-                    timestamp: new Date().toISOString(),
+                  addMutation({
                     type: 'tap_to_pay',
-                    idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
+                    payload: { amount: parseFloat(amount) }
                   });
-                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
                   alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
-                  router.push('/dashboard');
+                  // Remove router.push('/dashboard') so we stay on the page while offline
                 }
               }}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"

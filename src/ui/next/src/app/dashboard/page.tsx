@@ -7,6 +7,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { useSyncStore } from '../../lib/sync/syncStore';
 
 type DashboardMetrics = {
   active_customers: number;
@@ -74,8 +75,10 @@ export default function Dashboard() {
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isOffline, setIsOffline] = useState(false);
-  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+  const isOffline = useSyncStore((state) => !state.isOnline);
+
+  const offlineQueueCount = useSyncStore((state) => state.queue.length);
+
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [userName, setUserName] = useState("Human");
 
@@ -89,14 +92,7 @@ export default function Dashboard() {
       // ignore
     }
 
-    const updateOfflineStatus = () => {
-      setIsOffline(!navigator.onLine);
-      try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
-      } catch {
-        setOfflineQueueCount(0);
-      }
-    };
+
 
     async function loadDashboard() {
       const tenant = encodeURIComponent(tenantId());
@@ -137,17 +133,8 @@ export default function Dashboard() {
       }
     }
 
-    updateOfflineStatus();
     loadDashboard();
-    window.addEventListener("online", updateOfflineStatus);
-    window.addEventListener("offline", updateOfflineStatus);
-    window.addEventListener("storage", updateOfflineStatus);
 
-    return () => {
-      window.removeEventListener("online", updateOfflineStatus);
-      window.removeEventListener("offline", updateOfflineStatus);
-      window.removeEventListener("storage", updateOfflineStatus);
-    };
   }, []);
 
   const lowStockCount = useMemo(
