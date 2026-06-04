@@ -493,6 +493,7 @@ impl DB {
                         payload TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        tenant_id TEXT NOT NULL DEFAULT 'default_tenant',
                         auto_dreamed BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1

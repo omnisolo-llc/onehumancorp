@@ -310,6 +310,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod pos;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2195,6 +2196,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
+    pos_sync_worker.start();
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
@@ -3458,10 +3462,10 @@ async fn create_ui_bom_item_handler(
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "Set up your store", "duration": "1:20" },
+            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
             { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
             { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
-            { "id": 4, "title": "Add a product", "duration": "1:05" },
+            { "id": 4, "title": "Adding staff to your account", "duration": "1:05" },
             { "id": 5, "title": "Review an order", "duration": "1:10" },
             { "id": 6, "title": "Send a campaign", "duration": "1:25" },
             { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
@@ -3638,6 +3642,7 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
+        .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 
@@ -5784,6 +5789,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </li>
                             </ul>
                         </div>
+
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h3>7-Day Trend</h3>
+                            <ul id="cost-dashboard-trend" style="list-style: none; padding: 0; margin: 0; font-family: 'Outfit', 'Inter', sans-serif;">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+
                         <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
                     </div>
 
@@ -7831,6 +7844,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
+
+                                        const trendList = document.getElementById('cost-dashboard-trend');
+                                        trendList.innerHTML = '';
+                                        if (data.trend && data.trend.length > 0) {
+                                            data.trend.forEach(item => {
+                                                const li = document.createElement('li');
+                                                li.style.display = 'flex';
+                                                li.style.justifyContent = 'space-between';
+                                                li.style.borderBottom = '1px solid var(--border)';
+                                                li.style.padding = '8px 0';
+                                                li.innerHTML = `<span>${item.date}</span><strong>$${(item.total_cost / 100).toFixed(2)}</strong>`;
+                                                trendList.appendChild(li);
+                                            });
+                                        } else {
+                                            trendList.innerHTML = '<li style="padding: 8px 0; color: var(--text-secondary);">No trend data available yet.</li>';
+                                        }
                                     })
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
