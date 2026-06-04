@@ -27,3 +27,7 @@ pub mod state_machine;
 pub mod tasks_db;
 #[cfg(test)]
 pub mod tasks_db_test;
+pub mod router;
+
+#[cfg(test)]
+pub mod router_test;

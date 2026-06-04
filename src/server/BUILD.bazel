@@ -141,6 +141,8 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:statemachine_v2.rs",
     "//src/server/orchestration:state_machine.rs",
     "//src/server/orchestration:state_machine_test.rs",
+    "//src/server/orchestration:router.rs",
+    "//src/server/orchestration:router_test.rs",
     "//src/server/orchestration:tasks.rs",
     "//src/server/orchestration:tasks_db.rs",
     "//src/server/orchestration:tasks_db_test.rs",
