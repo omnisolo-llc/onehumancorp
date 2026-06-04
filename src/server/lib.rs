@@ -8023,6 +8023,59 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 loadInboxMessages();
                             }
 
+                            if (id === 'referral-dashboard-screen') {
+
+                                fetch('/api/v1/growth/referrals/generate', {
+
+                                    method: 'POST',
+
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+
+                                })
+
+                                .then(res => res.json())
+
+                                .then(data => {
+
+                                    if (data && data.referral_link) {
+
+                                        const linkEls = document.querySelectorAll('#referral-link');
+
+                                        linkEls.forEach(el => el.innerText = data.referral_link);
+
+                                        // Update the copy button actions
+
+                                        const referralDashboard = document.getElementById('referral-dashboard-screen');
+
+                                        if (referralDashboard) {
+
+                                            const buttons = referralDashboard.querySelectorAll('button');
+
+                                            buttons.forEach(btn => {
+
+                                                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('navigator.clipboard.writeText')) {
+
+                                                    let onclickCode = btn.getAttribute('onclick');
+
+                                                    onclickCode = onclickCode.replace(/ohc:\/\/join\?ref=[^']*/, data.referral_link);
+
+                                                    btn.setAttribute('onclick', onclickCode);
+
+                                                }
+
+                                            });
+
+                                        }
+
+                                    }
+
+                                })
+
+                                .catch(err => console.error('Error generating referral link:', err));
+
+                            }
+
+
                             if (id === 'supply-chain-screen') {
                                 loadSupplyData();
                             }
