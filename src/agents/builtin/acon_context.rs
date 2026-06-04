@@ -1,6 +1,6 @@
 use crate::types::{Message, Role};
 
-/// Configuration for the ACON Architectural Decision 3: Context Window Strategy.
+/// Configuration for the ACON Architectural Decision 3: Architectural Decision 3: Context Window Strategy.
 #[derive(Debug, Clone)]
 pub struct AconConfig {
     /// Number of recent messages to preserve completely.
@@ -15,7 +15,7 @@ impl Default for AconConfig {
     }
 }
 
-/// The ACON Architectural Decision 3: Context Window Strategy implementation.
+/// The ACON Architectural Decision 3: Architectural Decision 3: Context Window Strategy implementation.
 /// Prioritizes reasoning traces over raw tool outputs, yielding significant token reduction (26-54%)
 /// while preserving 95%+ accuracy.
 pub struct AconStrategy {

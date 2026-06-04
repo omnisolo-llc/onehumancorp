@@ -179,6 +179,7 @@ pub enum HumanInLoopSpectrum {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 /// Architectural Decision 5: Permission Architecture
+/// Architectural Decision 5: Permission Architecture
 pub enum PermissionArchitecture {
     /// Permissive (auto-approve): All tools are auto-approved unless explicitly in high-risk.
     Permissive,

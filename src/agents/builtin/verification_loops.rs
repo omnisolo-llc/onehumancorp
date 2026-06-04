@@ -22,7 +22,7 @@ pub trait InferentialSensor: Send + Sync {
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String>;
 }
 
-/// Architectural Decision 4: Verification Loops. A manager that coordinates the 3 distinct verification loops.
+/// Architectural Decision 4: Architectural Decision 4: Verification Loops. Architectural Decision 4: Verification Loops. A manager that coordinates the 3 distinct verification loops.
 pub struct VerificationManager {
     computational: Vec<Arc<dyn ComputationalGuide>>,
     visual: Vec<Arc<dyn VisualVerifier>>,

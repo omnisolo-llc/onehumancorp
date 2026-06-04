@@ -2097,7 +2097,7 @@ impl Agent {
                 }
             }
 
-            // Architectural Decision 7: Architectural Decision 7: Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
+            // Architectural Decision 7: Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
             if final_cfg.harness_thickness == crate::harness_thickness::HarnessThickness::Thin {
                 final_cfg.enable_llmcompiler_plan_and_execute = false;
             }
@@ -2113,7 +2113,7 @@ impl Agent {
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
-        // Architectural Decision 6: Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
+        // Architectural Decision 6: Architectural Decision 6: Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
         if final_cfg.enable_vercel_tool_scoping_metric && session_tools.len() > 5 {
             let keep_count = (session_tools.len() as f64 * 0.2).max(1.0) as usize;
             session_tools.truncate(keep_count);
@@ -2293,7 +2293,7 @@ impl Agent {
             crate::observation_masking::apply_observation_masking(&mut final_messages, final_cfg.observation_masking_threshold, final_cfg.observation_masking_size_limit);
         }
 
-            // Architectural Decision 3: Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
+            // Architectural Decision 3: Architectural Decision 3: Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
                 let acon_cfg = final_cfg.acon_config.clone().unwrap_or_default();
                 crate::acon_context::apply_acon_strategy(&mut final_messages, &acon_cfg);
