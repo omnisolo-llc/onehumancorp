@@ -8,4 +8,3 @@ pub mod dynamic;
 pub mod payment_routing;
 pub mod prompt_caching;
 pub mod rate_limit;
-pub mod cost_aggregator;

@@ -58,9 +58,6 @@ describe('WebsiteBuilderPage', () => {
       domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: false,
-      blocks: [],
-      status: "idle",
-      liveUrl: ""
     });
   });
 
@@ -161,7 +158,8 @@ describe('WebsiteBuilderPage', () => {
       { type: 'Catalog', props: { title: '2' } },
       { type: 'Booking', props: { title: '3' } }
     ];
-    useWebsiteBuilderStore.setState({ blocks: initialBlocks, status: 'draft' });
+    localStorage.setItem('ohc_builder_blocks', JSON.stringify(initialBlocks));
+    localStorage.setItem('ohc_builder_status', 'draft');
 
     render(<WebsiteBuilderPage />);
 
@@ -196,7 +194,8 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles launch from draft mode', async () => {
-    useWebsiteBuilderStore.setState({ status: 'draft', blocks: [{ type: 'Hero', props: {} }] });
+    localStorage.setItem('ohc_builder_status', 'draft');
+    localStorage.setItem('ohc_builder_blocks', JSON.stringify([{ type: 'Hero', props: {} }]));
 
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('publish_draft')) {
