@@ -90,7 +90,7 @@ export default function SmartPricingPage() {
                 data-testid="price-bounds-slider"
               />
 
-              <div className="mt-6 p-4 rounded-xl border shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+              <div className="mt-6 p-4 rounded-xl bg-gray-50 border border-gray-100">
                 <p className="text-sm font-semibold mb-3 text-gray-700">Preview: How a $10.00 item might fluctuate</p>
                 <div className="flex justify-between items-center px-2">
                   <div className="text-center">

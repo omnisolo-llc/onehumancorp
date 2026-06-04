@@ -5,7 +5,6 @@ exports_files(
     [
         "booking.rs",
         "mod.rs",
-        "cache_invalidator.rs",
         "wizard.rs",
     ],
     visibility = ["//visibility:public"],
@@ -17,7 +16,6 @@ rust_library(
         "bazel_lib.rs",
         "booking.rs",
         "mod.rs",
-        "cache_invalidator.rs",
         "wizard.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",

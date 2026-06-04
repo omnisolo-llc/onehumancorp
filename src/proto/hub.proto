@@ -282,15 +282,6 @@ service HubService {
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
-  rpc CreateTerminalConnectionToken(CreateTerminalTokenRequest) returns (CreateTerminalTokenResponse);
-}
-
-message CreateTerminalTokenRequest {
-}
-
-message CreateTerminalTokenResponse {
-  bool success = 1;
-  string token = 2;
 }
 
 message StartOnboardingRequest {

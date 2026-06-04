@@ -307,7 +307,7 @@ mod tests {
     use super::*;
     use ::server_auth::orchestration::AuthInfo;
     use tonic::Request;
-
+    use uuid::Uuid;
 
     async fn setup_test_agent_manager_service() -> MyAgentManagerService {
         let database_url = "sqlite::memory:";

@@ -37,7 +37,6 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
-static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -292,7 +291,6 @@ pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
-
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
@@ -300,7 +298,6 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
-
     pub use ::server_services_b2b as b2b;
     pub mod integration;
     pub mod ops;
@@ -482,7 +479,7 @@ struct HttpMetricsRequest {
     tenant_id: String,
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize)]
 struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
@@ -523,12 +520,6 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let cache_key = format!("metrics:{}", tenant_id);
-    let cache = METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-    if let Some(metrics) = cache.get(&cache_key).await {
-        return (StatusCode::OK, axum::Json(metrics)).into_response();
-    }
-
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
         async {
             match &db.store {
@@ -561,12 +552,9 @@ async fn http_metrics_handler(
     let total_sales = sales_res.unwrap_or(0.0);
     let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
-    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent };
-    cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(5)).await;
-
     (
         StatusCode::OK,
-        axum::Json(metrics),
+        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent }),
     )
         .into_response()
 }
@@ -1251,25 +1239,6 @@ impl HubService for MyHubService {
         }))
     }
 
-    async fn create_terminal_connection_token(
-        &self,
-        request: tonic::Request<::server_ohc::orchestration::CreateTerminalTokenRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::CreateTerminalTokenResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
-        let tenant_id = auth_info.map(|i| i.org_id).ok_or_else(|| tonic::Status::unauthenticated("Missing authentication context"))?;
-
-        let stripe_key = std::env::var("STRIPE_API_KEY")
-            .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
-        let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-
-        let token = client.create_terminal_connection_token(&tenant_id).await
-            .map_err(|e| tonic::Status::internal(e))?;
-
-        Ok(tonic::Response::new(::server_ohc::orchestration::CreateTerminalTokenResponse {
-            success: true,
-            token,
-        }))
-    }
 
     async fn register_agent(
         &self,
@@ -2278,15 +2247,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
 
-    tokio::join!(
-        dept_orchestrator.register_department(ops_agent),
-        dept_orchestrator.register_department(cs_agent),
-        dept_orchestrator.register_department(mkt_agent),
-        dept_orchestrator.register_department(sales_agent),
-        dept_orchestrator.register_department(finance_agent),
-        dept_orchestrator.register_department(legal_agent),
-        dept_orchestrator.register_department(advisory_agent)
-    );
+    dept_orchestrator.register_department(ops_agent).await;
+    dept_orchestrator.register_department(cs_agent).await;
+    dept_orchestrator.register_department(mkt_agent).await;
+    dept_orchestrator.register_department(sales_agent).await;
+    dept_orchestrator.register_department(finance_agent).await;
+    dept_orchestrator.register_department(legal_agent).await;
+    dept_orchestrator.register_department(advisory_agent).await;
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
     let department_service = crate::services::agent::department::service::DepartmentService::new(bus.clone(), dept_orchestrator.clone());
@@ -2634,7 +2601,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
         .route("/team", axum::routing::get(ui_handler))
-        .route("/team/chat", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
@@ -2910,10 +2876,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
-        .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
+        .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
-        .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
+        .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()))
         .route("/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
         .route(
             "/api/v1/advisory/insights",
@@ -2944,12 +2910,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
+            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
+            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
+            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
+            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
+            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
+            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
             { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
@@ -2965,16 +2931,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "Set up your store", "duration": "1:20" },
-            { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
-            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
-            { "id": 4, "title": "Add a product", "duration": "1:05" },
-            { "id": 5, "title": "Review an order", "duration": "1:10" },
-            { "id": 6, "title": "Send a campaign", "duration": "1:25" },
-            { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
-            { "id": 8, "title": "Manage inventory", "duration": "1:00" },
-            { "id": 9, "title": "View analytics", "duration": "0:45" },
-            { "id": 10, "title": "Update your profile", "duration": "0:55" }
+            { "id": 1, "title": "How to add a product", "duration": "1:20" },
+            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
+            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
+            { "id": 4, "title": "Adding team members", "duration": "1:05" },
+            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
+            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
+            { "id": 7, "title": "Using the builder", "duration": "1:30" },
+            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
+            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
+            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
@@ -2990,29 +2956,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let mut link_url = "/help";
 
-            if query.contains("getting started") {
-                reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
-            } else if query.contains("store") {
-                reply = format!("Based on our help center: {}", help_articles[1].1);
-                link_url = "/help/my-store";
-            } else if query.contains("payment") {
-                reply = format!("Based on our help center: {}", help_articles[2].1);
-                link_url = "/help/payments";
-            } else if query.contains("ai agent") {
-                reply = format!("Based on our help center: {}", help_articles[3].1);
-                link_url = "/help/ai-agents";
-            } else if query.contains("marketing") {
-                reply = format!("Based on our help center: {}", help_articles[4].1);
-                link_url = "/help/marketing";
-            } else if query.contains("billing") {
-                reply = format!("Based on our help center: {}", help_articles[5].1);
-                link_url = "/help/account-billing";
-            } else if query.contains("api") || query.contains("advanced") {
-                reply = format!("Based on our help center: {}", help_articles[6].1);
-                link_url = "/api-docs";
+            for (kw, desc) in help_articles {
+                if query.contains(kw) {
+                    reply = format!("Based on our help center: {}", desc);
+                    if kw == "api" {
+                        link_url = "/api-docs";
+                    }
+                    break;
+                }
             }
 
             axum::Json(serde_json::json!({
@@ -3082,7 +3035,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
-
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
         let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(60));
@@ -5797,8 +5749,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             return (items || []).map(renderItem).join('');
                         }
 
-                        function syncStoreProfileToBuilder(draft) {
-                            currentStoreProfile = draft;
+                        function syncWebsiteDraftToBuilder(draft) {
+                            currentSiteDraft = draft;
                             if (draft && draft.pages && draft.pages.length > 0) {
                                 storefrontDraftState = draft.pages[0].blocks.map((block, index) => ({
                                     id: 'brand-toolbox-' + index,
@@ -5817,8 +5769,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             content.style.display = 'block';
                             const dna = toolbox.brand_dna || {};
                             const colors = dna.colors || [];
-                            const websiteBlocks = toolbox.store_profile && toolbox.store_profile.pages && toolbox.store_profile.pages[0]
-                                ? toolbox.store_profile.pages[0].blocks || []
+                            const websiteBlocks = toolbox.website_draft && toolbox.website_draft.pages && toolbox.website_draft.pages[0]
+                                ? toolbox.website_draft.pages[0].blocks || []
                                 : [];
 
                             content.innerHTML = `
@@ -5960,7 +5912,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (!response.ok) throw new Error('Brand toolbox generation failed');
                                 currentBrandToolbox = await response.json();
                                 renderBrandToolbox(currentBrandToolbox);
-                                syncStoreProfileToBuilder(currentBrandToolbox.store_profile);
+                                syncWebsiteDraftToBuilder(currentBrandToolbox.website_draft);
                                 publishBtn.disabled = !currentBrandToolbox.id;
                                 status.textContent = 'Brand toolbox ready.';
                             } catch (e) {
@@ -6271,7 +6223,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         path: '/',
                                         title: 'Home',
                                         blocks: draftBlocks,
-                                        seo_metadata: currentStoreProfile ? currentStoreProfile.pages[0].seo_metadata : {}
+                                        seo_metadata: currentSiteDraft ? currentSiteDraft.pages[0].seo_metadata : {}
                                     }]
                                 }
                             };
@@ -6964,7 +6916,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        let currentStoreProfile = null;
+                        let currentSiteDraft = null;
 
                         async function generateAI() {
                             const descInput = document.querySelector('#step-ai input');
@@ -6978,7 +6930,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (response.ok) {
                                     const data = await response.json();
-                                    currentStoreProfile = data;
+                                    currentSiteDraft = data;
 
                                     // Update storefrontDraftState
                                     if (data.pages && data.pages.length > 0) {
@@ -7479,7 +7431,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if(data.link.url === '/api-docs') {
                                         aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;api-docs-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;; return false;">Read the full article →</a>';
                                     } else {
-                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_self">Read the full article →</a>';
+                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_blank">Read the full article →</a>';
                                     }
                                 }
                                 messages.appendChild(aiMsg);

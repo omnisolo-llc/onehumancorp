@@ -2,9 +2,9 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
 // Mock next/navigation
-vi.mock('next/navigation', () => {
-  return {
-    useRouter: () => ({
+vi.mock('next/navigation', () => ({
+  useRouter() {
+    return {
       push: vi.fn(),
       replace: vi.fn(),
       prefetch: vi.fn(),
@@ -13,47 +13,23 @@ vi.mock('next/navigation', () => {
       refresh: vi.fn(),
       pathname: '/',
       query: {},
-    }),
-    usePathname: () => '/',
-    useSearchParams: () => new URLSearchParams(),
-    useParams: () => ({ articleId: 'getting-started', article: 'getting-started' }),
-    redirect: vi.fn(),
-    notFound: vi.fn(),
-  }
-})
-
-// Mock next/link
-vi.mock('next/link', () => {
-  return {
-    default: ({ children, href, ...rest }: any) => {
-      // @ts-ignore
-      const React = require('react')
-      return React.createElement('a', { href, ...rest }, children)
     }
-  }
-})
-
-// Mock next/image
-vi.mock('next/image', () => ({
-  default: (props: any) => {
-    // @ts-ignore
-    const React = require('react')
-    return React.createElement('img', props)
-  }
-}))
-
-// Mock dompurify
-vi.mock('dompurify', () => ({
-  default: {
-    sanitize: (html: string) => html
-  }
+  },
+  usePathname() {
+    return '/'
+  },
+  useSearchParams() {
+    return new URLSearchParams()
+  },
+  redirect: vi.fn(),
+  notFound: vi.fn(),
 }))
 
 // Mock next/server
 vi.mock('next/server', () => {
   return {
-    NextResponse: class extends Response {
-      static json(data: any, init?: any) {
+    NextResponse: {
+      json: (data: any, init?: any) => {
         return new Response(JSON.stringify(data), {
           ...init,
           headers: {
@@ -61,16 +37,14 @@ vi.mock('next/server', () => {
             'Content-Type': 'application/json',
           },
         })
-      }
-      static redirect(url: string, status?: number) {
+      },
+      redirect: (url: string, status?: number) => {
         return new Response(null, {
           status: status || 307,
           headers: { Location: url },
         })
-      }
-      static next() {
-        return new Response(null, { status: 200 })
-      }
+      },
+      next: () => new Response(null, { status: 200 }),
     },
     NextRequest: Request,
   }
@@ -104,21 +78,19 @@ if (typeof global.fetch === 'undefined') {
 }
 
 // Add standard window mocks
-if (typeof window !== 'undefined') {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation(query => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(), // deprecated
-      removeListener: vi.fn(), // deprecated
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  })
-}
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
 
 // IntersectionObserver mock
 class IntersectionObserver {
@@ -131,17 +103,13 @@ class IntersectionObserver {
   takeRecords() { return [] }
   unobserve() {}
 }
-
-if (typeof window !== 'undefined') {
-  Object.defineProperty(window, 'IntersectionObserver', {
-    writable: true,
-    configurable: true,
-    value: IntersectionObserver,
-  })
-}
-
+Object.defineProperty(window, 'IntersectionObserver', {
+  writable: true,
+  configurable: true,
+  value: IntersectionObserver,
+})
 // Add fetch mock if needed
-const originalFetch2 = global.fetch;
+const originalFetch = global.fetch;
 global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
     let urlString = '';
     if (typeof url === 'string') {
@@ -155,5 +123,5 @@ global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
     if (urlString.startsWith('/')) {
         url = 'http://localhost:3000' + urlString;
     }
-    return originalFetch2(url, init);
+    return originalFetch(url, init);
 };
