@@ -130,45 +130,71 @@ export function UnifiedAgentFeed() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {approvals.map((approval) => (
-          <div
-            key={approval.id}
-            className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
-          >
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                  {approval.department.replace('_', ' ')}
-                </span>
-                {approval.action_risk === 'HIGH' && (
-                  <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
-                    Requires Review
-                  </span>
-                )}
-              </div>
-              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                {approval.description}
-              </h3>
-            </div>
+        {approvals.map((approval) => {
+          const isAbandonedCart = approval.department === 'customer_success' && approval.payload?.feature_type === 'abandoned_cart';
 
-            <div className="flex gap-3 w-full mt-2">
-              <button
-                onClick={() => handleDecision(approval.id, false)}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Reject proposal"
-              >
-                Dismiss
-              </button>
-              <button
-                onClick={() => handleDecision(approval.id, true)}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
-                aria-label="Approve proposal"
-              >
-                Approve
-              </button>
+          return (
+            <div
+              key={approval.id}
+              className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+            >
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                    {approval.department.replace('_', ' ')}
+                  </span>
+                  {approval.action_risk === 'HIGH' && (
+                    <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
+                      Requires Review
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
+                  {approval.description}
+                </h3>
+              </div>
+
+              {isAbandonedCart && approval.payload && (
+                <div className="flex flex-col gap-3 mt-1 mb-2">
+                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700/50">
+                    <div>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.abandoned_carts_count}</span> abandoned carts
+                    </div>
+                    <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+                    <div>
+                      potential revenue <span className="font-semibold text-green-600 dark:text-green-400">${approval.payload.potential_revenue}</span>
+                    </div>
+                  </div>
+                  {approval.payload.draft_message && (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Draft Message</span>
+                      <p className="italic text-gray-700 dark:text-gray-300 p-3 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-md border border-indigo-100 dark:border-indigo-800/30 text-sm">
+                        "{approval.payload.draft_message}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                <button
+                  onClick={() => handleDecision(approval.id, false)}
+                  className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label={isAbandonedCart ? "Edit or decline proposal" : "Reject proposal"}
+                >
+                  {isAbandonedCart ? "Edit/Decline" : "Dismiss"}
+                </button>
+                <button
+                  onClick={() => handleDecision(approval.id, true)}
+                  className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
+                  aria-label="Approve proposal"
+                >
+                  Approve
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
