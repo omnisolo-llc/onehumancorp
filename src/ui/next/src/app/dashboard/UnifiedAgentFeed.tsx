@@ -135,10 +135,10 @@ export function UnifiedAgentFeed() {
             key={approval.id}
             className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
           >
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                  {approval.department.replace('_', ' ')}
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md flex items-center gap-1">
+                  {approval.department === 'The Ambassador' ? '✨ ' : ''}{approval.department.replace('_', ' ')}
                 </span>
                 {approval.action_risk === 'HIGH' && (
                   <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
@@ -146,22 +146,62 @@ export function UnifiedAgentFeed() {
                   </span>
                 )}
               </div>
-              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
+              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
                 {approval.description}
               </h3>
+
+              {approval.payload && typeof approval.payload === 'object' && (
+                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-black/20 p-3 rounded-[8px] border border-gray-200 dark:border-gray-700">
+                  {approval.payload.abandoned_carts_count && (
+                    <div className="flex justify-between mb-1">
+                      <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
+                      <span className="font-medium">{approval.payload.abandoned_carts_count}</span>
+                    </div>
+                  )}
+                  {approval.payload.potential_revenue && (
+                    <div className="flex justify-between mb-1">
+                      <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
+                      <span className="font-medium text-green-600 dark:text-green-400">${approval.payload.potential_revenue}</span>
+                    </div>
+                  )}
+                  {approval.payload.draft_message && (
+                    <div className="mt-2">
+                      <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Draft Message:</span>
+                      <div className="italic text-gray-600 dark:text-gray-400 border-l-2 border-indigo-300 pl-2">
+                        "{approval.payload.draft_message}"
+                      </div>
+                    </div>
+                  )}
+                  {approval.payload.suggested_price && (
+                    <div className="flex justify-between mb-1">
+                      <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
+                      <span className="font-medium">${approval.payload.suggested_price}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="flex gap-3 w-full mt-2">
+            <div className="flex gap-2 w-full mt-3">
               <button
                 onClick={() => handleDecision(approval.id, false)}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Reject proposal"
+                className="flex-[0.5] min-h-[44px] px-3 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+                aria-label="Decline proposal"
               >
-                Dismiss
+                Decline
+              </button>
+              <button
+                onClick={() => {
+                  alert("Edit functionality would open here");
+                }}
+                className="flex-[0.5] min-h-[44px] px-3 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+                aria-label="Edit proposal"
+              >
+                Edit
               </button>
               <button
                 onClick={() => handleDecision(approval.id, true)}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
+                className="flex-[1.5] min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md text-sm"
                 aria-label="Approve proposal"
               >
                 Approve
