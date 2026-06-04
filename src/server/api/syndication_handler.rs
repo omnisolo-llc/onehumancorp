@@ -52,3 +52,29 @@ pub fn router() -> Router {
         .route("/api/v1/syndication/toggle", post(toggle_syndication))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::Request;
+    use axum::body::Body;
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_toggle_syndication() {
+        let app = router();
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/syndication/toggle")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(r#"{"channel_id": "google_shopping", "enabled": true}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}
