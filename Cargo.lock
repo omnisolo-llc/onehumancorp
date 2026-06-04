@@ -5643,6 +5643,15 @@ dependencies = [
 [[package]]
 name = "ohc_builtin_agent"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "prost",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tracing",
+]
 
 [[package]]
 name = "oid-registry"
@@ -8232,14 +8241,44 @@ version = "0.1.0"
 [[package]]
 name = "server_common"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "server_config",
+ "sqlx",
+]
 
 [[package]]
 name = "server_config"
 version = "0.1.0"
+dependencies = [
+ "config",
+ "serde",
+ "tracing",
+]
 
 [[package]]
 name = "server_harness"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "regex",
+ "serde",
+ "serde_json",
+ "server_common",
+ "server_telemetry",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "tree-sitter",
+ "tree-sitter-bash",
+ "uuid",
+]
 
 [[package]]
 name = "server_integrations_acuity"
@@ -8284,6 +8323,14 @@ version = "0.1.0"
 [[package]]
 name = "server_integrations_daily"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+]
 
 [[package]]
 name = "server_integrations_easypost"
@@ -8336,6 +8383,13 @@ version = "0.1.0"
 [[package]]
 name = "server_integrations_pubsub"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "ohc_builtin_agent",
+ "prost",
+ "server_ohc",
+ "uuid",
+]
 
 [[package]]
 name = "server_integrations_razorpay"
@@ -8397,10 +8451,44 @@ version = "0.1.0"
 [[package]]
 name = "server_pricing"
 version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "dashmap 5.5.3",
+ "flate2",
+ "hex",
+ "image",
+ "opentelemetry",
+ "redis",
+ "serde",
+ "serde_json",
+ "server_harness",
+ "sha2",
+ "sqlx",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "server_telemetry"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "regex",
+ "serde",
+ "serde_json",
+ "server_common",
+ "server_config",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+]
 
 [[package]]
 name = "server_utils"

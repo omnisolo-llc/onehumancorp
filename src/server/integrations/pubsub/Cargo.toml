@@ -3,5 +3,12 @@ name = "server_integrations_pubsub"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies]
+async-trait = "0.1.89"
+ohc_builtin_agent = { path = "../../../agents/builtin" }
+server_ohc = { path = "../../ohc" }
+prost = { workspace = true }
+uuid = { version = "1", features = ["v4", "serde"] }
+
 [lib]
 path = "mod.rs"
