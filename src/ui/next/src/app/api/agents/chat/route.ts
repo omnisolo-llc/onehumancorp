@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse, NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';

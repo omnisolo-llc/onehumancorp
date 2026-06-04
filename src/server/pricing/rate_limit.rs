@@ -83,16 +83,8 @@ impl PlanTier {
             PlanTier::Business => 299.0,
         }
     }
-
-    pub fn get_prompt_cache_ttl(&self) -> std::time::Duration {
-        match self {
-            PlanTier::Free => std::time::Duration::from_secs(60 * 60), // 1 hour
-            PlanTier::Starter => std::time::Duration::from_secs(24 * 60 * 60), // 24 hours
-            PlanTier::Pro => std::time::Duration::from_secs(7 * 24 * 60 * 60), // 7 days
-            PlanTier::Business => std::time::Duration::from_secs(30 * 24 * 60 * 60), // 30 days
-        }
-    }
 }
+
 #[derive(Debug, Clone)]
 pub struct RateLimitStatus {
     pub is_allowed: bool,

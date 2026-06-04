@@ -12,14 +12,13 @@ export default function ChangelogPage() {
         "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
         "### 🛠️ Improvements",
         "- Faster loading times for product images.",
-        "- Simplified checkout process for your customers.",
-        "This is a plain paragraph test line."
+        "- Simplified checkout process for your customers."
       ]
     }
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[20px] saturate-200">
+    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">Release Notes & Changelog</h1>
         <div className="space-y-8">

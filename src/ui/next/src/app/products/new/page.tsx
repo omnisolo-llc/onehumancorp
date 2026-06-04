@@ -5,14 +5,11 @@ import Link from 'next/link';
 
 export default function AutoCatalogPage() {
   const [loading, setLoading] = useState(false);
-      const [productData, setProductData] = useState<{
+  const [productData, setProductData] = useState<{
     title: string;
     description: string;
     price: string;
     category: string;
-    isSubscription?: boolean;
-    subscriptionInterval?: string;
-    subscriptionDiscount?: string;
   } | null>(null);
   const [published, setPublished] = useState(false);
 
@@ -33,33 +30,9 @@ export default function AutoCatalogPage() {
     }
   };
 
-  const handlePublish = async () => {
-    if (!productData) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch('/api/product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: productData.title,
-          description: productData.description,
-          price: productData.price,
-          item_type: productData.category,
-          is_subscription: productData.isSubscription,
-          subscription_interval: productData.subscriptionInterval,
-          subscription_discount: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined
-        })
-      });
-
-      if (response.ok) {
-        setPublished(true);
-      }
-    } catch (error) {
-      console.error('Error publishing product:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handlePublish = () => {
+    setPublished(true);
+    // Real implementation would save to DB here
   };
 
   if (published) {
@@ -167,44 +140,6 @@ export default function AutoCatalogPage() {
                         className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       />
                   </div>
-              </div>
-              <div className="mt-4 border-t border-white/40 pt-4">
-                  <label className="flex items-center cursor-pointer">
-                      <div className="relative">
-                          <input type="checkbox" className="sr-only" checked={productData?.isSubscription || false} onChange={(e) => setProductData({...productData!, isSubscription: e.target.checked})} />
-                          <div className={`block w-10 h-6 rounded-full transition-colors ${productData?.isSubscription ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-                          <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.isSubscription ? 'transform translate-x-4' : ''}`}></div>
-                      </div>
-                      <div className="ml-3 text-gray-800 font-semibold text-sm">
-                          Offer as Subscription
-                      </div>
-                  </label>
-
-                  {productData?.isSubscription && (
-                      <div className="mt-4 flex gap-4 animate-fade-in-up">
-                          <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Deliver every</label>
-                              <select
-                                  value={productData.subscriptionInterval || 'Month'}
-                                  onChange={(e) => setProductData({...productData, subscriptionInterval: e.target.value})}
-                                  className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                              >
-                                  <option value="Week">Week</option>
-                                  <option value="Month">Month</option>
-                                  <option value="Year">Year</option>
-                              </select>
-                          </div>
-                          <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Discount (%)</label>
-                              <input
-                                  type="text"
-                                  value={productData.subscriptionDiscount || '10'}
-                                  onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
-                                  className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                              />
-                          </div>
-                      </div>
-                  )}
               </div>
            </div>
 

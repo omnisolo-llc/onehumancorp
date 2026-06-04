@@ -10,60 +10,6 @@ use tokio::sync::mpsc;
 use serde::Deserialize;
 use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use axum::{
-    extract::Request,
-    middleware::Next,
-    body::Body,
-};
-
-pub async fn validation_middleware(
-    req: Request,
-    next: Next,
-) -> Result<axum::response::Response, axum::response::Response> {
-    let (parts, body) = req.into_parts();
-    // Use a sensible limit of 5MB for the payload to prevent memory exhaustion DoS
-    let bytes = match axum::body::to_bytes(body, 5 * 1024 * 1024).await {
-        Ok(b) => b,
-        Err(_) => {
-            let error_res = serde_json::json!({ "error": "failed to read body or body too large" });
-            return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-        }
-    };
-
-    if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&bytes) {
-        if let Some(obj) = json.as_object() {
-            let required_keys = ["agent_id", "channel", "event_type", "data"];
-            let mut missing_keys = Vec::new();
-
-            // Check for presence of required keys
-            for key in required_keys.iter() {
-                if !obj.contains_key(*key) {
-                    missing_keys.push(*key);
-                }
-            }
-
-            if !missing_keys.is_empty() {
-                let error_res = serde_json::json!({ "error": format!("missing required keys: {:?}", missing_keys) });
-                return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-            }
-
-            // Check for EXACTLY four keys to prevent any additional payload fields, including deprecated ones
-            if obj.len() != 4 {
-                let error_res = serde_json::json!({ "error": "payload must contain exactly four root-level keys: agent_id, channel, event_type, data" });
-                return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-            }
-        } else {
-            let error_res = serde_json::json!({ "error": "json payload must be an object" });
-            return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-        }
-    } else {
-        let error_res = serde_json::json!({ "error": "invalid json payload" });
-        return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-    }
-
-    let req = Request::from_parts(parts, Body::from(bytes));
-    Ok(next.run(req).await)
-}
 
 #[derive(Deserialize)]
 pub struct ConnectQuery {

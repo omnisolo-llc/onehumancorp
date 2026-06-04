@@ -33,67 +33,11 @@ export default function WebsiteBuilderPage() {
 
   const [liveUrl, setLiveUrl] = useState("");
 
-
-    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
-  const [saveMessage, setSaveMessage] = useState("");
 
-  useEffect(() => {
-    // Load from backend for cross-device resume
-    const loadSavedState = async () => {
-      try {
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-        const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-        const res = await fetch('/api/onboarding/state', {
-          headers: {
-            'x-tenant-id': tenant,
-            'x-user-id': user
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Object.keys(data).length > 0 && data.wizardState) {
-            useWebsiteBuilderStore.setState(data.wizardState);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load saved state', e);
-      }
-    };
-    loadSavedState();
-  }, []);
-
-  const handleSaveDraft = async () => {
-    setStatus("generating"); // Just show some loading state or disable button
-    try {
-      const state = useWebsiteBuilderStore.getState();
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
-      const res = await fetch('/api/onboarding/state', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenant,
-          'x-user-id': user
-        },
-        body: JSON.stringify({
-          wizardState: state
-        })
-      });
-
-      if (res.ok) {
-        setSaveMessage("Draft Saved!");
-        setTimeout(() => setSaveMessage(""), 3000);
-      }
-    } catch (e) {
-      console.error('Failed to save draft', e);
-    } finally {
-      setStatus("idle");
-    }
-  };
-
+  // Wizard state bindings
 
 
 
@@ -345,21 +289,7 @@ export default function WebsiteBuilderPage() {
               </button>
             )}
 
-
-            <div className="absolute top-6 right-8 flex items-center gap-4 z-10">
-              {saveMessage && <span className="text-[#34C759] text-sm font-semibold animate-fade-in">{saveMessage}</span>}
-              {wizardStep !== 0 && wizardStep !== 'instant-build' && (
-                <button
-                  onClick={handleSaveDraft}
-                  className="text-[#0071E3] font-medium text-sm hover:underline transition-all bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
-                >
-                  Save Draft
-                </button>
-              )}
-            </div>
-
             <div className={`animate-fade-in ${wizardStep !== 0 ? 'mt-10' : 'mt-4'}`} style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-
 
               {wizardStep === 0 && (
                 <>
@@ -374,7 +304,7 @@ export default function WebsiteBuilderPage() {
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep(1)}
                     >
-                      Start My Business
+                      Start My Business Next
                     </button>
 
                     <button
@@ -428,8 +358,7 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setBio(e.target.value)}
                     />
                     <button
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(3)}
                     >
                       Next
@@ -491,8 +420,7 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setProductPrice(e.target.value)}
                     />
                     <button
-                      disabled={!productName.trim() || !productPrice.trim()}
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(5)}
                     >
                       Next
@@ -550,8 +478,7 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setUserPassword(e.target.value)}
                     />
                     <button
-                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(7)}
                     >
                       Next

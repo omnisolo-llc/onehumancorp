@@ -1,114 +1,262 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('OnboardingWizard CUJ', () => {
+test.describe('Onboarding Wizard Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear local storage to ensure fresh state
-    await page.addInitScript(() => {
-      window.localStorage.clear();
+    // Mock the backend API calls
+    await page.route('**/api/onboarding/intake', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          business_type: "Bakery",
+          business_name: "Maya Bakery",
+          categories: ["food"],
+          initial_products: [{ name: "Cake", price: "20.00" }]
+        })
+      });
     });
-  });
 
-  test('Maya the Baker can complete the onboarding flow', async ({ page }) => {
-    // Mock the draft API call
-    await page.route('/api/onboarding/draft', async route => {
-      await route.fulfill({
+    await page.route('**/api/onboarding/start', route => {
+      // Simulate delay for loading screen
+      setTimeout(() => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: "Your business has been successfully launched." })
+        });
+      }, 1000);
+    });
+
+    await page.route('**/api/onboarding/state', route => {
+      route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({})
       });
     });
+  });
 
-    // Mock the intake API call (triggered when moving from Step 1 to Step 2)
-    await page.route('/api/onboarding/intake', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          business_type: 'Bakery',
-          business_name: 'Maya Bakery',
-          categories: ['food', 'baking'],
-          initial_products: [{ name: 'Custom Vegan Cake', price: '45.00' }]
-        })
-      });
-    });
+  test('completes full onboarding flow', async ({ page }) => {
+    // Mock the APIs
+    await page.route('**/api/onboarding/intake', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({
+        business_type: 'Bakery',
+        business_name: 'Maya Bakery',
+        categories: ['food'],
+        initial_products: [{ name: 'Cake', price: '20' }]
+      })
+    }));
 
-    // Mock the start API call (triggered when moving from Step 3 to Step 4/5)
-    await page.route('/api/onboarding/start', async route => {
-      // Simulate network delay for the loading animation
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          message: "Your business has been successfully launched."
-        })
-      });
-    });
+    await page.route('**/api/onboarding/start', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({ message: 'Success!' })
+    }));
 
-    // Navigate to the onboarding page
-    await page.goto('/onboarding');
+    // Navigate to onboarding page
+    await page.goto('http://localhost:3000/onboarding');
 
-    // --- Step 1: Chat/Intake ---
-    // Wait for the first prompt
-    await expect(page.getByText('Tell us about your business')).toBeVisible();
+    // Step 1: Business Name
+    await expect(page.locator('text="Tell us about your business"')).toBeVisible();
+    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('button:has-text("Next")').click();
 
-    // Fill in the business name (Chat Step 1)
-    const nameInput = page.getByPlaceholder(/Maya's Custom Cakes/i);
-    await expect(nameInput).toBeVisible();
-    await nameInput.fill('Maya Bakery');
-    await page.getByRole('button', { name: 'Next' }).click();
+    // Step 2: What do you sell
+    await expect(page.locator('text="What do you sell?"')).toBeVisible();
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom vegan cakes in Portland, OR...');
+    await page.locator('button:has-text("Next")').click();
 
-    // Fill in the description (Chat Step 2)
-    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
-    await expect(sellInput).toBeVisible();
-    await sellInput.fill('I bake custom vegan cakes for weddings and parties.');
-    await page.getByRole('button', { name: 'Next' }).click();
+    // Step 3: Location
+    await expect(page.locator('text="Where are you located?"')).toBeVisible();
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
 
-    // Fill in the location (Chat Step 3)
-    const locInput = page.getByPlaceholder(/Portland, OR/i);
-    await expect(locInput).toBeVisible();
-    await locInput.fill('Seattle, WA');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
 
-    // --- Step 2: Review Details ---
-    await expect(page.getByText('Review Details')).toBeVisible();
+    // 2. Wait for Review Details Step
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
 
-    // Verify AI extracted details correctly
-    await expect(page.getByDisplayValue('Maya Bakery')).toBeVisible();
-    await expect(page.getByDisplayValue('Bakery')).toBeVisible();
-    await expect(page.getByDisplayValue('Custom Vegan Cake')).toBeVisible();
-    await expect(page.getByDisplayValue('45.00')).toBeVisible();
+    // Continue to next step
+    await page.locator('button:has-text("Continue")').click();
 
-    // Maya decides to proceed
-    await page.getByRole('button', { name: 'Continue' }).click();
+    // 3. Wait for Style & Team Step
+    await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
 
-    // --- Step 3: Style & Team ---
-    await expect(page.getByText('Style & Team')).toBeVisible();
+    // Select Web Address and Template
+    await expect(page.locator('text="Web Address"')).toBeVisible();
+    await page.locator('text="Custom Domain"').click();
+    await page.locator('text="Classic"').click();
 
-    // Select website template
-    await page.getByText('Modern').click();
+    // Launch
+    const [response] = await Promise.all([
+      page.waitForResponse('**/api/onboarding/start'),
+      page.locator('button:has-text("Launch Store")').click()
+    ]);
 
-    // Check auto respond toggle
-    const toggle = page.getByRole('checkbox');
-    await expect(toggle).toBeChecked();
+    // 5. Live Screen
+    await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text="Success!"')).toBeVisible();
+    await expect(page.locator('text="my-business.ohc.store"')).toBeVisible();
 
-    // Account Setup
-    await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
-    await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
+    const dashboardLink = page.locator('a:has-text("Go to Dashboard")');
+    await expect(dashboardLink).toBeVisible();
+    await expect(dashboardLink).toHaveAttribute('href', '/dashboard');
 
-    // Launch store
-    await page.getByRole('button', { name: 'Launch Store' }).click();
+    await dashboardLink.click();
+    await page.waitForURL('**/dashboard');
 
-    // --- Step 4 & 5: Loading and Success ---
-    // Wait for Step 4 loading text temporarily
-    await expect(page.getByText('Building Your Business...')).toBeVisible();
+    await expect(page.locator('text="Morning Briefing"')).toBeVisible();
+    await expect(page.locator('a:has-text("Add your first product")')).toBeVisible();
+  });
 
-    // Wait for the success screen (Step 5)
-    await expect(page.getByText("You're Live!")).toBeVisible();
-    await expect(page.getByText('Your business has been successfully launched.')).toBeVisible();
+  test('Maya the Home Baker Persona CUJ', async ({ page }) => {
+    // This test simulates Maya, a home baker, setting up her custom cake business.
+    // Business: "Maya's Dream Cakes"
+    // Sell: "Custom vegan and gluten-free cakes for weddings and birthdays."
+    // Location: "Portland, OR"
 
-    // Verify links to dashboard and storefront are present
-    await expect(page.getByRole('link', { name: 'Go to Dashboard' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Preview Storefront' })).toBeVisible();
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill("Maya's Dream Cakes");
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What do you sell
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Custom vegan and gluten-free cakes for weddings and birthdays.');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Review Details
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('input[value="Maya Bakery"]')).toBeVisible();
+
+    // Continue
+    await page.locator('button:has-text("Continue")').click();
+
+    // Style & Team
+    await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
+    await page.locator('text="Minimal"').click();
+
+    // Enable Support Agent explicitly
+    const supportAgent = page.locator('text="Support Agent"');
+    await supportAgent.click();
+
+    // Launch
+    await page.locator('button:has-text("Launch Store")').click();
+
+    // Verification
+    await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text="Your business has been successfully launched."')).toBeVisible();
+  });
+
+  test('fails gracefully when intake API returns error', async ({ page }) => {
+    // Mock intake API to return 500 error
+    await page.route('**/api/onboarding/intake', route => route.fulfill({
+      status: 500,
+      body: JSON.stringify({ error: 'Internal Server Error' })
+    }));
+
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What do you sell
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Error should be shown on the same step
+    await expect(page.locator('text="Failed to process business details"')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Where are you located?"')).toBeVisible();
+  });
+
+  test('allows user to toggle auto-respond and select AI agents', async ({ page }) => {
+    // Mock the APIs
+    await page.route('**/api/onboarding/intake', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({
+        business_type: 'Bakery',
+        business_name: 'Maya Bakery',
+        categories: ['food'],
+        initial_products: [{ name: 'Cake', price: '20' }]
+      })
+    }));
+
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Step 1: Business Name
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What do you sell
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
+
+    // Click Generate
+    await page.locator('button:has-text("Generate My Business")').click();
+
+    // Review Details Step
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
+    await page.locator('button:has-text("Continue")').click();
+
+    // Style & Team Step
+    await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
+
+    // Ensure Sales Agent is selectable
+    const salesAgent = page.locator('text="Sales Agent"');
+    await expect(salesAgent).toBeVisible();
+    await salesAgent.click();
+
+    // Ensure the toggle works
+    const toggle = page.locator('label:has-text("Allow AI to Auto-Respond")');
+    await expect(toggle).toBeVisible();
+    await toggle.click(); // Uncheck
+    await toggle.click(); // Check again
+
+    // Verify template selection
+    await page.locator('text="Minimal"').click();
+  });
+
+  test('allows user to save draft', async ({ page }) => {
+    // Mock the APIs
+    await page.route('**/api/onboarding/draft', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({})
+    }));
+
+    await page.route('**/api/onboarding/state', route => route.fulfill({
+      status: 200,
+      body: JSON.stringify({})
+    }));
+
+    await page.goto('http://localhost:3000/onboarding');
+
+    // Enter Business Name
+    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+
+    // Click Save Draft
+    const saveDraftBtn = page.locator('button:has-text("Save Draft")').first();
+    await expect(saveDraftBtn).toBeVisible();
+    await saveDraftBtn.click();
+
+    // Verify success message
+    await expect(page.locator('text="Draft Saved!"')).toBeVisible({ timeout: 5000 });
   });
 });

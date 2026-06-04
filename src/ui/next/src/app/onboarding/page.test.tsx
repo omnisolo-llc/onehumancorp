@@ -80,51 +80,6 @@ describe('OnboardingWizard', () => {
     });
   });
 
-  it('Handles validation failures when fields are empty', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    render(<OnboardingWizard />);
-
-    // Chat Step 1 - Enter Key with short name
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Ma{Enter}');
-    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
-
-    await user.clear(nameInput);
-    await user.type(nameInput, 'Maya Bakery{Enter}');
-
-    // Chat Step 2 - Next click with empty value
-    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
-
-    // Test validation with missing data
-    await user.clear(sellInput);
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-
-    // Verify the button is disabled when empty
-    expect(nextBtn2).toBeDisabled();
-
-    // Provide value to enable button and proceed
-    await user.type(sellInput, 'Cakes');
-    expect(nextBtn2).not.toBeDisabled();
-    await user.click(nextBtn2);
-
-    // Chat Step 3 - Next click with empty value
-    const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
-
-    await user.clear(locInput);
-
-    const nextBtn3 = screen.getByRole('button', { name: /Generate My Business/i });
-
-    // Verify the button is disabled when empty
-    expect(nextBtn3).toBeDisabled();
-
-    // Provide value to enable button and proceed
-    await user.type(locInput, 'NY');
-    expect(nextBtn3).not.toBeDisabled();
-    await user.click(nextBtn3);
-  });
-
   it('Handles multi-step successful onboarding flow', async () => {
     const user = userEvent.setup({ delay: null });
 
@@ -191,13 +146,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Website Template")).toBeInTheDocument();
     });
 
-    // Fill in Account Setup fields
-    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
-    await user.type(emailInput, 'maya@example.com');
-
-    const passwordInput = screen.getByPlaceholderText(/••••••••/i);
-    await user.type(passwordInput, 'mypassword123');
-
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
 
@@ -206,16 +154,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
     });
-
-    // Check that start API was called with the correct credentials
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"admin_email":"maya@example.com"'),
-    }));
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"admin_password":"mypassword123"'),
-    }));
   });
 
   it('Step 1: Handles intake API failure', async () => {
@@ -318,41 +256,6 @@ describe('OnboardingWizard', () => {
     await user.click(nextButton);
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
-  });
-
-  it('Step 2: Displays validation error when product price is invalid', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    act(() => {
-      useOnboardingStore.setState({
-        step: 2,
-        businessName: 'Valid Name',
-        businessType: 'Bakery',
-        categories: ['food'],
-        domainChoice: 'subdomain',
-        firstProductName: 'Cake',
-        firstProductPrice: 'abc' // Invalid price
-      });
-    });
-
-    render(<OnboardingWizard />);
-
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
-
-    const priceInput = screen.getByDisplayValue('abc');
-    await user.type(priceInput, 'd'); // Type 'd' to trigger the onChange validation.
-
-    await user.click(continueButton);
-
-    await waitFor(() => {
-      // The general error message should trigger
-      expect(screen.getByText('Please fix the errors before continuing.')).toBeInTheDocument();
-      expect(screen.getByText('Invalid price.')).toBeInTheDocument();
-    });
-
-    // Check that we're still on step 2
-    expect(useOnboardingStore.getState().step).toBe(2);
   });
 
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {

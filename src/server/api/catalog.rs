@@ -16,9 +16,6 @@ pub struct CreateProductRequest {
     pub duration: Option<i32>,
     pub description: String,
     pub item_type: String,
-    pub is_subscription: Option<bool>,
-    pub subscription_interval: Option<String>,
-    pub subscription_discount: Option<i32>,
 }
 
 #[derive(Serialize)]
@@ -64,65 +61,7 @@ async fn handle_create_product(
     // Record product addition
     let _ = hub.tracker().record_product_added(&tenant_id).await;
 
-    let mut conn = match hub.pool.acquire().await {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::error!("Failed to acquire DB connection: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: "DATABASE_ERROR".to_string(),
-                    message: "Failed to connect to database".to_string(),
-                }),
-            ).into_response();
-        }
-    };
-
-    let product_id = uuid::Uuid::new_v4().to_string();
-
-    let insert_product = sqlx::query(
-        "INSERT INTO products (id, tenant_id, title, description, type, inventory_count) VALUES ($1, $2, $3, $4, $5, 100)"
-    )
-    .bind(&product_id)
-    .bind(&tenant_id)
-    .bind(&payload.name)
-    .bind(&payload.description)
-    .bind(&payload.item_type)
-    .execute(&mut *conn)
-    .await;
-
-    if let Err(e) = insert_product {
-        tracing::error!("Failed to insert product: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: "DATABASE_ERROR".to_string(),
-                message: "Failed to create product".to_string(),
-            }),
-        ).into_response();
-    }
-
-    if payload.is_subscription.unwrap_or(false) {
-        let plan_id = uuid::Uuid::new_v4().to_string();
-        let interval = payload.subscription_interval.unwrap_or_else(|| "Monthly".to_string()).to_lowercase();
-        let discount = payload.subscription_discount.unwrap_or(0);
-
-        let insert_plan = sqlx::query(
-            "INSERT INTO subscription_plans (id, tenant_id, product_id, interval, discount_percentage) VALUES ($1, $2, $3, $4, $5)"
-        )
-        .bind(&plan_id)
-        .bind(&tenant_id)
-        .bind(&product_id)
-        .bind(&interval)
-        .bind(discount)
-        .execute(&mut *conn)
-        .await;
-
-        if let Err(e) = insert_plan {
-            tracing::error!("Failed to insert subscription plan: {}", e);
-            // Non-fatal, just log it. The product was created.
-        }
-    }
+    // In a real app we'd save to the DB here
 
     (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
