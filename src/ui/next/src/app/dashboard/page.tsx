@@ -73,6 +73,7 @@ export default function Dashboard() {
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showMilestoneBanner, setShowMilestoneBanner] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
@@ -119,6 +120,12 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
+
+        if (metricsData.active_customers !== undefined && metricsData.active_customers !== null) {
+          const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
+          if (!dismissed) setShowMilestoneBanner(true);
+        }
+
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -143,6 +150,21 @@ export default function Dashboard() {
     () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length,
     [supply.raw_materials],
   );
+
+
+  const dismissMilestoneBanner = () => {
+    setShowMilestoneBanner(false);
+    localStorage.setItem('milestone_banner_dismissed', 'true');
+  };
+
+  const handleMilestoneShare = () => {
+    const currentTenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    const text = encodeURIComponent(`I just hit a new milestone on One Human Corp! 🚀 My small business is growing. Launch your own business today: ohc://join?ref=${currentTenantId}`);
+    const url = encodeURIComponent(window.location.origin + '/join?ref=' + currentTenantId);
+    console.log(`https://twitter.com/intent/tweet?text=${text}&url=${url}`);
+    dismissMilestoneBanner();
+    alert('Awesome! Your 7-day Pro Trial Extension has been unlocked.');
+  };
 
   const statusItems = [
     { label: "API", value: error ? "Degraded" : "Online", tone: error ? "bad" as const : "good" as const },
@@ -197,6 +219,24 @@ export default function Dashboard() {
       <div className="mb-6">
         <OneTapReferral tenantId={tenantId()} source="dashboard" />
       </div>
+
+
+        {showMilestoneBanner && (
+          <div className="mb-6 mx-4 md:mx-8 overflow-hidden rounded-xl p-4 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderLeft: '8px solid #f6d365' }}>
+            <div className="flex items-center gap-4">
+              <div>
+                <h3 className="m-0 text-lg font-bold">Milestone Unlocked!</h3>
+                <p className="m-0 text-sm opacity-90">You've reached {metrics.active_customers} active customers. Share your store's success to earn a free month of Pro!</p>
+              </div>
+            </div>
+            <button
+              onClick={handleMilestoneShare}
+              className="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold shadow-sm transition-colors hover:bg-orange-50 text-indigo-600"
+            >
+              Share &amp; Claim Reward
+            </button>
+          </div>
+        )}
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         <section>
