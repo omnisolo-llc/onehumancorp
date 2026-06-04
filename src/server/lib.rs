@@ -3057,6 +3057,11 @@ async fn create_ui_bom_item_handler(
         ),
     );
     let app = axum::Router::new()
+        .route("/api/staff_mesh/schedule/generate", axum::routing::post(crate::api::staff_mesh::generate_schedule_handler).with_state(db.clone()))
+        .route("/api/staff_mesh/payroll/draft", axum::routing::post(crate::api::staff_mesh::draft_payroll_handler).with_state(db.clone()))
+        .route("/api/staff_mesh/staff", axum::routing::post(crate::api::staff_mesh::create_staff_handler).get(crate::api::staff_mesh::get_staff_handler).with_state(db.clone()))
+        .route("/api/staff_mesh/staff/:id/pin", axum::routing::post(crate::api::staff_mesh::set_staff_pin_handler).with_state(db.clone()))
+        .route("/api/staff_mesh/timecard", axum::routing::post(crate::api::staff_mesh::sync_timecard_handler).with_state(db.clone()))
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;

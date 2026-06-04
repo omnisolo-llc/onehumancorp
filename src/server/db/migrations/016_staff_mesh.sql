@@ -33,3 +33,41 @@ DROP POLICY IF EXISTS tenant_isolation_ohc_timecard_event ON ohc_timecard_event;
 CREATE POLICY tenant_isolation_ohc_timecard_event
 ON ohc_timecard_event
 USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+-- Added for Issue #23771: Universal Autonomous Staff Scheduling and Payroll Mesh
+CREATE TABLE IF NOT EXISTS ohc_shift (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    staff_id TEXT NOT NULL,
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    status TEXT NOT NULL DEFAULT 'DRAFT', -- DRAFT, PUBLISHED, COMPLETED
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ohc_shift_tenant_staff
+ON ohc_shift(tenant_id, staff_id);
+ALTER TABLE ohc_shift ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_ohc_shift ON ohc_shift;
+CREATE POLICY tenant_isolation_ohc_shift
+ON ohc_shift
+USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+
+CREATE TABLE IF NOT EXISTS ohc_payroll_draft (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    staff_id TEXT NOT NULL,
+    period_start TIMESTAMPTZ NOT NULL,
+    period_end TIMESTAMPTZ NOT NULL,
+    total_hours NUMERIC NOT NULL,
+    gross_pay NUMERIC NOT NULL,
+    status TEXT NOT NULL DEFAULT 'DRAFT', -- DRAFT, APPROVED, PAID
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ohc_payroll_draft_tenant
+ON ohc_payroll_draft(tenant_id);
+ALTER TABLE ohc_payroll_draft ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_ohc_payroll_draft ON ohc_payroll_draft;
+CREATE POLICY tenant_isolation_ohc_payroll_draft
+ON ohc_payroll_draft
+USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));

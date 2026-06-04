@@ -87,7 +87,7 @@ pub async fn create_staff_handler(
     match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
             let res = sqlx::query(
-                "INSERT INTO staff_members (id, tenant_id, name, phone_number, role) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO ohc_staff_member (id, tenant_id, name, phone_number, role) VALUES (?, ?, ?, ?, ?)",
             )
             .bind(&staff_id)
             .bind(&tenant_id)
@@ -105,7 +105,7 @@ pub async fn create_staff_handler(
         }
         crate::db::DbStore::Postgres => {
              let res = sqlx::query(
-                "INSERT INTO staff_members (id, tenant_id, name, phone_number, role) VALUES ($1, $2, $3, $4, $5)",
+                "INSERT INTO ohc_staff_member (id, tenant_id, name, phone_number, role) VALUES ($1, $2, $3, $4, $5)",
             )
             .bind(&staff_id)
             .bind(&tenant_id)
@@ -140,7 +140,7 @@ pub async fn set_staff_pin_handler(
     match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
             let res = sqlx::query(
-                "UPDATE staff_members SET pin_hash = ? WHERE id = ? AND tenant_id = ?",
+                "UPDATE ohc_staff_member SET pin_hash = ? WHERE id = ? AND tenant_id = ?",
             )
             .bind(&pin_hash)
             .bind(&id)
@@ -156,7 +156,7 @@ pub async fn set_staff_pin_handler(
         }
         crate::db::DbStore::Postgres => {
             let res = sqlx::query(
-                "UPDATE staff_members SET pin_hash = $1 WHERE id = $2 AND tenant_id = $3",
+                "UPDATE ohc_staff_member SET pin_hash = $1 WHERE id = $2 AND tenant_id = $3",
             )
             .bind(&pin_hash)
             .bind(&id)
@@ -184,7 +184,7 @@ pub async fn get_staff_handler(
     let staff: Vec<StaffMember> = match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
             let rows: Result<Vec<(String, String, String, String, String)>, _> = sqlx::query_as(
-                "SELECT id, name, phone_number, role, status FROM staff_members WHERE tenant_id = ?",
+                "SELECT id, name, phone_number, role, status FROM ohc_staff_member WHERE tenant_id = ?",
             )
             .bind(&tenant_id)
             .fetch_all(pool)
@@ -196,7 +196,7 @@ pub async fn get_staff_handler(
         }
         crate::db::DbStore::Postgres => {
             let rows: Result<Vec<(String, String, String, String, String)>, _> = sqlx::query_as(
-                "SELECT id, name, phone_number, role, status FROM staff_members WHERE tenant_id = $1",
+                "SELECT id, name, phone_number, role, status FROM ohc_staff_member WHERE tenant_id = $1",
             )
             .bind(&tenant_id)
             .fetch_all(&db.pool)
@@ -222,7 +222,7 @@ pub async fn sync_timecard_handler(
         match &db.store {
             crate::db::DbStore::Sqlite(pool) => {
                 let _ = sqlx::query(
-                    "INSERT INTO timecard_events (id, tenant_id, staff_id, event_type, offline_timestamp) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, offline_timestamp) VALUES (?, ?, ?, ?, ?)",
                 )
                 .bind(&event.id)
                 .bind(&tenant_id)
@@ -234,7 +234,7 @@ pub async fn sync_timecard_handler(
             }
             crate::db::DbStore::Postgres => {
                 let _ = sqlx::query(
-                    "INSERT INTO timecard_events (id, tenant_id, staff_id, event_type, offline_timestamp) VALUES ($1, $2, $3, $4, $5::timestamp)",
+                    "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, offline_timestamp) VALUES ($1, $2, $3, $4, $5::timestamp)",
                 )
                 .bind(&event.id)
                 .bind(&tenant_id)
@@ -274,7 +274,7 @@ mod tests {
 
         // Setup schema
         sqlx::query(
-            "CREATE TABLE staff_members (
+            "CREATE TABLE ohc_staff_member (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 name TEXT NOT NULL,
@@ -290,7 +290,7 @@ mod tests {
         ).execute(&sqlite_pool).await.unwrap();
 
         sqlx::query(
-            "CREATE TABLE timecard_events (
+            "CREATE TABLE ohc_timecard_event (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 staff_id TEXT NOT NULL,
@@ -307,7 +307,7 @@ mod tests {
 
         let app = axum::Router::new()
             .route("/staff", axum::routing::post(create_staff_handler).get(get_staff_handler))
-            .route("/staff/:id/pin", axum::routing::post(set_staff_pin_handler))
+            .route("/staff/{id}/pin", axum::routing::post(set_staff_pin_handler))
             .route("/timecard", axum::routing::post(sync_timecard_handler))
             .with_state(db_arc);
 
@@ -382,6 +382,237 @@ mod tests {
             .header("content-type", "application/json")
             .header("x-spiffe-id", "spiffe://onehumancorp.io/test_org/test_tenant")
             .body(Body::from(timecard_payload.to_string()))
+            .unwrap();
+
+        let response = app.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct GenerateScheduleRequest {
+    pub start_date: String,
+    pub end_date: String,
+}
+
+#[derive(Serialize)]
+pub struct GenerateScheduleResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct DraftPayrollRequest {
+    pub period_start: String,
+    pub period_end: String,
+}
+
+#[derive(Serialize)]
+pub struct DraftPayrollResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn generate_schedule_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+    Json(payload): Json<GenerateScheduleRequest>,
+) -> impl IntoResponse {
+    let tenant_id = get_tenant_id(&headers);
+
+    // AI Operations Agent Logic (Simplified for implementation)
+    // In reality, this would trigger an async job or call an LLM.
+    // Here we simulate generating a draft shift.
+
+    let shift_id = format!("shift_{}", Uuid::new_v4());
+
+    match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+             // Just a dummy staff ID for the simulation
+            let staff_id = "staff_auto_generated";
+            let _ = sqlx::query(
+                "INSERT INTO ohc_shift (id, tenant_id, staff_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'DRAFT')",
+            )
+            .bind(&shift_id)
+            .bind(&tenant_id)
+            .bind(&staff_id)
+            .bind(&payload.start_date) // Expecting a parseable date string
+            .bind(&payload.end_date)
+            .execute(pool)
+            .await;
+        }
+        crate::db::DbStore::Postgres => {
+            let staff_id = "staff_auto_generated";
+            let _ = sqlx::query(
+                "INSERT INTO ohc_shift (id, tenant_id, staff_id, start_time, end_time, status) VALUES ($1, $2, $3, $4::timestamp, $5::timestamp, 'DRAFT')",
+            )
+            .bind(&shift_id)
+            .bind(&tenant_id)
+            .bind(&staff_id)
+            .bind(&payload.start_date)
+            .bind(&payload.end_date)
+            .execute(&db.pool)
+            .await;
+        }
+    }
+
+    (axum::http::StatusCode::OK, Json(GenerateScheduleResponse { success: true, message: "Schedule generated".to_string() })).into_response()
+}
+
+pub async fn draft_payroll_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+    Json(payload): Json<DraftPayrollRequest>,
+) -> impl IntoResponse {
+    let tenant_id = get_tenant_id(&headers);
+
+    // AI Finance Agent Logic
+    // In reality, this would aggregate timecards and calculate wages.
+
+    let draft_id = format!("payroll_{}", Uuid::new_v4());
+
+    match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+            let staff_id = "staff_auto_generated";
+            let total_hours = 40.0;
+            let gross_pay = 600.0;
+            let _ = sqlx::query(
+                "INSERT INTO ohc_payroll_draft (id, tenant_id, staff_id, period_start, period_end, total_hours, gross_pay, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT')",
+            )
+            .bind(&draft_id)
+            .bind(&tenant_id)
+            .bind(&staff_id)
+            .bind(&payload.period_start)
+            .bind(&payload.period_end)
+            .bind(total_hours)
+            .bind(gross_pay)
+            .execute(pool)
+            .await;
+        }
+        crate::db::DbStore::Postgres => {
+            let staff_id = "staff_auto_generated";
+            let total_hours = 40.0;
+            let gross_pay = 600.0;
+            let _ = sqlx::query(
+                "INSERT INTO ohc_payroll_draft (id, tenant_id, staff_id, period_start, period_end, total_hours, gross_pay, status) VALUES ($1, $2, $3, $4::timestamp, $5::timestamp, $6, $7, 'DRAFT')",
+            )
+            .bind(&draft_id)
+            .bind(&tenant_id)
+            .bind(&staff_id)
+            .bind(&payload.period_start)
+            .bind(&payload.period_end)
+            .bind(total_hours)
+            .bind(gross_pay)
+            .execute(&db.pool)
+            .await;
+        }
+    }
+
+    (axum::http::StatusCode::OK, Json(DraftPayrollResponse { success: true, message: "Payroll drafted".to_string() })).into_response()
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+    };
+    use tower::ServiceExt;
+    use crate::db::{DB, DbStore};
+
+    #[tokio::test]
+    async fn test_generate_schedule() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let db = DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        };
+
+        sqlx::query(
+            "CREATE TABLE ohc_shift (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                staff_id TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'DRAFT',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );"
+        ).execute(&sqlite_pool).await.unwrap();
+
+        let db_arc = Arc::new(db);
+
+        let app = axum::Router::new()
+            .route("/schedule/generate", axum::routing::post(generate_schedule_handler))
+            .with_state(db_arc);
+
+        let payload = serde_json::json!({
+            "start_date": "2024-01-01T00:00:00Z",
+            "end_date": "2024-01-07T23:59:59Z"
+        });
+
+        let request = Request::builder()
+            .method("POST")
+            .uri("/schedule/generate")
+            .header("content-type", "application/json")
+            .header("x-spiffe-id", "spiffe://onehumancorp.io/test_org/test_tenant")
+            .body(Body::from(payload.to_string()))
+            .unwrap();
+
+        let response = app.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_draft_payroll() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let db = DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        };
+
+        sqlx::query(
+            "CREATE TABLE ohc_payroll_draft (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                staff_id TEXT NOT NULL,
+                period_start TEXT NOT NULL,
+                period_end TEXT NOT NULL,
+                total_hours NUMERIC NOT NULL,
+                gross_pay NUMERIC NOT NULL,
+                status TEXT NOT NULL DEFAULT 'DRAFT',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );"
+        ).execute(&sqlite_pool).await.unwrap();
+
+        let db_arc = Arc::new(db);
+
+        let app = axum::Router::new()
+            .route("/payroll/draft", axum::routing::post(draft_payroll_handler))
+            .with_state(db_arc);
+
+        let payload = serde_json::json!({
+            "period_start": "2024-01-01T00:00:00Z",
+            "period_end": "2024-01-07T23:59:59Z"
+        });
+
+        let request = Request::builder()
+            .method("POST")
+            .uri("/payroll/draft")
+            .header("content-type", "application/json")
+            .header("x-spiffe-id", "spiffe://onehumancorp.io/test_org/test_tenant")
+            .body(Body::from(payload.to_string()))
             .unwrap();
 
         let response = app.clone().oneshot(request).await.unwrap();
