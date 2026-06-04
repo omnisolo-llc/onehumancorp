@@ -19,6 +19,7 @@ pub struct Order {
     pub customer_name: String,
     pub items: Vec<String>,
     pub organization_id: String,
+    pub payment_source: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -49,6 +50,7 @@ where
             customer_name: "John Doe".to_string(),
             items: vec!["2 Summer Dresses".to_string()],
             organization_id: "default".to_string(),
+            payment_source: None,
         },
         Order {
             id: "ord-2".to_string(),
@@ -57,6 +59,7 @@ where
             customer_name: "Jane Smith".to_string(),
             items: vec!["Chocolate Cake".to_string()],
             organization_id: "default".to_string(),
+            payment_source: None,
         },
         Order {
             id: "ord-3".to_string(),
@@ -65,6 +68,7 @@ where
             customer_name: "Alice Johnson".to_string(),
             items: vec!["Coffee and Bagel".to_string()],
             organization_id: "default".to_string(),
+            payment_source: Some("STRIPE_TERMINAL_TAP".to_string()),
         },
     ];
 

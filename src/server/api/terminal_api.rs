@@ -5,24 +5,24 @@ use axum::http::HeaderMap;
 
 #[derive(serde::Serialize)]
 pub struct TerminalTokenResponse {
-    pub token: String,
+    pub secret: String,
 }
 
 #[derive(serde::Deserialize)]
 pub struct PaymentIntentRequest {
-    pub amount_cents: i64,
+    pub amount: i64,
     pub currency: String,
 }
 
 #[derive(serde::Serialize)]
 pub struct PaymentIntentResponse {
-    pub intent_id: String,
+    pub client_secret: String,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
-        .route("/token", axum::routing::get(get_terminal_connection_token_handler))
-        .route("/intent", axum::routing::post(create_payment_intent_handler))
+        .route("/connection_token", axum::routing::post(get_terminal_connection_token_handler))
+        .route("/create_payment_intent", axum::routing::post(create_payment_intent_handler))
         .with_state(hub)
 }
 
@@ -50,7 +50,7 @@ pub async fn get_terminal_connection_token_handler(
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     match client.create_terminal_connection_token(&tenant_id).await {
-        Ok(token) => Json(Ok(TerminalTokenResponse { token })),
+        Ok(secret) => Json(Ok(TerminalTokenResponse { secret })),
         Err(e) => Json(Err(e)),
     }
 }
@@ -80,8 +80,8 @@ pub async fn create_payment_intent_handler(
     };
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
-        Ok(intent_id) => Json(Ok(PaymentIntentResponse { intent_id })),
+    match client.create_terminal_payment_intent(&tenant_id, req_data.amount, &req_data.currency).await {
+        Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
         Err(e) => Json(Err(e)),
     }
 }

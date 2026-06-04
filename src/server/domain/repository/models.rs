@@ -100,6 +100,11 @@ pub struct Product {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PaymentSource {
+    STRIPE_TERMINAL_TAP,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Order {
     pub id: String,
@@ -107,6 +112,7 @@ pub struct Order {
     pub customer_id: String,
     pub status: Option<String>,
     pub total_amount: Option<f64>,
+    pub payment_source: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
