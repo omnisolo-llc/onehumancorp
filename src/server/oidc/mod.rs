@@ -150,7 +150,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     
     let token_data = decode::<serde_json::Value>(token_str, &decoding_key, &validation).map_err(|e| {
         ::server_telemetry::record_error_signal("OIDC token validation failed");
-        tracing::error!("OIDC token validation failed: {}", e);
+        tracing::error!("OIDC validation failed: {}", e);
         e.to_string()
     })?;
     

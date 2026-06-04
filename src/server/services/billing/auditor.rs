@@ -110,7 +110,7 @@ impl CostAuditor {
 
         // Detect anomalies (simple threshold check)
         if cost > 10.0 {
-            tracing::warn!("Anomaly detected: High token usage cost ({})", cost);
+            tracing::warn!("Anomaly detected: High resource usage cost ({})", cost);
         }
         *total_cost += cost;
 

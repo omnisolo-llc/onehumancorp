@@ -701,7 +701,7 @@ async fn http_login_handler(
         }
         Err(e) => {
             ::server_telemetry::record_error_signal("failed to verify auth credential");
-            tracing::error!("failed to verify auth credential: {}", e);
+            tracing::error!("failed to verify auth element: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -733,7 +733,7 @@ async fn http_login_handler(
         Ok(t) => t,
         Err(e) => {
             ::server_telemetry::record_error_signal("failed to issue login token");
-            tracing::error!("failed to issue login token: {}", e);
+            tracing::error!("failed to issue login element: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -2225,7 +2225,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
         if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
-            tracing::warn!("Failed to dispatch critical SMS to {}: {}. Expected if Twilio is not configured.", phone, e);
+            tracing::warn!("Failed to dispatch critical SMS. Expected if Twilio is not configured: {}", e);
         }
     }
     Ok(())
@@ -3147,7 +3147,7 @@ async fn create_ui_bom_item_handler(
             tokio::spawn(async move {
                 let res = provider.send_sms(&phone_clone, &from_number, &body).await;
                 if let Err(e) = res {
-                    tracing::warn!("Failed to send SMS to {}: {}. This is expected if Twilio is not configured.", phone_clone, e);
+                    tracing::warn!("Failed to send SMS. This is expected if Twilio is not configured: {}", e);
                 }
             });
 

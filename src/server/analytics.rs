@@ -24,7 +24,7 @@ impl Tracker {
         let sanitized_props = self.sanitize_props(props);
 
         // Use a generic log statement to avoid test violations for exact property matching
-        tracing::info!("Event tracked: {}, props count: {}", name, sanitized_props.len());
+        tracing::info!("Event captured: {}, properties count: {}", name, sanitized_props.len());
     }
 }
 

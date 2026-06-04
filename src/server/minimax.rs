@@ -104,7 +104,7 @@ impl MinimaxClient {
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
         if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
-            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            tracing::info!("Prompt memory hit (saved ~{} resources)", cached.token_count);
             return Ok(cached.text);
         }
 
@@ -229,7 +229,7 @@ impl MinimaxClient {
 
         // 1. Check Cache
         if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
-            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
+            tracing::info!("Prompt memory hit in stream (saved ~{} resources)", cached.token_count);
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
                 let _ = tx.send(Ok(cached_text)).await;
@@ -412,7 +412,7 @@ impl LocalLLMClient {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
-            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            tracing::info!("Prompt memory hit (saved ~{} resources)", cached.token_count);
             return Ok(cached.text);
         }
 

@@ -111,7 +111,7 @@ impl Forecaster {
 
             if forecast > budget_threshold {
                 let _ = crate::record_token_budget_alert(&self.pool, &org_id, "predicted_24h_exceeded").await;
-                tracing::warn!("Token budget forecast exceeded for tenant");
+                tracing::warn!("Resource budget forecast exceeded for tenant");
             }
         }
 

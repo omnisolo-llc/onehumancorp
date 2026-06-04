@@ -276,8 +276,60 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        // Enforced via static code analysis rather than unit tests to prevent Bazel caching/sandbox limitations
-        assert!(true, "Verified code does not emit any sensitive strings in its logging layer");
+        // Ensure no sensitive variables are passed to tracing calls.
+        let mut violations = Vec::new();
+
+        // Find the root dir of the server source
+        let mut base_dir = std::path::PathBuf::from("src/server");
+        if !base_dir.exists() {
+            if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+                base_dir = std::path::PathBuf::from(workspace_dir).join("src/server");
+            } else if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
+                base_dir = std::path::PathBuf::from(runfiles_dir).join("ohc/src/server");
+            }
+        }
+
+        let sensitive_keywords = [
+            "password", "secret", "cookie", "credential",
+            "email", "phone", "ssn", "address", "pii", "jwt",
+            "credit_card", "api_key"
+        ];
+
+        let tracing_macros = ["tracing::info!", "tracing::warn!", "tracing::error!", "tracing::debug!", "tracing::trace!"];
+
+        for entry in walkdir::WalkDir::new(&base_dir) {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            if entry.path().extension().and_then(|s| s.to_str()) == Some("rs") {
+                let content = std::fs::read_to_string(entry.path()).unwrap_or_default();
+                for (line_idx, line) in content.lines().enumerate() {
+                    for mac in tracing_macros {
+                        if line.contains(mac) {
+                            // Simple heuristic: if a sensitive word appears in the same line as a tracing macro,
+                            // AND it's not a redacted version or part of a benign phrase like 'token_count', flag it.
+                            let lower_line = line.to_lowercase();
+                            for kw in sensitive_keywords {
+                                if lower_line.contains(kw) && !lower_line.contains("redact") {
+                                    // A few specific false positive allow-lists
+                                    if lower_line.contains("jwt secret") && lower_line.contains("persistence") { continue; } // config logs
+                                    if kw == "secret" && lower_line.contains("meta_app_secret") { continue; } // benign config check warning
+
+                                    violations.push(format!("{}:{}: {}", entry.path().display(), line_idx + 1, line.trim()));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assert!(
+            violations.is_empty(),
+            "Found potential PII logged via tracing macros:\n{}",
+            violations.join("\n")
+        );
     }
 
     #[test]
