@@ -34,6 +34,6 @@ test.describe('Navigation', () => {
   test('should show welcome message', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 });
