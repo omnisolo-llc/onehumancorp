@@ -39,7 +39,7 @@ mod tests {
 
     use super::*;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
-    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+    use crate::tools::{Tool, ToolExecutor};
     use serde_json::json;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -172,7 +172,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pydantic_to_engine_integration() {
-        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use crate::tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
         #[derive(Deserialize)]

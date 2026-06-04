@@ -9,7 +9,7 @@ use std::fmt::Write;
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
 use ohc_builtin_agent_llm::LlmClient;
-use ohc_builtin_agent_tools::Tool;
+use crate::tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 use crate::verification_loops::{ComputationalGuide, VisualVerifier};
 
@@ -402,7 +402,7 @@ impl Agent {
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
-        session_tools: &[ohc_builtin_agent_tools::Tool],
+        session_tools: &[crate::tools::Tool],
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
@@ -638,7 +638,7 @@ impl Agent {
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
-        session_tools: &[ohc_builtin_agent_tools::Tool],
+        session_tools: &[crate::tools::Tool],
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
@@ -2443,8 +2443,12 @@ impl Agent {
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(crate::verification_loops::BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
-                if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    verification_manager.add_visual(Arc::new(crate::verification_loops::BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                if final_cfg.enable_visual_verification {
+                    if final_cfg.visual_verification_command == "playwright" {
+                        verification_manager.add_visual(Arc::new(crate::verification_loops::PlaywrightVisualVerifier));
+                    } else if !final_cfg.visual_verification_command.is_empty() {
+                        verification_manager.add_visual(Arc::new(crate::verification_loops::BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    }
                 }
                 if final_cfg.enable_llm_judge {
                     verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor {
@@ -3828,13 +3832,13 @@ mod tests {
 
         struct UserFixableExecutor;
         #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableExecutor {
+        impl crate::tools::ToolExecutor for UserFixableExecutor {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
                 Err(crate::types::ToolError::UserFixable("needs human".to_string()))
             }
         }
 
-        let dummy_tool = ohc_builtin_agent_tools::Tool {
+        let dummy_tool = crate::tools::Tool {
             name: "test".to_string(),
             description: "A mutating tool".to_string(),
             parameters: serde_json::json!({}),
@@ -4656,7 +4660,7 @@ mod tests {
 
 
     use ohc_builtin_agent_core::types::{ChatRequest};
-    use ohc_builtin_agent_tools::ToolExecutor;
+    use crate::tools::ToolExecutor;
     use serde_json::Value;
 
     struct MockLlmClient {
@@ -6880,7 +6884,7 @@ mod stream_tests {
 
     struct DumbLoopMockExecutor;
     #[async_trait::async_trait]
-    impl ohc_builtin_agent_tools::ToolExecutor for DumbLoopMockExecutor {
+    impl crate::tools::ToolExecutor for DumbLoopMockExecutor {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
             Ok("read".to_string())
         }
@@ -6888,7 +6892,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_anthropic_dumb_loop() {
-        let mock_tool = ohc_builtin_agent_tools::Tool {
+        let mock_tool = crate::tools::Tool {
             name: "mock_read".to_string(),
             description: "reads".to_string(),
             is_read_only: true,
@@ -6912,7 +6916,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
-        use ohc_builtin_agent_tools::ToolExecutor;
+        use crate::tools::ToolExecutor;
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
@@ -7218,7 +7222,7 @@ async fn test_stripe_retry_limit() {
 
     struct FailingTool;
     #[async_trait::async_trait]
-    impl ohc_builtin_agent_tools::ToolExecutor for FailingTool {
+    impl crate::tools::ToolExecutor for FailingTool {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             Err(ToolError::LlmRecoverable("I always fail".to_string()))
         }
@@ -7257,7 +7261,7 @@ async fn test_stripe_retry_limit() {
 
     let client = Arc::new(RetryMockClient { call_count: tokio::sync::Mutex::new(0) });
     let tools = vec![
-        ohc_builtin_agent_tools::Tool {
+        crate::tools::Tool {
             name: "failing_tool".to_string(),
             description: "Fails".to_string(),
             is_read_only: false,

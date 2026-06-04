@@ -1,8 +1,8 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 
-use ohc_builtin_agent_tools::pydantic::{PydanticToolExecutor, PydanticAdapter};
-use ohc_builtin_agent_tools::ToolExecutor;
+use crate::tools::pydantic::{PydanticToolExecutor, PydanticAdapter};
+use crate::tools::ToolExecutor;
 
 #[derive(Deserialize)]
 struct MyArgs {
