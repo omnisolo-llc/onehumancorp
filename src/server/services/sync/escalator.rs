@@ -26,6 +26,7 @@ impl SyncEscalator {
                     }
                     _ = ticker.tick() => {
                         if let Err(e) = self.process_escalations().await {
+                            ::server_telemetry::record_error_signal("failed to process escalations");
                             tracing::error!("failed to process escalations: {}", e);
                         }
                     }
@@ -65,10 +66,12 @@ impl SyncEscalator {
                             .await
                             .map_err(|e| e.to_string())?;
                     } else {
+                        ::server_telemetry::record_error_signal("escalation failed with status");
                         tracing::error!("escalation failed with status: {}", resp.status());
                     }
                 }
                 Err(e) => {
+                    ::server_telemetry::record_error_signal("failed to send escalation request");
                     tracing::error!("failed to send escalation request: {}", e);
                 }
             }

@@ -53,6 +53,7 @@ pub async fn handle_mcp_webhook(
     match tracker.get_task(t_id).await {
         Ok(Some(task)) => {
             if let Err(e) = tracker.update_task_status(t_id, &payload.status, payload.result).await {
+                ::server_telemetry::record_error_signal("Failed to update MCP task ");
                 tracing::error!("Failed to update MCP task {}: {}", t_id, e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -86,6 +87,7 @@ pub async fn handle_mcp_webhook(
             )
         }
         Err(e) => {
+            ::server_telemetry::record_error_signal("Database error fetching MCP task ");
             tracing::error!("Database error fetching MCP task {}: {}", t_id, e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

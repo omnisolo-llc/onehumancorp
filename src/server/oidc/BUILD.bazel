@@ -6,6 +6,7 @@ rust_library(
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/telemetry:server_telemetry",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:jsonwebtoken",
@@ -27,6 +28,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/telemetry:server_telemetry",
         "@crates//:temp-env",
     ],
 )

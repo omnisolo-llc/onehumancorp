@@ -18,6 +18,7 @@ impl MigrationWorker {
             tracing::info!("MigrationWorker started");
             loop {
                 if let Err(e) = Self::process_next_job(&db).await {
+                    ::server_telemetry::record_error_signal("MigrationWorker error");
                     tracing::error!("MigrationWorker error: {}", e);
                 }
                 tokio::time::sleep(Duration::from_secs(10)).await;
@@ -67,6 +68,7 @@ impl MigrationWorker {
                     .await?;
             }
             Err(e) => {
+                ::server_telemetry::record_error_signal("Migration job  failed");
                 tracing::error!("Migration job {} failed: {}", job_id, e);
                 sqlx::query("UPDATE migration_jobs SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                     .bind(&job_id)

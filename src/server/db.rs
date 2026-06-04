@@ -103,6 +103,7 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
+                                ::server_telemetry::record_error_signal("Failed to securely create DB directory");
                                 tracing::error!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -110,6 +111,7 @@ impl DB {
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
+                                ::server_telemetry::record_error_signal("Failed to create DB directory");
                                 tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -126,6 +128,7 @@ impl DB {
 
                     if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
                         if sym_meta.file_type().is_symlink() {
+                            ::server_telemetry::record_error_signal("Security error: DB path is a symlink. Aborting.");
                             tracing::error!("Security error: DB path is a symlink. Aborting.");
                             return Err("Security error: DB path is a symlink.".into());
                         }
