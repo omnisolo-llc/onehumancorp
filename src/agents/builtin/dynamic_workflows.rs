@@ -10,7 +10,9 @@ use tokio::sync::{mpsc, Semaphore};
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
+    #[allow(dead_code)]
     script: String,
+
     max_concurrent: usize,
     max_total_agents: usize,
 }
