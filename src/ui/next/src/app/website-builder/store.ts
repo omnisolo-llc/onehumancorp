@@ -34,6 +34,12 @@ interface WebsiteBuilderState {
   setDomainChoice: (domain: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
+  blocks: any[];
+  status: "idle" | "generating" | "draft" | "live";
+  liveUrl: string;
+  setBlocks: (blocks: any[]) => void;
+  setStatus: (status: "idle" | "generating" | "draft" | "live") => void;
+  setLiveUrl: (url: string) => void;
   loadState?: (state: Partial<WebsiteBuilderState>) => void;
 }
 
@@ -72,6 +78,12 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       setDomainChoice: (domainChoice) => set({ domainChoice }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
+      blocks: [],
+      status: "idle",
+      liveUrl: "",
+      setBlocks: (blocks) => set({ blocks }),
+      setStatus: (status) => set({ status }),
+      setLiveUrl: (liveUrl) => set({ liveUrl }),
       loadState: (state) => set(state),
     }),
     {
