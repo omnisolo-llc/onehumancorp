@@ -22,7 +22,7 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     // Create a mock for window.open to prevent new tabs from opening and failing the test unexpectedly
     await page.addInitScript(() => {
         (window as any).open = function(url: string, target: string) {
-            console.log('Intercepted window.open:', url);
+            console.debug('Intercepted window.open:', url);
             return null;
         };
     });
