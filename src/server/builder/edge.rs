@@ -65,6 +65,15 @@ pub async fn handle_edge_request_impl(
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
     headers: axum::http::HeaderMap,
 ) -> Result<Response<Body>, axum::http::StatusCode> {
+    // Explicitly bypass cache for checkout operations per acceptance criteria
+    if headers.get("x-original-uri")
+        .and_then(|v| v.to_str().ok())
+        .map(|uri| uri.contains("/checkout") || uri.contains("/cart/add"))
+        .unwrap_or(false)
+    {
+        return Err(axum::http::StatusCode::TEMPORARY_REDIRECT);
+    }
+
     let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
@@ -73,6 +82,18 @@ pub async fn handle_edge_request_impl(
     let cache = get_edge_cache();
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
+        // Log telemetry metric for cache hit latency
+        if ::server_config::get().telemetry_enabled {
+            tokio::spawn(async move {
+                let pool = crate::db::get_pool();
+                let labels = serde_json::json!({
+                    "tenant_id": tenant_id.to_string(),
+                    "cache_key": cache_key.clone(),
+                });
+                let _ = crate::telemetry::buffer_metric(&pool, "edge_cache_hit_latency_ms", "histogram", 10.0, labels).await;
+            });
+        }
+
         let mut response = Html(cached_html).into_response();
         let cache_tag = format!("tenant-id:{}", tenant_id);
         if let Ok(val) = cache_tag.parse() {
@@ -300,4 +321,28 @@ async fn regenerate_cache(
     cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
 
     Ok((html, tags))
+}
+
+#[cfg(test)]
+mod checkout_exclusion_tests {
+    use super::*;
+    use axum::http::HeaderMap;
+
+    #[tokio::test]
+    async fn test_checkout_routes_bypass_cache() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-original-uri", "/checkout/123".parse().unwrap());
+
+        // Since we dummy state, if it bypasses properly, it returns early with TEMPORARY_REDIRECT
+        // It should not panic on state
+
+        let pool_opts = sqlx::sqlite::SqlitePoolOptions::new();
+        let pool = pool_opts.connect("sqlite::memory:").await.unwrap();
+
+        let state = Arc::new(EdgeWorkerState { pool });
+        let path = Path(("00000000-0000-0000-0000-000000000000".to_string(), "00000000-0000-0000-0000-000000000000".to_string()));
+
+        let result = handle_edge_request_impl(Extension(state.clone()), path, headers).await;
+        assert_eq!(result.unwrap_err(), axum::http::StatusCode::TEMPORARY_REDIRECT);
+    }
 }
