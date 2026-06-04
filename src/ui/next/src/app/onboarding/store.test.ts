@@ -1,9 +1,15 @@
 import { useOnboardingStore } from './store';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 describe('useOnboardingStore', () => {
   beforeEach(() => {
     localStorage.clear();
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      })
+    ) as any;
     useOnboardingStore.setState({
       step: 1,
       businessDescription: '',
@@ -76,5 +82,32 @@ describe('useOnboardingStore', () => {
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
+  });
+
+  it('should trigger backend sync on state changes', async () => {
+    vi.useFakeTimers();
+    useOnboardingStore.getState().setBusinessName('Network Sync Test');
+
+    vi.advanceTimersByTime(1500);
+
+    // Check if fetch was called
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({
+        'Content-Type': 'application/json'
+      }),
+      body: expect.any(String)
+    }));
+
+    // Parse the body of the most recent fetch call
+    const callArgs = (global.fetch as any).mock.calls[0];
+    const requestBody = JSON.parse(callArgs[1].body);
+    expect(requestBody.wizardState.businessName).toBe('Network Sync Test');
+
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });

@@ -44,9 +44,37 @@ interface OnboardingState {
   setStartResult: (result: any) => void;
 }
 
+let syncTimeout: NodeJS.Timeout | null = null;
+const syncWithBackend = async (state: Partial<OnboardingState>) => {
+  if (typeof window === 'undefined') return; // Do not run on SSR
+
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+  }
+
+  syncTimeout = setTimeout(async () => {
+    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+    const userId = localStorage.getItem('user_id') || 'test-user';
+
+    try {
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ wizardState: state }),
+      });
+    } catch (error) {
+      console.error('Failed to sync onboarding state with backend:', error);
+    }
+  }, 1000);
+};
+
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       step: 1,
       chatStep: 0,
       businessDescription: '',
@@ -56,7 +84,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessType: 'Online Store',
       categories: [],
       websiteTemplate: 'Modern',
-  domainChoice: 'subdomain',
+      domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
       adminName: '',
@@ -67,23 +95,23 @@ export const useOnboardingStore = create<OnboardingState>()(
       isLoading: false,
       error: '',
       startResult: null,
-      setStep: (step) => set({ step }),
-      setChatStep: (chatStep) => set({ chatStep }),
-      setBusinessDescription: (businessDescription) => set({ businessDescription }),
-      setBusinessName: (businessName) => set({ businessName }),
-      setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
-      setLocation: (location) => set({ location }),
-      setBusinessType: (businessType) => set({ businessType }),
-      setCategories: (categories) => set({ categories }),
-      setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
-  setDomainChoice: (domainChoice) => set({ domainChoice }),
-      setFirstProductName: (firstProductName) => set({ firstProductName }),
-      setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
-      setAdminName: (adminName) => set({ adminName }),
-      setAdminEmail: (adminEmail) => set({ adminEmail }),
-      setAdminPassword: (adminPassword) => set({ adminPassword }),
-      setAiAgents: (aiAgents) => set({ aiAgents }),
-      setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
+      setStep: (step) => { set({ step }); syncWithBackend(get()); },
+      setChatStep: (chatStep) => { set({ chatStep }); syncWithBackend(get()); },
+      setBusinessDescription: (businessDescription) => { set({ businessDescription }); syncWithBackend(get()); },
+      setBusinessName: (businessName) => { set({ businessName }); syncWithBackend(get()); },
+      setWhatYouSell: (whatYouSell) => { set({ whatYouSell }); syncWithBackend(get()); },
+      setLocation: (location) => { set({ location }); syncWithBackend(get()); },
+      setBusinessType: (businessType) => { set({ businessType }); syncWithBackend(get()); },
+      setCategories: (categories) => { set({ categories }); syncWithBackend(get()); },
+      setWebsiteTemplate: (websiteTemplate) => { set({ websiteTemplate }); syncWithBackend(get()); },
+      setDomainChoice: (domainChoice) => { set({ domainChoice }); syncWithBackend(get()); },
+      setFirstProductName: (firstProductName) => { set({ firstProductName }); syncWithBackend(get()); },
+      setFirstProductPrice: (firstProductPrice) => { set({ firstProductPrice }); syncWithBackend(get()); },
+      setAdminName: (adminName) => { set({ adminName }); syncWithBackend(get()); },
+      setAdminEmail: (adminEmail) => { set({ adminEmail }); syncWithBackend(get()); },
+      setAdminPassword: (adminPassword) => { set({ adminPassword }); syncWithBackend(get()); },
+      setAiAgents: (aiAgents) => { set({ aiAgents }); syncWithBackend(get()); },
+      setAiAutoRespond: (aiAutoRespond) => { set({ aiAutoRespond }); syncWithBackend(get()); },
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
