@@ -5664,13 +5664,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">My Plan</h1>
-                        <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif;">Plan: Free</p>
+                        <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif;">Loading...</p>
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Status: Active</p>
-                        <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif;">Estimated Next Bill: $0.00</p>
+                        <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif;">Loading...</p>
                         <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Your Current Usage</h3>
-                            <p id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">AI Actions Used: 0 / 100</p>
-                            <p id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Storage Used: 0MB / 500MB</p>
+                            <p id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Loading...</p>
+                            <p id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Loading...</p>
                             <button onclick="alert('File chooser opened')">Upload Photo</button>
                             <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
                         </div>
@@ -5688,29 +5688,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Billing Period</h2>
-                            <p id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif;">Period: -</p>
+                            <p id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif;">Loading...</p>
 
                             <h2 style="font-family: 'Outfit', 'Inter', sans-serif; margin-top: 24px;">Costs</h2>
                             <ul style="list-style: none; padding: 0;">
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
                                     <span>LLM Inference Cost</span>
-                                    <strong id="cost-dashboard-llm">$0.00</strong>
+                                    <strong id="cost-dashboard-llm">Loading...</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
                                     <span>Storage & CDN</span>
-                                    <strong id="cost-dashboard-storage">$0.00</strong>
+                                    <strong id="cost-dashboard-storage">Loading...</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
                                     <span>Payment Processor Fees</span>
-                                    <strong id="cost-dashboard-payment-fees">$0.00</strong>
+                                    <strong id="cost-dashboard-payment-fees">Loading...</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary); font-family: 'Outfit', 'Inter', sans-serif;">
                                     <strong>Total Costs</strong>
-                                    <strong id="cost-dashboard-total">$0.00</strong>
+                                    <strong id="cost-dashboard-total">Loading...</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green); font-family: 'Outfit', 'Inter', sans-serif;">
                                     <strong>Total Revenue</strong>
-                                    <strong id="cost-dashboard-revenue">$0.00</strong>
+                                    <strong id="cost-dashboard-revenue">Loading...</strong>
                                 </li>
                             </ul>
                         </div>
