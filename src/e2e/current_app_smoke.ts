@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 
 export function currentAppSmoke(label: string) {
+  test.describe(`Smoke ${label}`, () => {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     test.setTimeout(60000);
@@ -32,3 +33,4 @@ export function currentAppSmoke(label: string) {
     expect(ogCard.ok()).toBeTruthy();
   });
 }
+  });
