@@ -409,11 +409,16 @@ export default function OnboardingWizard() {
                         type="text"
                         autoFocus
                         value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
+                        onChange={(e) => {
+                          setBusinessName(e.target.value);
+                          if (e.target.value.trim().length >= 3) {
+                            setValidationError('');
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (businessName.trim().length < 3) {
+                            if (e.currentTarget.value.trim().length < 3) {
                               setValidationError('Business Name must be at least 3 characters.');
                               return;
                             }

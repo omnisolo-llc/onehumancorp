@@ -496,7 +496,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Start wizard
-    await user.click(screen.getByRole('button', { name: /Start building my business/i }));
+    await user.click(screen.getByRole('button', { name: /Start Setup/i }));
 
     // Wait for step 1 to render
     await waitFor(() => {
