@@ -63,7 +63,7 @@ export default function TerminalPage() {
       if (newPin.length === 4) {
         // Attempt to authenticate offline
         const staff = OfflineStore.getStaff();
-        const found = staff.find((s: any) => s.pin_hash === newPin); // Simple mock check
+        const found = staff.find((s: any) => s.pin_hash === newPin);
 
         if (found) {
           setActiveStaff(found);

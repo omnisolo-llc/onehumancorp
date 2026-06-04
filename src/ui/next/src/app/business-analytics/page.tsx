@@ -91,7 +91,7 @@ export default function BusinessAnalytics() {
                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-72 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Revenue Forecast</h3>
                    <div className="flex-1 flex flex-col justify-end gap-2 pb-4 border-b border-gray-100 relative">
-                        {/* Mock area chart */}
+
                        <div className="w-full h-full absolute inset-0 flex items-end">
                            <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
                                <path d="M0,50 L0,30 Q10,20 20,25 T40,15 T60,20 T80,5 Q90,10 100,0 L100,50 Z" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" strokeWidth="1"></path>

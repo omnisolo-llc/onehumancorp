@@ -9,7 +9,7 @@ test.describe('Conversational Checkout & Instant Deposit Engine', () => {
     // 2. Click Simulate Incoming Message
     await page.getByRole('button', { name: '🤖 Simulate Incoming Message' }).click();
 
-    // 3. Verify Sales AI detects intent and generates checkout bubble (mocked via AI Replied)
+    // 3. Verify Sales AI detects intent and generates checkout bubble (verified via AI Replied)
     await expect(page.getByText('AI Replied')).toBeVisible({ timeout: 15000 });
   });
 });

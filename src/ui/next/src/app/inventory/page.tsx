@@ -62,7 +62,7 @@ export default function InventoryDashboard() {
   return (
     <AppShell
       title="Inventory"
-      subtitle="Supply-chain records from the database, without mock fallback data."
+      subtitle="Supply-chain records from the database, without fallback data."
       statusItems={[
         { label: "Materials", value: String(supply.raw_materials.length), tone: supply.raw_materials.length > 0 ? "good" : "neutral" },
         { label: "Low Stock", value: String(lowStockMaterials.length), tone: lowStockMaterials.length > 0 ? "warn" : "good" },

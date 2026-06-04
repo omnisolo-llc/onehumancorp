@@ -1,4 +1,4 @@
-use crate::domain::subscription::{SubscriptionPlan, Subscriber, FulfillmentBatch, FulfillmentStatus, SubscriptionStatus};
+use server_domain::subscription::{SubscriptionPlan, Subscriber, SubscriptionStatus};
 use sqlx::PgPool as DbPool;
 use std::sync::Arc;
 use uuid::Uuid;

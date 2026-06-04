@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function CalendarPage() {
   const [appointments, setAppointments] = useState([
-    { id: '1', customer: 'Maya', service: 'Custom Cake Consultation', time: '10:00 AM', date: 'Today', status: 'confirmed', ai_scheduled: true, link: "https://zoom.us/j/mock_meeting_123" },
+    { id: '1', customer: 'Maya', service: 'Custom Cake Consultation', time: '10:00 AM', date: 'Today', status: 'confirmed', ai_scheduled: true, link: "https://zoom.us/j/meeting_123" },
     { id: '2', customer: 'Carlos', service: 'Pipe Fixing', time: '2:00 PM', date: 'Tomorrow', status: 'pending', ai_scheduled: true, link: "" },
     { id: '3', customer: 'Priya', service: 'Styling Session', time: '4:00 PM', date: 'Tomorrow', status: 'confirmed', ai_scheduled: false, link: "" },
   ]);

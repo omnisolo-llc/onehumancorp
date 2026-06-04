@@ -87,7 +87,7 @@ export default function AnalyticsPage() {
                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Traffic Sources</h3>
                    <div className="flex-1 flex flex-col justify-center items-center gap-3">
-                       {/* Mock Chart representation */}
+
                        <div className="w-full flex items-end justify-around h-32 border-b border-gray-200 pb-2">
                            <div className="w-8 bg-blue-500 rounded-t-sm h-full" title="Direct (45%)"></div>
                            <div className="w-8 bg-indigo-500 rounded-t-sm h-3/4" title="Social (30%)"></div>

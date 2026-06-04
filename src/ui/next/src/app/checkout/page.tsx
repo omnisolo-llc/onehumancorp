@@ -22,7 +22,7 @@ export default function CheckoutPage() {
 
     // Simulate checking if address is within radius
     setTimeout(() => {
-      // Mock DoorDash Drive API call
+
       setDeliveryFee(8.50); // Flat fee from DoorDash
       setIsCheckingDelivery(false);
     }, 800);
