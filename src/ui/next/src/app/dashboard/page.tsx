@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { OneTapReferral } from "../components/OneTapReferral";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -191,6 +192,10 @@ export default function Dashboard() {
           Offline - changes saved locally
         </div>
         {error && <div className="app-badge bad">{error}</div>}
+      </div>
+
+      <div className="mb-6">
+        <OneTapReferral tenantId={tenantId()} source="dashboard" />
       </div>
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
