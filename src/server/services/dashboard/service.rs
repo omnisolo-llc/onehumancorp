@@ -29,7 +29,12 @@ impl MyDashboardService {
             return Ok(agents);
         }
 
-        let agents = self.hub.get_agents().await.to_vec();
+        let mut agents = self.hub.get_agents().await.to_vec();
+        if mobile_optimized {
+            for agent in agents.iter_mut() {
+                agent.name = String::new();
+            }
+        }
         cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
         Ok(agents)
     }

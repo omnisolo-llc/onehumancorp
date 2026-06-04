@@ -90,6 +90,9 @@ impl TaskQueue for MemoryTaskQueue {
         for role in roles {
             if let Some(queue) = self.role_queues.get(&role) {
                 let mut q = queue.lock().unwrap();
+                if q.is_empty() {
+                    continue;
+                }
                 // Pop until we find a valid pending job, or queue is empty
                 while let Some(job_id) = q.pop_front() {
                     if let Some(mut job_ref) = self.jobs.get_mut(&job_id) {
