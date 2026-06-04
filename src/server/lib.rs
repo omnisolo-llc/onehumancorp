@@ -992,6 +992,27 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+
+    async fn route_semantic(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::SemanticRoutingRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::SemanticRoutingResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let internal_req = crate::orchestration::router::SemanticRoutingRequest {
+            tenant_id: req.tenant_id,
+            prompt: req.prompt,
+            embedding: if req.embedding.is_empty() { None } else { Some(req.embedding) },
+        };
+
+        match self.hub.semantic_router.route(&internal_req) {
+            Ok(res) => Ok(tonic::Response::new(::server_ohc::orchestration::SemanticRoutingResponse {
+                tenant_id: res.tenant_id,
+                target_department: res.target_department.to_string(),
+                confidence_score: res.confidence_score,
+            })),
+            Err(e) => Err(tonic::Status::internal(e)),
+        }
+    }
     type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
     async fn stream_messages(

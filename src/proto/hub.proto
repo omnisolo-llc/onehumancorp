@@ -259,6 +259,7 @@ service HubService {
   rpc ApproveTask(ApproveTaskRequest) returns (ApproveTaskResponse);
   rpc GetPendingApprovals(GetPendingApprovalsRequest) returns (GetPendingApprovalsResponse);
   rpc TriggerCustomOrder(TriggerCustomOrderRequest) returns (TriggerCustomOrderResponse);
+  rpc RouteSemantic(SemanticRoutingRequest) returns (SemanticRoutingResponse);
   rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
   rpc HandleConfigWizard(AgentConfig) returns (WizardResponse);
   rpc HandlePromptTuning(PromptTuningConfig) returns (WizardResponse);
@@ -1748,4 +1749,16 @@ message GetReputationRequest {}
 message GetReputationResponse {
   double average_rating = 1;
   int32 total_reviews = 2;
+}
+
+message SemanticRoutingRequest {
+  string tenant_id = 1;
+  string prompt = 2;
+  repeated float embedding = 3;
+}
+
+message SemanticRoutingResponse {
+  string tenant_id = 1;
+  string target_department = 2;
+  float confidence_score = 3;
 }
