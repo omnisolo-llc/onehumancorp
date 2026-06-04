@@ -134,7 +134,7 @@ export default function CheckoutPage() {
                   alert(`Payment of ${amount} successful!`);
                   router.push('/dashboard');
                 } else {
-                  const { addToOfflineQueue } = await import('@/lib/indexeddb');
+                  const { addToOfflineQueue } = await import('../../lib/indexeddb');
 
                   const newItem = {
                     id: 'txn_' + Date.now() + '_' + Math.random().toString(36).substring(7),

@@ -18,7 +18,7 @@ test.describe.skip('Cross Device Onboarding CUJ', () => {
     await expect(page.getByText('Tell us about your business')).toBeVisible();
 
     // 2. Owner enters business name
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
+    const nameInput = page.getByPlaceholder(/e.g. Maya's Cakes/i);
     await nameInput.fill('Cross Device Bakery');
 
     // 3. Click Save Draft
@@ -30,6 +30,6 @@ test.describe.skip('Cross Device Onboarding CUJ', () => {
     await page.reload();
 
     // 5. Verify the business name was properly restored
-    await expect(page.getByPlaceholder(/e.g. Maya's Custom Cakes/i)).toHaveValue('Cross Device Bakery', { timeout: 10000 });
+    await expect(page.getByPlaceholder(/e.g. Maya's Cakes/i)).toHaveValue('Cross Device Bakery', { timeout: 10000 });
   });
 });

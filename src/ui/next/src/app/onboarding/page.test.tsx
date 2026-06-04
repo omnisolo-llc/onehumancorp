@@ -62,7 +62,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1 - Use Enter Key
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = screen.getByPlaceholderText(/Maya's Cakes/i);
     await user.type(nameInput, 'Maya Bakery{Enter}');
 
     // Chat Step 2 - Use Enter Key
@@ -86,7 +86,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1 - Enter Key with short name
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = screen.getByPlaceholderText(/Maya's Cakes/i);
     await user.type(nameInput, 'Ma{Enter}');
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
 
@@ -153,7 +153,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = screen.getByPlaceholderText(/Maya's Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
@@ -233,7 +233,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = screen.getByPlaceholderText(/Maya's Cakes/i);
     await user.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });

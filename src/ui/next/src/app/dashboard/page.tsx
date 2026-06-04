@@ -80,7 +80,7 @@ export default function Dashboard() {
     const updateOfflineStatus = async () => {
       setIsOffline(!navigator.onLine);
       try {
-        const { getOfflineQueueCount } = await import('@/lib/indexeddb');
+        const { getOfflineQueueCount } = await import('../../lib/indexeddb');
         const count = await getOfflineQueueCount();
         setOfflineQueueCount(count);
       } catch {

@@ -44,7 +44,7 @@ test('Verify onboarding UI', async ({ page }) => {
   await page.screenshot({ path: 'onboarding-step1.png' });
 
   // Step 1: Business Name
-  await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
+  await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').fill('Maya Cakes');
   await page.locator('button:has-text("Next")').click();
 
   // Step 2: What do you sell
