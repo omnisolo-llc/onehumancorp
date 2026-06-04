@@ -9,16 +9,20 @@ pub struct ToolExecutionEngine;
 impl ToolExecutionEngine {
     async fn prompt_user(msg: &str) -> String {
         // Read the mock input from env to allow automated tests to provide responses.
-        if let Ok(mock_input) = std::env::var("OHC_MOCK_USER_INPUT") {
-            return mock_input;
-        }
-
         #[cfg(test)]
         {
+            if let Ok(mock_input) = std::env::var("OHC_MOCK_USER_INPUT") {
+                return mock_input;
+            }
             // Always abort in tests if no specific mock is provided to prevent blocking tests.
             // Also prefix unused variables to silence warnings.
             let _msg = msg;
             return "abort".to_string();
+        }
+
+        #[cfg(not(test))]
+        if let Ok(mock_input) = std::env::var("OHC_MOCK_USER_INPUT") {
+            return mock_input;
         }
 
         #[cfg(not(test))]
