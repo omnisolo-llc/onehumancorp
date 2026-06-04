@@ -21,7 +21,7 @@ test('Maya operates her custom cake business', async ({ page }) => {
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
 =======
   await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Custom cakes and pastries');
->>>>>>> 387b419a (test: fix broken E2E tests)
+>>>>>>> 41566399 (test: fix broken E2E tests)
   await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
 
   await page.getByLabel(/Physical Products/).check();

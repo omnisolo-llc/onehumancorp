@@ -24,7 +24,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
 =======
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Original art and prints');
->>>>>>> 387b419a (test: fix broken E2E tests)
+>>>>>>> 41566399 (test: fix broken E2E tests)
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await page.getByLabel(/Physical Products/).check();
     await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();

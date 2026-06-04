@@ -7181,7 +7181,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 document.getElementById('auto-catalog-price').setAttribute('value', '4.99');
                                 document.getElementById('auto-catalog-category').setAttribute('value', 'Baked Goods');
                                 if (form) form.style.display = 'block';
->>>>>>> 387b419a (test: fix broken E2E tests)
+>>>>>>> 41566399 (test: fix broken E2E tests)
                             }, 2000);
                         }
 
