@@ -3092,10 +3092,11 @@ async fn create_ui_bom_item_handler(
                     }
                 };
 
+                use axum::response::IntoResponse;
                 if valid {
-                    axum::response::Json(serde_json::json!({ "success": true }))
+                    axum::response::Json(serde_json::json!({ "success": true })).into_response()
                 } else {
-                    axum::response::Json(serde_json::json!({ "success": false, "message": "Invalid or expired OTP" }))
+                    (axum::http::StatusCode::BAD_REQUEST, axum::response::Json(serde_json::json!({ "success": false, "message": "Invalid or expired OTP" }))).into_response()
                 }
             }
         }))
