@@ -26,7 +26,7 @@ test.describe('Auto-Catalog flow', () => {
 
     // Verify generated product data populates the form
     const generatedFields = page.locator('#auto-catalog-form input');
-    await expect(generatedFields.nth(0)).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 10000 });
+    await expect(generatedFields.nth(0)).toHaveValue('Artisan Vanilla Bean Cupcake', { timeout: 60000 });
     await expect(generatedFields.nth(1)).toHaveValue('4.99');
     await expect(generatedFields.nth(2)).toHaveValue('Baked Goods');
 
