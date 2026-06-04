@@ -72,6 +72,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
@@ -374,6 +375,70 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+
+        <section className="mt-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold font-outfit" style={{color:'#1D1D1F'}}>Embed Your Store</h2>
+              <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                <span className="text-xs font-medium text-green-600">New Growth Loop</span>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{background:'rgba(255, 255, 255, 0.03)', backdropFilter:'blur(20px) saturate(200%)', border:'1px solid rgba(255, 255, 255, 0.08)', borderColor:'rgba(0,0,0,0.05)', backgroundColor:'#ffffff'}}>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
+                <pre className="text-xs text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap">
+{`<div id="ohc-embed-root"></div>
+<script src="https://ohc.app/embed.js" data-tenant="your-tenant-id"></script>`}
+                </pre>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 min-w-[200px]">
+              <button onClick={() => setIsEmbedModalOpen(true)} className="w-full bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl text-sm shadow-sm hover:bg-black transition-colors text-center">
+                Get Widget
+              </button>
+              <Link href="/referrals" className="w-full bg-white border border-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl text-sm hover:bg-gray-50 transition-colors text-center">
+                View Documentation
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {isEmbedModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h2 className="text-lg font-bold font-outfit text-gray-900">Embed Storefront</h2>
+                <button onClick={() => setIsEmbedModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                <p className="text-sm text-gray-600 mb-4">Copy and paste this HTML snippet into your website's code where you want the storefront widget to appear.</p>
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Embed Code</label>
+                  <textarea
+                    readOnly
+                    className="w-full bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs h-32 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=your-tenant-id&theme=light" width="320" height="400" frameborder="0"></iframe>`}
+                  />
+                </div>
+                <button
+                  className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl text-sm shadow-sm hover:bg-indigo-700 transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=your-tenant-id&theme=light" width="320" height="400" frameborder="0"></iframe>`);
+                    alert('Embed code copied!');
+                  }}
+                >
+                  Copy to Clipboard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="mt-4">
           <div className="mb-3 flex items-center justify-between gap-3">
