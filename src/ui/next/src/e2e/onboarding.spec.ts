@@ -71,7 +71,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     // --- Step 2: Review Details ---
-    await expect(page.getByText('Review Details')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Review Details' })).toBeVisible();
 
     // Verify AI extracted details correctly
     await expect(page.locator('input[value="Maya Bakery"]')).toBeVisible();

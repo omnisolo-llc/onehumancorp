@@ -242,7 +242,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 2;
+    let iterations = 50;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -435,7 +435,7 @@ pub async fn bench_get_analytics() {
     hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
 
     let org_service = crate::services::org::service::MyOrgService::new(hub);
-    let iterations = 5;
+    let iterations = 50;
 
     // First run (cold start, no cache)
     let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
