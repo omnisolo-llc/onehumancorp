@@ -1,3 +1,4 @@
+pub mod anthropic_hooks;
 pub mod openai_hooks;
 
 use ohc_builtin_agent_core::types::ToolCall;
