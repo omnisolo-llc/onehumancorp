@@ -17,6 +17,7 @@ Every item in the Master Catalog has been systematically verified to be implemen
 - **Tencent Workbuddy (Expert Team)**: `src/agents/builtin/expert_team.rs`.
 - **goose**: `src/agents/builtin/goose/mod.rs`.
 - **agenticSeek**: `src/agents/builtin/agentic_seek.rs`.
+- **Pi**: `src/agents/builtin/pi.rs`.
 
 ### SOTA Harness Patterns (2025-2026)
 1. **Actor-model message passing**: `src/agents/builtin/actor_model.rs`, `src/agents/builtin/agent.rs`
