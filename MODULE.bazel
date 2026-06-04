@@ -1,6 +1,6 @@
 module(
     name = "mono",
-    version = "0.4.42",
+    version = "0.4.35",
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
@@ -10,72 +10,18 @@ bazel_dep(name = "bazel-diff", version = "18.1.0")
 bazel_dep(name = "protobuf", version = "34.1")
 bazel_dep(name = "rules_python", version = "1.9.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
+bazel_dep(name = "rules_android", version = "0.7.2")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
 bazel_dep(name = "rules_go", version = "0.60.0")
 bazel_dep(name = "gazelle", version = "0.50.0")
-bazel_dep(name = "hermetic_cc_toolchain", version = "4.1.0")
-single_version_override(
-    module_name = "hermetic_cc_toolchain",
-    patch_strip = 1,
-    patches = [
-        "//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch",
-        "//bazel/patches:hermetic_cc_toolchain_zig_windows_msvc_link_args.patch",
-    ],
-)
-
-bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.2", dev_dependency = True)
-
-tauri_android_sdk_repository = use_repo_rule("//bazel/rules:android_sdk_repository.bzl", "tauri_android_sdk_repository")
-
-tauri_android_sdk_repository(
-    name = "tauri_android_sdk",
-)
-
-gradle_distribution_repository = use_repo_rule("//bazel/rules:gradle_repository.bzl", "gradle_distribution_repository")
-
-gradle_distribution_repository(
-    name = "tauri_gradle",
-)
-
-register_toolchains("@tauri_gradle//:gradle_toolchain")
-
-cargo_vendor_repository = use_repo_rule("//bazel/rules:cargo_vendor_repository.bzl", "cargo_vendor_repository")
-
-cargo_vendor_repository(
-    name = "tauri_cargo_vendor",
-    cargo_lock = "//:Cargo.lock",
-)
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(
-    name = "go_sdk",
-    version = "1.24.12",
-)
+go_sdk.download(name = "go_sdk", version = "1.24.12")
 use_repo(go_sdk, "go_sdk")
-
 register_toolchains("@go_sdk//:all")
-
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-python.toolchain(
-    python_version = "3.12.12",
-)
-
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-pip.parse(
-    hub_name = "docs_pip",
-    python_version = "3.12.12",
-    requirements_lock = "//:docs/requirements_lock.txt",
-)
-use_repo(pip, "docs_pip")
 
 # ── Rust support ──────────────────────────────────────────────────────────────
 bazel_dep(name = "rules_rust", version = "0.70.0")
-single_version_override(
-    module_name = "rules_rust",
-    patch_strip = 1,
-    patches = ["//bazel/patches:rules_rust_windows_gnullvm_platforms.patch"],
-)
-
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 
@@ -83,13 +29,12 @@ rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2024",
     extra_target_triples = [
-        "aarch64-pc-windows-gnullvm",
-        "aarch64-pc-windows-msvc",
-        "x86_64-pc-windows-gnullvm",
         "x86_64-pc-windows-msvc",
+        "x86_64-pc-windows-gnu",
+        "i686-pc-windows-msvc",
+        "i686-pc-windows-gnu",
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
-        "x86_64-apple-darwin",
         "aarch64-apple-darwin",
         "aarch64-apple-ios",
         "aarch64-linux-android",
@@ -102,7 +47,6 @@ rust.toolchain(
 use_repo(rust, "rust_toolchains")
 
 register_toolchains("//bazel/toolchains:prost_toolchain")
-
 register_toolchains("@rust_toolchains//:all")
 
 # ── WASM bindgen support ──────────────────────────────────────────────────────
@@ -124,25 +68,6 @@ crate.from_cargo(
     manifests = [
         "//:Cargo.toml",
     ],
-    supported_platform_triples = [
-        "aarch64-apple-darwin",
-        "aarch64-pc-windows-gnullvm",
-        "aarch64-pc-windows-msvc",
-        "aarch64-unknown-linux-gnu",
-        "wasm32-unknown-unknown",
-        "wasm32-wasip1",
-        "x86_64-apple-darwin",
-        "x86_64-pc-windows-gnullvm",
-        "x86_64-pc-windows-msvc",
-        "x86_64-unknown-linux-gnu",
-        "x86_64-unknown-nixos-gnu",
-    ],
-)
-crate.annotation(
-    crate = "windows-sys",
-    patch_args = ["-p1"],
-    patches = ["//bazel/patches:windows_sys_0_48_stable_raw_dylib.patch"],
-    version = "0.48.0",
 )
 crate.annotation(
     build_script_env = {
@@ -157,72 +82,12 @@ crate.annotation(
     crate = "rav1e",
 )
 crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "bzip2-sys",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "libsqlite3-sys",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "lzma-sys",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "ring",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "tree-sitter",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "tree-sitter-bash",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "zstd-sys",
-)
-crate.annotation(
     crate = "protoc-gen-prost",
     gen_binaries = ["protoc-gen-prost"],
 )
 crate.annotation(
     crate = "protoc-gen-tonic",
     gen_binaries = ["protoc-gen-tonic"],
-)
-crate.annotation(
-    crate = "tauri-cli",
-    gen_binaries = ["cargo-tauri"],
 )
 
 # wasm-bindgen crate version must match what the toolchain provides
@@ -243,19 +108,26 @@ bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
-bazel_dep(name = "rules_playwright", version = "0.5.4")
-git_override(
-    module_name = "rules_playwright",
-    remote = "https://github.com/mrmeku/rules_playwright",
-    tag = "v0.5.4",
+
+# ── Flutter rules (vendored fork) ─────────────────────────────────────────────
+bazel_dep(name = "rules_flutter", version = "0.0.0")
+local_path_override(
+    module_name = "rules_flutter",
+    path = "bazel/rules/flutter",
 )
 
-playwright = use_extension("@rules_playwright//playwright:extensions.bzl", "playwright")
-playwright.repo(
-    name = "playwright",
-    playwright_version = "1.50.1",
+flutter = use_extension("@rules_flutter//flutter:extensions.bzl", "flutter")
+flutter.toolchain(flutter_version = "3.29.3")
+use_repo(
+    flutter,
+    "flutter_sdk",
+    "flutter_toolchains",
 )
-use_repo(playwright, "playwright")
+
+register_toolchains("@flutter_toolchains//:all")
+
+# Flutter pub dependencies removed as requested.
+# ─────────────────────────────────────────────────────────────────────────────
 
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "23.6.0")
@@ -269,60 +141,40 @@ npm.npm_translate_lock(
     },
     pnpm_lock = "//:pnpm-lock.yaml",
 )
-npm.npm_translate_lock(
-    name = "next_npm",
-    pnpm_lock = "//src/ui/next:pnpm-lock.yaml",
-)
-use_repo(npm, "next_npm", "npm")
+use_repo(npm, "npm")
 
 platforms_host = use_extension("@platforms//host:extension.bzl", "host_platform")
 use_repo(platforms_host, "host_platform")
 
-hermetic_cc = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
-use_repo(hermetic_cc, "zig_sdk")
+bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
 
-register_toolchains(
-    "@zig_sdk//toolchain:windows_amd64",
-    "@zig_sdk//toolchain:windows_arm64",
-)
+buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
+buildbuddy.gcc_toolchain()
+use_repo(buildbuddy, "buildbuddy_toolchain")
 
-bazel_dep(name = "toolchains_llvm", version = "1.7.0")
-
-llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
-llvm.toolchain(
-    name = "llvm_toolchain",
-    llvm_version = "21.1.8",
-)
-use_repo(llvm, "llvm_toolchain")
-
-register_toolchains("@llvm_toolchain//:all")
+register_toolchains("@buildbuddy_toolchain//:all")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
     name = "distroless_static",
     digest = "sha256:47b2d72ff90843eb8a768b5c2f89b40741843b639d065b9b937b07cd59b479c6",
     image = "gcr.io/distroless/static",
-    platforms = [
-        "linux/amd64",
-        "linux/arm64/v8",
-    ],
+    platforms = ["linux/amd64"],
 )
 oci.pull(
     name = "distroless_cc",
     digest = "sha256:56aaf20ab2523a346a67c8e8f8e8dabe447447d0788b82284d14ad79cd5f93cc",
     image = "gcr.io/distroless/cc",
-    platforms = [
-        "linux/amd64",
-        "linux/arm64/v8",
-    ],
+    platforms = ["linux/amd64"],
 )
 oci.pull(
     name = "nginx_alpine",
     digest = "sha256:3bcf852aed06467cf075c6105892e4d5a6ebbbafa0ce22d35062db9e90ddef4c",
     image = "index.docker.io/library/nginx",
-    platforms = [
-        "linux/amd64",
-        "linux/arm64/v8",
-    ],
+    platforms = ["linux/amd64"],
 )
-use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux_arm64_v8", "distroless_static", "distroless_static_linux_amd64", "distroless_static_linux_arm64_v8", "nginx_alpine", "nginx_alpine_linux_amd64", "nginx_alpine_linux_arm64_v8")
+use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_static", "distroless_static_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")
+
+# ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
+proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
+use_repo(proto_deps, "google_protobuf_dart")

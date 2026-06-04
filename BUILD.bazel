@@ -1,7 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@rules_python//python:py_binary.bzl", "py_binary")
+
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -20,12 +19,11 @@ filegroup(
 
 # gazelle:prefix github.com/onehumancorp/mono
 exports_files([
-    "Cargo.lock",
-    "Cargo.toml",
+    "pubspec.yaml",
     "playwright.config.ts",
     "package.json",
-    "package-lock.json",
 ])
+
 
 config_setting(
     name = "linux",
@@ -45,42 +43,7 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-alias(
-    name = "buildifier",
-    actual = "@buildifier_prebuilt//:buildifier",
-    visibility = ["//visibility:public"],
-)
 
-alias(
-    name = "buildozer",
-    actual = "@buildifier_prebuilt//:buildozer",
-    visibility = ["//visibility:public"],
-)
-
-sh_binary(
-    name = "cargo",
-    srcs = ["//scripts:cargo_from_toolchain.sh"],
-    args = [
-        "$(rootpath @rules_rust//rust/toolchain:current_cargo_files)",
-        "$(rootpath @rules_rust//rust/toolchain:current_rustc_files)",
-    ],
-    data = [
-        "@rules_rust//rust/toolchain:current_cargo_files",
-        "@rules_rust//rust/toolchain:current_rust_toolchain",
-        "@rules_rust//rust/toolchain:current_rustc_files",
-    ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-alias(
-    name = "rust_lint",
-    actual = "//scripts:rust_lint",
-    visibility = ["//visibility:public"],
-)
 
 sh_binary(
     name = "deploy_dev",
@@ -91,58 +54,28 @@ sh_binary(
         "//deploy:setup_k8s.sh",
     ],
     tags = ["manual"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 filegroup(
     name = "docs_srcs",
-    srcs = glob([
-        "docs/**",
-    ]) + [
-        "mkdocs.yml",
-    ],
+    srcs = glob(["docs/**"]) + ["mkdocs.yml"],
     visibility = ["//visibility:public"],
 )
 
-py_binary(
+sh_binary(
     name = "docs_build",
-    srcs = ["docs/mkdocs_runner.py"],
+    srcs = ["docs/mkdocs_via_bazel.sh"],
     args = ["build"],
     data = [":docs_srcs"],
-    main = "docs/mkdocs_runner.py",
     tags = ["manual"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        "@docs_pip//mkdocs:pkg",
-        "@docs_pip//mkdocs_material:pkg",
-        "@docs_pip//mkdocs_material_extensions:pkg",
-        "@docs_pip//pymdown_extensions:pkg",
-    ],
 )
 
-py_binary(
+sh_binary(
     name = "docs_serve",
-    srcs = ["docs/mkdocs_runner.py"],
+    srcs = ["docs/mkdocs_via_bazel.sh"],
     args = ["serve"],
     data = [":docs_srcs"],
-    main = "docs/mkdocs_runner.py",
     tags = ["manual"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        "@docs_pip//mkdocs:pkg",
-        "@docs_pip//mkdocs_material:pkg",
-        "@docs_pip//mkdocs_material_extensions:pkg",
-        "@docs_pip//pymdown_extensions:pkg",
-    ],
 )
 
 sh_binary(
@@ -152,11 +85,8 @@ sh_binary(
         "MODULE.bazel",
     ],
     tags = ["manual"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
+
 
 # Alias to run hello-world agent easily
 alias(
@@ -165,5 +95,6 @@ alias(
     tags = ["manual"],
 )
 
+load("@gazelle//:def.bzl", "gazelle")
 # gazelle:prefix onehumancorp
 gazelle(name = "gazelle")

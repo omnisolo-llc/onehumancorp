@@ -1,18 +1,51 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Grandmother UX Fixes E2E tests', () => {
-  test('login screen uses plain language labels', async ({ page }) => {
+  test('Login screen shows plain language Fix App Issues button', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'One Human Corp' })).toBeVisible();
-    await expect(page.getByText('Sign in to manage your business')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Start Business Setup/ })).toBeVisible();
+    await expect(page.locator('text=Sign in to manage your business')).toBeVisible();
+    await expect(page.locator('button:has-text("Fix App Issues")')).toBeVisible();
   });
 
-  test('custom software screen uses plain language for external tools', async ({ page }) => {
-    await page.goto('/integrations');
+  test('Login screen shows plain language brand name', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('text="One Human Corp"').first()).toBeVisible();
+  });
 
-    await expect(page.getByRole('heading', { name: 'Connect Custom Software' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Social Media Accounts' })).toBeVisible();
-    await expect(page.getByText('Manage all your social media messages and posts in one place.')).toBeVisible();
+  test('Integrations screen uses plain language for external tools', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.click('button:has-text("Sign In")');
+
+    await page.click('button:has-text("Menu")');
+    await page.click('button:has-text("Connect Custom Software")');
+
+    await expect(page.locator('text=Connect Custom Software').last()).toBeVisible();
+  });
+
+  test('API Docs screen uses Custom Integration label', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.click('button:has-text("Sign In")');
+
+    await page.click('button:has-text("Menu")');
+    await page.click('button:has-text("Connect Custom Software")');
+
+    await expect(page.locator('text=Custom Integration')).toBeVisible();
+  });
+
+  test('API Docs screen replaces GET /v1/products with Read Product List', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').first().fill( 'test@example.com');
+    await page.locator('input[type="password"]').first().fill( 'password123');
+    await page.click('button:has-text("Sign In")');
+
+    await page.click('button:has-text("Menu")');
+    await page.click('button:has-text("Connect Custom Software")');
+
+    await expect(page.locator('text=Product Data Access').last()).toBeVisible();
+    await expect(page.locator('text=Read Product List')).toBeVisible();
   });
 });

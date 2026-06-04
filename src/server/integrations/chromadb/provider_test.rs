@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::provider::ChromaDbProvider;
+    use crate::integrations::chromadb::provider::ChromaDbProvider;
 
     #[test]
     fn test_chromadb_provider_standalone_mode() {

@@ -1,21 +1,6 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
-use super::User;
-
-#[async_trait::async_trait]
-pub trait UserRepository: Send + Sync {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String>;
-    async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String>;
-    async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String>;
-    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String>;
-    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String>;
-    async fn revoke_token(&self, jti: String, exp: chrono::DateTime<chrono::Utc>, org_id: &str) -> Result<(), String>;
-    async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String>;
-}
-
+use super::{User, UserRepository};
 use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
@@ -42,7 +27,7 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
@@ -52,7 +37,7 @@ impl UserRepository for PgUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
         .bind(user.active)
-        .bind(org_id)
+        .bind(&user.organization_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
@@ -66,13 +51,13 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND (tenant_id = $2 OR $2 = 'system')";
+        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query).bind(id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         // Parse roles from JSON string
         let roles_json: String = row.get("roles");
@@ -85,7 +70,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("tenant_id"),
+            organization_id: row.get("organization_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -94,13 +79,13 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by username
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND (tenant_id = $2 OR $2 = 'system')";
+        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query).bind(username).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -112,7 +97,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("tenant_id"),
+            organization_id: row.get("organization_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -121,13 +106,13 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by email
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND (tenant_id = $2 OR $2 = 'system')";
+        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -139,7 +124,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("tenant_id"),
+            organization_id: row.get("organization_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -148,13 +133,13 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by oidc_subject
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND (tenant_id = $2 OR $2 = 'system')";
+        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -166,7 +151,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("tenant_id"),
+            organization_id: row.get("organization_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -174,13 +159,13 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE (tenant_id = $1 OR $1 = 'system') ORDER BY created_at";
+        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
+        let rows = sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
         for row in rows {
@@ -194,7 +179,7 @@ impl UserRepository for PgUserRepository {
                 password_hash: row.get("password_hash"),
                 roles,
                 active: row.get("active"),
-                organization_id: row.get("tenant_id"),
+                organization_id: row.get("organization_id"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
                 oidc_subject: row.get("oidc_subject"),
@@ -208,8 +193,8 @@ impl UserRepository for PgUserRepository {
 
         let query = r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            tenant_id=$7, oidc_subject=$8, updated_at=$9
-            WHERE id=$1 AND (tenant_id = $10 OR $10 = 'system') RETURNING id
+            organization_id=$7, oidc_subject=$8, updated_at=$9
+            WHERE id=$1 RETURNING id
             "#;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -223,10 +208,9 @@ impl UserRepository for PgUserRepository {
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
-            .bind(org_id)
+            .bind(&user.organization_id)
             .bind(&user.oidc_subject)
             .bind(user.updated_at)
-            .bind(org_id)
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -241,13 +225,13 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
-        let query = "DELETE FROM users WHERE id = $1 AND (tenant_id = $2 OR $2 = 'system') RETURNING id";
+        let query = "DELETE FROM users WHERE id = $1 RETURNING id";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let res = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let res = sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -288,9 +272,8 @@ impl UserRepository for PgUserRepository {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND (tenant_id = $2 OR $2 = 'system')")
+        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
             .bind(jti)
-            .bind(org_id)
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -310,7 +293,7 @@ mod security_tests {
 
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };
@@ -343,7 +326,7 @@ mod security_tests {
 
     #[tokio::test]
     async fn test_revoke_token_uses_transaction_and_tenant_context() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
         };

@@ -45,7 +45,7 @@ The Teammate Mesh layer provides real-time IPC (Inter-Process Communication) acr
 
 ### Transport
 - **Cloud-Native Mode:** Redis Pub/Sub via the `mesh:tasks` and `mesh:coordination` channels.
-- **Standalone Mode:** Local in-process transport for host-machine efficiency.
+- **Standalone Mode:** Sharded in-memory Go channels for host-machine efficiency.
 
 ### API Contract (`/api/mesh/v2/broadcast`)
 ```json

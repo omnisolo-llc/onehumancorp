@@ -33,7 +33,7 @@ Instead of an agent needing to independently discover and fetch context via file
 ```mermaid
 graph TD
     A[KAIROS Orchestrator] -->|Delegates Task| B{Context Injector (SIPDB)}
-    B -->|Reads Grounding| C[(AGENTS.md / CLAUDE.md)]
+    B -->|Reads Grounding| C[(AGENTS.md / CLAUDE_OHC.md)]
     B -->|Writes Mission+Context| D[(Postgres / SQLite: agent_missions)]
     D -->|Instantiates| E[Specialized Sub-Agent]
     E -->|Executes with Zero Latency| F[Task Completion]
@@ -45,7 +45,7 @@ graph TD
 
 ## Validation & Implementation Feasibility
 
-Technically feasible by extending the current `agent_missions` table injection logic (in `src/server/sip.rs` or `tasks.go`). The orchestrator simply scans the root for `AGENTS.md` and appends its contents directly to the `payload` TEXT blob under a `[SYSTEM GROUNDING]` namespace.
+Technically feasible by extending the current `agent_missions` table injection logic (in `src/server/orchestration/sip.go` or `tasks.go`). The orchestrator simply scans the root for `AGENTS.md` and appends its contents directly to the `payload` TEXT blob under a `[SYSTEM GROUNDING]` namespace.
 
 This design document initiates the workflow to create a formal mission brief for implementation.
 

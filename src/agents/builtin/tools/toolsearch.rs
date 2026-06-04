@@ -38,10 +38,6 @@ impl ToolExecutor for ToolSearchExecutor {
             ("Agent", "Spawn a sub-agent task"),
             ("TaskStop", "Stop a running sub-agent"),
             ("TaskStatus", "Get sub-agent task status"),
-            (
-                "RunWorkflow",
-                "Run a built-in multi-agent workflow with phased subagent orchestration",
-            ),
         ];
 
         let matches: Vec<String> = all_tools

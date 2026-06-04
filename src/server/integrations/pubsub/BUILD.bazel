@@ -1,28 +1,8 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-
-rust_library(
-    name = "server_integrations_pubsub",
+filegroup(
+    name = "srcs",
     srcs = [
         "mcp.rs",
         "mod.rs",
     ],
-    crate_root = "mod.rs",
-    edition = "2024",
-    visibility = ["//visibility:public"],
-    deps = [
-        "//src/agents/builtin:ohc_builtin_agent_lib",
-        "//src/server/ohc:server_ohc",
-        "@crates//:prost",
-        "@crates//:uuid",
-    ],
-)
-
-rust_test(
-    name = "server_integrations_pubsub_unit_test",
-    size = "small",
-    crate = ":server_integrations_pubsub",
-    edition = "2024",
-    deps = [
-        "@crates//:tokio",
-    ],
+    visibility = ["//src/server/integrations:__pkg__"],
 )

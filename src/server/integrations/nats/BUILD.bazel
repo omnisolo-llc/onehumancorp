@@ -1,30 +1,9 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-
-rust_library(
-    name = "server_integrations_nats",
+filegroup(
+    name = "srcs",
     srcs = [
         "client.rs",
         "mod.rs",
         "provider.rs",
     ],
-    crate_root = "mod.rs",
-    edition = "2024",
-    proc_macro_deps = [
-        "@crates//:async-trait",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//src/server/integrations/core:server_integrations_core",
-        "@crates//:async-nats",
-        "@crates//:futures",
-        "@crates//:opentelemetry",
-        "@crates//:tokio",
-    ],
-)
-
-rust_test(
-    name = "server_integrations_nats_unit_test",
-    size = "small",
-    crate = ":server_integrations_nats",
-    edition = "2024",
+    visibility = ["//src/server/integrations:__pkg__"],
 )

@@ -1,9 +1,9 @@
-# playwright_tests.bzl - Generates Playwright Bazel test targets.
+# playwright_tests.bzl — Generates one sh_test per Playwright spec file.
 #
-# The sharded aggregate target is included in `bazel test //...` and runs every
-# Playwright spec. Per-spec targets are manual so they remain available for
-# direct debugging without making wildcard CI start one Docker/server stack per
-# spec file.
+# Each *.spec.ts becomes its own Bazel test target, enabling:
+#   - Granular remote caching (only re-run changed specs)
+#   - Integration with `bazel test //...`
+#   - Individual spec execution: `bazel test //src/e2e:playwright_app_spec_ts`
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -11,100 +11,42 @@ def _playwright_target_name(spec):
     """Convert a spec filename to a valid Bazel target name."""
     return "playwright_" + spec.replace("/", "_").replace(".", "_").replace("-", "_")
 
-def _playwright_shard_target_name(index, total):
-    return "playwright_shard_{}_of_{}".format(index + 1, total)
-
-def _shard_specs(specs, index, total):
-    shard_specs = []
-    for spec_index, spec in enumerate(specs):
-        if spec_index % total == index:
-            shard_specs.append(spec)
-    return shard_specs
-
-def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = "long"):
-    tags = [
-        "e2e",
-        "no-remote-exec",
-        "requires-docker",
-        "no-sandbox",
-    ]
-    if manual:
-        tags.append("manual")
-
-    attrs = {
-        "name": name,
-        "srcs": ["//bazel/rules/playwright:playwright_test.sh"],
-        "args": ["$(rootpath {})".format(spec) for spec in spec_args],
-        "data": spec_args + common_data,
-        "env": {
-            "BASE_URL": "http://localhost:18789",
-            "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
-            "PLAYWRIGHT_RETRIES": "0",
-        },
-        "size": "large",
-        "timeout": timeout,
-        "tags": tags,
-        "target_compatible_with": select({
-            "@platforms//os:linux": [],
-            "//conditions:default": ["@platforms//:incompatible"],
-        }),
-    }
-    sh_test(**attrs)
-
-def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = [], server = None):
-    """Generate one sharded all-spec CI test plus manual per-spec debug targets."""
-    common_data = [
-        "//src/e2e:fixtures.ts",
-        "//src/e2e:current_app_smoke.ts",
-        "//src/e2e:ai-judge.ts",
-        "//src/e2e:global-setup.ts",
-        "//src/e2e:e2e-seed.sql",
-        "//deploy:docker-compose.e2e.yml",
-        "//:playwright.config.ts",
-        "//:package.json",
-        "//:package-lock.json",
-        "//:node_modules",
-        "@playwright//:chromium-headless-shell",
-        "@playwright//:ffmpeg",
-    ] + data
-    if server:
-        common_data.append(server)
-
-    for spec in sorted(specs):
+def define_playwright_tests():
+    """Generate one sh_test target per *.spec.ts file, plus a test_suite."""
+    targets = []
+    for spec in sorted(native.glob(["*.spec.ts"])):
         name = _playwright_target_name(spec)
-        _playwright_sh_test(
+        sh_test(
             name = name,
-            spec_args = [spec],
-            common_data = common_data,
-            manual = True,
-            timeout = "eternal",
+            srcs = ["//bazel/rules/playwright:playwright_test.sh"],
+            args = [spec],
+            data = native.glob(["*.spec.ts"]) + [
+                "//src/server:server",
+                "//deploy:docker-compose.e2e.yml",
+                "//:playwright.config.ts",
+                "//:package.json",
+            ],
+            env = {
+                "BASE_URL": "http://localhost:18789",
+            },
+            size = "large",
+            timeout = "long",
+            tags = [
+                "e2e",
+                "no-remote-exec",
+                "requires-docker",
+                "no-sandbox",
+                "local",
+            ],
+            target_compatible_with = select({
+                "@platforms//os:linux": [],
+                "//conditions:default": ["@platforms//:incompatible"],
+            }),
         )
-
-    if not ci_specs:
-        ci_specs = specs
-    ci_specs = sorted(ci_specs)
-
-    sh_test(
-        name = "playwright_spec_coverage",
-        srcs = ["//bazel/rules/playwright:playwright_spec_coverage_check.sh"],
-        args = ["--all"] + sorted(specs) + ["--ci"] + sorted(ci_specs),
-        size = "small",
-        tags = ["playwright"],
-    )
-
-    shard_targets = []
-    for index in range(ci_shard_count):
-        shard_name = _playwright_shard_target_name(index, ci_shard_count)
-        shard_targets.append(":" + shard_name)
-        _playwright_sh_test(
-            name = shard_name,
-            spec_args = _shard_specs(ci_specs, index, ci_shard_count),
-            common_data = common_data,
-            manual = True,
-        )
+        targets.append(":" + name)
 
     native.test_suite(
         name = "playwright",
-        tags = ["manual"],
-        tests = [":playwright_spec_coverage"] + shard_targets,
+        tests = targets,
+        tags = [],
     )

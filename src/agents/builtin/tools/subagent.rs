@@ -30,9 +30,9 @@ impl ToolExecutor for SubagentExecutor {
             let worktree_path = format!(".agent-worktrees/{}", task_id);
 
             // Create worktree
+            let _ = self.runner.run("git", &["branch", &branch_name], None, vec![]).await;
 
-
-            let wt_output = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_path], None, vec![]).await;
+            let wt_output = self.runner.run("git", &["worktree", "add", &worktree_path, &branch_name], None, vec![]).await;
 
             if let Err(e) = wt_output {
                 return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
@@ -70,29 +70,20 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let mut summary = inner.result;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
-                        Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", task, summary))
+                        Ok(inner.result)
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "fork" {
-            let parent_context_file = args.get("parent_context_file").and_then(|v| v.as_str()).unwrap_or("");
+            let parent_context_json = args.get("parent_context_json").and_then(|v| v.as_str()).unwrap_or("");
 
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--parent-context-file", &parent_context_file], None, envs).await;
-
-            // Clean up the temporary context file
-            if !parent_context_file.is_empty() {
-                let _ = tokio::fs::remove_file(parent_context_file).await;
-            }
+            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--parent-context", &parent_context_json], None, envs).await;
 
             let res = match output {
                 Ok(out) => {
@@ -115,64 +106,9 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let mut summary = inner.result;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
-                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, summary))
+                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, inner.result))
                     }
                 }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
-            }
-        } else if mode == "worktree" {
-            let task_id = uuid::Uuid::new_v4().to_string();
-            let branch_name = format!("subagent-{}", task_id);
-            let worktree_dir = format!(".agent-worktrees/{}", branch_name);
-
-            // Create git worktree
-            let output = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_dir], None, vec![]).await;
-            if let Err(e) = output {
-                return Err(ToolError::LlmRecoverable(format!("Failed to create git worktree: {}", e)));
-            } else if let Ok(out) = output {
-                if !out.status.success() {
-                    return Err(ToolError::LlmRecoverable(format!("git worktree add failed: {}", String::from_utf8_lossy(&out.stderr))));
-                }
-            }
-
-            let worktree_task = format!(
-                "You are a subagent running in an isolated git worktree (branch: {}). Your task is: {}\n\nCRITICAL INSTRUCTION: You MUST return a 1k-2k token condensed summary of your findings and actions. Do not return your full context loop.",
-                branch_name, task
-            );
-
-            let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
-            }
-
-            let pb = std::path::PathBuf::from(&worktree_dir);
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &worktree_task], Some(pb.as_path()), envs).await;
-
-            let res = match output {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    if out.status.success() {
-                        let mut summary = stdout;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
-                        Ok(format!("[Subagent (Worktree: {})] Completed task. Summary: {}", branch_name, summary))
-                    } else {
-                        Err(format!("Process failed: {}", stderr))
-                    }
-                }
-                Err(e) => Err(format!("Runner failed: {}", e)),
-            };
-
-            // Note: We leave the worktree intact for the user or parent agent to inspect and merge.
-
-            match res {
-                Ok(msg) => Ok(msg),
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "teammate" {
@@ -213,18 +149,13 @@ When finished or if you need to report progress, write your final summary to {}.
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        let mut summary = stdout;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
-                        summary
+                        stdout
                     } else {
                         format!("Subagent error: {}", stderr)
                     }
                 }
                 Err(e) => format!("Subagent failed: {}", e),
             };
-
 
             use tokio::io::AsyncWriteExt;
             if let Ok(mut file) = tokio::fs::OpenOptions::new().create(true).append(true).open(&outbox_path_clone).await {
@@ -360,73 +291,5 @@ mod tests {
                 let _ = tokio::fs::remove_dir_all(parent_dir).await;
             });
         });
-    }
-
-    #[tokio::test]
-    async fn test_subagent_worktree_mode() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        // Mock successful git worktree add
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Preparing worktree", "")));
-        // Mock successful ohc_builtin_agent run
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, "I completed the worktree task", "")));
-
-        let executor = SubagentExecutor { runner };
-        let args = json!({
-            "task": "Do this worktree task",
-            "mode": "worktree"
-        });
-
-        let result = executor.execute(args).await;
-        assert!(result.is_ok(), "Expected Ok for worktree mode");
-        let msg = result.unwrap();
-
-        assert!(msg.contains("[Subagent (Worktree: subagent-"), "Message should contain success notification");
-        assert!(msg.contains("Completed task. Summary: I completed the worktree task"), "Message should contain the agent output");
-    }
-
-    #[tokio::test]
-    async fn test_subagent_output_truncation() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let long_string = "a".repeat(9000);
-
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, &long_string, "")));
-
-        let executor = SubagentExecutor { runner };
-        let args = json!({
-            "task": "Test truncation",
-            "mode": "fork"
-        });
-
-        let result = executor.execute(args).await;
-        assert!(result.is_ok(), "Expected Ok");
-        let msg = result.unwrap();
-        assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");
-        assert!(msg.len() < 9000, "Expected output length to be less than 9000 after truncation");
-    }
-    #[tokio::test]
-    async fn test_subagent_worktree_mode() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        // The executor makes 4 command calls in worktree mode:
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Worktree added", "")));
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Subagent ran successfully", "")));
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Worktree removed", "")));
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Branch deleted", "")));
-
-        let executor = SubagentExecutor { runner: runner.clone() };
-        let args = json!({
-            "task": "Test worktree mode",
-            "mode": "worktree"
-        });
-
-        let result = executor.execute(args).await;
-        assert!(result.is_ok(), "Expected Ok for worktree mode");
-        let msg = result.unwrap();
-        assert!(msg.contains("[Subagent (Worktree)] Completed task"));
-        assert!(msg.contains("Subagent ran successfully"));
-
-        let calls = runner.get_calls();
-        assert_eq!(calls.len(), 4, "Expected exactly 4 commands to be run");
-        assert!(calls[0].1.contains(&"worktree".to_string()) && calls[0].1.contains(&"add".to_string()) && calls[0].1.contains(&"-b".to_string()), "First command should be git worktree add -b");
-        assert!(calls[2].1.contains(&"worktree".to_string()) && calls[2].1.contains(&"remove".to_string()), "Third command should be git worktree remove");
     }
 }

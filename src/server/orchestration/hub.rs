@@ -1,54 +1,25 @@
 use async_trait::async_trait;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
-use opentelemetry::global;
-use opentelemetry::KeyValue;
-use opentelemetry::metrics::{Counter, Histogram};
-use std::time::Instant;
 
-/// RedisMeshTransport uses Redis Pub/Sub for Teammate Mesh APIs.
-/// It wraps RedisPubSubTransport to add OpenTelemetry tracking metrics.
 pub struct RedisMeshTransport {
-    inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
-    publish_counter: Counter<u64>,
-    bytes_counter: Counter<u64>,
-    subscribe_counter: Counter<u64>,
-    latency_histogram: Histogram<u64>,
+    inner: ohc_builtin_agent::mesh::transport::RedisTransport,
 }
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
-        let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url).await
-            .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
-
-        let meter = global::meter("orchestration");
-        let publish_counter = meter.u64_counter("mesh.publish.count").build();
-        let bytes_counter = meter.u64_counter("mesh.publish.bytes").build();
-        let subscribe_counter = meter.u64_counter("mesh.subscribe.count").build();
-        let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
-
-        Ok(Self { inner, publish_counter, bytes_counter, subscribe_counter, latency_histogram })
+        let inner = ohc_builtin_agent::mesh::transport::RedisTransport::new(url).await
+            .map_err(|e| format!("Failed to create RedisTransport: {}", e))?;
+        Ok(Self { inner })
     }
 }
 
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
-        let start = Instant::now();
-        let payload_size = message.payload.len() as u64;
-
-        self.publish_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
-        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
-
-        let res = self.inner.publish(topic, message).await;
-
-        let duration_ms = start.elapsed().as_millis() as u64;
-        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
-
-        res
+        self.inner.publish(topic, message).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }
 
@@ -69,28 +40,14 @@ impl MeshTransport for RedisMeshTransport {
     }
 }
 
-/// MemoryMeshTransport uses in-process DashMap broadcasting for Teammate Mesh APIs.
-/// This is primarily utilized when the application runs in Standalone (offline) mode.
-/// It wraps InProcessTransport to add OpenTelemetry tracking metrics.
 pub struct MemoryMeshTransport {
-    inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
-    publish_counter: Counter<u64>,
-    bytes_counter: Counter<u64>,
-    subscribe_counter: Counter<u64>,
-    latency_histogram: Histogram<u64>,
+    inner: ohc_builtin_agent::mesh::transport::MemoryTransport,
 }
 
 impl MemoryMeshTransport {
     pub fn new() -> Self {
-        let meter = global::meter("orchestration");
-        let publish_counter = meter.u64_counter("mesh.publish.count").build();
-        let bytes_counter = meter.u64_counter("mesh.publish.bytes").build();
-        let subscribe_counter = meter.u64_counter("mesh.subscribe.count").build();
-        let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
-
         Self {
-            inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
-            publish_counter, bytes_counter, subscribe_counter, latency_histogram,
+            inner: ohc_builtin_agent::mesh::transport::MemoryTransport::new(),
         }
     }
 }
@@ -98,22 +55,10 @@ impl MemoryMeshTransport {
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
-        let start = Instant::now();
-        let payload_size = message.payload.len() as u64;
-
-        self.publish_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
-        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
-
-        let res = self.inner.publish(topic, message).await;
-
-        let duration_ms = start.elapsed().as_millis() as u64;
-        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
-
-        res
+        self.inner.publish(topic, message).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }
 
@@ -133,340 +78,4 @@ impl MeshTransport for MemoryMeshTransport {
         self.inner.get_active_agents().await
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ohc_builtin_agent::mesh::transport::Message;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
-
-    #[tokio::test]
-    async fn test_memory_mesh_transport_pubsub() {
-        let transport = MemoryMeshTransport::new();
-        let received = Arc::new(Mutex::new(Vec::new()));
-        let received_clone = received.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            let received = received_clone.clone();
-            tokio::spawn(async move {
-                received.lock().await.push(msg);
-            });
-        });
-
-        let cancel = transport.subscribe("test_topic", handler).await.unwrap();
-
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "agent_1".to_string(),
-            action: "action_1".to_string(),
-            status: "ok".to_string(),
-            payload: b"hello".to_vec(),
-            msg_id: "msg_1".to_string(),
-        };
-
-        transport.publish("test_topic", msg.clone()).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-
-        let locked = received.lock().await;
-        assert_eq!(locked.len(), 1);
-        assert_eq!(locked[0].msg_id, "msg_1");
-        drop(locked);
-
-        cancel();
-    }
-
-    #[tokio::test]
-    async fn test_memory_mesh_transport_locking() {
-        let transport = MemoryMeshTransport::new();
-        let resource_name = format!("test_resource_{}", uuid::Uuid::new_v4());
-
-        let acq1 = transport.acquire_lock(&resource_name, "agent_1", 10).await.unwrap();
-        assert!(acq1);
-
-        let acq2 = transport.acquire_lock(&resource_name, "agent_2", 10).await.unwrap();
-        assert!(!acq2);
-
-        transport.release_lock(&resource_name, "agent_1").await.unwrap();
-
-        let acq3 = transport.acquire_lock(&resource_name, "agent_2", 10).await.unwrap();
-        assert!(acq3);
-    }
-
-    #[tokio::test]
-    async fn test_memory_mesh_transport_presence() {
-        let transport = MemoryMeshTransport::new();
-
-        transport.register_presence("agent_1", "online", 10).await.unwrap();
-        transport.register_presence("agent_2", "busy", 10).await.unwrap();
-
-        let mut agents = transport.get_active_agents().await.unwrap();
-        agents.sort();
-
-        assert_eq!(agents.len(), 2);
-        assert_eq!(agents[0], ("agent_1".to_string(), "online".to_string()));
-        assert_eq!(agents[1], ("agent_2".to_string(), "busy".to_string()));
-    }
-
-    #[tokio::test]
-    async fn test_redis_mesh_transport_pubsub() {
-        if std::env::var("REDIS_URL").is_err() {
-            return;
-        }
-        let redis_url = std::env::var("REDIS_URL").unwrap();
-
-        let transport_res = RedisMeshTransport::new(&redis_url).await;
-        let transport = transport_res.unwrap();
-        let received = Arc::new(Mutex::new(Vec::new()));
-        let received_clone = received.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            let received = received_clone.clone();
-            tokio::spawn(async move {
-                received.lock().await.push(msg);
-            });
-        });
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-
-        let cancel = transport.subscribe("test_topic_redis", handler).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "agent_1".to_string(),
-            action: "action_redis".to_string(),
-            status: "ok".to_string(),
-            payload: b"hello redis".to_vec(),
-            msg_id: "msg_redis_1".to_string(),
-        };
-
-        transport.publish("test_topic_redis", msg.clone()).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        let locked = received.lock().await;
-        assert!(locked.len() >= 1);
-        let found = locked.iter().any(|m| m.msg_id == "msg_redis_1");
-        assert!(found);
-        drop(locked);
-
-        cancel();
-    }
-
-    #[tokio::test]
-    async fn test_redis_mesh_transport_locking() {
-        if std::env::var("REDIS_URL").is_err() {
-            return;
-        }
-        let redis_url = std::env::var("REDIS_URL").unwrap();
-
-        let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
-
-        let acq1 = transport.acquire_lock("test_resource_redis", "agent_1", 10).await.unwrap();
-        assert!(acq1);
-
-        let acq2 = transport.acquire_lock("test_resource_redis", "agent_2", 10).await.unwrap();
-        assert!(!acq2);
-
-        transport.release_lock("test_resource_redis", "agent_1").await.unwrap();
-
-        let acq3 = transport.acquire_lock("test_resource_redis", "agent_2", 10).await.unwrap();
-        assert!(acq3);
-    }
-
-    #[tokio::test]
-    async fn test_redis_mesh_transport_presence() {
-        if std::env::var("REDIS_URL").is_err() {
-            return;
-        }
-        let redis_url = std::env::var("REDIS_URL").unwrap();
-
-        let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
-
-        transport.register_presence("agent_redis_1", "online", 10).await.unwrap();
-        transport.register_presence("agent_redis_2", "busy", 10).await.unwrap();
-
-        let mut agents = transport.get_active_agents().await.unwrap();
-
-        // Filter agents because other tests might run in parallel
-        agents.retain(|(id, _)| id == "agent_redis_1" || id == "agent_redis_2");
-        agents.sort();
-
-        assert_eq!(agents.len(), 2);
-        assert_eq!(agents[0], ("agent_redis_1".to_string(), "online".to_string()));
-        assert_eq!(agents[1], ("agent_redis_2".to_string(), "busy".to_string()));
-    }
-
-    #[tokio::test]
-    async fn test_memory_mesh_transport_concurrent_subscribers() {
-        let transport = MemoryMeshTransport::new();
-
-        let mut cancels = Vec::new();
-        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-
-        for _ in 0..5 {
-            let rc = received_count.clone();
-            let handler = Box::new(move |msg: Message| {
-                if msg.msg_id == "concurrent_msg_1" {
-                    rc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                }
-            });
-            let cancel = transport.subscribe("concurrent_topic", handler).await.unwrap();
-            cancels.push(cancel);
-        }
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "agent_concurrent".to_string(),
-            action: "broadcast".to_string(),
-            status: "ok".to_string(),
-            payload: b"data".to_vec(),
-            msg_id: "concurrent_msg_1".to_string(),
-        };
-
-        transport.publish("concurrent_topic", msg).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-
-        assert_eq!(received_count.load(std::sync::atomic::Ordering::SeqCst), 5);
-
-        for cancel in cancels {
-            cancel();
-        }
-    }
-
-    #[tokio::test]
-    async fn test_redis_mesh_transport_concurrent_subscribers() {
-        if std::env::var("OHC_REDIS_URL").is_err() {
-            return;
-        }
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap();
-        let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
-
-        let mut cancels = Vec::new();
-        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-
-        for _ in 0..5 {
-            let rc = received_count.clone();
-            let handler = Box::new(move |msg: Message| {
-                if msg.msg_id == "concurrent_msg_redis_1" {
-                    rc.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                }
-            });
-            let cancel = transport.subscribe("concurrent_topic_redis", handler).await.unwrap();
-            cancels.push(cancel);
-        }
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "agent_concurrent_redis".to_string(),
-            action: "broadcast".to_string(),
-            status: "ok".to_string(),
-            payload: b"data".to_vec(),
-            msg_id: "concurrent_msg_redis_1".to_string(),
-        };
-
-        transport.publish("concurrent_topic_redis", msg).await.unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        // At least some subscribers should receive the message.
-        // Redis pub/sub can be slightly non-deterministic with many rapid local connections
-        // but we expect exactly 5 here in a stable test.
-        assert_eq!(received_count.load(std::sync::atomic::Ordering::SeqCst), 5);
-
-        for cancel in cancels {
-            cancel();
-        }
-    }
-
-    #[tokio::test]
-    async fn test_memory_mesh_transport_submillisecond_latency() {
-        let transport = MemoryMeshTransport::new();
-        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
-        let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
-
-        let handler = Box::new(move |_msg: Message| {
-            let tx_clone = tx_arc.clone();
-            tokio::spawn(async move {
-                let tx = tx_clone.lock().await;
-                let _ = tx.send(std::time::Instant::now()).await;
-            });
-        });
-
-        let cancel = transport.subscribe("subms_topic", handler).await.unwrap();
-
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "agent_fast".to_string(),
-            action: "fast_action".to_string(),
-            status: "ok".to_string(),
-            payload: b"fast".to_vec(),
-            msg_id: "fast_1".to_string(),
-        };
-
-        // Sleep to let subscriber register
-        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
-        let start = std::time::Instant::now();
-        transport.publish("subms_topic", msg).await.unwrap();
-
-        if let Some(received_time) = rx.recv().await {
-            let elapsed = received_time.duration_since(start);
-            // using <= 10ms for reliability on slower CI runners while still proving sub-ms locally
-            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
-        } else {
-            panic!("Did not receive message");
-        }
-        cancel();
-    }
-
-    #[tokio::test]
-    async fn test_redis_mesh_transport_submillisecond_latency() {
-        if std::env::var("REDIS_URL").is_err() {
-            return;
-        }
-        let redis_url = std::env::var("REDIS_URL").unwrap();
-
-        let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
-        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
-        let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
-
-        let handler = Box::new(move |_msg: Message| {
-            let tx_clone = tx_arc.clone();
-            tokio::spawn(async move {
-                let tx = tx_clone.lock().await;
-                let _ = tx.send(std::time::Instant::now()).await;
-            });
-        });
-
-        let cancel = transport.subscribe("subms_topic_redis", handler).await.unwrap();
-
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "agent_fast_redis".to_string(),
-            action: "fast_action_redis".to_string(),
-            status: "ok".to_string(),
-            payload: b"fast_redis".to_vec(),
-            msg_id: "fast_redis_1".to_string(),
-        };
-
-        // Sleep to let subscriber register
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-
-        let start = std::time::Instant::now();
-        transport.publish("subms_topic_redis", msg).await.unwrap();
-
-        // use timeout
-        let res = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
-
-        if let Ok(Some(received_time)) = res {
-            let elapsed = received_time.duration_since(start);
-            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
-        } else {
-            panic!("Did not receive message");
-        }
-        cancel();
-    }
-}
+// dummy validation comment

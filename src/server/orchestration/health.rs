@@ -5,7 +5,7 @@ use crate::orchestration::mesh::TeammateMesh;
 pub async fn run_health_monitor(
     monitor_mesh: Arc<dyn TeammateMesh>,
     monitor_hub: Arc<Hub>,
-    is_cloud: bool,
+    _is_cloud: bool,
     tick_duration: std::time::Duration,
 ) {
     let mut interval = tokio::time::interval(tick_duration);
@@ -23,25 +23,22 @@ pub async fn run_health_monitor(
             tracing::trace!("HEALTH MONITOR: Active probe (ping) failed or timed out.");
         }
 
-        // Hybrid mode health check and sync probe
-        if let Ok(Ok(health)) = tokio::time::timeout(std::time::Duration::from_millis(50), monitor_hub.check_health()).await {
+        // Hybrid mode health check
+        if let Ok(health) = monitor_hub.check_health().await {
             if let Some(ready) = health.get("hybrid_mode_ready").and_then(|v| v.as_bool()) {
                 if !ready {
                     tracing::trace!("HEALTH MONITOR: Hybrid mode is degraded.");
                 }
             }
+        }
 
+        // New Health-check probe for local-to-cloud mission sync
+        if let Ok(health) = monitor_hub.check_health().await {
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
-                    tracing::trace!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
+                    tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
                 } else if sync_errors > 0 {
                     tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
-                }
-            }
-
-            if let Some(sync_queue) = health.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64()) {
-                if sync_queue > 100 {
-                    tracing::trace!("HEALTH MONITOR: High local_to_cloud_sync_queue detected: {}", sync_queue);
                 }
             }
         }
@@ -49,18 +46,19 @@ pub async fn run_health_monitor(
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
+                let is_cloud = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true";
+
                 if agents.is_empty() {
                     tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
                 }
 
-                let mut active_agent_ids = std::collections::HashSet::with_capacity(agents.len());
+                let mut active_agent_ids = std::collections::HashSet::new();
                 for (agent_id, _status) in agents {
                     active_agent_ids.insert(agent_id.clone());
                 }
 
-                let hub_agents = monitor_hub.get_agents().await;
-                let mut to_fire = Vec::with_capacity(hub_agents.len());
-                for agent in hub_agents.iter() {
+                let mut to_fire = Vec::new();
+                for agent in monitor_hub.get_agents().iter() {
                     // Fire agents that are missing from active agents mesh list OR if ping failed
                     if !active_agent_ids.contains(&agent.id) || !ping_ok {
                         to_fire.push(agent.id.clone());
@@ -78,7 +76,7 @@ pub async fn run_health_monitor(
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
                 for agent_id in to_fire_now {
-                    tracing::trace!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
+                    tracing::info!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
                     pending_fires.remove(&agent_id);
                 }
@@ -97,12 +95,12 @@ pub async fn run_health_monitor(
 mod tests {
     use super::*;
 
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -112,7 +110,7 @@ mod tests {
 
         // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
         // Since Hub takes a PgPool, we have to supply one to construct it, even if unused in this isolated test
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://dummy")
             .unwrap();
 
@@ -143,7 +141,7 @@ mod tests {
         assert!(hub.get_agent("agent_busy").is_some());
 
         // We simulate a transport with NO active agents
-        let transport = Arc::new(InProcessTransport::new());
+        let transport = Arc::new(MemoryTransport::new());
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
 
         let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
@@ -164,8 +162,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_cloud_retry() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -173,7 +171,7 @@ mod tests {
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://dummy")
             .unwrap();
 
@@ -205,8 +203,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_sync_probe() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -214,7 +212,7 @@ mod tests {
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://dummy")
             .unwrap();
 

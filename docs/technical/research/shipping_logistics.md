@@ -1,27 +1,29 @@
-# [Shipping & Logistics] Automated Shipping Rates and Labels
+# [Shipping & Logistics] Integrate Shippo for Automated Fulfillment
 
 ## Problem Statement
-Sellers of physical products need to charge customers the correct amount for shipping and easily print shipping labels. Calculating this manually is error-prone, and going to the post office to buy labels is time-consuming. They need shipping costs calculated automatically at checkout and one-click label printing.
+Sellers of physical products (like Priya's Boutique) struggle with calculating accurate shipping rates at checkout and manually copying addresses to print labels. They need an automated way to charge customers the right shipping fee and print labels with one click.
 
 ## Research Report
-- **Target Tools**: Shippo API or EasyPost API.
-- **Competitive Analysis**: Shopify has robust native shipping. OHC needs a simple, comparable alternative without the complexity of carrier negotiation.
-- **Ease of Use**: Shippo/EasyPost abstract multiple carriers (USPS, FedEx, UPS) into a single API. OHC users don't need their own carrier accounts.
-- **Pricing**: Pay-as-you-go per label (cents per label + postage). Can be passed to the user or absorbed in OHC premium tiers.
-- **Reputation**: Highly reliable APIs used by many e-commerce platforms.
-- **Advantages and Risks**: Massive time-saver for physical product sellers. Risk involves miscalculating package weights resulting in undercharging for shipping.
-- **Cloud vs Standalone**: Cloud integrates directly. Standalone could work if the API calls are client-side, but might still rely on a Cloud proxy to handle billing.
+**Evaluated Tool:** Shippo API
+**Alternatives Considered:** EasyPost, ShipEngine
+**Pros:** Excellent API design, strong network of global carriers, built-in address validation. Often provides discounted USPS/UPS rates out of the box without requiring the user to negotiate their own carrier accounts.
+**Cons:** Customer support can be slow on lower tiers.
+**Ease of Use for Non-technical Users:** The user enters the weight of their product. When an order arrives, they click "Buy Label", and a printable PDF appears. Shippo's default discounted rates mean the user doesn't need to configure carrier accounts.
+**Pricing:** Pay-as-you-go (per label fee) or monthly subscriptions.
+**Deployment:** Cloud-native.
 
 ## Design Doc
-- **Integration Flow**: In "Operations", the user sets up their shipping origin address and default box sizes.
-- **Actions**: During customer checkout, the system calls the API to get real-time rates based on the cart contents and destination. Post-purchase, the user can click "Generate Label" to get a printable PDF and automatically email tracking info to the customer.
-- **User Experience**: A "Print Shipping Label" button appears on physical product orders. The system handles the payment for the postage in the background (deducted from their payout or charged to their card on file).
+**Integration with OHC:**
+- **Trigger:** A customer enters their shipping address at checkout (for live rates), or the business owner clicks "Fulfill Order".
+- **Action:** OHC queries Shippo for shipping rates, or generates a shipping label transaction.
+- **AI Agent Interaction:** "The Operations Manager" automatically fetches the tracking number from Shippo and triggers "The Ambassador" to email the customer the tracking link.
+- **User View:** A "Fulfillment" screen on the order details page showing a generated label PDF and tracking status.
 
 ## Implementation Prompt
-Integrate a shipping aggregation API (like EasyPost or Shippo) to provide real-time shipping rate calculation at checkout for physical products. Additionally, build a feature allowing the business owner to generate and print shipping labels directly from the order details screen in the OHC app. Ensure tracking numbers are automatically generated and attached to the order.
+Integrate the Shippo API to provide real-time shipping rate calculation at checkout and shipping label generation in the order management dashboard. Ensure tracking webhooks are processed to update order statuses and trigger customer notifications automatically.
 
 ## Priority
 P1
 
 ## Estimated Scope
-Large
+Medium

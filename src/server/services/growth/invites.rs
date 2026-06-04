@@ -39,37 +39,6 @@ impl InviteRepository {
         Ok(())
     }
 
-    pub async fn get_team_invites(&self, team_id: &str, cursor: Option<String>, limit: i64) -> Result<Vec<TeamInvite>, String> {
-        let rows = if let Some(c) = cursor {
-            sqlx::query("SELECT id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1 AND created_at <= (SELECT created_at FROM team_invites WHERE id = $2) AND id < $2 ORDER BY created_at DESC, id DESC LIMIT $3")
-                .bind(team_id)
-                .bind(c)
-                .bind(limit)
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| e.to_string())?
-        } else {
-            sqlx::query("SELECT id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2")
-                .bind(team_id)
-                .bind(limit)
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| e.to_string())?
-        };
-
-        let invites = rows.into_iter().map(|row| TeamInvite {
-            id: row.get("id"),
-            team_id: row.get("team_id"),
-            inviter_id: row.get("inviter_id"),
-            invitee_id: row.get("invitee_id"),
-            status: row.get("status"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-        }).collect();
-
-        Ok(invites)
-    }
-
     pub async fn get_team_invites_count(&self, team_id: &str) -> Result<i64, String> {
         let row = sqlx::query("SELECT COUNT(*) FROM team_invites WHERE team_id = $1")
             .bind(team_id)
@@ -79,20 +48,6 @@ impl InviteRepository {
             
         let count: i64 = row.get(0);
         Ok(count)
-    }
-
-    pub async fn accept_invite(&self, invite_id: &str) -> Result<(), String> {
-        let result = sqlx::query("UPDATE team_invites SET status = 'ACCEPTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-            .bind(invite_id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if result.rows_affected() == 0 {
-            return Err("not found".to_string());
-        }
-
-        Ok(())
     }
 
     pub async fn get_total_invites_count(&self) -> Result<i64, String> {
@@ -153,16 +108,8 @@ impl InviteTracker {
         Ok(())
     }
 
-    pub async fn get_team_invites(&self, team_id: &str, cursor: Option<String>, limit: i64) -> Result<Vec<TeamInvite>, String> {
-        self.repo.get_team_invites(team_id, cursor, limit).await
-    }
-
     pub async fn get_team_invites_count(&self, team_id: &str) -> Result<i64, String> {
         self.repo.get_team_invites_count(team_id).await
-    }
-
-    pub async fn accept_invite(&self, invite_id: &str) -> Result<(), String> {
-        self.repo.accept_invite(invite_id).await
     }
 
     pub async fn get_total_invites_count(&self) -> Result<i64, String> {

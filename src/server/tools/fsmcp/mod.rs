@@ -67,11 +67,11 @@ pub struct FsMcpTool {
 
 impl FsMcpTool {
     pub fn new(storage_provider: Option<Arc<dyn Provider>>) -> Self {
-        let is_standalone = env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+        let is_standalone = env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true";
         let local_base_dir = if let Ok(home) = env::var("HOME") {
             PathBuf::from(home).join(".ohc-local-data/fs")
         } else {
-            std::env::temp_dir().join(".ohc-local-data/fs")
+            PathBuf::from("/tmp/.ohc-local-data/fs")
         };
 
         let local_dir_clone = local_base_dir.clone();

@@ -4,9 +4,9 @@ The developer section covers setup, workflow, and local validation.
 
 ## Start Here
 
-- `docs/technical/developer/setup.md`
-- `docs/technical/developer/developer-guide.md`
-- `docs/technical/developer/interactive-tutorial.md`
+- `docs/developer/setup.md`
+- `docs/developer/developer-guide.md`
+- `docs/developer/ui_testing_guidelines.md`
 
 ## Expectations
 

@@ -1,13 +1,18 @@
 name: docs-site
 
 on:
-  schedule:
-    - cron: "41 11 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - .github/workflows/docs-site.yml
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -17,44 +22,40 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      pages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v6.0.0
+        uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
+            test --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+            # build --config=buildbuddy-official
+            # test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
+            test --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
 
       - name: Build docs site
         run: bazelisk run //:docs_build
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v5.0.0
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
@@ -62,14 +63,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5.0.0
+        uses: actions/deploy-pages@v4

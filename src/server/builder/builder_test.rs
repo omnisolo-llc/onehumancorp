@@ -4,10 +4,10 @@ use super::db;
 use std::time::Duration;
 
 async fn setup_db() -> Option<(PgPool, Uuid)> {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("DATABASE_URL").is_err() {
         return None; // If no DB is available, tests will simply return/pass without error.
     }
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("DATABASE_URL").unwrap();
     let tenant_id = Uuid::new_v4();
     let tenant_id_clone = tenant_id.clone();
 
@@ -56,7 +56,7 @@ async fn test_builder_db_crud() {
     assert_eq!(pages[0].id, page.id);
 
     // 3. Create Blocks
-    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"headline": "Hello", "subtitle": "World"}), 0).await.expect("Failed to create block 1");
+    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"text": "Hello"}), 0).await.expect("Failed to create block 1");
     let block2 = db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({"items": []}), 1).await.expect("Failed to create block 2");
 
     let blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
@@ -65,8 +65,8 @@ async fn test_builder_db_crud() {
     assert_eq!(blocks[1].id, block2.id);
 
     // 4. Update Block
-    let updated_block1 = db::update_block(&pool, tenant_id, block1.id, serde_json::json!({"headline": "Updated Hello", "subtitle": "World"})).await.expect("Failed to update block");
-    assert_eq!(updated_block1.content["headline"], "Updated Hello");
+    let updated_block1 = db::update_block(&pool, tenant_id, block1.id, serde_json::json!({"text": "Updated Hello"})).await.expect("Failed to update block");
+    assert_eq!(updated_block1.content["text"], "Updated Hello");
 
     // 5. Reorder Blocks
     db::reorder_blocks(&pool, tenant_id, page.id, vec![block2.id, block1.id]).await.expect("Failed to reorder blocks");
@@ -175,27 +175,15 @@ async fn test_builder_api() {
 
     // Create Block
     let res = client.post(&format!("{}/builder/pages/{}/blocks", base_url, page.id))
-        .json(&serde_json::json!({"block_type": "HeroBlock", "content": {"headline": "Hero", "subtitle": "Sub"}, "sort_order": 0}))
+        .json(&serde_json::json!({"block_type": "HeroBlock", "content": {"text": "Hero"}, "sort_order": 0}))
         .send().await.unwrap();
     assert_eq!(res.status(), 200);
     let block: super::api::BlockResponse = res.json().await.unwrap();
     assert_eq!(block.block_type, "HeroBlock");
 
-    // Get Full Site Structure
-    let res = client.get(&format!("{}/builder/sites/{}", base_url, site.id))
-        .send().await.unwrap();
-    assert_eq!(res.status(), 200);
-    let full_site: super::api::SiteStructureResponse = res.json().await.unwrap();
-    assert_eq!(full_site.id, site.id);
-    assert_eq!(full_site.pages.len(), 1);
-    assert_eq!(full_site.pages[0].id, page.id);
-    assert_eq!(full_site.pages[0].blocks.len(), 1);
-    assert_eq!(full_site.pages[0].blocks[0].id, block.id);
-
-
     // Update Block
     let res = client.put(&format!("{}/builder/blocks/{}", base_url, block.id))
-        .json(&serde_json::json!({"content": {"headline": "Updated Hero", "subtitle": "Sub"}}))
+        .json(&serde_json::json!({"content": {"text": "Updated Hero"}}))
         .send().await.unwrap();
     assert_eq!(res.status(), 200);
 
@@ -254,92 +242,22 @@ async fn test_builder_generate_and_publish_draft() {
     let client = reqwest::Client::new();
     let base_url = format!("http://127.0.0.1:{}", port);
 
-    // 0. Generate the brand toolbox
-    let res = match client.post(&format!("{}/builder/brand_toolbox/generate", base_url))
-        .json(&serde_json::json!({
-            "description": "I am a handyman who offers fast local repairs",
-            "website_url": "https://example.com",
-            "product_url": "https://example.com/services/sink-repair",
-            "campaign_prompt": "book more weekend jobs",
-            "uploaded_asset_names": ["logo.png", "before-after.jpg"]
-        }))
+    // 1. Generate Storefront
+    let res = match client.post(&format!("{}/builder/generate", base_url))
+        .json(&serde_json::json!({"description": "I am a handyman"}))
         .send().await {
             Ok(r) => r,
             Err(_) => return,
         };
 
-    assert_eq!(res.status(), 200);
-    let toolbox: super::api::BrandToolboxResponse = res.json().await.unwrap();
-    assert!(!toolbox.brand_dna.colors.is_empty());
-    assert!(!toolbox.logo_concepts.is_empty());
-    assert!(!toolbox.brand_book.is_empty());
-    assert!(!toolbox.catalog.is_empty());
-    assert!(!toolbox.campaign_ideas.is_empty());
-    assert!(!toolbox.social_calendar.is_empty());
-    assert!(!toolbox.assets.is_empty());
-    assert!(!toolbox.photoshoot.prompts.is_empty());
-    assert!(!toolbox.photoshoot.shots.is_empty());
-    assert_eq!(toolbox.store_profile.pages.len(), 1);
-    let toolbox_id = toolbox.id.expect("generated toolbox should be persisted");
 
-    let res = client
-        .get(&format!("{}/builder/brand_toolbox/{}", base_url, toolbox_id))
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(res.status(), 200);
-    let fetched_toolbox: super::api::BrandToolboxResponse = res.json().await.unwrap();
-    assert_eq!(fetched_toolbox.id, Some(toolbox_id));
 
-    let res = client
-        .get(&format!("{}/builder/brand_toolbox", base_url))
-        .send()
-        .await
-        .unwrap();
     assert_eq!(res.status(), 200);
-    let saved_toolboxes: Vec<super::api::BrandToolboxResponse> = res.json().await.unwrap();
-    assert!(saved_toolboxes.iter().any(|saved| saved.id == Some(toolbox_id)));
-
-    let res = client
-        .post(&format!(
-            "{}/builder/brand_toolbox/{}/publish_website",
-            base_url, toolbox_id
-        ))
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(res.status(), 200);
-    let toolbox_site: super::api::SiteResponse = res.json().await.unwrap();
-    assert!(toolbox_site.domain.as_deref().unwrap_or("").ends_with(".ohc.store"));
-
-    // 1. Mock Generate Storefront instead of hitting external APIs.
-    let draft = super::api::StoreProfile {
-        theme: Some("Modern".to_string()),
-        sample_products: vec![],
-        shipping_settings: Some(serde_json::json!({})),
-        tax_settings: Some(serde_json::json!({})),
-        domain: Some("handyman-draft.com".to_string()),
-        pages: vec![super::api::DraftPage {
-            path: "/".to_string(),
-            title: "Home".to_string(),
-            seo_metadata: serde_json::json!({"@context": "https://schema.org"}),
-            blocks: vec![
-                super::api::DraftBlock {
-                    block_type: "HeroBlock".to_string(),
-                    content: serde_json::json!({
-                        "headline": "Handyman",
-                        "subtitle": "Fast local repairs"
-                    }),
-                    sort_order: 0,
-                },
-                super::api::DraftBlock {
-                    block_type: "ProductGridBlock".to_string(),
-                    content: serde_json::json!({"items": []}),
-                    sort_order: 1,
-                },
-            ],
-        }],
-    };
+    let draft: super::api::SiteDraft = res.json().await.unwrap();
+    assert_eq!(draft.pages.len(), 1);
+    assert_eq!(draft.pages[0].blocks.len(), 2);
+    assert_eq!(draft.pages[0].blocks[0].block_type, "HeroBlock");
+    assert_eq!(draft.pages[0].blocks[1].block_type, "ServiceBookingBlock");
 
     // 2. Publish Draft
     let res = client.post(&format!("{}/builder/publish_draft", base_url))
@@ -351,13 +269,5 @@ async fn test_builder_generate_and_publish_draft() {
     assert_eq!(site.domain.as_deref(), Some("handyman-draft.com"));
 
     // Clean up
-    let _ = sqlx::query("DELETE FROM builder_brand_toolboxes WHERE id = $1")
-        .bind(toolbox_id)
-        .execute(&pool)
-        .await;
-    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1")
-        .bind(toolbox_site.id)
-        .execute(&pool)
-        .await;
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }

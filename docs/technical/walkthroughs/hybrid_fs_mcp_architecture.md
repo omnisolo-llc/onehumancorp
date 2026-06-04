@@ -17,13 +17,13 @@ sequenceDiagram
     participant CloudAgent as Cloud Worker Pod
 
     LocalFS->>Sync: File Change Detected (Inotify/FSEvents)
-    Sync->>Router: Push Context Delta (Protobuf over Redis Pub/Sub (Cloud) / Local IPC (Standalone))
+    Sync->>Router: Push Context Delta (gRPC/WebSockets)
     Router->>Vector: Queue for AutoDream Vectorization
     Router->>CloudAgent: Stream Context via Teammate Mesh
-    CloudAgent->>CloudAgent: Rehydrate State (Idempotent)
+    CloudAgent->>CloudAgent: Rehydrate State
 ```
 
 ## 2. Fallback Mechanism
 
-When the Cloud Router is unreachable, the MCP Local Daemon gracefully degrades, queuing deltas in a local SQLite buffer (`mcp_sync_queue`) until connectivity is restored. State handoff and rehydration operations are idempotent to prevent duplicate records during mode switches.
+When the Cloud Router is unreachable, the MCP Local Daemon gracefully degrades, queuing deltas in a local SQLite buffer (`mcp_sync_queue`) until connectivity is restored.
 </div>

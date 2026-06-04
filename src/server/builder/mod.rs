@@ -4,5 +4,3 @@ pub mod jobs;
 
 #[cfg(test)]
 mod builder_test;
-
-pub mod edge;

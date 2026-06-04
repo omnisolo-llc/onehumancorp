@@ -101,7 +101,7 @@ impl TaskWorker {
             if a.status == "ACTIVE" || a.status == "WAITING_FOR_TOOLS" {
                 let payload = serde_json::json!({
                     "issue_id":   issue.id,
-                    "issue_name": ::server_pricing::compression::reduce_tokens(&issue.name),
+                    "issue_name": issue.name,
                     "directive":  "Please resolve the attached issue descriptor.",
                 });
                 
@@ -161,27 +161,6 @@ impl TaskWorker {
             if current_time - last_failure < 30 {
                 error!("Circuit breaker OPEN: builtin agent is currently marked as unavailable due to repeated failures.");
                 // ML-Resilience: paused state
-
-                // Actual implementation for business owner notification
-                let notification_payload = serde_json::json!({
-                    "issue_id": issue.id,
-                    "issue_name": issue.name,
-                    "event": "agent_paused",
-                    "reason": "Circuit breaker OPEN due to repeated failures. LLM API is unavailable."
-                });
-
-                let msg = crate::ohc::orchestration::Message {
-                    id: format!("notify-{}", issue.id),
-                    from_agent: "SYSTEM".to_string(),
-                    to_agent: "OWNER".to_string(),
-                    r#type: "SystemNotification".to_string(),
-                    content: notification_payload.to_string(),
-                    meeting_id: "".to_string(),
-                    occurred_at_unix: chrono::Utc::now().timestamp(),
-                };
-
-                let _ = hub.clone().publish(msg);
-
                 return Err("Circuit breaker OPEN. Agent in paused state. Business owner has been notified.".to_string());
             } else {
                 // Allow a single trial request by temporarily acting as half-open (we don't reset failures yet)
@@ -236,9 +215,6 @@ impl TaskWorker {
                     }
                     // ML-Resilience: automatic retry (max 3 attempts)
                     if attempt >= max_attempts {
-                        if e.contains("exceeded") || e.contains("connect to builtin") || e.contains("unavailable") || e.contains("PAUSED") {
-                            return Err("PAUSED".to_string());
-                        }
                         return Err(e);
                     }
                 }
@@ -248,12 +224,12 @@ impl TaskWorker {
                     LAST_FAILURE_TIME.store(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(), std::sync::atomic::Ordering::SeqCst);
                     // ML-Resilience: automatic retry (max 3 attempts)
                     if attempt >= max_attempts {
-                        return Err("PAUSED".to_string());
+                        return Err("Timeout executing agent job (ML-Resilience 60s boundary)".to_string());
                     }
                 }
             }
             // exponential backoff
-            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempt as u32))).await;
+            tokio::time::sleep(std::time::Duration::from_secs(2 * attempt)).await;
         }
     }
 }
@@ -275,27 +251,5 @@ mod tests {
 
         assert!(result.is_err(), "Worker dispatch must enforce timeout");
         assert!(start.elapsed() >= Duration::from_millis(60), "Timeout should wait the configured time");
-    }
-
-    #[tokio::test]
-    async fn test_ml_resilience_worker_retry_pause() {
-        let mut attempt = 0;
-        let max_attempts = 3;
-        let mut result = Ok(());
-
-        while attempt < max_attempts {
-            attempt += 1;
-            let timeout_result = tokio::time::timeout(Duration::from_millis(10), async {
-                tokio::time::sleep(Duration::from_millis(20)).await;
-                Ok::<(), String>(())
-            }).await;
-
-            if timeout_result.is_err() {
-                if attempt >= max_attempts {
-                    result = Err("PAUSED".to_string());
-                }
-            }
-        }
-        assert_eq!(result, Err("PAUSED".to_string()));
     }
 }

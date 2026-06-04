@@ -1,5 +1,5 @@
 ## [Video] Zoom Integration
-**Title**: Integrate Zoom for Automated Video Conferencing
+**Title**: Integrate Zoom for Auto-Generated Meeting Links
 **Problem Statement**: Leo (Music Tutor) manually creates a Zoom link for every new lesson and emails it to the student. This is prone to error and looks unprofessional. He needs links to be generated automatically when a lesson is booked.
 **Research Report**:
 - **Tool**: Zoom

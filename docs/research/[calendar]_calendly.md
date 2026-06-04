@@ -1,5 +1,5 @@
 ## [Calendar] Calendly Integration
-**Title**: Integrate Calendly for Automated Scheduling
+**Title**: Integrate Calendly for Automated Booking
 **Problem Statement**: Service providers like Carlos (Handyman) and Leo (Music Tutor) lose time going back and forth over email/text to find a time to meet. They need a way for customers to simply click a link, see available times, and book a slot directly on their calendar.
 **Research Report**:
 - **Tool**: Calendly

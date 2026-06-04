@@ -7,12 +7,12 @@ pub struct Job {
     pub id: String,
     pub tenant_id: String,
     pub parent_task_id: String,
-    pub job_type: String,
+    pub agent_role: String,
     pub payload: String,
     pub status: String,
-    pub retry_count: i32,
-    pub max_retries: i32,
-    pub next_retry_at: DateTime<Utc>,
+    pub attempts: i32,
+    pub max_attempts: i32,
+    pub run_after: DateTime<Utc>,
     pub locked_until: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -22,7 +22,7 @@ pub struct Job {
 pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> { for job in jobs { self.enqueue(job).await?; } Ok(()) }
-    async fn dequeue(&self, roles: Vec<String>, estimated_vram: i64, estimated_tokens: i64) -> Result<Option<Job>, String>;
+    async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String>;
     async fn complete(&self, job_id: &str) -> Result<(), String>;
     async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String>;
 }

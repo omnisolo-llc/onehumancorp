@@ -12,14 +12,11 @@ export interface ToolProgressProps {
 
 export const ToolProgress: React.FC<ToolProgressProps> = ({ tools }) => {
   return (
-    <Box flexDirection="column" marginY={1} borderStyle="round" borderColor="dim" padding={1}>
-      <Box marginBottom={1}>
-        <Text bold color="magenta">Tools Executed:</Text>
-      </Box>
+    <Box flexDirection="column" marginY={1}>
+      <Text bold color="magenta">Tools Executed:</Text>
       {tools.map((tool, index) => {
         let icon = '[ ]';
         let color = 'gray';
-        let isDim = false;
 
         if (tool.status === 'success') {
           icon = '[✓]';
@@ -28,15 +25,14 @@ export const ToolProgress: React.FC<ToolProgressProps> = ({ tools }) => {
           icon = '[x]';
           color = 'red';
         } else {
-          icon = '[~]';
+          icon = '[ ]';
           color = 'yellow';
-          isDim = true;
         }
 
         return (
-          <Box key={index} paddingLeft={2}>
-            <Text color={color} dimColor={isDim}>{icon}</Text>
-            <Text dimColor={isDim}> {tool.name}</Text>
+          <Box key={index}>
+            <Text color={color}>{icon}</Text>
+            <Text> {tool.name}</Text>
           </Box>
         );
       })}

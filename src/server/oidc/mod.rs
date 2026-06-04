@@ -48,13 +48,7 @@ fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
     ip.is_loopback() || ip.is_unspecified() || ip.is_multicast() ||
     match ip {
         std::net::IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_link_local(),
-        std::net::IpAddr::V6(ipv6) => {
-            let segs = ipv6.segments();
-            let is_ula = (segs[0] & 0xfe00) == 0xfc00;
-            let is_link_local = (segs[0] & 0xffc0) == 0xfe80;
-            let is_v4_mapped = segs[0] == 0 && segs[1] == 0 && segs[2] == 0 && segs[3] == 0 && segs[4] == 0 && segs[5] == 0xffff;
-            is_ula || is_link_local || is_v4_mapped || ipv6.is_loopback() || ipv6.is_unspecified()
-        }
+        std::net::IpAddr::V6(ipv6) => ipv6.is_loopback() || ipv6.is_unspecified(),
     }
 }
 
@@ -164,12 +158,6 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     } else {
         return Err("OIDC token missing expiration".to_string());
     }
-
-    if let Some(nbf) = raw.get("nbf").and_then(|v| v.as_i64()) {
-        if nbf > current_ts {
-            return Err("OIDC token not yet valid".to_string());
-        }
-    }
     
     let mut roles = Vec::new();
     if let Some(r) = raw.get("roles") {
@@ -207,7 +195,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         email: raw.get("email").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         roles,
-        organization_id: raw.get("organization_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        organization_id: None,
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
@@ -237,13 +225,6 @@ mod tests {
         
         // Public IP
         assert!(!is_blocked_ip("8.8.8.8".parse().unwrap()));
-
-        // IPv6 Link-local
-        assert!(is_blocked_ip("fe80::1".parse().unwrap()));
-        // IPv6 ULA
-        assert!(is_blocked_ip("fc00::1".parse().unwrap()));
-        // IPv4-mapped IPv6
-        assert!(is_blocked_ip("::ffff:127.0.0.1".parse().unwrap()));
     }
 
     #[tokio::test]

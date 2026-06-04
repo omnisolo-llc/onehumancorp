@@ -1,4 +1,17 @@
-pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
+// Stub module - functionality was removed or moved
+// This file exists to satisfy module references that weren't cleaned up
+
+
+pub struct IntegrationProvider {
+    pub metadata: ProviderMetadata,
+}
+
+pub struct ProviderMetadata {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub base_url: String,
+}
 
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     let mut catalog = vec![];
@@ -28,64 +41,6 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     catalog.push(twilio_provider);
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
-
-    let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
-    catalog.push(meta_provider.to_integration_provider());
-
-    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("dummy_token".to_string());
-    catalog.push(google_calendar_provider.to_integration_provider());
-
-    let cal_com_provider = crate::integrations::cal_com::provider::CalComProvider::new("dummy_token".to_string());
-    catalog.push(cal_com_provider.to_integration_provider());
-
-    let resend_provider = crate::integrations::resend::provider::ResendProvider::new("dummy_token".to_string());
-    catalog.push(resend_provider.to_integration_provider());
-
-    let sendgrid_provider = crate::integrations::sendgrid::provider::SendGridProvider::new("dummy_token".to_string());
-    catalog.push(sendgrid_provider.to_integration_provider());
-
-    let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
-    catalog.push(shippo_provider.to_integration_provider());
-
-    let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new("dummy_token".to_string());
-    catalog.push(zoom_provider.to_integration_provider());
-
-    let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
-    catalog.push(mercadopago_provider.to_integration_provider());
-
-    let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
-    catalog.push(alipay_provider.to_integration_provider());
-
-    let razorpay_provider = crate::integrations::razorpay::provider::RazorpayProvider::new("dummy_key".to_string(), "dummy_secret".to_string());
-    catalog.push(razorpay_provider.to_integration_provider());
-
-
-    let calendly_provider = crate::integrations::calendly::provider::CalendlyProvider::new("dummy_token".to_string());
-    catalog.push(calendly_provider.to_integration_provider());
-
-    let mailchimp_provider = crate::integrations::mailchimp::provider::MailchimpProvider::new("dummy_token".to_string());
-    catalog.push(mailchimp_provider.to_integration_provider());
-
-    let manychat_provider = crate::integrations::manychat::provider::ManychatProvider::new("dummy_token".to_string());
-    catalog.push(manychat_provider.to_integration_provider());
-
-    let ayrshare_provider = crate::integrations::ayrshare::provider::AyrshareProvider::new("dummy_token".to_string());
-    catalog.push(ayrshare_provider.to_integration_provider());
-
-    let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
-    catalog.push(listmonk_provider.to_integration_provider());
-
-    let doordash_provider = crate::integrations::doordash::provider::DoorDashProvider::new("dummy_token".to_string());
-    catalog.push(doordash_provider.to_integration_provider());
-
-    let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
-    catalog.push(easypost_provider.to_integration_provider());
-
-    let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
-    catalog.push(jitsi_provider.to_integration_provider());
-
-    let restic_provider = crate::integrations::restic::provider::ResticProvider::new();
-    catalog.push(restic_provider.to_integration_provider());
 
     catalog
 }

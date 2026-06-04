@@ -33,7 +33,7 @@ impl TaskQueue for RedisTaskQueue {
         let mut pipe = redis::pipe();
         for job in jobs {
             let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
-            pipe.cmd("ZADD").arg(&self.queue_name).arg(job.next_retry_at.timestamp_millis()).arg(payload_json);
+            pipe.cmd("RPUSH").arg(&self.queue_name).arg(payload_json);
         }
         let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
         Ok(())
@@ -43,9 +43,8 @@ impl TaskQueue for RedisTaskQueue {
         let mut conn = self.get_connection().await?;
         let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
 
-        let _: () = redis::cmd("ZADD")
+        let _: () = redis::cmd("RPUSH")
             .arg(&self.queue_name)
-            .arg(job.next_retry_at.timestamp_millis())
             .arg(payload_json)
             .query_async(&mut conn)
             .await
@@ -54,38 +53,21 @@ impl TaskQueue for RedisTaskQueue {
         Ok(())
     }
 
-    async fn dequeue(&self, roles: Vec<String>, _estimated_vram: i64, _estimated_tokens: i64) -> Result<Option<Job>, String> {
+    async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
         let mut conn = self.get_connection().await?;
-        let now = chrono::Utc::now().timestamp_millis();
 
-        // Pop min from zset
-        let result: Vec<(String, f64)> = redis::cmd("ZPOPMIN")
+        let result: Option<(String, String)> = redis::cmd("BLPOP")
             .arg(&self.queue_name)
             .arg(1)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
 
-        if !result.is_empty() {
-            let (payload_json, score) = &result[0];
-            if *score > now as f64 {
-                // Not ready, put it back
-                let _: () = redis::cmd("ZADD")
-                    .arg(&self.queue_name)
-                    .arg(*score)
-                    .arg(payload_json)
-                    .query_async(&mut conn)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                return Ok(None);
-            }
-
-            if let Ok(job) = serde_json::from_str::<Job>(payload_json) {
-                if roles.contains(&job.job_type) {
-                    // Would do quota check here before returning
+        if let Some((_, payload_json)) = result {
+            if let Ok(job) = serde_json::from_str::<Job>(&payload_json) {
+                if roles.contains(&job.agent_role) {
                     return Ok(Some(job));
                 } else {
-                    // Not right role, put it back
                     let _ = self.enqueue(job).await;
                 }
             }
@@ -98,8 +80,6 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn fail(&self, _job_id: &str, _reason: &str) -> Result<(), String> {
-        // Normally we'd fetch the job state from a tracking hash, update attempt count, and enqueue
-        // Since we lack state in this simplified trait interface we assume it's handled via requeue by the caller or we would implement it here
         Ok(())
     }
 }

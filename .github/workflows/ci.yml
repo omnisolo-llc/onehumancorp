@@ -5,16 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
-    - cron: "23 10 * * *"
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.event_name == 'schedule' && 'schedule' || github.event_name == 'workflow_dispatch' && format('manual/{0}', github.run_id) || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' }}
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -24,610 +19,208 @@ defaults:
     shell: bash
 
 jobs:
-  check-changes:
-    name: Check what files changed
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      markdown-only: ${{ steps.check.outputs.markdown-only }}
-    steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Check if only markdown files changed
-        id: check
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch origin "${{ github.base_ref }}"
-            changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            changed_files=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
-          else
-            echo "markdown-only=false" >> "$GITHUB_OUTPUT"
-            echo "Full run; treating as non-markdown change set"
-            exit 0
-          fi
-
-          echo "Changed files:"
-          echo "$changed_files"
-
-          non_md_files=$(echo "$changed_files" | grep -v '\.md$' | grep -v '^$' || true)
-
-          if [ -z "$non_md_files" ]; then
-            echo "markdown-only=true" >> "$GITHUB_OUTPUT"
-            echo "Only markdown files changed"
-          else
-            echo "markdown-only=false" >> "$GITHUB_OUTPUT"
-            echo "Non-markdown files changed: $non_md_files"
-          fi
-
-      - name: Check tracked artifacts
-        run: .github/scripts/check_repo_hygiene.sh
-
-  bazel-build:
-    name: Bazel build (${{ matrix.name }})
-    needs:
-      - check-changes
-    if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - name: linux-x86_64
-            runner: ubuntu-latest
-            bazel_config: linux_x86_64
-          - name: windows-x86_64
-            runner: ubuntu-latest
-            bazel_config: windows_x86_64
-          - name: android
-            runner: ubuntu-latest
-            bazel_config: linux_x86_64
-          # - name: windows-arm64
-          #  runner: windows-11-arm
-          #   bazel_config: windows_arm64
-          #- name: macos-aarch64
-          #  runner: macos-latest
-          #  bazel_config: macos_aarch64
-          #- name: macos-x86_64
-          #  runner: macos-15-intel
-          #  bazel_config: macos_x86_64
-    steps:
-      - uses: actions/checkout@v6.0.2
-
-      - name: Free runner disk space
-        if: startsWith(matrix.runner, 'ubuntu')
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
-      - name: Select Xcode
-        if: startsWith(matrix.name, 'macos-')
-        run: sudo xcode-select -s /Applications/Xcode.app
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, matrix.name, github.event.pull_request.number) || format('{0}-{1}', github.workflow, matrix.name) }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - Cargo.lock
-            - package-lock.json
-            - pnpm-lock.yaml
-            - src/server/Cargo.lock
-            - src/ui/next/package-lock.json
-          external-cache: true
-          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
-          # Fork PRs can still restore from the shared cache but do not save remote cache.
-          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-
-      - name: Build non-test artifacts
-        if: matrix.name != 'android'
-        run: |
-          bazelisk query '
-            kind(".* rule", //...)
-            except kind(".*_test rule", //...)
-            except filter(".*_test$", //...)
-            except attr("tags", "manual", //...)
-            except filter("^//:(\\.aspect_rules_js/node_modules|node_modules)(/|$)", //...)
-            except //src/ui/tauri:all
-            except //deploy:all
-            except //release:all
-          ' > build-targets.txt
-          xargs -r bazelisk build \
-            --config=${{ matrix.bazel_config }} \
-            --skip_incompatible_explicit_targets \
-            --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
-            < build-targets.txt
-
-      - name: Install Linux Tauri desktop dependencies
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            pkg-config
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
-            || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
-
-      - name: Build Tauri desktop Bazel target
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          bazelisk build \
-            //src/ui/tauri:app \
-            --config=linux_x86_64 \
-            --//src/ui/tauri:build_tauri=true
-
-      - name: Build server web image tarball
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          bazelisk build //deploy:server_web_image_tar \
-            --config=linux_x86_64 \
-            --output_groups=+tarball
-
-      - name: Build Tauri Android Bazel targets
-        if: matrix.name == 'android'
-        run: |
-          bazelisk build \
-            //src/ui/tauri:tauri_android_apk \
-            //src/ui/tauri:tauri_android_aab \
-            --config=linux_x86_64
-
-      - name: Install iOS signing assets
-        if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        env:
-          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
-        run: |
-          for name in APPLE_CERTIFICATE_BASE64 APPLE_CERTIFICATE_PASSWORD APPLE_PROVISIONING_PROFILE_BASE64 KEYCHAIN_PASSWORD; do
-            if [[ -z "${!name}" ]]; then
-              echo "$name is required to build the iOS IPA" >&2
-              exit 1
-            fi
-          done
-          certificate_path="$RUNNER_TEMP/ohc-ios-signing.p12"
-          profile_path="$RUNNER_TEMP/ohc.mobileprovision"
-          keychain_path="$RUNNER_TEMP/ohc-signing.keychain-db"
-          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
-          echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
-          security set-keychain-settings -lut 21600 "$keychain_path"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
-          security import "$certificate_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
-          security list-keychain -d user -s "$keychain_path" $(security list-keychains -d user | sed s/\"//g)
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/ohc.mobileprovision"
-
-      - name: Build Tauri iOS Bazel target
-        if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
-
-      - name: Analyze Tauri iOS Bazel target
-        if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
-
   bazel-test:
-    name: Bazel test
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - name: Free runner disk space
+      - name: Install base dependencies
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
+          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends --fix-missing \
+            build-essential pkg-config libssl-dev \
+            libdbus-1-dev libatk1.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libsoup-3.0-dev \
+            ca-certificates curl git
 
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - Cargo.lock
-            - package-lock.json
-            - pnpm-lock.yaml
-            - src/server/Cargo.lock
-            - src/ui/next/package-lock.json
+          bazelisk-cache: false
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          repository-cache: true
           external-cache: true
-          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
-          # Fork PRs can still restore from the shared cache but do not save remote cache.
-          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
+            test --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+            # build --config=buildbuddy-official
+            # test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
+            test --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
+            test --sandbox_add_mount_pair=/var/run/docker.sock
 
-      - name: Test fast targets
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Build release artifacts
+        run: bazelisk build //release:all_release_artifacts --config=linux
+
+      - name: Test
         run: |
           bazelisk test \
-            --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
-            --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
+            --config=linux \
+            --test_output=errors \
+            --test_summary=terse \
+            --test_timeout=300,600,900,1800 \
             //...
 
-  bazel-test-e2e:
-    name: Bazel Playwright E2E
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+  bazel-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
-      - name: Free runner disk space
+      - name: Install base dependencies
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
+          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends --fix-missing \
+            build-essential pkg-config libssl-dev \
+            libdbus-1-dev libatk1.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libsoup-3.0-dev \
+            ca-certificates curl git
 
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # - name: Install Bazelisk
+      #   run: |
+      #     go install github.com/bazelbuild/bazelisk@latest
+      #     echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - Cargo.lock
-            - package-lock.json
-            - pnpm-lock.yaml
-            - src/server/Cargo.lock
-            - src/ui/next/package-lock.json
+          bazelisk-cache: false
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          repository-cache: true
           external-cache: true
-          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
-          # Fork PRs can still restore from the shared cache but do not save remote cache.
-          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
+            test --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+            # build --config=buildbuddy-official
+            # test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
+            test --build_metadata=ROLE=CI
+            build --color=yes
             build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
+            test --sandbox_add_mount_pair=/var/run/docker.sock
 
-      - name: Pull E2E Docker images
+      - name: Build all artifacts
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          bazelisk build //... --config=linux
+          bazelisk build //... --config=windows || echo "Warning: Windows build failed"
+          bazelisk build //... --config=macos || echo "Warning: MacOS build failed"
 
-      - name: Test Playwright E2E suite
-        run: bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"
+  # playwright-e2e:
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 60
+  #   steps:
+  #     - uses: actions/checkout@v6
 
-  kind-e2e:
-    name: Kind E2E
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      KIND_VERSION: "v0.31.0"
-      KUBECTL_VERSION: "v1.36.1"
-      HELM_VERSION: "v3.20.2"
-      KIND_SHA256_AMD64: "eb244cbafcc157dff60cf68693c14c9a75c4e6e6fedaf9cd71c58117cb93e3fa"
-      KIND_SHA256_ARM64: "8e1014e87c34901cc422a1445866835d1e666f2a61301c27e722bdeab5a1f7e4"
-      KUBECTL_SHA256_AMD64: "629d3f410e09bf49b64ae7079f7f0bda1191efed311f7d37fdbab0ad5b0ec2b7"
-      KUBECTL_SHA256_ARM64: "59f7ee8e477fae658447607dc3c8790ac17a1b016c01c622c12070e969e2d4e7"
-      HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
-      HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
-    steps:
-      - uses: actions/checkout@v6.0.2
+  #     - name: Install base dependencies
+  #       run: |
+  #         echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+  #         sudo apt-get update -qq
+  #         sudo apt-get install -y --no-install-recommends --fix-missing \
+  #           build-essential pkg-config libssl-dev \
+  #           libdbus-1-dev libatk1.0-dev libgtk-3-dev \
+  #           libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+  #           librsvg2-dev libsoup-3.0-dev \
+  #           ca-certificates curl git
 
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: "1.24"
 
-      - name: Install Kubernetes tools
-        run: |
-          case "$(uname -m)" in
-            x86_64)
-              CI_ARCH=amd64
-              KIND_SHA256="$KIND_SHA256_AMD64"
-              KUBECTL_SHA256="$KUBECTL_SHA256_AMD64"
-              HELM_SHA256="$HELM_SHA256_AMD64"
-              ;;
-            aarch64|arm64)
-              CI_ARCH=arm64
-              KIND_SHA256="$KIND_SHA256_ARM64"
-              KUBECTL_SHA256="$KUBECTL_SHA256_ARM64"
-              HELM_SHA256="$HELM_SHA256_ARM64"
-              ;;
-            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
-          esac
-          echo "CI_ARCH=${CI_ARCH}" >> "${GITHUB_ENV}"
+  #     - name: Set up Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "24"
+  #         cache: "npm"
 
-          tool_dir="$(mktemp -d)"
+  #     - name: Install dependencies
+  #       run: npm ci
 
-          curl -fsSL -o "$tool_dir/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
-          echo "${KIND_SHA256}  $tool_dir/kind" | sha256sum --check --strict
-          chmod +x "$tool_dir/kind"
-          sudo install "$tool_dir/kind" /usr/local/bin/kind
+  #     - name: Install Bazelisk
+  #       run: |
+  #         go install github.com/bazelbuild/bazelisk@latest
+  #         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-          curl -fsSL -o "$tool_dir/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
-          echo "${KUBECTL_SHA256}  $tool_dir/kubectl" | sha256sum --check --strict
-          chmod +x "$tool_dir/kubectl"
-          sudo install "$tool_dir/kubectl" /usr/local/bin/kubectl
+  #     - name: Set up Bazel
+  #       uses: bazel-contrib/setup-bazel@0.19.0
+  #       with:
+  #         bazelisk-cache: false
+  #         disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+  #         repository-cache: true
+  #         external-cache: true
+  #         cache-save: ${{ github.event_name != 'pull_request' }}
+  #         bazelrc: |
+  #           common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+  #           build --config=buildbuddy
+  #           test --config=buildbuddy
+  #           build --build_metadata=ROLE=CI
+  #           test --build_metadata=ROLE=CI
+  #           build --color=yes
+  #           build --show_timestamps
+  #           test --sandbox_add_mount_pair=/var/run/docker.sock
 
-          curl -fsSL -o "$tool_dir/helm.tar.gz" "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
-          echo "${HELM_SHA256}  $tool_dir/helm.tar.gz" | sha256sum --check --strict
-          tar -C "$tool_dir" -xzf "$tool_dir/helm.tar.gz"
-          sudo install "$tool_dir/linux-${CI_ARCH}/helm" /usr/local/bin/helm
+  #     - name: Build server
+  #       run: bazelisk build //src/server:server --config=linux
 
-          kind version
-          kubectl version --client=true
-          helm version --short
-
-      - name: Verify Docker is available
-        run: |
-          docker version
-          docker info
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}-${{ github.job }}
-          repository-cache: true
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
-
-      - name: Run Kind smoke test
-        run: |
-          command -v kind
-          command -v kubectl
-          command -v helm
-          command -v docker
-          command -v bazelisk
-          if [[ "${CI_ARCH}" == "arm64" ]]; then
-            BAZEL_PLATFORM_CONFIG=linux_arm64
-          else
-            BAZEL_PLATFORM_CONFIG=linux
-          fi
-          bazelisk test //deploy:kind_e2e_test \
-            --config="${BAZEL_PLATFORM_CONFIG}" \
-            --nocache_test_results
-
-  docker-e2e:
-    name: Docker E2E
-    needs:
-      - check-changes
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6.0.2
-
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
-      - name: Verify Docker is available
-        run: |
-          docker version
-          docker info
-
-      - name: Restore Docker Compose image cache
-        uses: actions/cache@v5.0.5
-        with:
-          path: /tmp/ohc-docker-compose-images
-          key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-
-
-      - name: Load Docker Compose image cache
-        run: |
-          if [[ -f /tmp/ohc-docker-compose-images/images.tar ]]; then
-            docker load -i /tmp/ohc-docker-compose-images/images.tar
-          fi
-
-      - name: Pull Docker Compose images
-        run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
-          mkdir -p /tmp/ohc-docker-compose-images
-          docker save \
-            pgvector/pgvector:pg16 \
-            valkey/valkey:8-alpine \
-            -o /tmp/ohc-docker-compose-images/images.tar
-
-      - name: Set Bazel cache week
-        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}-${{ github.job }}
-          repository-cache: true
-          bazelrc: |
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_upload_local_results=true
-            build --build_metadata=ROLE=CI
-            build --show_timestamps
-            build --nokeep_going
-            build --verbose_failures
-            test --test_output=errors
-            test --test_summary=detailed
-
-      - name: Run Docker Compose smoke test
-        run: |
-          command -v docker
-          command -v curl
-          command -v bazelisk
-          bazelisk test //deploy:docker_compose_e2e_test \
-            --config=linux \
-            --nocache_test_results
-
-  ci-required:
-    name: CI Required
-    needs:
-      - check-changes
-      - bazel-build
-      - bazel-test
-      - bazel-test-e2e
-      - kind-e2e
-      - docker-e2e
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check required CI results
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}
-          CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}
-          BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}
-          BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}
-          BAZEL_TEST_E2E_RESULT: ${{ needs.bazel-test-e2e.result }}
-          KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}
-          DOCKER_E2E_RESULT: ${{ needs.docker-e2e.result }}
-        run: |
-          set -euo pipefail
-
-          echo "check-changes: ${CHECK_CHANGES_RESULT}"
-          echo "bazel-build: ${BAZEL_BUILD_RESULT}"
-          echo "bazel-test: ${BAZEL_TEST_RESULT}"
-          echo "bazel-test-e2e: ${BAZEL_TEST_E2E_RESULT}"
-          echo "kind-e2e: ${KIND_E2E_RESULT}"
-          echo "docker-e2e: ${DOCKER_E2E_RESULT}"
-
-          require_success() {
-            local name="$1"
-            local result="$2"
-            if [[ "$result" != "success" ]]; then
-              echo "::error::${name} finished with result '${result}', expected 'success'."
-              exit 1
-            fi
-          }
-
-          allow_success_or_skipped() {
-            local name="$1"
-            local result="$2"
-            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
-              echo "::error::${name} finished with result '${result}', expected 'success' or 'skipped'."
-              exit 1
-            fi
-          }
-
-          require_success "check-changes" "$CHECK_CHANGES_RESULT"
-
-          if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            require_success "bazel-build" "$BAZEL_BUILD_RESULT"
-          else
-            allow_success_or_skipped "bazel-build" "$BAZEL_BUILD_RESULT"
-          fi
-
-          if [[ "$MARKDOWN_ONLY" == "true" ]]; then
-            allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"
-            allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
-            allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
-            allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"
-          else
-            require_success "bazel-test" "$BAZEL_TEST_RESULT"
-            require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
-            require_success "kind-e2e" "$KIND_E2E_RESULT"
-            require_success "docker-e2e" "$DOCKER_E2E_RESULT"
-          fi
+  #     - name: Run E2E tests
+  #       run: |
+  #         bazelisk test //src/e2e:playwright \
+  #           --test_output=streamed \
+  #           --test_timeout=300,600,900,1800

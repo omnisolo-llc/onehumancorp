@@ -1,21 +1,21 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Login Screen Visual Audit', () => {
   test('should display login page', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
-    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Login' }).filter({ visible: true })).toBeVisible();
+    await expect(page.getByPlaceholder('Email or Username').first()).toBeVisible();
+    await expect(page.locator('input[type="password"]').first()).toBeVisible();
   });
 
   test('should display dashboard', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).filter({ visible: true })).toBeVisible();
   });
 
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
   });
 });
 
@@ -24,7 +24,7 @@ test.describe('Navigation', () => {
     await page.goto('/');
     await expect(page.locator('nav')).toBeVisible();
     await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agents' }).filter({ visible: true })).toBeVisible();
   });
 
   test('should show welcome message', async ({ page }) => {

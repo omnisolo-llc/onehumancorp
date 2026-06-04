@@ -53,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_
 ## 4. Implementation Details
 
 - **Batch Processing:** The `AutoDreamWorker` daemon processes data in batches (e.g., `LIMIT 500`) to prevent unbound queue growth and ensure stable memory utilization.
-- **LLM Integration:** Uses the Rust LLM clients under `src/agents/builtin/llm/` and server AutoDream workers to generate embeddings for consolidated memory chunks.
-- **Graceful Degradation:** Conditional logic branches on `crate::db::DbStore` to avoid PostgreSQL-specific locks or exact-neighbor queries when operating in Standalone mode.
+- **LLM Integration:** Utilizes existing LLM clients (`src/server/agents/local/llm.go`) to generate embeddings for the consolidated memory chunks.
+- **Graceful Degradation:** Conditional logic (`dbWrapper.Provider().IsSQLite()`) disables PostgreSQL-specific locks or exact-neighbor queries when operating in Standalone mode.
 
 </div>

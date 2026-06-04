@@ -119,16 +119,15 @@ impl HybridFSMcpServer {
                 async {
                     let id = uuid::Uuid::new_v4().to_string();
                     let spiffe_id_str = &req.spiffe_id;
-                    let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| tonic::Status::unauthenticated("invalid spiffe id"))?;
-                    let tenant_id = parsed.0;
+                    let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+                    let mut tenant_id = parsed.0;
                     if tenant_id.is_empty() {
-                        return Err(tonic::Status::unauthenticated("empty tenant ID in SPIFFE ID"));
-
+                        tenant_id = "system".to_string();
                     }
 
                     // Add to hybrid_fs_sync_queue
                     let query = "
-                        INSERT INTO hybrid_fs_sync_queue (id, tenant_id, local_path, cloud_path, status, created_at, updated_at)
+                        INSERT INTO hybrid_fs_sync_queue (id, organization_id, local_path, cloud_path, status, created_at, updated_at)
                         VALUES ($1, $2, $3, $4, 'FILE_SYNC_PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     ";
 
@@ -147,7 +146,7 @@ impl HybridFSMcpServer {
                 .instrument(tracing::info_span!("fs_hybrid_sync"))
                 .await
             }
-            _ => Err(tonic::Status::not_found(format!("tool {} not implemented", req.tool_id))),
+            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
         }
     }
 }

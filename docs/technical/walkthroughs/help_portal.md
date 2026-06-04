@@ -100,15 +100,15 @@ sequenceDiagram
 
 ## 5. Advanced KAIROS Orchestration
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
-- **[Distributed State Machine](../../features/kairos/distributed_state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
-- **[Sub-Agent Queue](../../technical/architecture/kairos/sub-agent-queue-design.md):** Learn how vast amounts of agent tasks are routed securely in the background.
-- **[AutoDream Pipeline](../../features/kairos/autodream_pipelines.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
+- **[Distributed State Machine](../features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
+- **[Sub-Agent Queue](../features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
+- **[AutoDream Pipeline](../features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ## 6. Deep Dive Walkthroughs
 - **[OHC Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
 - **[KAIROS Shared Task List: Visual Walkthrough](shared_task_list_visual_walkthrough.md)**
-- **[KAIROS Orchestration: Visual Walkthrough](../../walkthroughs/kairos_orchestration.md)**
-- **[Interactive CLI Guide for AutoDream](../../walkthroughs/autodream_cli_guide.md)**
+- **[KAIROS Orchestration: Visual Walkthrough](kairos_orchestration.md)**
+- **[Interactive CLI Guide for AutoDream](autodream_cli_guide.md)**
 - **[KAIROS Central Orchestration CLI Guide](kairos_central_orchestration_cli_guide.md)**
 - **[Elastic Swarm Bursting: Visual Walkthrough](elastic_swarm_bursting.md)**
 - **[Hybrid Troubleshooting Guide](hybrid_troubleshooting.md)**
@@ -125,11 +125,11 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Hybrid Swarm-Aware Telemetry Mesh Walkthrough](hybrid_swarm_telemetry_mesh.md)**: Visual guide to the mTLS telemetry buffering and sync.
 - **[Hybrid FS MCP Architecture Walkthrough](hybrid_fs_mcp_architecture.md)**: Visual guide to the Machine Context Protocol state sync.
 - **[AutoDream Sync Daemon Walkthrough](autodream_sync.md)**: Visual guide to the Hybrid AutoDream Synchronization.
-- **[Distributed State Machine Walkthrough](../../features/kairos/distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
+- **[Distributed State Machine Walkthrough](distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
 - **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
-- **[KAIROS Sub-Agent Orchestration Walkthrough](../architecture/kairos/sub-agent-queue-design.md)**: Explore the orchestration of sub-agents.
+- **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
 - **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
-- **[AutoDream Pipeline Walkthrough](../../features/kairos/autodream_pipelines.md)**: Visual guide to the memory consolidation engine.
+- **[AutoDream Pipeline Walkthrough](autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
 - **[Omni-Context Sub-Agent Routing Walkthrough](omni_context_routing.md)**: Visual guide to the zero-latency sub-agent context injection.
 - **[Virtual Meeting Room Walkthrough](virtual_meeting_room.md)**: Visual guide to the UltraPlan protocol and agent deliberation.
 - **[Hybrid Swarm-Aware MCP Telemetry Mesh Walkthrough](hybrid_telemetry_mesh.md)**: Visual guide to full-spectrum hybrid observability.
@@ -138,7 +138,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Thin Client Integration Walkthrough](thin_client_integration.md)**: Visual guide to the UI-only Thin Client connection.
 - **[SPIFFE Identity Onboarding Walkthrough](spiffe_identity_onboarding.md)**: Visual guide to the zero-trust secure agent identity protocol.
 
-- **[Edge LLM Offloading Protocol API](../api/edge-llm-offloading-api.md)**: Interactive playbook for offloading LLM inference to the cloud.
+- **[Edge LLM Offloading Protocol API](../api/edge_llm_offloading_api.md)**: Interactive playbook for offloading LLM inference to the cloud.
 - **[Edge LLM Handoff Visual Walkthrough](edge_llm_handoff_walkthrough.md)**: Visual diagram illustrating the context transfer flow.
 - **[Hybrid Environment Setup Walkthrough](hybrid_environment_setup_walkthrough.md)**: Visual guide to Cloud vs Standalone environment initialization.
 - **[Agent Harness OS-Level Sandboxing and MCP Integration](agent_harness_os_level_sandboxing_mcp_integration.md)**: Visual guide to the OS-Level execution wrapper and MCP integrations.

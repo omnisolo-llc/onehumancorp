@@ -1,15 +1,14 @@
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use ::server_ohc::mcp_proxy::{ProxyToServer, RegisterProxyRequest, proxy_to_server};
+use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer, RegisterProxyRequest, proxy_to_server};
 use tonic::transport::Channel;
 use tonic::Request;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing::{info, error};
+use tokio::process::Command;
+use std::process::Stdio;
+use tracing::{info, warn, error};
 use super::blob::{create_blob_provider, BlobProvider};
 use std::sync::Arc;
-
-use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig};
-use crate::orchestration::local_sandbox::LocalSandbox;
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
@@ -53,7 +52,7 @@ impl LocalProxyClient {
         }).await;
 
         let request_stream = ReceiverStream::new(rx);
-        let response = self.client.establish_tunnel(Request::new(request_stream)).await?;
+        let mut response = self.client.establish_tunnel(Request::new(request_stream)).await?;
         let mut in_stream = response.into_inner();
 
         let tx_clone = tx.clone();
@@ -67,62 +66,30 @@ impl LocalProxyClient {
 
                             let (success, result, error_details) = match req.tool_id.as_str() {
                                 "shell" => {
-                                    let config = SandboxConfig {
-                                        deny_list_dirs: vec!["/root".to_string(), "/etc/shadow".to_string()],
-                                        ..Default::default()
-                                    };
-                                    let sandbox = LocalSandbox::new(config, None);
-
-                                    match sandbox.execute(&req.params).await {
-                                        Ok((success, stdout, stderr)) => {
-                                            if success {
-                                                (true, stdout, "".to_string())
+                                    match Command::new("sh").arg("-c").arg(&req.params).output().await {
+                                        Ok(output) => {
+                                            if output.status.success() {
+                                                (true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string())
                                             } else {
-                                                (false, "".to_string(), stderr)
+                                                (false, "".to_string(), String::from_utf8_lossy(&output.stderr).to_string())
                                             }
                                         }
-                                        Err(e) => {
-                                            let error_msg = format!("Sandbox Violation: {} ({})", e.reason, e.command);
-                                            error!("{}", error_msg);
-
-                                            let details = serde_json::json!({
-                                                "reason": e.reason,
-                                                "command": e.command,
-                                            });
-
-                                            let _ = ::server_telemetry::buffer_metric(
-                                                &crate::db::get_pool(),
-                                                "sandbox_violation_event",
-                                                "counter",
-                                                1.0,
-                                                details
-                                            ).await;
-
-                                            ::server_telemetry::record_sandbox_violation(&e.reason, &e.command);
-
-                                            (false, "".to_string(), error_msg)
-                                        }
+                                        Err(e) => (false, "".to_string(), e.to_string()),
                                     }
                                 }
                                 "fs_read" => {
-                                    let start = std::time::Instant::now();
-                                    let res = match blob_provider.read_blob(&req.params).await {
+                                    match blob_provider.read_blob(&req.params).await {
                                         Ok(content) => (true, content, "".to_string()),
                                         Err(e) => (false, "".to_string(), e.to_string()),
-                                    };
-                                    ::server_telemetry::record_harness_db_io_latency("fs_read", start.elapsed().as_secs_f64());
-                                    res
+                                    }
                                 }
                                 "fs_write" => {
                                     let parts: Vec<&str> = req.params.splitn(2, "||").collect();
                                     if parts.len() == 2 {
-                                        let start = std::time::Instant::now();
-                                        let res = match blob_provider.write_blob(parts[0], parts[1]).await {
+                                        match blob_provider.write_blob(parts[0], parts[1]).await {
                                             Ok(_) => (true, "Successfully wrote file".to_string(), "".to_string()),
                                             Err(e) => (false, "".to_string(), e.to_string()),
-                                        };
-                                        ::server_telemetry::record_harness_db_io_latency("fs_write", start.elapsed().as_secs_f64());
-                                        res
+                                        }
                                     } else {
                                         (false, "".to_string(), "Invalid params for fs_write".to_string())
                                     }

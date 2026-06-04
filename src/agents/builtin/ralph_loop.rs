@@ -10,8 +10,6 @@ pub struct RalphProgress {
     pub task_description: String,
     pub features: Vec<Feature>,
     pub current_feature_index: usize,
-    #[serde(default)]
-    pub notes: Vec<String>,
     pub is_complete: bool,
 }
 
@@ -88,12 +86,7 @@ impl RalphLoop {
 
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
-            let scratchpad_context = if !progress.notes.is_empty() {
-                format!("\nStructured Scratchpad Notes:\n- {}", progress.notes.join("\n- "))
-            } else {
-                String::new()
-            };
-            feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
+            feature_config.user_instructions = feature_prompt.clone();
 
             let mut on_event = |event: AgentEvent| {
                 if let AgentEvent::TaskError { error } = event {
@@ -105,7 +98,6 @@ impl RalphLoop {
                 Ok(result) => {
                     tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
                     progress.features[progress.current_feature_index].status = "completed".to_string();
-                    progress.notes.push(format!("Completed feature {}: {}", feature_name, result));
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
 
@@ -162,7 +154,6 @@ impl RalphLoop {
             task_description: task.to_string(),
             features,
             current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
             is_complete: false,
         };
 
@@ -286,7 +277,6 @@ mod tests {
                 Feature { name: "Step 2".to_string(), status: "pending".to_string() },
             ],
             current_feature_index: 0,
-            notes: vec!["Initialized task and broken down into features.".to_string()],
             is_complete: false,
         };
         std::fs::write(&progress_file, serde_json::to_string(&initial_progress).unwrap()).unwrap();

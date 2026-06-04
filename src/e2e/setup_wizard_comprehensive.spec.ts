@@ -1,39 +1,73 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
-  test('traverses the current wizard from welcome to launch', async ({ page }) => {
-    const id = `setup-comprehensive-${Date.now()}-${Math.random()}`;
-    const email = `alex+${Date.now()}@example.com`;
-    await page.addInitScript((tenantId) => {
-      localStorage.setItem('tenant_id', tenantId);
-      localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('ohc_wizard_state');
-    }, id);
-    await page.goto('/website-builder');
+  // dummy validation comment
+  test('should traverse the complete business setup wizard successfully', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').first().fill('founder@example.com');
+    await page.locator('input[type="password"]').first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
 
-    await page.waitForLoadState('networkidle');
+    await page.waitForURL('**/dashboard');
 
-    await page.getByRole('button', { name: /Start My Business/ }).click();
-    await page.getByRole('button', { name: /Online Store/ }).click();
-    await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');
-    await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Physical Products/).check();
-    await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
-    await page.getByPlaceholder('What is the name of this product?').fill('Custom Print');
-    await page.getByPlaceholder('0.00').fill('49.00');
-    await page.locator('#step-5').getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: 'Online', exact: true }).click();
-    await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Art');
-    await page.getByPlaceholder('you@email.com').fill(email);
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.locator('#step-7').getByRole('button', { name: /Next/ }).first().click();
-    await page.getByRole('button', { name: 'Modern' }).click();
-    await page.locator('#step-8').getByRole('button', { name: /Next/ }).first().click();
-    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
-    await page.locator('#step-9').getByRole('button', { name: /Next/ }).first().click();
-    await page.getByRole('button', { name: /Publish my business/ }).click();
+    // Trigger setup wizard
+    await page.locator('button:has-text("Start Setup")').click();
+    await expect(page.locator('text=Your business, live in minutes.')).toBeVisible({ timeout: 5000 });
 
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible();
+    // Step 0: Welcome
+    await page.locator('button:has-text("Start My Business")').first().click();
+
+    // Step 1: Business Type
+    await expect(page.locator('text=What kind of business are you building?')).toBeVisible();
+    await page.locator('text=Online Store').click();
+    await page.locator('button:has-text("Next")').first().click();
+
+    // Step 2: Company Info
+    await expect(page.locator('text=What is your business called?')).toBeVisible();
+    await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').fill('Comprehensive Bakery');
+    await page.locator('button:has-text("Auto-suggest Description")').click();
+    await page.waitForTimeout(1000); // Wait for auto-generation
+    await page.locator('button:has-text("Next")').first().click();
+
+    // Step 3: Selling Categories
+    await expect(page.locator('text=What do you sell?')).toBeVisible();
+    await page.locator('text=Physical products').click();
+    await page.locator('button:has-text("Next")').first().click();
+
+    // Step 4: First Product (skipped if service, but we chose Physical)
+    await expect(page.locator('text=Add your first product')).toBeVisible();
+    await page.locator('input[placeholder="What is the name of this product?"]').fill('Chocolate Chip Cookie');
+    await page.locator('input[placeholder="0.00"]').fill('12.99');
+    await page.locator('button:has-text("Next")').first().click();
+
+    // Step 5: Payments
+    await expect(page.locator('text=How do you want to receive payments?')).toBeVisible();
+    await page.locator('text=Online only').click();
+    await page.locator('button:has-text("Next")').first().click();
+
+    // Step 6: Choose Template
+    await expect(page.locator('text=Choose a Template')).toBeVisible();
+    await page.locator('text=Modern').click();
+    await page.locator('button:has-text("Next")').first().click();
+
+    // Step 7: Domain
+    await expect(page.locator('text=Choose a Domain')).toBeVisible();
+    await page.locator('text=Free OHC Domain').click();
+    await page.locator('button:has-text("Next")').first().click();
+
+    // Step 8: Admin Account
+    await expect(page.locator('text=Administrator account')).toBeVisible();
+    await page.locator('input[placeholder="e.g. Maya Smith"]').fill('Jane Founder');
+    await page.locator('input[placeholder="you@email.com"]').fill('jane@example.com');
+    await page.locator('input[placeholder="Password"]').fill('securepassword!');
+
+    // Final Launch
+    await page.locator('button:has-text("Review & Launch")').first().click();
+
+    // Expect success screen
+    await expect(page.locator('text=Almost there')).toBeVisible({ timeout: 5000 });
+    await page.locator('button:has-text("Launch!")').click();
+
+    await expect(page.locator('text=Onboarding Complete!')).toBeVisible({ timeout: 10000 });
   });
 });

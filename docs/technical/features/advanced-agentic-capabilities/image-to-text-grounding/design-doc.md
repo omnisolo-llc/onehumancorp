@@ -18,11 +18,10 @@
 4. LLM returns text descriptions (bounding boxes, layout analysis).
 
 ## 4. API & Data Models
-```rust
-#[derive(serde::Serialize, serde::Deserialize)]
-struct MultimodalPayload {
-    prompt: String,
-    images_base64: Vec<String>,
+```go
+type MultimodalPayload struct {
+  Prompt string `json:"prompt"`
+  Images []string `json:"images_base64"`
 }
 ```
 

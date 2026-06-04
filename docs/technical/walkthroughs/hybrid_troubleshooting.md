@@ -25,6 +25,6 @@ graph TD
 - **Database Lock Contention (SQLite)**: Ensure multiple background processes are not writing to `.ohc/runtime` directories simultaneously without respecting the file lock protocol.
 - **Redis Pub/Sub Disconnects (Cloud)**: Check network stability and SPIFFE token expiration if the Teammate Mesh events are failing to broadcast.
 
-*For additional architectural context, refer to the [System Design Document](../architecture/system-design.md).*
+*For additional architectural context, refer to the [System Design Document](../system-design.md).*
 
 </div>

@@ -1,51 +1,3 @@
-## v0.4.47 (Cloud) / v0.4.47+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Enhance Multi-Environment Promotion capabilities for multi-tenant K8s to better support high-load environments.
-
-### Privacy/Offline Improvements
-- Refine Multi-Environment Promotion behavior for Local desktop beta builds ensuring stricter local offline usage and privacy guarantees.
-
-## v0.4.46 (Cloud) / v0.4.46+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Coordinate promotions across Cloud staging for increased load.
-
-### Privacy/Offline Improvements
-- Coordinate promotions across Local desktop beta builds for improved local offline usage and privacy.
-
-## v0.4.45 (Cloud) / v0.4.45+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Optimize Cloud staging multi-environment promotion performance for increased load.
-
-### Privacy/Offline Improvements
-- Enforce improved local offline telemetry privacy controls for Standalone desktop beta builds.
-
-## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Improve multi-environment promotion across Cloud staging.
-
-### Privacy/Offline Improvements
-- Enhance privacy controls for local Standalone desktop beta builds.
-
-## v0.4.43 (Cloud) / v0.4.43+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Optimize multi-tenant database connection pooling for staging stability.
-
-### Privacy/Offline Improvements
-- Enhance local offline telemetry privacy rules.
-
-## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Optimize multi-tenant scaling to enhance multi-environment promotion across Cloud staging.
-
-### Privacy/Offline Improvements
-- Enforce improved local offline usage and privacy for Standalone desktop beta builds.
-
 ## v0.4.37 (Cloud) / v0.4.37+1 (Standalone)
 
 - Scaling (Cloud): Upgraded orchestration layers with AutoDream Vector Data Pipelines and hierarchical sub-agent concurrency.
@@ -53,18 +5,9 @@
 
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
-
-### Cloud Scaling Improvements
-- Optimize multi-tenant scaling to enhance multi-environment promotion across Cloud staging.
-
-### Privacy/Offline Improvements
-- Enforce improved local offline usage and privacy for Standalone desktop beta builds.
-
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 
 ### Cloud Scaling Improvements
-- ✍️ Scribe: Implemented the In-App Help Center & Contextual Tooltip API, enabling non-technical users to access step-by-step guides, onboarding walkthroughs, and plain-language assistance directly within the app.
 - Optimize Sub-Agent Queue polling intervals to reduce Postgres connection pressure.
 
 ### Privacy/Offline Improvements

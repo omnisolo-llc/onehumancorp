@@ -3,17 +3,6 @@ platform(
     constraint_values = [
         "@platforms//os:windows",
         "@platforms//cpu:x86_64",
-        "@rules_rust//rust/platform:windows_gnullvm",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-platform(
-    name = "windows_arm64",
-    constraint_values = [
-        "@platforms//os:windows",
-        "@platforms//cpu:aarch64",
-        "@rules_rust//rust/platform:windows_gnullvm",
     ],
     visibility = ["//visibility:public"],
 )
@@ -23,7 +12,6 @@ platform(
     constraint_values = [
         "@platforms//os:windows",
         "@platforms//cpu:x86_32",
-        "@rules_rust//rust/platform:windows_gnullvm",
     ],
     visibility = ["//visibility:public"],
 )
@@ -38,30 +26,10 @@ platform(
 )
 
 platform(
-    name = "linux_arm64",
-    constraint_values = [
-        "@platforms//os:linux",
-        "@platforms//cpu:arm64",
-        "@bazel_tools//tools/cpp:gcc",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-platform(
     name = "linux_aarch64",
     constraint_values = [
         "@platforms//os:linux",
-        "@platforms//cpu:arm64",
-        "@bazel_tools//tools/cpp:gcc",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-platform(
-    name = "macos_x86_64",
-    constraint_values = [
-        "@platforms//os:macos",
-        "@platforms//cpu:x86_64",
+        "@platforms//cpu:aarch64",
     ],
     visibility = ["//visibility:public"],
 )

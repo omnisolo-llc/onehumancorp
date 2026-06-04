@@ -49,31 +49,3 @@ Selector labels
 app.kubernetes.io/name: {{ include "ohc.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-
-{{/*
-Valkey service name from the official valkey chart dependency.
-*/}}
-{{- define "ohc.valkey.fullname" -}}
-{{- if .Values.valkey.fullnameOverride }}
-{{- .Values.valkey.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default "valkey" .Values.valkey.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{- define "ohc.valkey.addr" -}}
-{{ include "ohc.valkey.fullname" . }}:{{ .Values.valkey.service.port }}
-{{- end }}
-
-{{- define "ohc.valkey.name" -}}
-{{ default "valkey" .Values.valkey.nameOverride }}
-{{- end }}
-
-{{- define "ohc.valkey.url" -}}
-redis://{{ include "ohc.valkey.addr" . }}
-{{- end }}

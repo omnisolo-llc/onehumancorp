@@ -3,7 +3,7 @@ use flate2::read::GzDecoder;
 use flate2::Compression;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use std::io::{Write, Read, Cursor};
+use std::io::{Write, Read};
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
 
@@ -31,27 +31,22 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
-static STOP_WORDS: &[&str] = &[
-    "a", "an", "the", "is", "are",
-    "and", "or", "but", "in", "on",
-    "at", "to", "for", "with", "by",
-    "about", "as", "of",
-];
-
 pub fn reduce_tokens(data: &str) -> String {
+    let stop_words: std::collections::HashSet<&str> = [
+        "a", "an", "the", "is", "are",
+        "and", "or", "but", "in", "on",
+        "at", "to", "for", "with", "by",
+        "about", "as", "of",
+    ].iter().cloned().collect();
+
     data.split_whitespace()
         .filter(|word| {
-            !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
+            let clean_word = word.to_lowercase();
+            !stop_words.contains(clean_word.as_str())
         })
-        .fold(String::with_capacity(data.len()), |mut acc, w| {
-            if !acc.is_empty() {
-                acc.push(' ');
-            }
-            acc.push_str(w);
-            acc
-        })
+        .collect::<Vec<&str>>()
+        .join(" ")
 }
-
 
 pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
     if max_words == 0 {
@@ -71,43 +66,6 @@ pub fn minify_json_prompt(data: &str) -> String {
         }
     }
     data.to_string()
-}
-
-/// Optimizes an image by resizing it to a maximum dimension and converting it to WebP.
-pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), String> {
-    let img = image::load_from_memory(data).map_err(|e| e.to_string())?;
-
-    // Only resize if it exceeds max_dim
-    let (width, height) = image::GenericImageView::dimensions(&img);
-    let resized = if width > max_dim || height > max_dim {
-        img.thumbnail(max_dim, max_dim)
-    } else {
-        img
-    };
-
-    let mut webp_data = Vec::new();
-    let mut cursor = Cursor::new(&mut webp_data);
-
-    // We use a default quality for WebP encoding
-    // This reduces storage compression and CDN transit costs significantly.
-    let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
-    resized.write_with_encoder(encoder).map_err(|e| e.to_string())?;
-
-    Ok((webp_data, "image/webp".to_string()))
-}
-
-pub fn is_image_extension(ext: &str) -> bool {
-    matches!(ext.to_lowercase().as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp")
-}
-
-pub fn get_optimized_key(key: &str) -> String {
-    let path = std::path::Path::new(key);
-    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-        if is_image_extension(ext) && ext.to_lowercase() != "webp" {
-            return path.with_extension("webp").to_string_lossy().to_string();
-        }
-    }
-    key.to_string()
 }
 
 #[cfg(test)]
@@ -171,63 +129,5 @@ mod tests {
         // Invalid json should return as-is
         let invalid = "{ invalid json ]";
         assert_eq!(minify_json_prompt(invalid), invalid);
-    }
-
-    #[test]
-    fn test_is_image_extension() {
-        assert!(is_image_extension("png"));
-        assert!(is_image_extension("JPG"));
-        assert!(!is_image_extension("txt"));
-    }
-
-    #[test]
-    fn test_get_optimized_key() {
-        assert_eq!(get_optimized_key("test.png"), "test.webp");
-        assert_eq!(get_optimized_key("test.jpg"), "test.webp");
-        assert_eq!(get_optimized_key("test.webp"), "test.webp");
-        assert_eq!(get_optimized_key("test.txt"), "test.txt");
-    }
-
-    #[test]
-    fn test_optimize_image_valid() {
-        use image::{ImageBuffer, Rgb};
-
-        // Create a 10x10 RGB image
-        let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(10, 10);
-        let mut png_data = Vec::new();
-        let mut cursor = Cursor::new(&mut png_data);
-        img.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
-
-        let (optimized, mime) = optimize_image(&png_data, 5).unwrap();
-        assert_eq!(mime, "image/webp");
-        assert!(!optimized.is_empty());
-
-        // Verify it's actually WebP and resized
-        let opt_img = image::load_from_memory(&optimized).unwrap();
-        let (w, h) = image::GenericImageView::dimensions(&opt_img);
-        assert!(w <= 5);
-        assert!(h <= 5);
-    }
-
-    #[test]
-    fn test_optimize_image_invalid() {
-        let invalid_data = vec![0, 1, 2, 3];
-        let result = optimize_image(&invalid_data, 5);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_decompress_lossless_invalid_base64() {
-        let invalid_base64 = format!("{}invalid_base64", COMPRESSION_PREFIX);
-        let result = decompress_lossless(&invalid_base64);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_decompress_lossless_invalid_gzip() {
-        // "AAAA" is valid base64 but invalid gzip
-        let invalid_gzip = format!("{}AAAA", COMPRESSION_PREFIX);
-        let result = decompress_lossless(&invalid_gzip);
-        assert!(result.is_err());
     }
 }

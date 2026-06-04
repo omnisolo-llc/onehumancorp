@@ -14,15 +14,13 @@ use opentelemetry::trace::Tracer;
 pub struct AutoDreamWorker {
     db: Arc<DB>,
     embedded_counter: Counter<u64>,
-    cache: Arc<crate::pricing::cache::LocalEmbeddingCache>,
 }
 
 impl AutoDreamWorker {
     pub fn new(db: Arc<DB>) -> Self {
         let meter = global::meter("ohc.autodream");
         let embedded_counter = meter.u64_counter("autodream.tasks.embedded").build();
-        let cache = Arc::new(crate::pricing::cache::LocalEmbeddingCache::new(std::time::Duration::from_secs(3600)));
-        AutoDreamWorker { db, embedded_counter, cache }
+        AutoDreamWorker { db, embedded_counter }
     }
 
 
@@ -31,12 +29,10 @@ impl AutoDreamWorker {
         
         let db = self.db.clone();
         let counter = self.embedded_counter.clone();
-        let cache_for_prune = self.cache.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running pruning pipeline...");
-                let cache_ref = cache_for_prune.clone();
-                if let Err(e) = Self::prune_stale_sessions(&db, &counter, &cache_ref).await {
+                if let Err(e) = Self::prune_stale_sessions(&db, &counter).await {
                     debug!("AutoDream: pruning stale sessions failed: {}", e);
                 }
 
@@ -56,28 +52,23 @@ impl AutoDreamWorker {
         
         let db = self.db.clone();
         let counter = self.embedded_counter.clone();
-        let cache_for_ingest = self.cache.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running completed tasks ingestion pipeline...");
-                let cache_ref = cache_for_ingest.clone();
-                if let Err(e) = Self::ingest_completed_tasks(&db, &counter, &cache_ref).await {
+                if let Err(e) = Self::ingest_completed_tasks(&db, &counter).await {
                     debug!("AutoDream: tasks ingestion failed: {}", e);
                 }
 
                 if let Err(e) = Self::compress_session_contexts(&db).await {
                     tracing::error!("AutoDream: compress_session_contexts failed: {}", e);
                 }
-                let cache_ref = cache_for_ingest.clone();
-                if let Err(e) = Self::process_db_memories(&db, &counter, &cache_ref).await {
+                if let Err(e) = Self::process_db_memories(&db, &counter).await {
                     debug!("AutoDream: DB memories processing failed: {}", e);
                 }
-                let cache_ref = cache_for_ingest.clone();
-                if let Err(e) = Self::process_fs_memories(&db, &counter, &cache_ref).await {
+                if let Err(e) = Self::process_fs_memories(&db, &counter).await {
                     debug!("AutoDream: FS memories processing failed: {}", e);
                 }
-                let cache_ref = cache_for_ingest.clone();
-                if let Err(e) = Self::consolidate_agent_task_memories(&db, &counter, &cache_ref).await {
+                if let Err(e) = Self::consolidate_agent_task_memories(&db, &counter).await {
                     debug!("AutoDream: agent-task memories consolidation failed: {}", e);
                 }
                 if let Err(e) = Self::process_mesh_messages(&db).await {
@@ -99,7 +90,7 @@ impl AutoDreamWorker {
         });
     }
 
-    async fn prune_stale_sessions(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn prune_stale_sessions(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::hours(24);
         
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
@@ -112,29 +103,23 @@ impl AutoDreamWorker {
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
 
-             let embedding = if let Some(cached) = cache.get(&summary) {
-                 cached
-             } else {
-                 match client.generate_embedding(&summary).await {
-                     Ok(emb) => {
-                         counter.add(1, &[]);
-                         let emb_str = format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                         cache.set(&summary, &emb_str);
-                         emb_str
-                     },
-                     Err(e) => {
-                         tracing::error!("AutoDream: failed to generate embedding: {}", e);
-                         format!("[{}]", vec!["0.0"; 1536].join(", "))
-                     }
-                 }
+             let embedding = match client.generate_embedding(&summary).await {
+                Ok(emb) => {
+                    counter.add(1, &[]);
+                    format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","))
+                },
+                Err(e) => {
+                    tracing::error!("AutoDream: failed to generate embedding: {}", e);
+                    format!("[{}]", vec!["0.0"; 1536].join(", "))
+                }
              };
 
-             db.inject_truth("system", &format!("session-summary-{}", id), &summary, &embedding).await?;
+             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
 
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
              if db.is_sqlite() {
-                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                      .bind(&format!("session-summary-{}", id))
                      .bind("system")
                      .bind("system_agent")
@@ -145,7 +130,7 @@ impl AutoDreamWorker {
                      .execute(&db.pool)
                      .await?;
              } else {
-                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                      .bind(&format!("session-summary-{}", id))
                      .bind("system")
                      .bind("system_agent")
@@ -175,7 +160,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
 
         for (id, org_id, payload, table) in tasks {
@@ -189,20 +174,14 @@ impl AutoDreamWorker {
             
             let mem_id = uuid::Uuid::new_v4().to_string();
             
-            let embedding = if let Some(cached) = cache.get(&summary) {
-                cached
-            } else {
-                match client.generate_embedding(&summary).await {
-                    Ok(emb) => {
-                        counter.add(1, &[]);
-                        let emb_str = format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                        cache.set(&summary, &emb_str);
-                        emb_str
-                    },
-                    Err(e) => {
-                        debug!("AutoDream: failed to generate embedding: {}", e);
-                        format!("[{}]", vec!["0.0"; 1536].join(", "))
-                    }
+            let embedding = match client.generate_embedding(&summary).await {
+                Ok(emb) => {
+                    counter.add(1, &[]);
+                    format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","))
+                },
+                Err(e) => {
+                    debug!("AutoDream: failed to generate embedding: {}", e);
+                    format!("[{}]", vec!["0.0"; 1536].join(", "))
                 }
             };
             
@@ -211,7 +190,7 @@ impl AutoDreamWorker {
             
             // Insert into the proper KAIROS knowledge_embeddings table
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
-            db.mark_task_auto_dreamed(&org_id, &id, &table).await?;
+            db.mark_task_auto_dreamed(&id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
         }
@@ -286,12 +265,12 @@ impl AutoDreamWorker {
             let session_id: String = row.get("session_id");
             let mut context_data: String = row.get("context_data");
             if context_data.starts_with("gz_b64:") {
-                if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
+                if let Ok(decompressed) = ::server_pricing::compression::decompress_lossless(&context_data) {
                     context_data = decompressed;
                 }
             }
 
-            if let Ok(compressed) = crate::pricing::compression::compress_lossless(&context_data) {
+            if let Ok(compressed) = ::server_pricing::compression::compress_lossless(&context_data) {
                 sqlx::query("UPDATE agent_session_data SET context_data = $1 WHERE session_id = $2")
                     .bind(compressed)
                     .bind(&session_id)
@@ -302,7 +281,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_db_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_db_memories(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
             .fetch_all(&db.pool)
             .await?;
@@ -314,33 +293,21 @@ impl AutoDreamWorker {
             let _agent_id: String = row.get("agent_id");
             let mut context_data: String = row.get("context_data");
             if context_data.starts_with("gz_b64:") {
-                if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
+                if let Ok(decompressed) = ::server_pricing::compression::decompress_lossless(&context_data) {
                     context_data = decompressed;
                 }
             }
 
-            let embedding_res = if let Some(cached) = cache.get(&context_data) {
-                Ok(cached)
-            } else {
-                match client.generate_embedding(&context_data).await {
-                    Ok(embedding) => {
-                        counter.add(1, &[]);
-                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                        cache.set(&context_data, &emb_str);
-                        Ok(emb_str)
-                    },
-                    Err(e) => Err(e),
-                }
-            };
-
-            match embedding_res {
-                Ok(emb_str) => {
+            match client.generate_embedding(&context_data).await {
+                Ok(embedding) => {
+                    counter.add(1, &[]);
+                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = uuid::Uuid::new_v4().to_string();
                     
                     db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
                     
                     if db.is_sqlite() {
-                        sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                             .bind(&mem_id)
                             .bind("system")
                             .bind("system_agent")
@@ -351,7 +318,7 @@ impl AutoDreamWorker {
                             .execute(&db.pool)
                             .await?;
                     } else {
-                        sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                             .bind(&mem_id)
                             .bind("system")
                             .bind("system_agent")
@@ -376,7 +343,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_fs_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_fs_memories(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
@@ -393,28 +360,16 @@ impl AutoDreamWorker {
             if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&path).await?;
                 
-                let embedding_res = if let Some(cached) = cache.get(&content) {
-                    Ok(cached)
-                } else {
-                    match client.generate_embedding(&content).await {
-                        Ok(embedding) => {
-                            counter.add(1, &[]);
-                            let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                            cache.set(&content, &emb_str);
-                            Ok(emb_str)
-                        },
-                        Err(e) => Err(e),
-                    }
-                };
-
-                match embedding_res {
-                    Ok(emb_str) => {
+                match client.generate_embedding(&content).await {
+                    Ok(embedding) => {
+                        counter.add(1, &[]);
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
                         
                         db.insert_autodream_memory(&mem_id, "system", "fs-agent", "fs-task", &content, &emb_str, "FS_MEMORY").await?;
 
                         if db.is_sqlite() {
-                            sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&mem_id)
                                 .bind("system")
                                 .bind("fs-agent")
@@ -425,7 +380,7 @@ impl AutoDreamWorker {
                                 .execute(&db.pool)
                                 .await?;
                         } else {
-                            sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                                 .bind(&mem_id)
                                 .bind("system")
                                 .bind("fs-agent")
@@ -448,7 +403,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn consolidate_agent_task_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn consolidate_agent_task_memories(db: &Arc<DB>, counter: &Counter<u64>) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::path::Path::new(".agent-task/memory");
 
         if !memory_dir.exists() {
@@ -464,53 +419,41 @@ impl AutoDreamWorker {
             if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&path).await?;
 
-                let embedding_res = if let Some(cached) = cache.get(&content) {
-                    Ok(cached)
-                } else {
-                    match client.generate_embedding(&content).await {
-                        Ok(embedding) => {
-                            counter.add(1, &[]);
-                            let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                            cache.set(&content, &emb_str);
-                            Ok(emb_str)
-                        },
-                        Err(e) => Err(e),
-                    }
-                };
-
-                match embedding_res {
-                    Ok(emb_str) => {
+                match client.generate_embedding(&content).await {
+                    Ok(embedding) => {
+                        counter.add(1, &[]);
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
+                        db.insert_autodream_memory(&mem_id, "system", "system_agent", "agent-task", &content, &emb_str, "TASK_SUMMARY").await?;
 
-                        let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
-                            id: mem_id,
-                            tenant_id: "system".to_string(),
-                            agent_id: "system_agent".to_string(),
-                            content: content.clone(),
-                            embedding: embedding_vec,
-                            source_type: "TASK_SUMMARY".to_string(),
-                            created_at: chrono::Utc::now(),
-                            last_referenced_at: chrono::Utc::now(),
-                            reference_count: 0,
-                            reliability_score: 50,
-                            owner_override: false,
-                            metadata: None,
-                        };
-
-                        let repository = match &db.store {
-                            crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-                            crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
-                        };
-
-                        if let Err(e) = repository.upsert(&record).await {
-                            debug!("AutoDreamWorker: failed to upsert agent-task memory {:?}: {}", path, e);
+                        if db.is_sqlite() {
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                                .bind(&mem_id)
+                                .bind("system") // Placeholder since we don't have org_id in yml name
+                                .bind("system_agent")
+                                .bind("agent-task")
+                                .bind(&content)
+                                .bind(&emb_str)
+                                .bind("TASK_SUMMARY")
+                                .execute(&db.pool)
+                                .await?;
                         } else {
-                            let path_clone = path.clone();
-                            tokio::fs::remove_file(path).await?;
-                            debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
+                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                                .bind(&mem_id)
+                                .bind("system") // Placeholder since we don't have org_id in yml name
+                                .bind("system_agent")
+                                .bind("agent-task")
+                                .bind(&content)
+                                .bind(&emb_str)
+                                .bind("TASK_SUMMARY")
+                                .execute(&db.pool)
+                                .await?;
                         }
+
+                        let path_clone = path.clone();
+                        tokio::fs::remove_file(path).await?;
+                        debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                     }
                     Err(e) => {
                         debug!("AutoDreamWorker: failed to embed agent-task memory {:?}: {}", path, e);
@@ -539,7 +482,7 @@ mod tests {
     #[test]
     async fn test_autodream_worker_init() {
         // Skip actual db execution to prevent CI timeouts
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -555,9 +498,6 @@ mod tests {
 
         assert!(worker.consolidate_epoch().await.is_ok());
 
-        worker.cache.set("test_prompt", "[0.1,0.2]");
-        assert_eq!(worker.cache.get("test_prompt"), Some("[0.1,0.2]".to_string()));
-
         let sqlite_url = "sqlite::memory:";
         if let Ok(sqlite_pool) = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -568,27 +508,6 @@ mod tests {
             let result = worker_sqlite.consolidate_epoch().await;
             assert!(result.is_ok());
         }
-    }
-
-    #[tokio::test]
-    async fn test_consolidate_agent_task_memories_empty() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
-        let worker = AutoDreamWorker::new(db.clone());
-
-        let res = AutoDreamWorker::consolidate_agent_task_memories(&db, &worker.embedded_counter, &worker.cache).await;
-        // Should return Ok(()) if directory doesn't exist
-        assert!(res.is_ok());
     }
 }
 

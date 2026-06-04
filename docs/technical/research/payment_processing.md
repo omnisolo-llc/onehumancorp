@@ -1,24 +1,26 @@
-# [Payment Processing] Localized Alternative Payments
+# [Payment Processing] Integrate Mercado Pago for LATAM Expansion
 
 ## Problem Statement
-While Stripe is excellent, users in certain regions (LATAM, India, Asia) rely on localized payment methods that Stripe might not fully support or where direct integrations are preferred by local consumers. A business owner needs to accept the payment methods their local customers actually use.
+While Stripe covers the US and Europe well, businesses operating in Latin America need local payment methods (like Pix in Brazil, or OXXO in Mexico). Without these, they cannot process online payments effectively, limiting their business growth.
 
 ## Research Report
-- **Target Tools**: Mercado Pago API (LATAM), Paytm API (India), Alipay API.
-- **Competitive Analysis**: Global platforms often struggle here. Shopify supports many gateways but setup is complex.
-- **Ease of Use**: Requires the user to have an existing account with the provider and link it via OAuth or a simple API key exchange.
-- **Pricing**: Transaction fees vary by provider but are standard for the respective regions.
-- **Reputation**: These are the dominant payment processors in their respective local markets.
-- **Advantages and Risks**: Critical for international adoption; risk is the engineering overhead of supporting and testing 5+ distinct payment APIs.
-- **Cloud vs Standalone**: Cloud works well via webhooks. Standalone might struggle to securely receive webhooks if the local instance isn't exposed to the public internet securely.
+**Evaluated Tool:** Mercado Pago API
+**Alternatives Considered:** dLocal, EBANX
+**Pros:** Dominant player in LATAM. Supports a massive variety of local payment methods (cash vouchers, local credit cards, bank transfers). Strong consumer trust in the region.
+**Cons:** API documentation can be fragmented; support is localized.
+**Ease of Use for Non-technical Users:** The user connects their Mercado Pago account via a simple OAuth flow, instantly enabling local payment options at checkout for their customers.
+**Pricing:** Transaction percentage + fixed fee (varies heavily by country and payment method).
+**Deployment:** Cloud and Standalone compatible via standard OAuth and webhooks.
 
 ## Design Doc
-- **Integration Flow**: In the "Finance & Payments" department, under regional settings, users can enable local payment providers.
-- **Actions**: Replaces or supplements the standard Stripe checkout with the localized checkout flow when a customer initiates a purchase.
-- **User Experience**: The business owner toggles the local provider on and logs in. For the buyer, they see their familiar local payment option at checkout.
+**Integration with OHC:**
+- **Trigger:** A customer initiates checkout in a supported LATAM country.
+- **Action:** OHC routes the payment intent to Mercado Pago instead of Stripe, generating a checkout session or native UI component.
+- **AI Agent Interaction:** "The Accountant" logs the pending payment, monitors the Mercado Pago webhook for success, and reconciles the localized currency to the owner's dashboard.
+- **User View:** A "Payments" setting allowing the owner to connect Mercado Pago. Customers see familiar local payment options at checkout.
 
 ## Implementation Prompt
-Extend the payment processing system to support alternative, region-specific payment gateways alongside the existing Stripe integration. Implement the connection flow for at least one major regional provider (e.g., Mercado Pago). The checkout experience for the end-customer must seamlessly present these new payment options, and the business owner's dashboard must accurately reflect transactions processed through these alternative gateways.
+Integrate the Mercado Pago API as an alternative payment gateway. Implement the OAuth connection flow for tenants. Update the checkout UI to support Mercado Pago checkout sessions and handle webhooks for payment status updates (pending, approved, rejected).
 
 ## Priority
 P2

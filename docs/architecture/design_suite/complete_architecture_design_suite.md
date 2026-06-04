@@ -21,6 +21,13 @@ The OHC platform must serve diverse small business owners (Maya, Carlos, Priya, 
   - **Retention**: Driven by actionable notifications and AI insights, not complex dashboards.
   - **Revenue/Referral**: Contextual upgrade prompts and built-in sharing mechanisms.
 
+### Persona-Specific Pain Point Summaries
+- **🧁 Maya (Home Baker)**: Constant DMs asking about custom cake options while she bakes.
+- **🔧 Carlos (Handyman)**: Manual quoting over the phone while on a ladder; loses leads.
+- **👗 Priya (Boutique Owner)**: Complex dashboard navigation for daily analytics.
+- **🎵 Leo (Music Tutor)**: Chaos managing Google Calendar links and chasing payments.
+- **🍜 Fatima (Food Cart Operator)**: Needs simple pre-orders on slow hardware; English-heavy tools are unusable.
+
 ### Design Doc
 
 **Key Decisions**:
@@ -106,7 +113,7 @@ erDiagram
 - AI agents MUST be scoped to the `tenant_id` they operate under.
 
 ### Implementation Prompt
-Update the Rust backend schema and repository layer to enforce `tenant_id` presence on all core entities. Configure PostgreSQL Row Level Security (RLS) policies for these tables. Add E2E tests proving cross-tenant data access is blocked.
+Update the Go backend schema and repository layer to enforce `tenant_id` presence on all core entities. Configure PostgreSQL Row Level Security (RLS) policies for these tables. Add E2E tests proving cross-tenant data access is blocked.
 
 ### Priority: P0 | Scope: Medium
 
@@ -165,6 +172,13 @@ Traditional drag-and-drop builders are too complex for non-technical users. OHC 
 - **Goal**: Sub-60-second generation time for a functional storefront.
 - **Methodology**: Replace complex wizards with a "Tell us about your business" prompt.
 
+### Comparative Feature Matrix
+| Feature | Shopify | Wix | OHC (Goal) |
+| :--- | :--- | :--- | :--- |
+| **Setup Time** | 30-60 min | 20-40 min | < 60s |
+| **Method** | Complex UI | ADI (One-time) | Conversational |
+| **AI Drafts** | Add-on app | Partial | Native |
+
 ### Design Doc
 
 **Generation Flow**:
@@ -209,7 +223,7 @@ OHC promises full business management from a mobile device. We must formalize th
 - **Offline Capabilities**: Critical reads (dashboard summary) must be cached locally; critical writes (approving agent actions) must use a local retry queue.
 
 ### Implementation Prompt
-Audit and update the core Tauri UI components. Ensure all touch targets meet the 44px minimum. Implement a local caching layer for the main dashboard view and a retry mechanism for critical mutations when offline.
+Audit and update the core Flutter/Slint UI components. Ensure all touch targets meet the 44px minimum. Implement a local caching layer (e.g., SQLite or shared preferences) for the main dashboard view and a retry mechanism for critical mutations when offline.
 
 ### Priority: P0 | Scope: Medium
 
@@ -235,6 +249,6 @@ A clear, transparent pricing tier system is required to monetize the platform wh
 - The UI intercepts this response and displays a contextual, plain-language upgrade prompt (e.g., "You've reached your 10 product limit. Upgrade to Starter to add unlimited products!").
 
 ### Implementation Prompt
-Implement the `TierService` middleware in the Rust backend to track and enforce tier limits (e.g., product count, AI action count). Integrate Stripe webhooks to synchronize tier status. Implement the frontend interceptors to display user-friendly upgrade prompts when limits are encountered.
+Implement the `TierService` middleware in the Go backend to track and enforce tier limits (e.g., product count, AI action count). Integrate Stripe webhooks to synchronize tier status. Implement the frontend interceptors to display user-friendly upgrade prompts when limits are encountered.
 
 ### Priority: P1 | Scope: Medium

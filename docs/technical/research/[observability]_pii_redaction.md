@@ -4,25 +4,56 @@
 Fix PII redaction leaks before JSON marshaling in telemetry and event logging.
 
 ## Problem Statement
-The OHC codebase enforces strict PII redaction across the multi-tenant architecture. Specifically, "In telemetry or logging code, always apply `redact_interface_pii` (or an equivalent redaction function) to payload maps before calling `serde_json::to_string` or passing values along to prevent PII leakage in multi-tenant environments."
-However, historically there were multiple code paths violating this rule in the legacy codebase.
-
-Currently, the Rust implementation ensures robust PII redaction natively in the core telemetry and orchestration pipelines. Specifically:
-1. `src/server/telemetry/mod.rs`: The `record_queue_length` and other telemetry functions safely construct a `serde_json::Value` payload and pass it to `buffer_metric`. The `buffer_metric` function internally calls `redact_interface_pii(labels)` *before* converting the payload to a JSON string via `serde_json::to_string`, thus guaranteeing no PII leaks.
-2. `src/server/hub.rs`: The `sanitize_hub_event` function receives a `serde_json::Value` and invokes `redact_interface_pii` directly on it *before* returning the stringified `HubEvent` struct, ensuring orchestrator logs do not leak PII to persistent storage.
+The OHC codebase enforces strict PII redaction across the multi-tenant architecture. Specifically, "In telemetry or logging code, always apply `RedactInterfacePII` (or an equivalent redaction function) to payload maps before calling `json.Marshal` to prevent PII leakage in multi-tenant environments."
+However, there are multiple code paths violating this rule:
+1. `src/server/telemetry/telemetry.go`: The `RecordQueueLength` function builds a payload string manually using `fmt.Sprintf` instead of safely constructing a map, redacting it, and JSON marshaling it.
+2. `src/server/orchestration/event_log.go`: The `sanitizeHubEvent` function takes a `raw interface{}`, immediately serializes it via `json.Marshal(raw)`, and only then attempts to unmarshal and redact. If the initial parsing fails, the unredacted payload leaks into the event log and persistent storage.
 
 ## Research Report
-A deep code audit verified all `buffer_metric` calls and `serde_json::to_string` usages in the modern Rust backend.
-- In `telemetry/mod.rs`, the redaction mechanism acts as a strict guardrail. By moving `redact_interface_pii` directly into the `buffer_metric` function body, the codebase enforces structural consistency and prevents developers from bypassing redaction when buffering custom payloads.
-- In `hub.rs`, `sanitize_hub_event` redacts the incoming `raw` event before serialization.
-- Exhaustive testing covering multi-tenant PII guardrails, mixed arrays, varied and nested JSON objects ensures edge cases cannot bypass the PII filter rules.
+A deep code audit verified all `BufferMetricFunc` calls and `json.Marshal` usages.
+- In `telemetry.go`, an invariant test (`pii_linter_test.go` and `ast_pii_linter_test.go`) enforces the redaction mechanism. However, `RecordQueueLength` bypasses it because it skips JSON marshaling entirely, breaking the structural consistency.
+- In `event_log.go`, `sanitizeHubEvent` calls `json.Marshal` prematurely before the redaction step, representing a severe risk for leaking tenant data into orchestrator logs.
 
 ## Design Doc
-1. **telemetry_test.rs**: Enhance existing PII unit tests by adding comprehensive checks for complex nested structures, mixed arrays, and varied casing logic within `test_redact_interface_pii_edge_cases` and `test_redact_interface_pii_highly_nested`.
-2. **hub.rs**: Validate that `sanitize_hub_event` continues to redact the `raw` input BEFORE performing the initial stringification. The internal `test_sanitize_hub_event_redaction` verifies this component.
+1. **telemetry.go**: Update `RecordQueueLength` to construct a map with the key `"delta"`, apply `RedactInterfacePII(payloadMap)`, and serialize it with `json.Marshal(redactedMap)` to align with all other telemetry metrics.
+2. **event_log.go**: Update `sanitizeHubEvent` to redact the `raw` input BEFORE performing the initial `json.Marshal`.
+
+## Implementation Prompt
+Hello Implementer agent! Your task is to resolve PII leakage risks in the telemetry and logging systems.
+
+1. In `src/server/telemetry/telemetry.go`, locate `func RecordQueueLength(ctx context.Context, delta int)`. Update the implementation to follow the pattern used by `RecordSwarmTaskQueueLength`:
+```go
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"delta": delta,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", string(payloadBytes))
+		return
+	}
+```
+
+2. In `src/server/orchestration/event_log.go`, locate `func sanitizeHubEvent(raw interface{}) (HubEvent, error)`. Ensure the `raw` payload is redacted BEFORE it is ever converted to JSON. Modify the logic to immediately redact `raw`:
+```go
+func sanitizeHubEvent(raw interface{}) (HubEvent, error) {
+	redactedRaw := telemetry.RedactInterfacePII(raw)
+	payload, err := json.Marshal(redactedRaw)
+	if err != nil {
+		return HubEvent{}, fmt.Errorf("marshal hub event: %w", err)
+	}
+
+	// Since we've already redacted, we just parse it back if we need the map for type detection.
+	// But actually, we can just detect the type on the redacted raw directly if it's already a map!
+
+	// Ensure the logic is sound and no unredacted data is ever marshaled into `payload`.
+```
+*(You will need to adjust the unmarshaling type-check logic accordingly, but the core invariant is `telemetry.RedactInterfacePII` must be invoked BEFORE `json.Marshal`)*.
+
+3. Run `bazelisk test //src/server/telemetry/...` and `bazelisk test //src/server/orchestration/...` to verify your changes pass the strict AST PII Linters.
 
 ## Priority
 P0
 
 ## Estimated Scope
-Completed in Rust backend.
+Small

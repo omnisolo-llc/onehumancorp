@@ -174,7 +174,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_context_tool_success() {
         // This tests the success path if a database is actually available.
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         if let Ok(pool) = sqlx::PgPool::connect_lazy(&db_url) {
             // Check if connection is actually alive
             if sqlx::query("SELECT 1").execute(&pool).await.is_err() {

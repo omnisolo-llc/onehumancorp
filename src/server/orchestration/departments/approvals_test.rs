@@ -1,15 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
-    use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
+    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, ActionRisk};
+    use crate::orchestration::departments::types::DepartmentType;
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use ohc_builtin_agent::mesh::transport::MemoryTransport;
     use std::sync::Arc;
     use crate::db::DbStore;
 
     #[tokio::test]
     async fn test_approvals_workflow() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() {
             return;
         }
 
@@ -19,20 +19,20 @@ mod tests {
 
         match &db.store {
             DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test Tenant', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
                     .bind(&tenant_id)
                     .execute(&db.pool)
                     .await;
             }
             DbStore::Sqlite(pool) => {
-                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test Tenant', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
                     .bind(&tenant_id)
                     .execute(pool)
                     .await;
             }
         }
 
-        let transport = Arc::new(InProcessTransport::new());
+        let transport = Arc::new(MemoryTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
 
         let orchestrator = DepartmentOrchestrator::new(db, mesh);
@@ -47,7 +47,7 @@ mod tests {
             serde_json::json!({"test": "payload"}),
         ).await;
 
-        let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        let pending = orchestrator.get_pending_approvals(&tenant_id).await;
         if pending.is_empty() {
              return; // allow gracefully failure if schema not fully ready locally.
         }
@@ -57,7 +57,7 @@ mod tests {
         let res = orchestrator.decide_approval(&request_id, &tenant_id, true).await;
         assert!(res.is_ok());
 
-        let pending_after = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        let pending_after = orchestrator.get_pending_approvals(&tenant_id).await;
         assert!(pending_after.iter().find(|p| p.id == request_id).is_none());
     }
 }

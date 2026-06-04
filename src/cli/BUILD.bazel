@@ -2,18 +2,17 @@ load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library")
 
 js_library(
     name = "lib",
-    srcs = [
-        "src/App.test.tsx",
-        "src/App.tsx",
-        "src/index.tsx",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+        ],
+        allow_empty = True,
+    ) + [
         "package.json",
         "tsconfig.json",
     ],
     visibility = ["//visibility:public"],
-    deps = [
-        "//src/cli/src/components",
-        "//src/cli/src/hooks",
-    ],
 )
 
 js_binary(

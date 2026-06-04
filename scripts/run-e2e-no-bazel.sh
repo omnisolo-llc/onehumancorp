@@ -22,8 +22,8 @@ function wait_for_port() {
 export PROTOC="$(pwd)/bazel-out/k8-fastbuild/bin/external/protobuf+/protoc"
 
 echo "[e2e-no-bazel] Building web app via Bazel..."
-cd src/ui/next && npm run build
-cd ../../..
+# Build the WASM binary (for wasm32 target)
+bazel build //src/app:app_web --platforms=@rules_rust//rust/platform:wasm32
 
 echo "[e2e-no-bazel] Building server..."
 cargo build --bin server
@@ -47,7 +47,7 @@ wait_for_port 6379 "Redis"
 echo "[e2e-no-bazel] Starting server..."
 export DATABASE_URL="postgres://ohc:ohc@localhost:5432/ohc"
 export REDIS_URL="redis://localhost:6379"
-export OHC_STANDALONE_MODE="true"
+export STANDALONE_MODE="true"
 
 ./target/debug/server &
 SERVER_PID=$!

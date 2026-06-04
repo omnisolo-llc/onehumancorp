@@ -1,11 +1,11 @@
+use std::sync::atomic::Ordering;
+use crate::msgbus::MemoryBus;
 use crate::msgbus::{Bus, DistributedLock, Message};
-
+use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
 
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 pub mod proto {
-    pub use ::server_ohc::interop::*;
+    pub use interop_proto::ohc::interop::*;
 }
 
 /// Interop Layer protocol for mode-switch behaviour and sync
@@ -28,8 +28,6 @@ impl InteropProtocol {
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        tracing::info!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff");
-
         let lock_resource = format!("handoff:{}", mission_id);
 
         // Wait for lock with a timeout to prevent deadlocks and apply backoff.
@@ -39,7 +37,6 @@ impl InteropProtocol {
                 if self.lock.acquire_lock(&lock_resource, &self.node_id, 10).await.unwrap_or(false) {
                     break;
                 }
-                tracing::debug!(mission_id = %mission_id, "Waiting to acquire handoff lock");
                 retries += 1;
                 let sleep_ms = 50 * retries;
                 sleep(Duration::from_millis(sleep_ms)).await;
@@ -47,7 +44,6 @@ impl InteropProtocol {
         };
 
         if timeout(Duration::from_secs(5), acquire_future).await.is_err() {
-            tracing::error!(mission_id = %mission_id, "Timeout waiting for handoff lock");
             return Err("Timeout waiting for lock".to_string());
         }
 
@@ -60,7 +56,7 @@ impl InteropProtocol {
             return Ok(());
         }
 
-        let handoff_msg = ::server_ohc::interop::StateHandoff {
+        let handoff_msg = proto::StateHandoff {
             source_mode: 0,
             target_mode: 0,
             mission_id: mission_id.to_string(),
@@ -114,11 +110,11 @@ impl InteropProtocol {
     }
 
     /// Listens for state handoff updates
-    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(::server_ohc::interop::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]) {
+                if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -135,8 +131,8 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
-                    let ack = ::server_ohc::interop::HealthAck {
+                if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
+                    let ack = proto::HealthAck {
                         source_node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
                         target_node_id: decoded.source_node_id.clone(),
@@ -171,7 +167,7 @@ impl InteropProtocol {
     /// Health monitor across the swarm using protobuf
     pub async fn check_health(&self, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
-        use std::sync::atomic::Ordering;
+        use std::sync::atomic::{AtomicBool, Ordering};
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
@@ -185,7 +181,7 @@ impl InteropProtocol {
 
         let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
 
-        let ping = ::server_ohc::interop::HealthPing {
+        let ping = proto::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: self.node_id.clone(),
@@ -217,9 +213,7 @@ impl InteropProtocol {
     /// Dispatches a background job and waits for acknowledgment
     pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
         use prost::Message as ProstMessage;
-        use std::sync::atomic::Ordering;
-
-        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job");
+        use std::sync::atomic::{AtomicBool, Ordering};
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
@@ -233,19 +227,16 @@ impl InteropProtocol {
 
         let cancel = self.bus.subscribe(format!("system:job_ack:{}", job_id), handler).await?;
 
-        let dispatch = ::server_ohc::interop::JobDispatch {
+        let dispatch = proto::JobDispatch {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             action_name: action_name.to_string(),
-            payload,
+            payload: payload,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
         };
 
         let mut buf = Vec::new();
-        if let Err(e) = dispatch.encode(&mut buf) {
-            tracing::error!(job_id = %job_id, error = %e, "Failed to encode job dispatch message");
-            return Err(e.to_string());
-        }
+        dispatch.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let msg = Message {
             topic: format!("system:job_dispatch:{}", tenant_id),
@@ -257,14 +248,10 @@ impl InteropProtocol {
         let mut delay_ms = 100;
         loop {
             match self.bus.publish(msg.clone()).await {
-                Ok(_) => {
-                    tracing::debug!(job_id = %job_id, "Successfully published job dispatch message");
-                    break;
-                },
+                Ok(_) => break,
                 Err(e) => {
                     if retries >= 5 {
                         cancel();
-                        tracing::error!(job_id = %job_id, error = %e, "Failed to publish job dispatch after max retries");
                         return Err(format!("Failed to publish job dispatch after retries: {}", e));
                     }
                     retries += 1;
@@ -279,14 +266,12 @@ impl InteropProtocol {
         while start.elapsed().as_millis() < timeout_ms as u128 {
             if received.load(Ordering::SeqCst) {
                 cancel();
-                tracing::info!(job_id = %job_id, "Job dispatch acknowledged");
                 return Ok(true);
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         }
 
         cancel();
-        tracing::warn!(job_id = %job_id, timeout_ms = %timeout_ms, "Job dispatch timeout waiting for acknowledgment");
         Ok(false) // Not acked, implies failure/timeout, dispatch might need to be retried by the caller
     }
 
@@ -298,10 +283,10 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::JobDispatch::decode(&msg.payload[..]) {
+                if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
                     // In a real implementation, we would process the job here or send it to a worker pool
                     // Here, we just acknowledge receipt
-                    let ack = ::server_ohc::interop::JobAck {
+                    let ack = proto::JobAck {
                         job_id: decoded.job_id.clone(),
                         node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -338,7 +323,7 @@ impl InteropProtocol {
     pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        let update = ::server_ohc::interop::JobStatusUpdate {
+        let update = proto::JobStatusUpdate {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             status: status.to_string(),
@@ -373,11 +358,11 @@ impl InteropProtocol {
     }
 
     /// Listens for job status updates for a specific job
-    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(::server_ohc::interop::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::JobStatusUpdate::decode(&msg.payload[..]) {
+                if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -386,75 +371,13 @@ impl InteropProtocol {
         self.bus.subscribe(format!("system:job_status:{}", job_id), bus_handler).await
     }
 
-    /// Synchronizes a QueueJob across modes idempotently
-    pub async fn sync_queue_job(&self, job: ::server_ohc::interop::QueueJob) -> Result<(), String> {
-        use prost::Message as ProstMessage;
-
-        // Idempotency check: ensure we don't duplicate syncing the EXACT same state transition
-        // by including updated_at_ms in the lock resource.
-        let idempotency_lock_resource = format!("queue_job:processed:{}_{}", job.id, job.updated_at_ms);
-        let attempt_owner = format!("{}_{}", self.node_id, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
-
-        if !self.lock.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.unwrap_or(false) {
-            return Ok(());
-        }
-
-        let mut buf = Vec::new();
-        if let Err(e) = job.encode(&mut buf) {
-            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
-            return Err(e.to_string());
-        }
-
-        let msg = Message {
-            topic: format!("system:queue_job_sync:{}", job.tenant_id),
-            payload: buf,
-        };
-
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        let result = loop {
-            match self.bus.publish(msg.clone()).await {
-                Ok(_) => break Ok(()),
-                Err(e) => {
-                    if retries >= 5 {
-                        break Err(format!("Failed to publish queue job sync after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
-            }
-        };
-
-        if result.is_err() {
-            // Failed to publish, release idempotency lock so it can be retried
-            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
-        }
-
-        result
-    }
-
-    /// Listens for queue job synchronizations
-    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(::server_ohc::interop::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let bus_handler = Box::new(move |msg: Message| {
-            if msg.topic.starts_with("system:queue_job_sync:") {
-                use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::QueueJob::decode(&msg.payload[..]) {
-                    handler(decoded);
-                }
-            }
-        });
-
-        self.bus.subscribe(format!("system:queue_job_sync:{}", tenant_id), bus_handler).await
-    }
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::msgbus::MemoryBus;
-    use std::sync::atomic::Ordering;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     #[tokio::test]
     async fn test_interop_handoff_memory() {
@@ -468,7 +391,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
@@ -529,7 +452,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
@@ -585,7 +508,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |msg: ::server_ohc::interop::StateHandoff| {
+        let handler = Box::new(move |msg: proto::StateHandoff| {
             if msg.mission_id == "mission_2" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -634,7 +557,7 @@ mod tests {
 
         // Publish a ping
         use prost::Message as ProstMessage;
-        let ping = ::server_ohc::interop::HealthPing {
+        let ping = proto::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: "sender_node".to_string(),
@@ -678,7 +601,7 @@ mod tests {
 
         // Publish a job
         use prost::Message as ProstMessage;
-        let dispatch = ::server_ohc::interop::JobDispatch {
+        let dispatch = proto::JobDispatch {
             job_id: "job_123".to_string(),
             tenant_id: "tenant_x".to_string(),
             action_name: "test_action".to_string(),
@@ -730,7 +653,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |update: ::server_ohc::interop::JobStatusUpdate| {
+        let handler = Box::new(move |update: proto::JobStatusUpdate| {
             if update.job_id == "job_status_123" && update.status == "COMPLETED" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -862,7 +785,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_msg: ::server_ohc::interop::StateHandoff| {
+        let handler = Box::new(move |_msg: proto::StateHandoff| {
             rx.store(true, Ordering::SeqCst);
         });
 
@@ -951,7 +874,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_update: ::server_ohc::interop::JobStatusUpdate| {
+        let handler = Box::new(move |_update: proto::JobStatusUpdate| {
             rx.store(true, Ordering::SeqCst);
         });
 
@@ -971,3 +894,201 @@ mod tests {
     }
 
 }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_state_handoff() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let handler = Box::new(move |handoff: proto::StateHandoff| {
+            if handoff.mission_id == "m1" && handoff.tenant_id == "t1" {
+                rx.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let _cancel = protocol.listen_for_state_handoff(handler).await.unwrap();
+
+        let handoff = proto::StateHandoff {
+            mission_id: "m1".to_string(),
+            tenant_id: "t1".to_string(),
+            source_mode: 0,
+            target_mode: 0,
+            timestamp_ms: 1000,
+            state_snapshot: vec![1, 2, 3],
+        };
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        handoff.encode(&mut buf).unwrap();
+
+        bus.publish(crate::msgbus::Message {
+            topic: "system:state_handoff".to_string(),
+            payload: buf,
+        }).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_pings() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let _cancel_ping = protocol.listen_for_pings().await.unwrap();
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel_ack = bus.subscribe("system:health_ack:sender_node".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(ack) = proto::HealthAck::decode(&msg.payload[..]) {
+                if ack.source_node_id == "node1" && ack.target_node_id == "sender_node" {
+                    rx.store(true, Ordering::SeqCst);
+                }
+            }
+        })).await.unwrap();
+
+        let ping = proto::HealthPing {
+            source_node_id: "sender_node".to_string(),
+            current_mode: 0,
+            timestamp_ms: 1000,
+        };
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        ping.encode(&mut buf).unwrap();
+
+        bus.publish(crate::msgbus::Message {
+            topic: "system:health_ping".to_string(),
+            payload: buf,
+        }).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_listen_for_jobs() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let _cancel_jobs = protocol.listen_for_jobs("t1").await.unwrap();
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel_ack = bus.subscribe("system:job_ack:job1".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(ack) = proto::JobAck::decode(&msg.payload[..]) {
+                if ack.job_id == "job1" && ack.node_id == "node1" {
+                    rx.store(true, Ordering::SeqCst);
+                }
+            }
+        })).await.unwrap();
+
+        let dispatch = proto::JobDispatch {
+            job_id: "job1".to_string(),
+            tenant_id: "t1".to_string(),
+            action_name: "act".to_string(),
+            payload: vec![],
+            timestamp_ms: 1000,
+        };
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        dispatch.encode(&mut buf).unwrap();
+
+        bus.publish(crate::msgbus::Message {
+            topic: "system:job_dispatch:t1".to_string(),
+            payload: buf,
+        }).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_check_health_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let bus_clone = bus.clone();
+        let _cancel = bus.subscribe("system:health_ping".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(ping) = proto::HealthPing::decode(&msg.payload[..]) {
+                let ack = proto::HealthAck {
+                    source_node_id: "responder".to_string(),
+                    target_node_id: ping.source_node_id.clone(),
+                    timestamp_ms: 1000,
+                };
+                let mut buf = Vec::new();
+                ack.encode(&mut buf).unwrap();
+                let b = bus_clone.clone();
+                tokio::spawn(async move {
+                    b.publish(crate::msgbus::Message {
+                        topic: format!("system:health_ack:{}", ping.source_node_id),
+                        payload: buf,
+                    }).await.unwrap();
+                });
+            }
+        })).await.unwrap();
+
+        let is_healthy = protocol.check_health(500).await.unwrap();
+        assert!(is_healthy);
+    }
+
+    #[tokio::test]
+    async fn test_interop_dispatch_job_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let bus_clone = bus.clone();
+        let _cancel = bus.subscribe("system:job_dispatch:t1".to_string(), Box::new(move |msg| {
+            use prost::Message as ProstMessage;
+            if let Ok(dispatch) = proto::JobDispatch::decode(&msg.payload[..]) {
+                let ack = proto::JobAck {
+                    job_id: dispatch.job_id.clone(),
+                    node_id: "responder".to_string(),
+                    timestamp_ms: 1000,
+                };
+                let mut buf = Vec::new();
+                ack.encode(&mut buf).unwrap();
+                let b = bus_clone.clone();
+                tokio::spawn(async move {
+                    b.publish(crate::msgbus::Message {
+                        topic: format!("system:job_ack:{}", dispatch.job_id),
+                        payload: buf,
+                    }).await.unwrap();
+                });
+            }
+        })).await.unwrap();
+
+        let success = protocol.dispatch_job("job1", "t1", "action", vec![], 500).await.unwrap();
+        assert!(success);
+    }
+
+    #[tokio::test]
+    async fn test_interop_handoff_success() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = Arc::new(MemoryBus::new());
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rx = received.clone();
+
+        let _cancel = bus.subscribe("system:state_handoff".to_string(), Box::new(move |_| {
+            rx.store(true, Ordering::SeqCst);
+        })).await.unwrap();
+
+        let result = protocol.handoff("m1", "t1", vec![]).await;
+        assert!(result.is_ok());
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }

@@ -11,11 +11,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
   updatePolicy:
-    updateMode: {{ if .Values.backend.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
       - containerName: backend
-        controlledResources: ["memory"]
+        controlledResources: ["cpu", "memory"]
         minAllowed:
           cpu: {{ .Values.backend.resources.requests.cpu | quote }}
           memory: {{ .Values.backend.resources.requests.memory | quote }}
@@ -37,11 +37,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
   updatePolicy:
-    updateMode: {{ if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
-        controlledResources: ["memory"]
+        controlledResources: ["cpu", "memory"]
         minAllowed:
           cpu: {{ .Values.ohcCore.resources.requests.cpu | quote }}
           memory: {{ .Values.ohcCore.resources.requests.memory | quote }}
@@ -63,11 +63,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-chatwoot
   updatePolicy:
-    updateMode: {{ if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
       - containerName: chatwoot
-        controlledResources: ["memory"]
+        controlledResources: ["cpu", "memory"]
         minAllowed:
           cpu: {{ .Values.chatwoot.resources.requests.cpu | quote }}
           memory: {{ .Values.chatwoot.resources.requests.memory | quote }}
@@ -89,11 +89,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-powersync
   updatePolicy:
-    updateMode: {{ if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+    updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
       - containerName: powersync
-        controlledResources: ["memory"]
+        controlledResources: ["cpu", "memory"]
         minAllowed:
           cpu: {{ .Values.powersync.resources.requests.cpu | quote }}
           memory: {{ .Values.powersync.resources.requests.memory | quote }}

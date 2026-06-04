@@ -34,8 +34,8 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 ```mermaid
 graph TD
     subgraph "Thin Client Mode (UI-Only)"
-        Desktop[Tauri Desktop Client] -->|API/OAuth| BE[OHC Backend Server]
-        Web[Static Web Client] -->|API/OAuth| BE
+        Desktop[Slint Desktop Client] -->|API/OAuth| BE[OHC Backend Server]
+        Web[Slint Web Client] -->|API/OAuth| BE
     end
     
     subgraph "Cloud-Native Mode (Multi-Tenant)"
@@ -74,11 +74,11 @@ graph TD
 - **Cloud-native shared service**: the Rust API tier runs in Kubernetes, scales horizontally, and relies on Postgres as the consistency boundary.
 - **Headless remote-service mode**: the backend runs with UI serving disabled so mobile and desktop clients use it as an API-only service.
 - **Desktop standalone mode**: the desktop shell manages a local backend lifecycle, local SQLite-backed state, and optional public integrations.
-- **Remote client mode**: the Tauri app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
+- **Remote client mode**: the Slint app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
 
 ### 3.2 Hybrid Parity and Graceful Degradation
 - **Standalone Wrapper Spec**: The desktop wrapper must instantiate the Rust backend as a child process, utilizing SQLite instead of Postgres and relying on local process boundaries rather than strict multi-tenant container isolation.
-- **Thin Client APIs**: UI actions use the Axum HTTP routes and tonic gRPC services registered from `src/server/lib.rs` and `src/server/api/`. Mode-specific integrations degrade where an implementation exists, such as Redis-backed mesh transport falling back to local transport in standalone paths.
+- **Thin Client APIs**: All UI actions must map to identical REST or gRPC definitions regardless of the target backend. Endpoints gracefully degrade if a service is unavailable (e.g., if Redis Pub/Sub is missing, fallback to local memory channels).
 - **Verification**: Architectural changes must maintain parity across both hybrid targets.
 
 ### 3.3 Orchestration Hub (`src/server/orchestration/`)
@@ -114,13 +114,10 @@ message AgentMessage {
 
 | Method | Path | Request Body | Resulting State |
 |--------|------|--------------|-----------------|
-| `GET` | `/healthz`, `/readyz`, `/api/v1/health` | N/A | Returns service or hub health. |
-| `POST` | `/api/v1/auth/login` | `{"username": "...", "password": "...", "organization_id": "..."}` | Issues an authenticated session token. |
-| `GET` / `POST` | `/api/agents/` and `/api/agents/hire` | Agent hire payload | Lists or hires agents through the Hub-backed agent API. |
-| `GET` / `POST` | `/api/agents/approvals/` and `/api/agents/approvals/{id}` | Approval decision payload | Lists and decides department approvals. |
-| `POST` | `/api/mesh/v2/broadcast`, `/api/mesh/v2/direct`, `/api/mesh/v2/mailbox` | Mesh event payload | Publishes or stores teammate mesh events. |
-| `GET` | `/api/v1/mesh/connect` | WebSocket upgrade | Opens the mesh WebSocket stream. |
-| `POST` | `/api/v1/builder/generate`, `/api/v1/builder/publish_draft` | Builder payload | Generates or publishes storefront drafts. |
+| `GET` | `/api/dashboard` | N/A | Returns full org, active meetings, and costs. |
+| `POST` | `/api/agents/hire` | `{"name": "...", "role": "..."}` | New `Agent` in `IDLE` status in Hub. |
+| `POST` | `/api/messages` | `{"fromAgent": "...", "content": "..."}` | Updates `MeetingRoom.Transcript` and triggers agent logic. |
+| `POST` | `/api/approvals/decide` | `{"approvalId": "...", "decision": "approve"}` | Gates high-risk execution until human sign-off. |
 
 ## 5. Security & Trust Domain
 ### 5.1 SPIFFE/SPIRE Identity
@@ -140,13 +137,13 @@ Audit logs and snapshots are stored in a managed Postgres cluster via the CNPG o
 - Integrated Prometheus metrics for DB health.
 
 ### 6.3 Multi-Tenant Routing and Headless Serving
-- Authenticated requests carry `organization_id` claims; service handlers and shared-database queries use those claims to scope tenant-visible data.
-- `OHC_MULTITENANT=true` enables cloud-mode tenant requirements in auth and related service paths.
-- `OHC_HEADLESS=true` selects API-only/headless integration behavior. The current Rust entrypoint still registers the Axum UI fallback route; static Tauri assets are packaged by the desktop app, not by a `FRONTEND_STATIC_DIR` server setting.
-- Current persistence hardening is focused on making every shared Postgres query org-aware end to end; the auth, dashboard, billing, onboarding, orchestration, and growth surfaces already carry org-scoped behavior.
+- `TenantRegistry` routes authenticated requests by `organization_id` and lazily provisions organisation-scoped HTTP servers.
+- `OHC_MULTITENANT=true` enables shared-service routing for cloud deployments.
+- `OHC_HEADLESS=true` disables static UI serving so the backend can act purely as an API for remote mobile and desktop clients.
+- Current persistence hardening is focused on making every shared Postgres query org-aware end to end; the routing layer and dashboard surface already enforce org-scoped behavior.
 
 ## 7. Monitoring & Observability
-- **Metrics**: OpenTelemetry metrics from `src/server/telemetry/`, including token, agent, queue, mission, and business event counters.
+- **Metrics**: Standard `net/http` metrics + custom `ohc_tokens_consumed_total`.
 - **Tracing**: W3C Traceparent propagation through agent handoffs for distributed request tracking.
 - **Liveness/Readiness**: `/healthz` (service up) and `/readyz` (DB/Redis reachable).
 d-to-end mTLS via SPIFFE.
@@ -193,7 +190,7 @@ Optimize agent throughput by aligning LLM requirements with cluster hardware.
 
 - **Liveness & Readiness**: `/healthz` and `/readyz` endpoints for Kubernetes probes.
 - **Tracing**: OpenTelemetry traces exported to OTLP compatible backends (Jaeger, Honeycomb).
-- **Logging**: `tracing` and `tracing-subscriber`, with JSON output when `LOG_FORMAT=json`.
+- **Logging**: Structured JSON logging via `log/slog` for automated log analysis.
 - **Metrics**: Prometheus metrics for system health (CPU, Memory, Request Latency).
 
 ## 11. Modular Capability Expansion Flow

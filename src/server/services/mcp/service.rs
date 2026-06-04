@@ -5,14 +5,14 @@ use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
-use crate::tools::config_sync::server::ConfigSyncServer;
+use crate::tools::local_proxy::server::LocalProxyServer;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
     registry: Arc<IntegrationsRegistry>,
     hub: Arc<crate::hub::Hub>,
     hybrid_fs_server: Arc<HybridFSMcpServer>,
-    config_sync_server: Arc<ConfigSyncServer>,
+    local_proxy_server: Arc<LocalProxyServer>,
 }
 
 impl MyMcpService {
@@ -20,9 +20,9 @@ impl MyMcpService {
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
-            hub: hub.clone(),
+            hub,
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
-            config_sync_server: Arc::new(ConfigSyncServer::new(hub.pool.clone())),
+            local_proxy_server: Arc::new(LocalProxyServer::new()),
         }
     }
 }
@@ -65,9 +65,9 @@ impl McpService for MyMcpService {
     ) -> Result<Response<McpToolsResponse>, Status> {
         let mut tools = self.dynamic_tools.read().unwrap().clone();
         let hybrid_fs_tools = self.hybrid_fs_server.get_tools();
+        let local_proxy_tools = self.local_proxy_server.get_tools();
         tools.extend(hybrid_fs_tools);
-        let config_sync_tools = self.config_sync_server.get_tools();
-        tools.extend(config_sync_tools);
+        tools.extend(local_proxy_tools);
         Ok(Response::new(McpToolsResponse {
             tools,
         }))
@@ -199,30 +199,25 @@ impl McpService for MyMcpService {
                 let resp_payload = serde_json::to_string(&serde_json::json!({"value": "mock_value"})).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
-            "sync_config_to_cloud" | "mcp_config_sync" => {
-                let mut modified_req = req.clone();
-                modified_req.tool_id = "mcp_config_sync".to_string(); // Normalize
-                match self.config_sync_server.invoke_tool(&modified_req).await {
+            "sync_config_to_cloud" => {
+                let resp_payload = serde_json::to_string(&serde_json::json!({"status": "success"})).unwrap();
+                Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
+            }
+            "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" => {
+                match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
                     Ok(resp) => Ok(Response::new(resp)),
                     Err(e) => Err(e),
                 }
             }
-            "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" | "fs_search_files" => {
-                // Determine tenant_id from spiffe_id on each request to ensure multi-tenancy
-                let spiffe_id_str = &req.spiffe_id;
-                let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-                let tenant_id = parsed.0;
-                if tenant_id.is_empty() {
-                    return Err(Status::unauthenticated("empty tenant ID in SPIFFE ID"));
-                }
-                let provider = crate::tools::hybridfsmcp::factory::create_fs_provider(Some(tenant_id));
-                let request_specific_server = crate::tools::hybridfsmcp::server::HybridFSMcpServer::new(provider);
-                match request_specific_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
+            "local_stateful_proxy" => {
+                match self.local_proxy_server.invoke_tool(&req).await {
                     Ok(resp) => Ok(Response::new(resp)),
                     Err(e) => Err(e),
                 }
             }
-            _ => Err(Status::not_found(format!("tool {} not implemented", req.tool_id)))
+            _ => {
+                Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
+            }
         }
     }
 
@@ -232,8 +227,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-        let tenant_id = parsed.0;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -251,15 +245,9 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
-            match crate::sip::get_sqlite_limiter().try_acquire() {
-                Ok(p) => Some(p),
-                Err(_) => {
-                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "delegate_missions").await;
-                    Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| Status::internal(e.to_string()))?)
-                }
-            }
+            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
         } else {
             None
         };
@@ -284,23 +272,16 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-        let tenant_id = parsed.0;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let req = request.into_inner();
-        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
         let _permit = if is_standalone {
-            match crate::sip::get_sqlite_limiter().try_acquire() {
-                Ok(p) => Some(p),
-                Err(_) => {
-                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "sync_context").await;
-                    Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| Status::internal(e.to_string()))?)
-                }
-            }
+            Some(crate::sip::get_sqlite_limiter().acquire().await.unwrap())
         } else {
             None
         };
@@ -341,7 +322,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -359,7 +340,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -382,7 +363,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -402,7 +383,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));

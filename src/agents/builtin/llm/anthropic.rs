@@ -304,9 +304,17 @@ impl LlmClient for AnthropicClient {
             })
             .collect();
 
+        let max_tokens = if req.max_tokens == 0 {
+            2048
+        } else if req.max_tokens > 4096 {
+            4096
+        } else {
+            req.max_tokens
+        };
+
         let payload = AnthropicRequest {
             model: req.model.clone(),
-            max_tokens: req.max_tokens,
+            max_tokens,
             system,
             messages,
             tools,

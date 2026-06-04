@@ -1,5 +1,5 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, ActionRisk, Department};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest};
 use serde_json::Value;
 
 pub struct OperationsAgent {
@@ -19,10 +19,7 @@ impl Department for OperationsAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec![
-            "tenant.quote.accepted".to_string(),
-            "tenant.order.created".to_string(),
-        ]
+        vec!["tenant.quote.accepted".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -37,28 +34,13 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
-        let action_description = if event.event_type == "tenant.order.created" {
-            "Process Order & Update Inventory".to_string()
-        } else {
-            "Create order and booking".to_string()
-        };
-
         self.orchestrator.execute_action(
             DepartmentType::Operations,
-            action_description,
+            "Create order and booking".to_string(),
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
-        ).await?;
-
-        // Dispatch event for customer success agent
-        let cs_event = DepartmentEvent {
-            id: uuid::Uuid::new_v4().to_string(),
-            tenant_id: event.tenant_id.clone(),
-            event_type: "tenant.order.fulfillment_ready".to_string(),
-            payload: event.payload.clone(),
-        };
-        self.orchestrator.dispatch_event(cs_event).await
+        ).await.map(|_| ())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {

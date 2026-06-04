@@ -1,300 +1,42 @@
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
+use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
 
 /// OpenAI Codex & Agents SDK Archetype:
 /// Uses a `Runner` class with async, sync, and streamed modes.
-/// Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.
-
-// 1. Codex Core layer
-pub struct CodexCore {
-    pub agent: Arc<Agent>,
-    pub runtime_config: AgentRunConfig,
-}
-
-impl CodexCore {
-    pub fn new(agent: Arc<Agent>, runtime_config: AgentRunConfig) -> Self {
-        Self { agent, runtime_config }
-    }
-
-    pub async fn execute(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let mut on_event = |_e| {};
-        self.agent.run(&self.runtime_config, message, &mut on_event).await
-    }
-}
-
 pub struct Runner {
-    pub core: Arc<CodexCore>,
+    pub agent: Arc<Agent>,
 }
 
 impl Runner {
     pub fn new(agent: Arc<Agent>) -> Self {
-        let core = Arc::new(CodexCore::new(agent, AgentRunConfig::default()));
-        Self { core }
+        Self { agent }
     }
 
-    pub fn new_with_core(core: Arc<CodexCore>) -> Self {
-        Self { core }
+    /// Asynchronous execution mode
+    pub async fn run_async(&self, cfg: &AgentRunConfig, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let mut on_event = |_e| {};
+        self.agent.run(cfg, initial_message, &mut on_event).await
     }
 
-    pub async fn run_async(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        self.core.execute(message).await
+    /// Synchronous execution mode (blocks the current thread)
+    pub fn run_sync_blocking(&self, cfg: &AgentRunConfig, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let cfg = cfg.clone();
+        let initial_message = initial_message.to_string();
+        let agent = self.agent.clone();
+
+        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        rt.block_on(async move {
+            let mut on_event = |_e| {};
+            agent.run(&cfg, &initial_message, &mut on_event).await
+        })
     }
 
-    pub fn run_sync_blocking(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let core = self.core.clone();
-        let msg = message.to_string();
-
-        let handle = tokio::runtime::Handle::try_current();
-        if let Ok(rt) = handle {
-            tokio::task::block_in_place(move || {
-                rt.block_on(async move {
-                    core.execute(&msg).await
-                })
-            })
-        } else {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async move {
-                core.execute(&msg).await
-            })
-        }
-    }
-
-    pub fn run_streamed(&self, message: &str) -> mpsc::Receiver<AgentEvent> {
-        let (tx, rx) = mpsc::channel(100);
-        let core = self.core.clone();
-        let msg = message.to_string();
-
-        tokio::spawn(async move {
-            let tx_clone = tx.clone();
-            let mut on_event = move |event: AgentEvent| {
-                let _ = tx_clone.try_send(event);
-            };
-            match core.agent.run(&core.runtime_config, &msg, &mut on_event).await {
-                Ok(result) => {
-                    let _ = tx.send(AgentEvent::TaskComplete { content: result }).await;
-                }
-                Err(e) => {
-                    let _ = tx.send(AgentEvent::TaskError { error: e.to_string() }).await;
-                }
-            }
-        });
-
-        rx
-    }
-}
-
-// 2. App Server JSON-RPC layer
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
-pub struct JsonRpcRequest {
-    pub jsonrpc: String,
-    pub id: Option<serde_json::Value>,
-    pub method: String,
-    pub params: serde_json::Value,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct JsonRpcResponse {
-    pub jsonrpc: String,
-    pub id: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<JsonRpcError>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct JsonRpcError {
-    pub code: i32,
-    pub message: String,
-}
-
-pub struct AppServer {
-    pub runner: Arc<Runner>,
-}
-
-impl AppServer {
-    pub fn new(runner: Arc<Runner>) -> Self {
-        Self { runner }
-    }
-
-    pub async fn handle_request(&self, req_str: &str) -> String {
-        let req: JsonRpcRequest = match serde_json::from_str(req_str) {
-            Ok(r) => r,
-            Err(_) => {
-                let err_resp = JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    id: None,
-                    result: None,
-                    error: Some(JsonRpcError { code: -32700, message: "Parse error".to_string() }),
-                };
-                return serde_json::to_string(&err_resp).unwrap();
-            }
-        };
-
-        if req.method == "run_expert_team" {
-            let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-            struct LlmClientAdapter {
-                inner: Arc<dyn crate::llm::LlmClient>,
-            }
-
-            #[async_trait::async_trait]
-            impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for LlmClientAdapter {
-                async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                    self.inner.chat(req).await
-                }
-            }
-
-            let adapter = Arc::new(LlmClientAdapter { inner: self.runner.core.agent.llm.clone() });
-
-            // Expert Team Implementation
-            let experts = vec![
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Industry Researcher".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Financial Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Strategic Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Process Supervisor".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Quality Auditor".to_string(), llm: adapter.clone() },
-            ];
-
-            let manager = ohc_builtin_agent_core::expert_team::ExpertTeamManager::new("Project Director", experts);
-
-            // Gate 1: Pre-flight
-            if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(&manager, &initial_message) {
-                let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                return serde_json::to_string(&resp).unwrap();
-            }
-
-            let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
-            match manager.execute_parallel_tasks(&initial_message, &mut trace).await {
-                Ok(summaries) => {
-                    // Gate 2: Pre-merge
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                        return serde_json::to_string(&resp).unwrap();
-                    }
-
-                    let final_output = format!("Combined Executive Summary:\n{}\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n{}", summaries.join("\n"), " word".repeat(20000));
-
-                    // Gate 3: Pre-deliver
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(&final_output, &trace) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                        return serde_json::to_string(&resp).unwrap();
-                    }
-
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: Some(serde_json::json!({ "output": final_output })),
-                        error: None,
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-                Err(e) => {
-                    let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
-                    serde_json::to_string(&resp).unwrap()
-                }
-            }
-        } else if req.method == "run_agent" {
-            let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let _cfg = AgentRunConfig::default();
-            match self.runner.run_async(&initial_message).await {
-                Ok(result) => {
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: Some(serde_json::json!({ "output": result })),
-                        error: None,
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-                Err(e) => {
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: None,
-                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-            }
-        } else if req.method == "run_scalable_agents" {
-            let count = req.params.get("count").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
-            let message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-            // Integrate the scalable multi-agent cloud orchestrator
-            let mode = if count > 10 {
-                crate::scalable_multi_agent::DeploymentMode::CloudDistributed
-            } else {
-                crate::scalable_multi_agent::DeploymentMode::LocalCli
-            };
-
-            // We adapt Agent to AgentNode
-            struct AgentNodeAdapter {
-                runner: Arc<Runner>,
-            }
-            #[async_trait::async_trait]
-            impl crate::scalable_multi_agent::AgentNode for AgentNodeAdapter {
-                async fn execute(&self, chunk: crate::scalable_multi_agent::TaskChunk) -> Result<crate::scalable_multi_agent::TaskResult, String> {
-                    let _cfg = AgentRunConfig::default();
-                    match self.runner.run_async(&chunk.payload).await {
-                        Ok(res) => Ok(crate::scalable_multi_agent::TaskResult {
-                            chunk_id: chunk.id,
-                            output: res,
-                        }),
-                        Err(e) => Err(e.to_string()),
-                    }
-                }
-            }
-
-            let mut nodes: Vec<Arc<dyn crate::scalable_multi_agent::AgentNode>> = Vec::new();
-            // In a real cloud setup, these nodes would be distributed endpoints. Here we mock instances.
-            for _ in 0..count {
-                nodes.push(Arc::new(AgentNodeAdapter { runner: self.runner.clone() }));
-            }
-
-            let orchestrator = crate::scalable_multi_agent::CloudOrchestrator::new(mode, nodes);
-            let mut tasks = Vec::new();
-            for i in 0..count {
-                tasks.push(crate::scalable_multi_agent::TaskChunk {
-                    id: format!("chunk_{}", i),
-                    payload: format!("{} (chunk {})", message, i),
-                });
-            }
-
-            match orchestrator.distribute_and_execute(tasks).await {
-                Ok(results) => {
-                    let outputs: Vec<String> = results.into_iter().map(|r| r.output).collect();
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: Some(serde_json::json!({ "outputs": outputs })),
-                        error: None,
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-                Err(e) => {
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: None,
-                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-            }
-        } else {
-            let resp = JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req.id,
-                result: None,
-                error: Some(JsonRpcError { code: -32601, message: "Method not found".to_string() }),
-            };
-            serde_json::to_string(&resp).unwrap()
-        }
+    /// Streamed execution mode (returns a receiver for AgentEvents)
+    pub fn run_streamed(&self, cfg: &AgentRunConfig, initial_message: &str) -> mpsc::UnboundedReceiver<AgentEvent> {
+        self.agent.clone().query(cfg.clone(), initial_message.to_string())
     }
 }
 
@@ -302,7 +44,7 @@ impl AppServer {
 mod tests {
     use super::*;
     use crate::llm::LlmClient;
-    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use crate::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
 
     struct MockLlmClient {
@@ -338,8 +80,8 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
-        let result = runner.run_async("test").await.unwrap();
+        let cfg = AgentRunConfig::default();
+        let result = runner.run_async(&cfg, "test").await.unwrap();
         assert_eq!(result, "async success");
     }
 
@@ -355,8 +97,8 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
-        let result = runner.run_sync_blocking("test").unwrap();
+        let cfg = AgentRunConfig::default();
+        let result = runner.run_sync_blocking(&cfg, "test").unwrap();
         assert_eq!(result, "sync success");
     }
 
@@ -372,8 +114,8 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
-        let _cfg = AgentRunConfig::default();
-        let mut rx = runner.run_streamed("test");
+        let cfg = AgentRunConfig::default();
+        let mut rx = runner.run_streamed(&cfg, "test");
 
         let mut events = vec![];
         while let Some(event) = rx.recv().await {
@@ -382,44 +124,5 @@ mod tests {
 
         let has_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
         assert!(has_complete);
-    }
-
-    #[tokio::test]
-    async fn test_app_server_json_rpc() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message::assistant("rpc success"),
-                usage: Usage::default(),
-                stop_reason: "stop".to_string(),
-                response_id: Some("mock-id".to_string()),
-            }]),
-        });
-        let agent = Arc::new(Agent::new(client, vec![]));
-        let runner = Arc::new(Runner::new(agent));
-        let app_server = AppServer::new(runner);
-
-        let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello"}}"#;
-        let resp_json = app_server.handle_request(req_json).await;
-
-        let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
-        assert_eq!(resp.id.unwrap(), serde_json::json!("1"));
-        assert!(resp.error.is_none());
-        assert_eq!(resp.result.unwrap().get("output").unwrap().as_str().unwrap(), "rpc success");
-
-        // Test run_scalable_agents method
-        let req_json_scalable = r#"{"jsonrpc": "2.0", "id": "2", "method": "run_scalable_agents", "params": {"message": "hello", "count": 2}}"#;
-        let resp_json_scalable = app_server.handle_request(req_json_scalable).await;
-        let resp_scalable: JsonRpcResponse = serde_json::from_str(&resp_json_scalable).unwrap();
-        assert!(resp_scalable.error.is_none());
-        let outputs = resp_scalable.result.unwrap().get("outputs").unwrap().as_array().unwrap().clone();
-        assert_eq!(outputs.len(), 2);
-        assert_eq!(outputs[0].as_str().unwrap(), "default output");
-        assert_eq!(outputs[1].as_str().unwrap(), "default output");
-
-        // Test unknown method
-        let req_json_bad = r#"{"jsonrpc": "2.0", "id": "3", "method": "unknown", "params": {}}"#;
-        let resp_json_bad = app_server.handle_request(req_json_bad).await;
-        let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
-        assert_eq!(resp_bad.error.unwrap().code, -32601);
     }
 }
