@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useSyncStore } from '../../lib/sync/syncStore';
+
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function CheckoutPage() {
+  const enqueueMutation = useSyncStore(state => state.enqueueMutation);
+
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -150,24 +154,14 @@ export default function CheckoutPage() {
                 if (!amount) return;
 
                 if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
-                  router.push('/dashboard');
+                  setShowSuccessModal(true);
                 } else {
-                  let queue = [];
-                  try {
-                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                  } catch (e) {}
-
-                  queue.push({
-                    id: 'txn_' + Date.now(),
-                    amount: parseFloat(amount),
-                    timestamp: new Date().toISOString(),
+                  enqueueMutation({
                     type: 'tap_to_pay',
-                    idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
+                    payload: { amount: parseFloat(amount) }
                   });
-                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
-                  router.push('/dashboard');
+                  // Soft UI update instead of hard navigation while offline
+                  setShowSuccessModal(true);
                 }
               }}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
@@ -273,7 +267,13 @@ export default function CheckoutPage() {
               </div>
 
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => {
+                  if (navigator.onLine) {
+                    router.push('/dashboard');
+                  } else {
+                    window.location.href = '/dashboard';
+                  }
+                }}
                 className="w-full px-4 py-3 text-indigo-600 bg-indigo-50 rounded-lg font-medium hover:bg-indigo-100 transition-colors"
               >
                 Continue to Dashboard

@@ -4,6 +4,7 @@ import { WalkthroughTarget } from '../components/Walkthrough';
 import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
+import { SyncProvider } from '../lib/sync/syncManager';
 import { HelpChat } from "../components/HelpChat";
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ export default function RootLayout({
       <body>
         <TooltipProvider>
                   <WalkthroughProvider>
-            {children}
+            <SyncProvider>{children}</SyncProvider>
             <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
             <HelpChat />
           </WalkthroughProvider>

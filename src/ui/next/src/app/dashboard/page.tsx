@@ -1,5 +1,7 @@
 "use client";
 
+import { useSyncStore } from '../../lib/sync/syncStore';
+import { useSyncManager } from '../../lib/sync/syncManager';
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
@@ -68,6 +70,9 @@ function statusTone(status?: string) {
 }
 
 export default function Dashboard() {
+  const pendingCount = useSyncStore(state => state.getPendingMutations().length);
+  const { processQueue } = useSyncManager();
+
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -78,6 +83,10 @@ export default function Dashboard() {
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [userName, setUserName] = useState("Human");
+
+  useEffect(() => {
+    setOfflineQueueCount(pendingCount);
+  }, [pendingCount]);
 
   useEffect(() => {
     try {
@@ -91,11 +100,7 @@ export default function Dashboard() {
 
     const updateOfflineStatus = () => {
       setIsOffline(!navigator.onLine);
-      try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
-      } catch {
-        setOfflineQueueCount(0);
-      }
+      setOfflineQueueCount(pendingCount);
     };
 
     async function loadDashboard() {
@@ -201,8 +206,9 @@ export default function Dashboard() {
         <button type="button" onClick={() => setIsWalkthroughOpen(true)} className="app-button">
           Start Tour
         </button>
-        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
+        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn flex items-center gap-2" : "hidden"}>
           {offlineQueueCount} payments pending sync
+          <button onClick={() => { processQueue(); alert("Syncing..."); }} className="underline text-sm ml-2">Sync Now</button>
         </div>
         <div id="network-status-indicator" className={isOffline ? "app-badge warn" : "hidden"}>
           Offline - changes saved locally
