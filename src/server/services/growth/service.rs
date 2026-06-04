@@ -309,6 +309,24 @@ impl GrowthService for MyGrowthService {
             .execute(&mut *tx)
             .await;
 
+        // Immutably log the credit allocation to the universal ledger
+        let ledger_id = format!("ldg_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
+        let payload = serde_json::json!({
+            "referral_id": req.id,
+            "credit_type": "1_month_pro",
+            "allocated_to": [org_id.clone()]
+        });
+
+        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, event_type, department, payload) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&ledger_id)
+            .bind(&org_id)
+            .bind("ReferralConversion")
+            .bind("Sales & Acquisition")
+            .bind(&payload)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
@@ -329,6 +347,97 @@ impl GrowthService for MyGrowthService {
         Ok(Response::new(DownloadsResponse {
             downloads: dls.clone(),
         }))
+    }
+
+
+    async fn submit_review(
+        &self,
+        request: Request<SubmitReviewRequest>,
+    ) -> Result<Response<SubmitReviewResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+
+        if req.score < 1 || req.score > 5 {
+            return Err(Status::invalid_argument("score must be between 1 and 5"));
+        }
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // 1. Insert the review
+        let review_id = format!("rev_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
+        sqlx::query("INSERT INTO reviews (id, tenant_id, customer_id, score, comment) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&review_id)
+            .bind(&org_id)
+            .bind(&req.customer_id)
+            .bind(req.score)
+            .bind(&req.comment)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // 2. Upsert reputation profile
+        let profile_id = format!("rep_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
+        sqlx::query("
+            INSERT INTO reputation_profiles (id, tenant_id, average_score, total_reviews)
+            VALUES ($1, $2, $3, 1)
+            ON CONFLICT (tenant_id) DO UPDATE SET
+                average_score = ((reputation_profiles.average_score * reputation_profiles.total_reviews) + EXCLUDED.average_score) / (reputation_profiles.total_reviews + 1),
+                total_reviews = reputation_profiles.total_reviews + 1,
+                updated_at = CURRENT_TIMESTAMP
+        ")
+            .bind(&profile_id)
+            .bind(&org_id)
+            .bind(req.score as f64)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // 3. Generate referral link if score >= 4
+        let mut referral_link = String::new();
+        if req.score >= 4 {
+            if let Ok(link) = crate::services::growth::referral_api::generate_referral_link(&req.customer_id) {
+                referral_link = link;
+            }
+        }
+
+        Ok(Response::new(SubmitReviewResponse {
+            success: true,
+            referral_link,
+        }))
+    }
+
+    async fn get_reputation(
+        &self,
+        request: Request<GetReputationRequest>,
+    ) -> Result<Response<GetReputationResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let row = sqlx::query("SELECT average_score, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+            .bind(&org_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        if let Some(r) = row {
+            use sqlx::Row;
+            Ok(Response::new(GetReputationResponse {
+                average_score: r.get("average_score"),
+                total_reviews: r.get("total_reviews"),
+            }))
+        } else {
+            Ok(Response::new(GetReputationResponse {
+                average_score: 0.0,
+                total_reviews: 0,
+            }))
+        }
     }
 
     async fn create_download(
@@ -595,6 +704,90 @@ impl GrowthService for MyGrowthService {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_submit_review_generates_referral() {
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+
+        // Setup schema
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT, score INTEGER, comment TEXT, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS reputation_profiles (id TEXT PRIMARY KEY, tenant_id TEXT UNIQUE NOT NULL, average_score DOUBLE PRECISION NOT NULL DEFAULT 0.0, total_reviews INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
+
+        let mut req = Request::new(SubmitReviewRequest {
+            customer_id: "cust_123".to_string(),
+            score: 4,
+            comment: "Great!".to_string(),
+        });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-rep/agent1".parse().unwrap());
+
+        let res = service.submit_review(req).await;
+        assert!(res.is_ok());
+        let inner = res.unwrap().into_inner();
+        assert!(inner.success);
+        assert!(!inner.referral_link.is_empty(), "Score >= 4 should generate a referral link");
+    }
+
+    #[tokio::test]
+    async fn test_submit_review_no_referral() {
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+
+        // Setup schema
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT, score INTEGER, comment TEXT, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS reputation_profiles (id TEXT PRIMARY KEY, tenant_id TEXT UNIQUE NOT NULL, average_score DOUBLE PRECISION NOT NULL DEFAULT 0.0, total_reviews INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
+
+        let mut req = Request::new(SubmitReviewRequest {
+            customer_id: "cust_123".to_string(),
+            score: 3,
+            comment: "Okayish".to_string(),
+        });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-rep2/agent1".parse().unwrap());
+
+        let res = service.submit_review(req).await;
+        assert!(res.is_ok());
+        let inner = res.unwrap().into_inner();
+        assert!(inner.success);
+        assert!(inner.referral_link.is_empty(), "Score < 4 should NOT generate a referral link");
+    }
+
+    #[tokio::test]
+    async fn test_get_reputation() {
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
+
+        // Setup schema
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT, score INTEGER, comment TEXT, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS reputation_profiles (id TEXT PRIMARY KEY, tenant_id TEXT UNIQUE NOT NULL, average_score DOUBLE PRECISION NOT NULL DEFAULT 0.0, total_reviews INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await;
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
+
+        let mut req = Request::new(GetReputationRequest {});
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-rep3/agent1".parse().unwrap());
+
+        let res = service.get_reputation(req).await;
+        assert!(res.is_ok());
+        let inner = res.unwrap().into_inner();
+        assert_eq!(inner.average_score, 0.0);
+        assert_eq!(inner.total_reviews, 0);
+    }
+
     use super::*;
 
     #[tokio::test]

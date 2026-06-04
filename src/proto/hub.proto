@@ -807,7 +807,28 @@ message WaitlistResponse {
   repeated WaitlistEntry entries = 1;
 }
 
+
+message SubmitReviewRequest {
+  string customer_id = 1;
+  int32 score = 2;
+  string comment = 3;
+}
+
+message SubmitReviewResponse {
+  bool success = 1;
+  string referral_link = 2;
+}
+
+message GetReputationRequest {}
+
+message GetReputationResponse {
+  double average_score = 1;
+  int32 total_reviews = 2;
+}
+
 service GrowthService {
+  rpc SubmitReview(SubmitReviewRequest) returns (SubmitReviewResponse);
+  rpc GetReputation(GetReputationRequest) returns (GetReputationResponse);
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   
