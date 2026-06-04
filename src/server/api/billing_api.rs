@@ -16,9 +16,13 @@ pub struct MyPlanResponse {
 #[derive(serde::Serialize)]
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
+    #[serde(rename = "total")]
     pub total_costs: i64,
+    #[serde(rename = "llm")]
     pub llm_cost: i64,
+    #[serde(rename = "storage")]
     pub storage_cost: i64,
+    #[serde(rename = "payment_fees")]
     pub payment_fees: i64,
     pub network_cost: i64,
     pub bandwidth_savings: i64,

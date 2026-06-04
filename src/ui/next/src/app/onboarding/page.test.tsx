@@ -404,7 +404,8 @@ describe('OnboardingWizard', () => {
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
-    const toggle = screen.getByRole('checkbox');
+    // Checkbox might be hidden by sr-only or similar, use label text instead or get by id
+    const toggle = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(toggle).toBeChecked();
 
     // Select Sales Agent

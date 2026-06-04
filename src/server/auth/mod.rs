@@ -172,22 +172,13 @@ impl Store {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::OpenOptionsExt;
-                    use std::os::unix::fs::PermissionsExt;
                     use std::io::Write;
                     if let Ok(mut file) = std::fs::OpenOptions::new()
-                        .read(true)
                         .write(true)
                         .create(true)
                         .mode(0o600)
                         .open(secret_path)
                     {
-                        if let Ok(metadata) = file.metadata() {
-                            let mut perms = metadata.permissions();
-                            if perms.mode() & 0o777 != 0o600 {
-                                perms.set_mode(0o600);
-                                let _ = file.set_permissions(perms);
-                            }
-                        }
                         let _ = file.write_all(&new_secret);
                     }
                 }
@@ -329,6 +320,7 @@ impl Store {
     }
 
     pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+        self.validate_org_id(org_id)?;
         let by_name = self.by_name.read().unwrap();
         let users = self.users.read().unwrap();
 
@@ -359,7 +351,24 @@ impl Store {
         }
     }
 
+    fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
+        if org_id.trim() == "system" {
+            if ::server_config::get().multitenant {
+                return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+            }
+        } else if org_id.trim().is_empty() {
+            if ::server_config::get().multitenant {
+                return Err("empty tenant_id is not allowed in multi-tenant mode".into());
+            }
+        }
+        Ok(())
+    }
+
     pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+        if self.validate_org_id(org_id).is_err() {
+            return None;
+        }
+
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
 
@@ -376,6 +385,10 @@ impl Store {
     }
 
     pub fn list_users(&self, org_id: &str) -> Vec<User> {
+        if self.validate_org_id(org_id).is_err() {
+            return vec![];
+        }
+
         let users = self.users.read().unwrap();
         users.values()
             .filter(|u| {
@@ -386,6 +399,8 @@ impl Store {
     }
 
     pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+        self.validate_org_id(org_id)?;
+
         let mut users = self.users.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
 
@@ -424,6 +439,8 @@ impl Store {
     }
 
     pub fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        self.validate_org_id(org_id)?;
+
         let mut users = self.users.write().unwrap();
         let mut by_name = self.by_name.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
@@ -449,7 +466,11 @@ impl Store {
         Ok(())
     }
 
-    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
+        if self.validate_org_id(org_id).is_err() {
+            return;
+        }
+
         {
             let mut revoked = self.revoked.write().unwrap();
             revoked.insert(jti.clone(), exp);
@@ -466,7 +487,11 @@ impl Store {
         }
     }
 
-    pub async fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+    pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
+        if self.validate_org_id(org_id).is_err() {
+            return false;
+        }
+
         {
             let revoked = self.revoked.read().unwrap();
             if let Some(exp) = revoked.get(jti) {
@@ -841,5 +866,37 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
+    }
+}
+
+#[cfg(test)]
+mod store_tests {
+    use super::*;
+
+    #[test]
+    fn test_store_validate_org_id_multitenant() {
+        // Create an empty store just to access the validate_org_id method
+        let store = Store::new();
+
+        // In a real environment, ::server_config::get().multitenant is controlled by the config.
+        // We test that `validate_org_id` properly returns an error or success based on the config.
+        let multitenant = ::server_config::get().multitenant;
+
+        let res_system = store.validate_org_id("system");
+        let res_empty = store.validate_org_id("");
+        let res_valid = store.validate_org_id("tenant-123");
+
+        if multitenant {
+            assert!(res_system.is_err());
+            assert_eq!(res_system.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+            assert!(res_empty.is_err());
+            assert_eq!(res_empty.unwrap_err(), "empty tenant_id is not allowed in multi-tenant mode");
+            assert!(res_valid.is_ok());
+        } else {
+            // Standalone mode: we allow empty and system.
+            assert!(res_system.is_ok());
+            assert!(res_empty.is_ok());
+            assert!(res_valid.is_ok());
+        }
     }
 }
