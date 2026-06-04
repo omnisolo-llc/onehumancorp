@@ -26,12 +26,13 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .with_state(hub)
 }
 
+
 pub async fn get_terminal_connection_token_handler(
     _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
 ) -> Json<Result<TerminalTokenResponse, String>> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()
@@ -54,12 +55,15 @@ pub async fn get_terminal_connection_token_handler(
     }
 }
 
+
+
 pub async fn create_payment_intent_handler(
     _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<PaymentIntentRequest>,
 ) -> Json<Result<PaymentIntentResponse, String>> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()
@@ -68,12 +72,6 @@ pub async fn create_payment_intent_handler(
             }
         },
         None => return Json(Err("Unauthenticated".to_string()))
-    };
-
-    let payload: Result<axum::extract::Json<PaymentIntentRequest>, _> = axum::extract::FromRequest::from_request(request, &()).await;
-    let req_data = match payload {
-        Ok(data) => data.0,
-        Err(_) => return Json(Err("Invalid payload".to_string())),
     };
 
     let stripe_key = match std::env::var("STRIPE_API_KEY") {

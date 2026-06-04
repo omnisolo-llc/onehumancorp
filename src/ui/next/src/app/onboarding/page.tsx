@@ -45,6 +45,7 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    adminName, setAdminName,
     adminEmail, setAdminEmail,
     adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
@@ -80,6 +81,7 @@ export default function OnboardingWizard() {
         domainChoice,
         firstProductName,
         firstProductPrice,
+        adminName,
         adminEmail,
         adminPassword,
         aiAgents,
@@ -133,6 +135,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
         if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
         if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
@@ -166,6 +169,7 @@ export default function OnboardingWizard() {
       domainChoice,
       firstProductName,
       firstProductPrice,
+      adminName,
       adminEmail,
       adminPassword,
       aiAgents,
@@ -184,7 +188,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
+    adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -252,7 +256,7 @@ export default function OnboardingWizard() {
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: adminEmail || 'admin@ohc.app',
-          admin_name: businessName + ' Admin',
+          admin_name: adminName || businessName + ' Admin',
           admin_password: adminPassword || 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
@@ -327,10 +331,31 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
+
+              {chatStep === 0 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in text-center">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Let's get your business online in under 10 minutes.
+                  </p>
+                  <button
+                    role="link"
+                    onClick={() => setChatStep(1)}
+                    className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  >
+                    Start Onboarding
+                  </button>
+                </div>
+              )}
+
+              {chatStep > 0 && (
+                <>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                  </p>
+                </>
+              )}
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
@@ -713,6 +738,16 @@ export default function OnboardingWizard() {
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
                   <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
+                      <input
+                        type="text"
+                        value={adminName}
+                        onChange={(e) => setAdminName(e.target.value)}
+                        placeholder="e.g. Maya Smith"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                    </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
