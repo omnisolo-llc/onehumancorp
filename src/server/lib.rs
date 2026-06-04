@@ -4254,7 +4254,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <p id="auto-catalog-loading" style="display:none;">AutoDream AI is analyzing your photo...</p>
                         <div id="auto-catalog-form" class="card glass" style="display:none;">
-                            <input id="auto-catalog-title" value="Artisan Vanilla Bean Cupcake" />
+                            <input id="auto-catalog-title" type="text" data-original-type="text" placeholder="Title returned by AutoDream" data-original-placeholder="Title returned by AutoDream" />
                             <input id="auto-catalog-price" value="4.99" />
                             <input id="auto-catalog-category" value="Baked Goods" />
                             <textarea id="auto-catalog-description">A delightful handcrafted vanilla bean cupcake.</textarea>
@@ -6573,7 +6573,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (form) form.style.display = 'none';
                             setTimeout(() => {
                                 if (loading) loading.style.display = 'none';
-                                if (form) form.style.display = 'block';
+                                if (form) {
+                                    form.style.display = 'block';
+                                    const titleInput = document.getElementById('auto-catalog-title');
+                                    if (titleInput) titleInput.value = 'Artisan Vanilla Bean Cupcake';
+                                }
                             }, 2000);
                         }
 
