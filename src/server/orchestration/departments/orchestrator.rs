@@ -267,17 +267,21 @@ impl DepartmentOrchestrator {
         _action_payload: serde_json::Value,
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
+        let mut final_risk = risk;
+        let mut final_description = description.clone();
+
         if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
-            return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+            final_risk = ActionRisk::DraftForReview;
+            final_description.push_str("\n\n[SOFT LIMIT] You've reached your free action limit. While you can still use the app, upgrading to Starter gives you 1,000 actions and faster response times for just $29/mo.");
         }
 
-        match risk {
+        match final_risk {
             ActionRisk::AutoExecute => {
                 let req = ApprovalRequest {
                     id: Uuid::new_v4().to_string(),
                     tenant_id,
                     department,
-                    description: description.clone(),
+                    description: final_description,
                     status: ApprovalStatus::Approved,
                     action_risk: ActionRisk::AutoExecute,
                     payload: Some(_action_payload),
@@ -290,7 +294,7 @@ impl DepartmentOrchestrator {
                     id: Uuid::new_v4().to_string(),
                     tenant_id,
                     department,
-                    description: description.clone(),
+                    description: final_description,
                     status: ApprovalStatus::PendingApproval,
                     action_risk: ActionRisk::DraftForReview,
                     payload: Some(_action_payload),
