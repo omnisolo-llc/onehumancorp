@@ -44,9 +44,9 @@ test.describe('Cost Dashboard', () => {
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
 
-    expect(data).toHaveProperty('total');
-    expect(data).toHaveProperty('llm');
-    expect(data).toHaveProperty('storage');
+    expect(data).toHaveProperty('total_costs');
+    expect(data).toHaveProperty('llm_cost');
+    expect(data).toHaveProperty('storage_cost');
     expect(data).toHaveProperty('payment_fees');
   });
 });
