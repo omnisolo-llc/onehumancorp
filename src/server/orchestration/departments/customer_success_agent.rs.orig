@@ -116,7 +116,6 @@ impl Department for CustomerSuccessAgent {
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
-                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
             });
 
             self.orchestrator.execute_action(
