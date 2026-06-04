@@ -2,8 +2,11 @@ use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::auto_dream_service_server::AutoDreamService;
 use std::sync::Arc;
-#[allow(ambiguous_glob_imports)]
+#[cfg(ohc_bazel_package)]
+use ::server_lib::autodream::AutoDreamWorker;
+#[cfg(not(ohc_bazel_package))]
 use crate::autodream::AutoDreamWorker;
+use crate::autodream;
 
 pub struct MyAutoDreamService {
     worker: Arc<AutoDreamWorker>,

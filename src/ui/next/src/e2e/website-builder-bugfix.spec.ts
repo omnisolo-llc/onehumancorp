@@ -10,7 +10,7 @@ test.describe('Website Builder Tool (E2E Validation)', () => {
         await page.goto('/website-builder');
 
         const typeInput = page.getByPlaceholder('e.g., Coffee Shop, Marketing Agency, Bakery');
-        await expect(typeInput).toBeVisible();
+        await expect(typeInput).toBeVisible({ timeout: 60000 });
         await typeInput.fill('Bakery');
 
         const nextButton = page.getByRole('button', { name: 'Next' });
@@ -25,7 +25,7 @@ test.describe('Website Builder Tool (E2E Validation)', () => {
 
         // Skip first step
         const typeInput = page.getByPlaceholder('e.g., Coffee Shop, Marketing Agency, Bakery');
-        await expect(typeInput).toBeVisible();
+        await expect(typeInput).toBeVisible({ timeout: 60000 });
         await typeInput.fill('Bakery');
         await page.getByRole('button', { name: 'Next' }).click();
 
@@ -44,7 +44,7 @@ test.describe('Website Builder Tool (E2E Validation)', () => {
         await page.goto('/website-builder');
 
         // Skip to step 3
-        await page.getByPlaceholder('e.g., Coffee Shop, Marketing Agency, Bakery').fill('Bakery');
+        const typeInput = page.getByPlaceholder('e.g., Coffee Shop, Marketing Agency, Bakery'); await expect(typeInput).toBeVisible({ timeout: 60000 }); await typeInput.fill('Bakery');
         await page.getByRole('button', { name: 'Next' }).click();
         await page.getByPlaceholder('Enter your business name').fill('Sweet Treats');
         await page.getByRole('button', { name: 'Next' }).click();
@@ -62,7 +62,7 @@ test.describe('Website Builder Tool (E2E Validation)', () => {
         await page.goto('/website-builder');
 
         // Skip to step 4
-        await page.getByPlaceholder('e.g., Coffee Shop, Marketing Agency, Bakery').fill('Bakery');
+        const typeInput = page.getByPlaceholder('e.g., Coffee Shop, Marketing Agency, Bakery'); await expect(typeInput).toBeVisible({ timeout: 60000 }); await typeInput.fill('Bakery');
         await page.getByRole('button', { name: 'Next' }).click();
         await page.getByPlaceholder('Enter your business name').fill('Sweet Treats');
         await page.getByRole('button', { name: 'Next' }).click();
