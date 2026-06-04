@@ -21,19 +21,6 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 
 
-macro_rules! validate_org_id {
-    ($org_id:expr) => {
-        if $org_id.trim() == "system" {
-            if ::server_config::get().multitenant {
-                return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-            }
-        } else if $org_id.trim().is_empty() {
-            if ::server_config::get().multitenant {
-                return Err("empty tenant_id is not allowed in multi-tenant mode".to_string());
-            }
-        }
-    };
-}
 
 #[allow(dead_code)]
 pub struct PgUserRepository {
@@ -50,7 +37,8 @@ impl PgUserRepository {
 #[async_trait]
 impl UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -82,7 +70,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -110,7 +99,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         // Similar to get_by_id but query by username
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2";
 
@@ -138,7 +128,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         // Similar to get_by_id but query by email
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2";
 
@@ -166,7 +157,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         // Similar to get_by_id but query by oidc_subject
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2";
 
@@ -224,7 +216,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
         let query = r#"
@@ -262,7 +255,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         let query = "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -281,7 +275,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
@@ -308,7 +303,8 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
-        validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
+        crate::validate_org_id!(org_id);
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
