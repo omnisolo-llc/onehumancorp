@@ -2057,7 +2057,6 @@ impl Agent {
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
-
         // Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
         if final_cfg.enable_vercel_tool_scoping_metric && session_tools.len() > 5 {
             let keep_count = (session_tools.len() as f64 * 0.2).max(1.0) as usize;
@@ -2069,6 +2068,14 @@ impl Agent {
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(active_tools_clone));
             // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
         }
+
+        if let Some(store) = &self_with_memory.memory_store {
+            if let Some(accessor) = store.as_anthropic_accessor() {
+                session_tools.push(crate::tools::anthropic_memory::topic_retrieve_tool(accessor.clone()));
+                session_tools.push(crate::tools::anthropic_memory::transcript_search_tool(accessor));
+            }
+        }
+
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
