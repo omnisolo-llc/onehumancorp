@@ -6,7 +6,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
-import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { AgentFeed } from "../../components/AgentFeed/AgentFeed";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -215,7 +215,7 @@ export default function Dashboard() {
       </div>
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
-        <UnifiedAgentFeed />
+        <AgentFeed />
 
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
