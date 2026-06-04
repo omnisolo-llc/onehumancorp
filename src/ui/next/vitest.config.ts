@@ -16,7 +16,7 @@ export default defineConfig({
       '**/external/**',
       '**/.next/**',
       '**/coverage/**',
-      '**/api/**', // API routes require Next.js specific testing utilities or E2E tests
+
     ],
     coverage: {
       provider: 'v8',
