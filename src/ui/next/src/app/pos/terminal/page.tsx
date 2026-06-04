@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
+import { loadStripeTerminal } from '@stripe/terminal-js';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -27,6 +28,11 @@ export default function TerminalPage() {
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
+  const [terminalInstance, setTerminalInstance] = useState<any>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentAmount, setCurrentAmount] = useState<number>(0);
+  const isTerminalConnecting = useRef(false);
 
   // Background sync
   useEffect(() => {
@@ -52,6 +58,37 @@ export default function TerminalPage() {
     }, 10000); // Try syncing every 10 seconds
 
     return () => clearInterval(syncInterval);
+  }, []);
+
+  // Initialize Stripe Terminal SDK
+  useEffect(() => {
+    let active = true;
+    const initTerminal = async () => {
+      if (terminalInstance || isTerminalConnecting.current) return;
+      isTerminalConnecting.current = true;
+      try {
+        const StripeTerminal = await loadStripeTerminal();
+        if (StripeTerminal) {
+          const terminal = StripeTerminal.create({
+            onFetchConnectionToken: async () => {
+              const res = await fetch('/api/v1/pos/terminal/token');
+              const data = await res.json();
+              return data.token;
+            },
+            onUnexpectedReaderDisconnect: () => {
+              console.warn('Reader disconnected unexpectedly.');
+              setPaymentStatus('Reader disconnected');
+            }
+          });
+          if (active) setTerminalInstance(terminal);
+        }
+      } catch (err) {
+        console.error('Failed to initialize Stripe Terminal:', err);
+      }
+      isTerminalConnecting.current = false;
+    };
+    initTerminal();
+    return () => { active = false; };
   }, []);
 
   const handlePinEntry = (digit: string) => {
@@ -102,14 +139,81 @@ export default function TerminalPage() {
     setClockedIn(type === 'CLOCK_IN');
   };
 
-  const handleNewOrder = () => {
+  const handleNewOrder = async () => {
     const basePrice = 5000; // $50.00
     const converted = convert(basePrice, 'USD', currency);
     if (converted.isOffline) {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);
     }
-    alert(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+
+    setCurrentAmount(converted.amount);
+    setShowPaymentModal(true);
+    setPaymentStatus('Processing Tap to Pay...');
+
+    if (!terminalInstance) {
+       setPaymentStatus('Terminal not initialized');
+       return;
+    }
+
+    try {
+      // 1. Connect reader (Mocked for web UI demonstration)
+      const discoverResult = await terminalInstance.discoverReaders({ simulated: true });
+      if (discoverResult.error) throw new Error(discoverResult.error.message);
+
+      const readers = discoverResult.discoveredReaders;
+      if (!readers || readers.length === 0) {
+        // If web integration doesn't discover, just mock the flow for UX
+        setPaymentStatus('Waiting for card tap...');
+      } else {
+        const connectResult = await terminalInstance.connectReader(readers[0]);
+        if (connectResult.error) throw new Error(connectResult.error.message);
+        setPaymentStatus('Waiting for card tap...');
+      }
+
+      // 2. Fetch PaymentIntent
+      const intentRes = await fetch('/api/v1/pos/terminal/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_cents: converted.amount, currency: currency })
+      });
+      const intentData = await intentRes.json();
+
+      // 3. Collect & Process
+      const collectResult = await terminalInstance.collectPaymentMethod(intentData.intent_id);
+      if (collectResult.error) throw new Error(collectResult.error.message);
+
+      setPaymentStatus('Processing payment...');
+      const processResult = await terminalInstance.processPayment(intentData.intent_id);
+      if (processResult.error) throw new Error(processResult.error.message);
+
+      setPaymentStatus('Payment successful!');
+
+      // Log order locally or send to backend
+      const events = OfflineStore.getEvents();
+      events.push({
+         type: 'NEW_ORDER',
+         payload: {
+           id: `txn_${Date.now()}`,
+           amount: converted.amount,
+           currency: currency,
+           staff_id: activeStaff.id
+         }
+      });
+
+      setTimeout(() => {
+        setShowPaymentModal(false);
+        setPaymentStatus(null);
+        alert('Payment successful!');
+      }, 2000);
+
+    } catch (err: any) {
+      setPaymentStatus(`Error: ${err.message}`);
+      setTimeout(() => {
+        setShowPaymentModal(false);
+        setPaymentStatus(null);
+      }, 3000);
+    }
   };
 
   if (!activeStaff) {
@@ -252,6 +356,41 @@ export default function TerminalPage() {
           </div>
         )}
       </div>
+
+      {showPaymentModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[10px]">
+          <div className="w-full max-w-[340px] bg-white/80 backdrop-blur-[20px] rounded-3xl p-8 shadow-2xl border border-white/50 flex flex-col items-center animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-blue-100/50 rounded-full flex items-center justify-center mb-6 shadow-inner relative overflow-hidden">
+               {paymentStatus === 'Payment successful!' ? (
+                 <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+               ) : (
+                 <>
+                   <svg className="w-10 h-10 text-blue-600 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                   <div className="absolute inset-0 bg-blue-400/20 animate-ping"></div>
+                 </>
+               )}
+            </div>
+
+            <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-2">
+              {(currentAmount / 100).toFixed(2)} {currency}
+            </h2>
+            <p className="text-gray-600 text-center font-medium mb-8">
+              {t(paymentStatus || 'Waiting for card...')}
+            </p>
+
+            <button
+              onClick={() => {
+                setShowPaymentModal(false);
+                setPaymentStatus(null);
+              }}
+              className="w-full py-4 rounded-xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-colors"
+            >
+              {t('Cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
