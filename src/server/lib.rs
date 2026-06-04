@@ -1449,18 +1449,39 @@ impl HubService for MyHubService {
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
+        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+            .bind(&tenant_id)
+            .bind(&user_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let (mut merged_state, prev_step) = if let Some(record) = row {
+            use sqlx::Row;
+            let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
+            (existing_json, existing_step)
+        } else {
+            (serde_json::json!({}), 0)
+        };
+
+        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), state_json.as_object()) {
+            for (k, v) in new_obj {
+                existing_obj.insert(k.clone(), v.clone());
+            }
+        } else {
+            merged_state = state_json.clone();
+        }
+
+        let new_step = std::cmp::max(prev_step, current_step);
+
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4) \
-             ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
-                 current_step = EXCLUDED.current_step, \
-                 updated_at = CURRENT_TIMESTAMP"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)              ON CONFLICT (tenant_id, user_id) DO UPDATE              SET state_json = EXCLUDED.state_json,                  current_step = EXCLUDED.current_step,                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
         .bind(&user_id)
-        .bind(current_step)
-        .bind(&state_json)
+        .bind(new_step)
+        .bind(&merged_state)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1484,15 +1505,16 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can read wizard state"));
         }
         let tenant_id = org_id.clone();
+        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1531,15 +1553,16 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can reset wizard state"));
         }
         let tenant_id = org_id.clone();
+        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -2255,13 +2278,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _ = sqlx::query(
                 "CREATE TABLE IF NOT EXISTS onboarding_state (
                     tenant_id TEXT NOT NULL,
-                    organization_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
                     state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (tenant_id, organization_id)
+                    PRIMARY KEY (tenant_id, user_id)
                 );"
             )
             .execute(pool)
