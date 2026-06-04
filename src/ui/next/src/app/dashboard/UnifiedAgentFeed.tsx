@@ -130,45 +130,108 @@ export function UnifiedAgentFeed() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {approvals.map((approval) => (
-          <div
-            key={approval.id}
-            className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
-          >
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                  {approval.department.replace('_', ' ')}
-                </span>
-                {approval.action_risk === 'HIGH' && (
-                  <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
-                    Requires Review
-                  </span>
-                )}
-              </div>
-              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                {approval.description}
-              </h3>
-            </div>
+        {approvals.map((approval) => {
+          // Check if this is the Proactive Ambassador abandoned cart payload
+          const isAbandonedCart = approval.department === "customer_success" && approval.payload?.feature_type === "abandoned_cart";
 
-            <div className="flex gap-3 w-full mt-2">
-              <button
-                onClick={() => handleDecision(approval.id, false)}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Reject proposal"
+          if (isAbandonedCart) {
+            const cartCount = approval.payload?.cart_count || 0;
+            const revenue = approval.payload?.potential_revenue || 0;
+            const draftMessage = approval.payload?.message || "Hi! We noticed you left some items in your cart. Here is a 10% discount: RECOVER10.";
+
+            return (
+              <div
+                key={approval.id}
+                className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4 relative overflow-hidden"
               >
-                Dismiss
-              </button>
-              <button
-                onClick={() => handleDecision(approval.id, true)}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
-                aria-label="Approve proposal"
-              >
-                Approve
-              </button>
+                {/* Accent bar for Customer Success */}
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#34C759]"></div>
+
+                <div className="flex flex-col gap-1 ml-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#34C759] bg-[#34C759]/10 px-2 py-1 rounded-md">
+                      The Ambassador
+                    </span>
+                    {approval.action_risk === 'HIGH' && (
+                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-md">
+                        Requires Review
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
+                    Recover {cartCount} abandoned {cartCount === 1 ? 'cart' : 'carts'}?
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    You have <strong className="text-[#1D1D1F] dark:text-white">{cartCount}</strong> abandoned carts totaling <strong className="text-[#1D1D1F] dark:text-white">${revenue}</strong>. Send them a 10% discount to recover?
+                  </p>
+                </div>
+
+                <div className="ml-2 mt-1 p-3 bg-white/50 dark:bg-black/30 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold block mb-1">Draft Message</span>
+                  "{draftMessage}"
+                </div>
+
+                <div className="flex gap-3 w-full mt-2 ml-2 pr-2">
+                  <button
+                    onClick={() => handleDecision(approval.id, false)}
+                    className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    aria-label="Decline proposal"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => handleDecision(approval.id, true)}
+                    className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
+                    aria-label="Approve proposal"
+                  >
+                    Approve
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          // Default Card Fallback
+          return (
+            <div
+              key={approval.id}
+              className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+            >
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                    {approval.department.replace('_', ' ')}
+                  </span>
+                  {approval.action_risk === 'HIGH' && (
+                    <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-md">
+                      Requires Review
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
+                  {approval.description}
+                </h3>
+              </div>
+
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  onClick={() => handleDecision(approval.id, false)}
+                  className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Decline proposal"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => handleDecision(approval.id, true)}
+                  className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
+                  aria-label="Approve proposal"
+                >
+                  Approve
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
