@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Cost Dashboard', () => {
+
+
   test('should display 7-Day Trend', async ({ page }) => {
     await page.goto('/cost-dashboard');
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
@@ -35,5 +37,16 @@ test.describe('Cost Dashboard', () => {
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
     await expect(page.locator('#cost-dashboard-payment-fees')).toBeVisible();
     await expect(page.locator('#cost-dashboard-payment-fees')).toContainText('$');
+  });
+
+  test('should return correct JSON payload from backend API', async ({ request }) => {
+    const response = await request.get('/api/billing/cost-dashboard');
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+
+    expect(data).toHaveProperty('total');
+    expect(data).toHaveProperty('llm');
+    expect(data).toHaveProperty('storage');
+    expect(data).toHaveProperty('payment_fees');
   });
 });
