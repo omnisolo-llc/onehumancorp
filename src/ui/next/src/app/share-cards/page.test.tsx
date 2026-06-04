@@ -21,7 +21,7 @@ describe('ShareCardsPage', () => {
 
   it('renders Powered by OHC branding in preview', () => {
     render(<ShareCardsPage />);
-    const branding = screen.getByText(/Powered by OHC/i);
-    expect(branding).toBeInTheDocument();
+    const branding = screen.getAllByText(/Powered by OHC/i);
+    expect(branding.length).toBeGreaterThan(0);
   });
 });

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import QRCodeGenerator from '../components/QRCodeGenerator';
 
 export default function ShareCardsPage() {
   const router = useRouter();
@@ -82,7 +83,7 @@ export default function ShareCardsPage() {
                 </div>
             </div>
 
-            <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div className="p-6 shadow-md mb-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Share</h2>
                 <div className="flex flex-col gap-3">
                     <button
@@ -127,6 +128,8 @@ export default function ShareCardsPage() {
                     </a>
                 </div>
             </div>
+
+            <QRCodeGenerator value={shareLink} storeName={storeName} />
         </section>
 
         {/* Live Preview */}
