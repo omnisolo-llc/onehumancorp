@@ -190,3 +190,46 @@ impl Default for PermissionArchitecture {
         Self::Permissive
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_role_display() {
+        assert_eq!(Role::User.to_string(), "user");
+        assert_eq!(Role::Assistant.to_string(), "assistant");
+        assert_eq!(Role::System.to_string(), "system");
+        assert_eq!(Role::Tool.to_string(), "tool");
+    }
+
+    #[test]
+    fn test_message_constructors() {
+        let u_msg = Message::user("Hello");
+        assert_eq!(u_msg.role, Role::User);
+        assert_eq!(u_msg.content, "Hello");
+
+        let a_msg = Message::assistant("Hi there");
+        assert_eq!(a_msg.role, Role::Assistant);
+        assert_eq!(a_msg.content, "Hi there");
+
+        let s_msg = Message::system("System instructions");
+        assert_eq!(s_msg.role, Role::System);
+        assert_eq!(s_msg.content, "System instructions");
+    }
+
+    #[test]
+    fn test_tool_error_display() {
+        assert_eq!(ToolError::Transient("timeout".to_string()).to_string(), "Transient error: timeout");
+        assert_eq!(ToolError::LlmRecoverable("bad args".to_string()).to_string(), "Recoverable error: bad args");
+        assert_eq!(ToolError::UserFixable("need approval".to_string()).to_string(), "User intervention required: need approval");
+        assert_eq!(ToolError::Fatal("crash".to_string()).to_string(), "Fatal error: crash");
+        assert_eq!(ToolError::Unexpected("wut".to_string()).to_string(), "Unexpected error: wut");
+        assert_eq!(ToolError::HandoffRequested("agent2".to_string()).to_string(), "Handoff requested to: agent2");
+    }
+
+    #[test]
+    fn test_permission_architecture_default() {
+        assert_eq!(PermissionArchitecture::default(), PermissionArchitecture::Permissive);
+    }
+}

@@ -89,7 +89,9 @@ export function HelpChat() {
     };
   };
 
-  if (process.env.NEXT_PUBLIC_E2E === 'true') {
+  const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
+  const forceChat = typeof window !== 'undefined' && window.location.search.includes('test_chat=true');
+  if (isE2E && !forceChat) {
     return null; // Disable in E2E
   }
 
@@ -111,34 +113,35 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-white/50 animate-slide-up-chat">
+        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
           {/* Header */}
-          <div className="bg-gray-900/90 text-white p-4 flex justify-between items-center backdrop-blur-md">
+          <div id="ai-chat-header" className="bg-gray-900/95 text-white p-4 flex justify-between items-center backdrop-blur-[20px]">
             <div className="flex items-center gap-2">
-              <span className="text-xl">✨</span>
+              <span className="text-xl drop-shadow-md">✨</span>
               <div>
-                <h3 className="font-bold font-outfit text-sm">Help Agent</h3>
-                <p className="text-xs text-gray-300 font-inter">Always here to help</p>
+                <h3 className="font-bold font-outfit text-sm tracking-wide text-white/90">Ask AI Help</h3>
+                <p className="text-xs text-gray-300 font-inter font-medium">Always here to help</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors" aria-label="Close help chat">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5" aria-label="Close help chat">
+              <span className="sr-only">✕</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-4 overflow-y-auto h-[350px] bg-transparent flex flex-col gap-4 font-inter text-sm">
+          <div className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent flex flex-col gap-5 font-inter text-sm">
             {messages.map(msg => (
               <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] leading-relaxed ${
+                <div className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${
                   msg.sender === 'user'
-                    ? 'bg-blue-600/90 backdrop-blur-md text-white rounded-br-sm shadow-sm'
-                    : 'bg-white/80 backdrop-blur-md border border-white/50 text-gray-800 rounded-bl-sm shadow-sm'
+                    ? 'bg-blue-600/95 backdrop-blur-[20px] saturate-200 text-white rounded-br-sm border border-blue-500/50'
+                    : 'bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm'
                 }`}>
                   {msg.text}
                 </div>
                 {msg.link && (
-                  <a href={msg.link.url} className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-semibold hover:underline bg-blue-50/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm">
+                  <a href={msg.link.url} className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-bold hover:underline bg-blue-50/90 backdrop-blur-[20px] px-3.5 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm transition-all hover:bg-blue-100/90">
                     {msg.link.title}
                   </a>
                 )}
@@ -148,18 +151,18 @@ export function HelpChat() {
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="p-3 bg-white/50 backdrop-blur-md border-t border-white/30 flex gap-2">
+          <form onSubmit={handleSend} className="p-3 bg-white/60 backdrop-blur-[20px] saturate-200 border-t border-white/50 flex gap-2">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
-              className="flex-1 bg-white/60 backdrop-blur-md border border-white/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter"
+              className="flex-1 bg-white/70 backdrop-blur-[20px] saturate-200 border border-white/60 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner"
             />
             <button
               type="submit"
               disabled={!inputValue.trim()}
-              className="bg-blue-600/90 backdrop-blur-md text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/90 transition-colors shadow-sm"
+              className="bg-blue-600/95 backdrop-blur-[20px] text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
               aria-label="Send message"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>

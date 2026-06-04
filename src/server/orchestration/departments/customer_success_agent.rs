@@ -28,7 +28,6 @@ impl Department for CustomerSuccessAgent {
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
-            "tenant.review.received".to_string(),
         ]
     }
 
@@ -52,27 +51,19 @@ impl Department for CustomerSuccessAgent {
             } else {
                 "Unknown response"
             };
-
-            let feature_type = if let Some(orig) = original {
-                orig.get("feature_type").and_then(|v| v.as_str()).unwrap_or("")
-            } else {
-                ""
-            };
-
-            if feature_type == "google_review_reply" {
-                tracing::info!("EXECUTING APPROVED DRAFT: Sending Google Review reply: {}", message);
-            } else {
-                tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
-            }
+            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
 
             let content = format!("Sent response to customer: {}", message);
 
+            // Log the action in the agent's memory, handling errors and using proper defaults
+            // Assuming we don't have an embedding service here, we use a zero vector
+            // but properly await and map the error.
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
                 agent_id: "customer_success_agent".to_string(),
                 content,
-                embedding: vec![0.0; 1536],
+                embedding: vec![0.0; 1536], // Simple dummy embedding since we don't have an embedder
                 source_type: "AGENT_ACTION".to_string(),
                 created_at: chrono::Utc::now(),
                 last_referenced_at: chrono::Utc::now(),
@@ -86,52 +77,10 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.review.received" {
-            let review_comment = event.payload.get("comment").and_then(|v| v.as_str()).unwrap_or("");
-            let reviewer_name = event.payload.get("reviewer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
-            let star_rating = event.payload.get("star_rating").and_then(|v| v.as_str()).unwrap_or("5");
-
-            let query_embedding = vec![0.5; 1536];
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
-
-            let context_summary = if !memories.is_empty() {
-                memories.join("\n")
-            } else {
-                "No relevant memory found.".to_string()
-            };
-
-            let tone = config.map(|c| c.tone_of_voice).unwrap_or_else(|| "friendly and professional".to_string());
-
-            let generated_response = format!(
-                "Hi {}, thank you for your {}-star review! We appreciate your feedback: '{}'. ({})",
-                reviewer_name, star_rating, review_comment, tone
-            );
-
-            let description = format!("Draft reply for Google Review from {}", reviewer_name);
-
-            let action_payload = serde_json::json!({
-                "feature_type": "google_review_reply",
-                "original_message": review_comment,
-                "generated_response": generated_response,
-                "context_used": context_summary,
-                "review_id": event.payload.get("review_id"),
-                "location_id": event.payload.get("location_id")
-            });
-
-            self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                description,
-                event.tenant_id.clone(),
-                ActionRisk::DraftForReview,
-                action_payload,
-            ).await.map(|_| ())?;
-
-            return Ok(());
-        }
-
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
+            // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 

@@ -22,43 +22,11 @@ impl Department for MarketingAgent {
         vec![
             "tenant.insight.trending".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.catalog.updated".to_string(),
-            "tenant.hours.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
-
-        if event.event_type == "tenant.catalog.updated" {
-            // Auto sync without review
-            let description = "Automatically syncing catalog changes to Google Business Profile".to_string();
-            return self.orchestrator.execute_action(
-                DepartmentType::Marketing,
-                description,
-                event.tenant_id.clone(),
-                ActionRisk::AutoExecute,
-                serde_json::json!({
-                    "feature_type": "google_business_sync_catalog",
-                    "catalog_data": event.payload.clone()
-                })
-            ).await.map(|_| ());
-        }
-
-        if event.event_type == "tenant.hours.updated" {
-             // Auto sync without review
-             let description = "Automatically syncing hours changes to Google Business Profile".to_string();
-             return self.orchestrator.execute_action(
-                 DepartmentType::Marketing,
-                 description,
-                 event.tenant_id.clone(),
-                 ActionRisk::AutoExecute,
-                 serde_json::json!({
-                     "feature_type": "google_business_sync_hours",
-                     "hours_data": event.payload.clone()
-                 })
-             ).await.map(|_| ());
-        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");

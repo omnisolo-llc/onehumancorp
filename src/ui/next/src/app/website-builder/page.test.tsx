@@ -80,7 +80,7 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     // Step 0
-    fireEvent.click(screen.getByText('Start My Business Next'));
+    fireEvent.click(screen.getByText('Start My Business'));
 
     // Step 1
     fireEvent.click(screen.getByText('Online Store'));

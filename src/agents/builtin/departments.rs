@@ -117,3 +117,83 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
         },
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_department_from_str() {
+        assert!(matches!(Department::from_str("operations"), Ok(Department::Operations)));
+        assert!(matches!(Department::from_str("Operations"), Ok(Department::Operations)));
+        assert!(matches!(Department::from_str("marketing"), Ok(Department::Marketing)));
+        assert!(matches!(Department::from_str("sales"), Ok(Department::Sales)));
+        assert!(matches!(Department::from_str("customersuccess"), Ok(Department::CustomerSuccess)));
+        assert!(matches!(Department::from_str("customer_success"), Ok(Department::CustomerSuccess)));
+        assert!(matches!(Department::from_str("finance"), Ok(Department::Finance)));
+        assert!(matches!(Department::from_str("legal"), Ok(Department::Legal)));
+        assert!(matches!(Department::from_str("businessadvisory"), Ok(Department::BusinessAdvisory)));
+        assert!(matches!(Department::from_str("business_advisory"), Ok(Department::BusinessAdvisory)));
+
+        let err = Department::from_str("invalid_dept");
+        assert!(err.is_err());
+        assert_eq!(err.unwrap_err(), "Unknown department: invalid_dept");
+    }
+
+    #[test]
+    fn test_get_department_config_operations() {
+        let config = get_department_config(Department::Operations);
+        assert!(config.system_prompt.contains("Department: Operations"));
+        assert!(config.allowed_tools.contains(&"read"));
+        assert!(config.allowed_tools.contains(&"task_create"));
+        assert_eq!(config.confidence_threshold, 0.85);
+    }
+
+    #[test]
+    fn test_get_department_config_marketing() {
+        let config = get_department_config(Department::Marketing);
+        assert!(config.system_prompt.contains("Marketing & Advertising"));
+        assert!(config.allowed_tools.contains(&"websearch"));
+        assert_eq!(config.confidence_threshold, 0.70);
+    }
+
+    #[test]
+    fn test_get_department_config_sales() {
+        let config = get_department_config(Department::Sales);
+        assert!(config.system_prompt.contains("Sales & Acquisition"));
+        assert!(config.allowed_tools.contains(&"sendmessage"));
+        assert_eq!(config.confidence_threshold, 0.80);
+    }
+
+    #[test]
+    fn test_get_department_config_customer_success() {
+        let config = get_department_config(Department::CustomerSuccess);
+        assert!(config.system_prompt.contains("Customer Success"));
+        assert!(config.allowed_tools.contains(&"booking_create_appointment"));
+        assert_eq!(config.confidence_threshold, 0.90);
+    }
+
+    #[test]
+    fn test_get_department_config_finance() {
+        let config = get_department_config(Department::Finance);
+        assert!(config.system_prompt.contains("Finance & Payments"));
+        assert!(config.allowed_tools.contains(&"finance_report"));
+        assert_eq!(config.confidence_threshold, 0.95);
+    }
+
+    #[test]
+    fn test_get_department_config_legal() {
+        let config = get_department_config(Department::Legal);
+        assert!(config.system_prompt.contains("Legal & Compliance"));
+        assert!(config.allowed_tools.contains(&"grep"));
+        assert_eq!(config.confidence_threshold, 0.98);
+    }
+
+    #[test]
+    fn test_get_department_config_business_advisory() {
+        let config = get_department_config(Department::BusinessAdvisory);
+        assert!(config.system_prompt.contains("Business Advisory"));
+        assert!(config.allowed_tools.contains(&"finance_report"));
+        assert_eq!(config.confidence_threshold, 0.85);
+    }
+}

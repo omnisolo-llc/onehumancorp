@@ -17,7 +17,7 @@ impl SqliteUserRepository {
 
 #[async_trait]
 impl UserRepository for SqliteUserRepository {
-    async fn create_user(&self, user: User, _org_id: &str) -> Result<(), String> {
+    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         // For SQLite in Standalone mode, there's no multi-tenant isolation via connection parameters.
         // We still store the org_id to conform to the interface.
@@ -33,7 +33,7 @@ impl UserRepository for SqliteUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json)
         .bind(user.active)
-        .bind(&user.organization_id)
+        .bind(org_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
@@ -168,7 +168,7 @@ impl UserRepository for SqliteUserRepository {
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
-            .bind(&user.organization_id)
+            .bind(org_id)
             .bind(&user.oidc_subject)
             .bind(user.updated_at)
             .bind(org_id)
@@ -272,7 +272,7 @@ mod tests {
             oidc_subject: None,
         };
 
-        // Pass a different org_id argument to verify the model binds `user.organization_id` instead
+        // Pass a different org_id argument to verify the model binds `org_id` argument instead
         repo.create_user(user, "function-arg-org-id").await.unwrap();
 
         let row = sqlx::query("SELECT tenant_id FROM users WHERE id = 'test-id'")
@@ -281,6 +281,6 @@ mod tests {
             .unwrap();
 
         let fetched_org_id: String = sqlx::Row::get(&row, "tenant_id");
-        assert_eq!(fetched_org_id, "user-org-id");
+        assert_eq!(fetched_org_id, "function-arg-org-id");
     }
 }
