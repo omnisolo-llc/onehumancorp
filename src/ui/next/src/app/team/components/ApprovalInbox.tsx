@@ -362,6 +362,55 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "social_post" && (
+                    <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        Social Media Post Drafted
+                      </div>
+                      <div className="text-xs text-pink-700">
+                        Based on your new product:{" "}
+                        <span className="font-semibold">{req.payload.product_name}</span>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-pink-100 overflow-hidden shadow-sm">
+                        {req.payload.image_url ? (
+                          <div className="w-full h-40 bg-gray-100 relative">
+                            <img
+                              src={req.payload.image_url}
+                              alt="Product photo"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-40 bg-pink-50 flex items-center justify-center border-b border-pink-100">
+                            <span className="text-4xl">📸</span>
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">
+                            Generated Caption
+                          </div>
+                          <p className="text-xs text-gray-700 italic">
+                            "{req.payload.draft_copy}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "social_calendar" && (
                     <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
