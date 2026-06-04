@@ -1,0 +1,27 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_square",
+    srcs = [
+        "client.rs",
+        "mod.rs",
+        "provider.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/integrations/core:server_integrations_core",
+        "@crates//:reqwest",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_square_unit_test",
+    size = "small",
+    crate = ":server_integrations_square",
+    edition = "2024",
+)
