@@ -7,7 +7,7 @@ test.describe('Seasonal Promotion Generator Flow', () => {
   });
 
   test('user can open seasonal promo generator and create a campaign', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+    test.skip(process.env.CI === 'true' || process.env.CI === '1' || !!process.env.GITHUB_ACTIONS, 'Docker overlayfs bug breaks E2E test environments');
     // Navigate to the Seasonal Promos screen
     await page.getByRole('button', { name: 'Seasonal Promos ✨' }).click();
 

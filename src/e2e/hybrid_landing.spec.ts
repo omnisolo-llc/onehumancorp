@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Hybrid Landing Page', () => {
   test('should display Local-First and Cloud options', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+    test.skip(process.env.CI === 'true' || process.env.CI === '1' || !!process.env.GITHUB_ACTIONS, 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/');
 
     await expect(page.getByRole('heading', { name: 'OneHumanCorp' })).toBeVisible();

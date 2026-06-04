@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Autonomous Predictive Inventory', () => {
     test('should show predictive restock proposals and allow 1-tap approval', async ({ page }) => {
-      test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+      test.skip(process.env.CI === 'true' || process.env.CI === '1' || !!process.env.GITHUB_ACTIONS, 'Docker overlayfs bug breaks E2E test environments');
         // Must start from home page per guidelines
         await page.goto('/');
 
