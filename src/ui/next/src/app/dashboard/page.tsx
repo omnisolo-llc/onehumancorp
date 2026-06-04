@@ -74,88 +74,6 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
-  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
-  const [isSendingCampaign, setIsSendingCampaign] = useState(false);
-  const [campaignSuccess, setCampaignSuccess] = useState(false);
-
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-        setHasPro(localStorage.getItem('has_pro') === 'true');
-    }
-  }, []);
-
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
-  const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
-  const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
-  const [todaysSales, setTodaysSales] = useState<number>(0);
-  const [activeCustomers, setActiveCustomers] = useState<number>(0);
-  const [pendingOrders, setPendingOrders] = useState<number>(0);
-  const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
-  const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
-  const [activeReferrals, setActiveReferrals] = useState<number>(0);
-  const [revenueFromReferrals, setRevenueFromReferrals] = useState<number>(0);
-  const [pendingRewards, setPendingRewards] = useState<number>(0);
-  const [productCount, setProductCount] = useState<number>(10);
-  const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
-  const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
-
-  // Growth Loop: Trial Extension State
-  const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
-  const [upsellRevenue, setUpsellRevenue] = useState<number>(0);
-  useEffect(() => {
-    try {
-      const rev = parseFloat(localStorage.getItem('ohc_upsell_revenue') || '0');
-      setUpsellRevenue(rev);
-    } catch (e) {}
-  }, []);
-
-  const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
-  const [reviewLeft, setReviewLeft] = useState<boolean>(false);
-  const [productAdded, setProductAdded] = useState<boolean>(false);
-
-  // Growth Loop: Referral Modal State
-  const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
-  const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
-
-  // Growth Loop: Post-Purchase Social Share State
-  const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
-  const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
-  const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
-  const [newItemType, setNewItemType] = useState<string>('product');
-  const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
-  const [embedCopied, setEmbedCopied] = useState<boolean>(false);
-  const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
-  const [copied, setCopied] = useState<boolean>(false);
-  const [referralLink, setReferralLink] = useState<string>("");
-
-  const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
-
-  const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
-  const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before theyre gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
-
-  // Growth Loop: Wall of Love Generator State
-  const [showWallOfLoveModal, setShowWallOfLoveModal] = useState<boolean>(false);
-  const [isGeneratingWallOfLove, setIsGeneratingWallOfLove] = useState<boolean>(false);
-  const [wallOfLoveCopied, setWallOfLoveCopied] = useState<boolean>(false);
-
-  // Growth Loop: Automated Review Request State
-  const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
-  const [isGeneratingReview, setIsGeneratingReview] = useState<boolean>(false);
-  const [reviewMessage, setReviewMessage] = useState<string>("");
-  const [reviewSent, setReviewSent] = useState<boolean>(false);
-
-  // Growth Loop: Abandoned Cart Recovery State
-  const [showCartModal, setShowCartModal] = useState<boolean>(false);
-  const [isGeneratingCartCampaign, setIsGeneratingCartCampaign] = useState<boolean>(false);
-  const [cartCampaignMessage, setCartCampaignMessage] = useState<string>("");
-  const [cartCampaignSent, setCartCampaignSent] = useState<boolean>(false);
-
-  // Growth Loop: VIP Customer Referral Campaign State
-  const [showCustomerReferralModal, setShowCustomerReferralModal] = useState<boolean>(false);
-  const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
-  const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
-  const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
@@ -283,15 +201,6 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="app-grid metrics">
-
-            {/* AI Upsell Engine Revenue Insights Card */}
-            <div className="app-card" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
-                <div className="app-metric-label">AI Upsell Revenue</div>
-                <div className="app-metric-value">${upsellRevenue.toFixed(2)}</div>
-                <p className="app-list-subtitle mt-2">Generated this week</p>
-                <p className="app-list-subtitle">Autonomous 1-click upsells added to customer orders during checkout.</p>
-            </div>
-
             <WalkthroughTarget id="sales-card-target" className="app-card">
               <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
                 <div className="app-metric-label">Total Sales</div>

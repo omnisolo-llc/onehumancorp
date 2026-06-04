@@ -39,7 +39,6 @@ export default function CheckoutPage() {
       const newQueue = upsellProducts.filter(p => p.id !== id);
       setUpsellProducts(newQueue);
 
-      // Update local storage metric for Dashboard
       try {
         const currentRevenue = parseFloat(localStorage.getItem('ohc_upsell_revenue') || '0');
         localStorage.setItem('ohc_upsell_revenue', (currentRevenue + parseFloat(price)).toString());
