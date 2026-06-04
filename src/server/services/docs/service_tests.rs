@@ -98,7 +98,7 @@
             ("social media", "", 1), // "Marketing"
             ("photo", "", 1), // "My Store"
             ("setup", "", 0), // wait, "set up" is in the text, let's verify "set up"
-            ("set up", "", 2), // "Getting Started", "My Store"
+            ("set up", "", 2), // "My Store", "Getting Started"
         ];
 
         for (query, topic, expected) in cases {
