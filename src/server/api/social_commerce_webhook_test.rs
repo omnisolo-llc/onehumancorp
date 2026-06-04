@@ -4,7 +4,9 @@ use axum::{
     routing::post,
     Router,
 };
+use std::sync::Arc;
 use tower::ServiceExt; // for `oneshot` and `ready`
+use ::server_tools::edgecommercemcp::server::EdgeCommerceMcpServer;
 
 use super::social_commerce_webhook::{handle_social_commerce_webhook, SocialCommerceState, SocialWebhookPayload, SocialWebhookResponse};
 
@@ -16,7 +18,50 @@ async fn get_body_bytes(body: axum::body::Body) -> Vec<u8> {
 
 #[tokio::test]
 async fn test_social_commerce_webhook_handler_quote() {
-    let state = SocialCommerceState {};
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+    let pool = match sqlx::postgres::PgPoolOptions::new().connect(&db_url).await {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+
+    let redis_client = match redis::Client::open("redis://localhost:6379/") {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    // ensure product exists
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS products (
+            id TEXT,
+            tenant_id TEXT,
+            price_cents BIGINT,
+            inventory_count BIGINT,
+            PRIMARY KEY (id, tenant_id)
+        )"
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO products (id, tenant_id, price_cents, inventory_count) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING"
+    )
+    .bind("prod-1")
+    .bind("tenant-test")
+    .bind(1000)
+    .bind(10)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let server = EdgeCommerceMcpServer::new(redis_client, pool);
+
+    let state = SocialCommerceState {
+        edge_commerce_server: Arc::new(server),
+    };
 
     let app = Router::new()
         .route("/webhook", post(handle_social_commerce_webhook))
@@ -55,7 +100,24 @@ async fn test_social_commerce_webhook_handler_quote() {
 
 #[tokio::test]
 async fn test_social_commerce_webhook_handler_generic() {
-    let state = SocialCommerceState {};
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+    let pool = match sqlx::postgres::PgPoolOptions::new().connect(&db_url).await {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+
+    let redis_client = match redis::Client::open("redis://localhost:6379/") {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let server = EdgeCommerceMcpServer::new(redis_client, pool);
+
+    let state = SocialCommerceState {
+        edge_commerce_server: Arc::new(server),
+    };
 
     let app = Router::new()
         .route("/webhook", post(handle_social_commerce_webhook))

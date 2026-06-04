@@ -16,6 +16,3 @@ pub mod syndication_handler;
 pub mod dynamic_workflows;
 
 pub mod catalog;
-
-pub mod social_commerce_webhook;
-pub mod social_commerce_webhook_test;

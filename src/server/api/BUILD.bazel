@@ -20,8 +20,6 @@ exports_files(
         "telemetry.rs",
         "catalog.rs",
         "local_seo.rs",
-        "social_commerce_webhook.rs",
-        "social_commerce_webhook_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -48,8 +46,6 @@ rust_library(
         "telemetry.rs",
         "catalog.rs",
         "local_seo.rs",
-        "social_commerce_webhook.rs",
-        "social_commerce_webhook_test.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
