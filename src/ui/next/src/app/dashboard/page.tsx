@@ -78,6 +78,8 @@ export default function Dashboard() {
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [userName, setUserName] = useState("Human");
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
 
   useEffect(() => {
     try {
@@ -182,10 +184,14 @@ export default function Dashboard() {
       title="Dashboard"
       subtitle="Network-style command center for database-backed store operations."
       statusItems={statusItems}
-      actions={[
+            actions={[
         { label: "New Product", href: "/products/new", primary: true },
+        { label: "Share on X to get 7 Days Free", href: "#", primary: false },
+        { label: "Embed", href: "#", primary: false, onClick: () => setShowEmbedModal(true) },
+        { label: "Referral", href: "#", primary: false, onClick: () => setShowReferralModal(true) },
       ]}
     >
+      <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Business Snapshot</h2>
       <div className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your AI assistants are working on your behalf.</p>
@@ -379,7 +385,7 @@ export default function Dashboard() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>
-              <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
+              <p className="app-list-subtitle">Unlock new buyers and track milestones.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -412,6 +418,37 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
+
+      {showEmbedModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-[500px] text-gray-900">
+            <h2 className="text-xl font-bold mb-4">Embed Storefront</h2>
+            <div className="bg-gray-100 p-4 rounded mb-4 font-mono text-sm">
+              {'<iframe src="https://ohc.network/embed/store" width="100%" height="600px" />'}
+            </div>
+            <div className="flex justify-between">
+              <button className="bg-gray-200 px-4 py-2 rounded" onClick={() => setShowEmbedModal(false)}>Close</button>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded">Copy Code</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReferralModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-[500px] text-gray-900">
+            <h2 className="text-xl font-bold mb-4">Help a Business Grow!</h2>
+            <p className="mb-4">Give $50, Get $50 when your friends join.</p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Your Unique Link</label>
+              <input type="text" readOnly value="https://ohc.network/ref/123" className="w-full border rounded p-2 bg-gray-50" />
+            </div>
+            <div className="flex justify-end">
+              <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={() => setShowReferralModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

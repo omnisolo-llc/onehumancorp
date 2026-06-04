@@ -153,7 +153,16 @@ export function AppShell({
                 </div>
               ))}
             </div>
-            {actions.map((action) => (
+            {actions.map((action) => action.href === '#' ? (
+              <button
+                key={action.label}
+                className={action.primary ? "app-button primary" : "app-button"}
+                onClick={action.onClick}
+              >
+                <ShellIcon name={actionIcon(action)} />
+                {action.label}
+              </button>
+            ) : (
               <Link
                 key={action.href}
                 href={action.href}
