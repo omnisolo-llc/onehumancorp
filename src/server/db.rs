@@ -1146,7 +1146,7 @@ impl DB {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
+                sqlx::query("DELETE FROM agent_missions WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
@@ -1158,7 +1158,7 @@ impl DB {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-                    total_affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < $1)) AND tenant_id = $2")
+                    total_affected += sqlx::query("DELETE FROM agent_missions WHERE (status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < $1)) AND tenant_id = $2")
                         .bind(threshold)
                         .bind(&tenant_id)
                         .execute(&mut *tx)
@@ -1796,20 +1796,20 @@ mod e2e_cleanup_stagnant_missions_tests {
         // Clean up missions older than 3600 seconds
         let _affected = db.cleanup_stagnant_missions(3600).await.expect("Database URL or operation failed in test");
 
-        let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1' AND tenant_id = $1")
+        let count_1: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id = 'mission_1' AND tenant_id = $1")
             .bind(&test_tenant)
-            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
-        assert_eq!(status_1, "FAILED");
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test");
+        assert_eq!(count_1, 0);
 
         let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2' AND tenant_id = $1")
             .bind(&test_tenant)
             .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
         assert_eq!(status_2, "PENDING");
 
-        let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3' AND tenant_id = $1")
+        let count_3: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id = 'mission_3' AND tenant_id = $1")
             .bind(&test_tenant)
-            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
-        assert_eq!(status_3, "FAILED");
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test");
+        assert_eq!(count_3, 0);
 
         // Clean up the table for the unique tenant
         sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
