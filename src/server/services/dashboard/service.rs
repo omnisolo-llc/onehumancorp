@@ -4,8 +4,11 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
 use std::sync::OnceLock;
+use tokio::sync::Mutex;
+use std::collections::HashMap;
 
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
+static PRODUCTS_LOCKS: OnceLock<std::sync::Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>> = OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
@@ -85,6 +88,22 @@ impl MyDashboardService {
             return Ok(products);
         }
 
+        let locks = PRODUCTS_LOCKS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+        let lock = {
+            let mut map = locks.lock().unwrap();
+            map.entry(cache_key.clone())
+               .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+               .clone()
+        };
+
+        let _guard = lock.lock().await;
+
+        if let Some(products) = cache.get(&cache_key).await {
+            let mut map = locks.lock().unwrap();
+            map.remove(&cache_key);
+            return Ok(products);
+        }
+
         let q = if mobile_optimized {
             "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
         } else {
@@ -139,6 +158,10 @@ impl MyDashboardService {
             }
         }
 
+        {
+            let mut map = locks.lock().unwrap();
+            map.remove(&cache_key);
+        }
         cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
         Ok(results)
     }
@@ -193,7 +216,11 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
+        {
+            let mut map = locks.lock().unwrap();
+            map.remove(&cache_key);
+        }
+        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
         Ok(results)
     }
 
