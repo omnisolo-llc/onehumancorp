@@ -183,6 +183,12 @@ export default function AgentsPage() {
               >
                 Automations
               </button>
+              <button
+                onClick={() => setActiveTab('automations')}
+                className={`pb-4 px-2 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'automations' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                Automations
+              </button>
  <button
  onClick={() => setActiveTab('approvals')}
  className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'approvals' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}

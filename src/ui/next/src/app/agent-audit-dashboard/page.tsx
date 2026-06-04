@@ -25,7 +25,7 @@ export default function AgentAuditDashboard() {
  <section className="shadow-lg rounded-[16px] p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
  <h2 className="text-xl font-bold font-outfit mb-4">Operations</h2>
  <div className="flex items-center gap-4">
- <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#34C759' }}></div>
+ <div className="w-3 h-3 rounded-full" ></div>
  <div>Agent Health: Optimal</div>
  </div>
  </section>
@@ -33,7 +33,7 @@ export default function AgentAuditDashboard() {
  <section className="shadow-lg rounded-[16px] p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
  <h2 className="text-xl font-bold font-outfit mb-4">Marketing & Advertising</h2>
  <div className="flex items-center gap-4">
- <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#34C759' }}></div>
+ <div className="w-3 h-3 rounded-full" ></div>
  <div>Campaigns Sync: Active</div>
  </div>
  </section>
