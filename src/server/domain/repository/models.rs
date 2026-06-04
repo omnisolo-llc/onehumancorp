@@ -16,20 +16,6 @@ pub struct Task {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct ConversationalCheckoutSession {
-    pub id: String,
-    pub tenant_id: String,
-    pub customer_id: String,
-    #[sqlx(rename = "type")]
-    pub r#type: String,
-    pub amount: i64,
-    pub status: String,
-    pub inventory_lock_id: Option<String>,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct TaskDependency {
     pub task_id: String,
     pub depends_on_task_id: String,

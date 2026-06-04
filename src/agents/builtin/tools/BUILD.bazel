@@ -7,7 +7,6 @@ rust_library(
         "anthropic_memory.rs",
         "bash.rs",
         "booking.rs",
-        "checkout.rs",
         "edit.rs",
         "finance.rs",
         "generative_visibility.rs",
@@ -69,7 +68,6 @@ rust_library(
         "@crates//:tracing",
         "@crates//:urlencoding",
         "@crates//:uuid",
-        "@crates//:sqlx",
     ],
     proc_macro_deps = [
         "@crates//:async-recursion",

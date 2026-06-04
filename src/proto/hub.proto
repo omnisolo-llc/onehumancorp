@@ -1659,8 +1659,6 @@ message CostDashboardResponse {
   int64 payment_fees = 5;
   string period_start = 6;
   string period_end = 7;
-  int64 bandwidth_savings = 8;
-  int64 network_cost = 9;
 }
 
 message SelectPlanRequest {

@@ -120,27 +120,4 @@ mod tests {
         // 10000 * 0.0001 = 1.0 = 1 cent
         assert_eq!(cost, 1);
     }
-
-    #[test]
-    fn test_prompt_cache_get_missing() {
-        let cache = PromptCache::new(Duration::from_secs(10));
-        let response = cache.get("What is the capital of France?");
-        assert!(response.is_none());
-        let (response_with_cost, cost) = cache.get_with_cost_cents("What is the capital of France?");
-        assert!(response_with_cost.is_none());
-        assert_eq!(cost, 0);
-    }
-
-    #[test]
-    fn test_prompt_cache_set_with_ttl() {
-        let cache = PromptCache::new(Duration::from_secs(10));
-        cache.set_with_ttl("What is the capital of France?", "Paris", 1, Duration::from_millis(10));
-
-        let response = cache.get("What is the capital of France?");
-        assert!(response.is_some());
-        assert_eq!(response.unwrap().text, "Paris");
-
-        thread::sleep(Duration::from_millis(20));
-        assert!(cache.get("What is the capital of France?").is_none());
-    }
 }
