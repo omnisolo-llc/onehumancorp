@@ -131,7 +131,13 @@ impl HybridSyncDaemon {
             let id: String = row.get("id");
             let payload: String = row.get("payload");
             let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
-            total_payload_size += payload.len();
+
+            // Sanitize PII
+            let parsed_payload: Value = serde_json::from_str(&payload).unwrap_or_else(|_| json!({ "raw": payload }));
+            let sanitized_payload = ::server_telemetry::redact_interface_pii(parsed_payload);
+            let final_payload = sanitized_payload.to_string();
+
+            total_payload_size += final_payload.len();
 
             let mut tx = match self.pg_pool.begin().await {
                 Ok(t) => t,
@@ -155,7 +161,7 @@ impl HybridSyncDaemon {
 
             let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, $3) ON CONFLICT (id) DO UPDATE SET payload = $2")
                 .bind(&id)
-                .bind(&payload)
+                .bind(&final_payload)
                 .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await;
