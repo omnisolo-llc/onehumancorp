@@ -32,6 +32,7 @@ export default function WebsiteBuilderPage() {
 
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [startY, setStartY] = useState(0);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
@@ -196,13 +197,11 @@ export default function WebsiteBuilderPage() {
   const moveBlock = (fromIndex: number, toIndex: number) => {
     if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
 
-    setBlocks(prev => {
-      const newBlocks = [...prev];
-      const [moved] = newBlocks.splice(fromIndex, 1);
-      newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
-      return newBlocks;
-    });
+    const newBlocks = [...blocks];
+    const [moved] = newBlocks.splice(fromIndex, 1);
+    newBlocks.splice(toIndex, 0, moved);
+    localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+    setBlocks(newBlocks);
 
     if (selectedBlockIndex === fromIndex) {
       setSelectedBlockIndex(toIndex);
@@ -684,6 +683,11 @@ export default function WebsiteBuilderPage() {
                   (e as React.DragEvent).dataTransfer.setData('text/plain', i.toString());
                 }
                 setDraggedIndex(i);
+                if ('touches' in e) {
+                  setStartY((e as React.TouchEvent).touches[0].clientY);
+                } else if ('clientY' in e) {
+                  setStartY((e as React.DragEvent).clientY);
+                }
                 setSelectedBlockIndex(i);
               }}
               onDragOver={(e) => {

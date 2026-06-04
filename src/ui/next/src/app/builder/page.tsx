@@ -597,9 +597,13 @@ export default function BuilderPage() {
                 setIsActionSheetOpen(true);
               }}
               onDragStart={(e) => {
+                if (e.type.includes('drag') && (e as React.DragEvent).dataTransfer) {
+                  (e as React.DragEvent).dataTransfer.effectAllowed = 'move';
+                  (e as React.DragEvent).dataTransfer.setData('text/plain', i.toString());
+                }
                 setDraggedIndex(i);
                 if ('touches' in e) {
-                  setStartY(e.touches[0].clientY);
+                  setStartY((e as React.TouchEvent).touches[0].clientY);
                 } else if ('clientY' in e) {
                   setStartY((e as React.DragEvent).clientY);
                 }
