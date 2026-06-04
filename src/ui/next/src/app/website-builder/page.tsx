@@ -27,7 +27,7 @@ export default function WebsiteBuilderPage() {
     domainChoice, setDomainChoice,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
-    blocks, setBlocks,
+    blocks, setBlocks, moveBlock,
     status, setStatus,
     liveUrl, setLiveUrl
   } = useWebsiteBuilderStore();
@@ -195,17 +195,8 @@ export default function WebsiteBuilderPage() {
     }
   };
 
-  const moveBlock = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
-
-    setBlocks(prev => {
-      const newBlocks = [...prev];
-      const [moved] = newBlocks.splice(fromIndex, 1);
-      newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
-      return newBlocks;
-    });
-
+  const handleMoveBlock = (fromIndex: number, toIndex: number) => {
+    moveBlock(fromIndex, toIndex);
     if (selectedBlockIndex === fromIndex) {
       setSelectedBlockIndex(toIndex);
     } else if (selectedBlockIndex === toIndex) {
@@ -730,13 +721,13 @@ export default function WebsiteBuilderPage() {
               }}
               onDragEnter={() => {
                 if (draggedIndex !== null && draggedIndex !== i) {
-                  moveBlock(draggedIndex, i);
+                  handleMoveBlock(draggedIndex, i);
                   setDraggedIndex(i);
                 }
               }}
               onDragEnd={() => setDraggedIndex(null)}
-              onMoveUp={i > 0 ? () => moveBlock(i, i - 1) : undefined}
-              onMoveDown={i < blocks.length - 1 ? () => moveBlock(i, i + 1) : undefined}
+              onMoveUp={i > 0 ? () => handleMoveBlock(i, i - 1) : undefined}
+              onMoveDown={i < blocks.length - 1 ? () => handleMoveBlock(i, i + 1) : undefined}
             >
               <SmartBlock {...b} />
             </DraggableBlock>
