@@ -107,6 +107,7 @@ rust_library(
         "//src/server/auth:server_auth",
         "//src/server/common:server_common",
         "//src/server/config:server_config",
+        "//src/server/domain:server_domain",
         "//src/server/harness:server_harness",
         "//src/server/integrations/ayrshare:server_integrations_ayrshare",
         "//src/server/integrations/cal_com:server_integrations_cal_com",
