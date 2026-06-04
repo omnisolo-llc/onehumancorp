@@ -38,6 +38,9 @@ static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCach
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
@@ -2641,6 +2644,12 @@ async fn list_ui_orders_handler(
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
 
+    let cache_key = format!("ui_orders:{}", tenant_id);
+    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
     let orders = match &db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query(
@@ -2683,7 +2692,10 @@ async fn list_ui_orders_handler(
     };
 
     match orders {
-        Ok(orders) => (axum::http::StatusCode::OK, axum::Json(orders)).into_response(),
+        Ok(orders) => {
+            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
+        },
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
@@ -2699,6 +2711,12 @@ async fn list_ui_inbox_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_inbox:{}", tenant_id);
+    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2736,7 +2754,10 @@ async fn list_ui_inbox_handler(
     };
 
     match messages {
-        Ok(messages) => (axum::http::StatusCode::OK, axum::Json(messages)).into_response(),
+        Ok(messages) => {
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        },
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to fetch UI inbox messages");
             tracing::error!("Failed to fetch UI inbox messages: {}", e);
@@ -2751,6 +2772,12 @@ async fn ui_dashboard_metrics_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
+    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let metrics = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2781,12 +2808,14 @@ async fn ui_dashboard_metrics_handler(
 
     match metrics {
         Ok((active_customers, pending_orders, total_sales)) => {
-            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+            let res = serde_json::json!({
                 "active_customers": active_customers,
                 "pending_orders": pending_orders,
                 "total_sales": total_sales,
                 "total_campaigns_sent": 0
-            }))).into_response()
+            });
+            cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
+            (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to fetch UI dashboard metrics");
@@ -7882,9 +7911,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
-                                fetchMilestones();
-                                fetchApprovals();
-                                fetchActivityFeed();
+                                Promise.all([
+                                    fetchMilestones(),
+                                    fetchApprovals(),
+                                    fetchActivityFeed()
+                                ]).catch(err => console.error('Error loading dashboard components:', err));
                             }
 
                             if (id === 'my-plan-screen') {
