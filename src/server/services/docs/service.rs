@@ -15,7 +15,7 @@ impl MyDocsService {
     }
 }
 
-fn get_articles() -> &'static Vec<HelpArticle> {
+pub fn get_articles() -> &'static Vec<HelpArticle> {
     HELP_ARTICLES.get_or_init(|| {
         vec![
             HelpArticle {

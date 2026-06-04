@@ -315,6 +315,7 @@ pub mod services {
     pub mod autodream;
     pub mod booking;
     pub mod pos;
+    pub use ::server_services_docs as docs;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -3556,15 +3557,30 @@ async fn create_ui_bom_item_handler(
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
-            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
-        ])) }))
+        .route("/api/help", axum::routing::get(|| async {
+            let articles = crate::services::docs::service::get_articles();
+            let response: Vec<serde_json::Value> = articles.iter().map(|a| {
+                serde_json::json!({
+                    "title": a.title,
+                    "desc": a.content_markdown,
+                    "link": format!("/help/{}", a.id)
+                })
+            }).collect();
+            axum::Json(serde_json::json!(response))
+        }))
+        .route("/api/help/:article_id", axum::routing::get(|axum::extract::Path(article_id): axum::extract::Path<String>| async move {
+            let articles = crate::services::docs::service::get_articles();
+            if let Some(article) = articles.iter().find(|a| a.id == article_id) {
+                axum::Json(serde_json::json!({
+                    "title": article.title,
+                    "contentHtml": article.content_markdown
+                }))
+            } else {
+                axum::Json(serde_json::json!({
+                    "error": "Article not found"
+                }))
+            }
+        }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
             let m = registry.read().unwrap();
