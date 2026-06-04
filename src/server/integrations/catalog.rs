@@ -5,8 +5,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
 
     // We instantiate nats as a placeholder, without making actual network connection
     // since this is used in synchronous `new()` of registry
-    let nats_provider = crate::integrations::catalog::IntegrationProvider {
-        metadata: crate::integrations::catalog::ProviderMetadata {
+    let nats_provider = ::server_integrations_core::IntegrationProvider {
+        metadata: ::server_integrations_core::ProviderMetadata {
             id: "nats".to_string(),
             name: "NATS Event Mesh".to_string(),
             category: "event_mesh".to_string(),
@@ -17,8 +17,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
 
     // We avoid initializing a real TwilioProvider client here just for metadata
     // to prevent unwanted HTTP client instantiation during registry initialization
-    let twilio_provider = crate::integrations::catalog::IntegrationProvider {
-        metadata: crate::integrations::catalog::ProviderMetadata {
+    let twilio_provider = ::server_integrations_core::IntegrationProvider {
+        metadata: ::server_integrations_core::ProviderMetadata {
             id: "twilio".to_string(),
             name: "Twilio SMS".to_string(),
             category: "sms".to_string(),
