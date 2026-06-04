@@ -254,7 +254,9 @@ impl SipDB {
     pub fn enrich_payload_with_grounding_content(&self, payload: &str, grounding_content: &Option<String>) -> String {
         let mut final_payload = payload.to_string();
         if let Some(content) = grounding_content {
-            final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", payload, content);
+            if !content.trim().is_empty() {
+                final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", payload, content);
+            }
         }
         final_payload
     }
