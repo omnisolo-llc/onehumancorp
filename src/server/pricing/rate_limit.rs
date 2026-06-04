@@ -414,6 +414,38 @@ mod tests {
         assert_eq!(PlanTier::Business.base_price(), 299.0);
     }
 
+    #[test]
+    fn test_plan_tier_edge_cases() {
+        // Create an "unknown" tier simulation if we were to parse from string
+        // Though PlanTier is an enum, we just verify its methods hold true for all variants
+        let tiers = vec![PlanTier::Free, PlanTier::Starter, PlanTier::Pro, PlanTier::Business];
+        for tier in tiers {
+            // Verify base_price is never negative
+            assert!(tier.base_price() >= 0.0);
+
+            // Verify that if storage limit is provided, it's non-zero (or handle zero)
+            if let Some(limit) = tier.storage_limit_mb() {
+                assert!(limit > 0);
+            }
+
+            // Max products should be greater than 0 if present
+            if let Some(products) = tier.max_products() {
+                assert!(products > 0);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_redis_rate_limiter_connection_failure() {
+        // Provide an invalid Redis URL to test connection fallback/error
+        if let Ok(client) = redis::Client::open("redis://invalid_host:9999") {
+            let limiter = RedisRateLimiter::new(client);
+            let res = limiter.check_agent_quota("test-tenant").await;
+            // It should fail gracefully returning an Err string
+            assert!(res.is_err());
+        }
+    }
+
     #[tokio::test]
     async fn test_check_product_quota_no_mutation() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
