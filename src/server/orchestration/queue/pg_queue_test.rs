@@ -51,7 +51,8 @@ async fn test_pg_fail_backoff() {
     let status: String = row.get("status");
     assert_eq!(status, "PENDING");
 
-    let next_retry_at: chrono::DateTime<chrono::Utc> = row.get("next_retry_at");
+    let next_retry_at_str: String = row.get("next_retry_at");
+    let next_retry_at: chrono::DateTime<chrono::Utc> = next_retry_at_str.parse().expect("next_retry_at must be a valid ISO 8601 string");
 
     // Verify next_retry_at is approximately now + 2 seconds (1 << 1 attempt)
     let backoff_duration = chrono::Duration::seconds(2);

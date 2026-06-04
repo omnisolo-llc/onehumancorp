@@ -1,14 +1,6 @@
-<style>
-body {
-    background: linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
-    color: #94a3b8;
-}
-h1, h2 {
-    color: white;
-}
-</style>
+<div markdown="1" style="backdrop-filter: blur(30px) saturate(210%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(22, 22, 26, 0.7); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# Hybrid Parity Audit & Chaos Resilience Report
+# 🛡️ Hybrid Parity Audit & Chaos Resilience Report
 
 ## Methodology
 The audit investigated potential functional discrepancies between the `CloudStateManager` (using Postgres) and `StandaloneStateManager` (using SQLite) regarding how they coordinate orchestration tasks. Additionally, chaos tests were engineered to evaluate graceful degradation properties (such as lock contention under lag and network dropping).
@@ -27,7 +19,8 @@ Chaos benchmark tests were added into `src/server/benchmarks/chaos_bench.rs` suc
 *   `test_drop_network_packets`: Testing Mesh `publish_with_ack` ensuring retries transparently paper over synthetic packet loss.
 *   `test_graceful_degradation`: Simulating database freezing or heavy contention successfully triggers the new timeout blocks preventing runaway execution wait times.
 
-
 ### Grafana Visualizations
 ![Latency Histogram](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
 ![Error Rates](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
+
+</div>

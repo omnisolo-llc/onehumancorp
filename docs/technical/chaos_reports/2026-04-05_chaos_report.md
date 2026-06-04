@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(30px) saturate(210%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(22, 22, 26, 0.7); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+
 <div align="center">
   <img src="https://via.placeholder.com/1200x300/0a0a0a/ffffff?text=OHC+Chaos+Engineering+Report" alt="OHC Chaos Header" />
   <h1>SENTRY: Chaos Engineering & Parity Audit</h1>
@@ -55,4 +57,6 @@
 <div align="center" style="padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; backdrop-filter: blur(20px);">
   <p><i>"Absolute Autonomy. Zero Secrets. Precision & Coverage."</i></p>
   <p><b>— OHC SIP Sentry Protocol</b></p>
+</div>
+
 </div>
