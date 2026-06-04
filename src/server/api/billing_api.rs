@@ -16,19 +16,14 @@ pub struct MyPlanResponse {
 #[derive(serde::Serialize)]
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
-    #[serde(rename = "total")]
     pub total_costs: i64,
-    #[serde(rename = "llm")]
     pub llm_cost: i64,
-    #[serde(rename = "storage")]
     pub storage_cost: i64,
-    #[serde(rename = "payment_fees")]
     pub payment_fees: i64,
     pub network_cost: i64,
     pub bandwidth_savings: i64,
     pub period_start: String,
     pub period_end: String,
-    pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -114,7 +109,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![] })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
     };
 
     let now = chrono::Utc::now();
@@ -155,9 +150,6 @@ pub async fn cost_dashboard_handler(
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
 
-    let pool = crate::db::get_pool();
-    let trend = crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &tenant_id).await;
-
     Json(CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
@@ -168,6 +160,5 @@ pub async fn cost_dashboard_handler(
         bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
         period_start,
         period_end,
-        trend,
     })
 }

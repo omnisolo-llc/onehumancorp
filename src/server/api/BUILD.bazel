@@ -3,7 +3,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "autodream.rs",
-        "terminal_api.rs",
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
@@ -13,7 +12,6 @@ exports_files(
         "syndication_handler.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
-        "meta_webhook.rs",
         "oauth/mod.rs",
         "oauth/proxy.rs",
         "mod.rs",
@@ -29,7 +27,6 @@ exports_files(
 rust_library(
     name = "server_api",
     srcs = [
-        "terminal_api.rs",
         "bazel_lib.rs",
         "autodream.rs",
         "billing_api.rs",
@@ -41,7 +38,6 @@ rust_library(
         "syndication_handler.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
-        "meta_webhook.rs",
         "oauth/mod.rs",
         "oauth/proxy.rs",
         "mod.rs",

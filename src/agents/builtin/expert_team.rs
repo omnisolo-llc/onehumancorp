@@ -191,19 +191,13 @@ impl QualityGates {
         }
 
         // 75% similarity deduplication using Jaccard index on word tokens
-        let mut token_sets = Vec::with_capacity(summaries.len());
-        for summary in summaries {
-            let set: std::collections::HashSet<&str> = summary.split_whitespace().collect();
-            token_sets.push(set);
-        }
+        for i in 0..summaries.len() {
+            for j in (i + 1)..summaries.len() {
+                let set_i: std::collections::HashSet<&str> = summaries[i].split_whitespace().collect();
+                let set_j: std::collections::HashSet<&str> = summaries[j].split_whitespace().collect();
 
-        for i in 0..token_sets.len() {
-            for j in (i + 1)..token_sets.len() {
-                let set_i = &token_sets[i];
-                let set_j = &token_sets[j];
-
-                let intersection = set_i.intersection(set_j).count() as f64;
-                let union = set_i.union(set_j).count() as f64;
+                let intersection = set_i.intersection(&set_j).count() as f64;
+                let union = set_i.union(&set_j).count() as f64;
 
                 if union > 0.0 {
                     let jaccard_similarity = intersection / union;

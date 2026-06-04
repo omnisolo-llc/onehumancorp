@@ -149,7 +149,6 @@ impl UserRepository for SqliteUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE (tenant_id = $1 OR $1 = 'system') ORDER BY created_at";
         let rows = sqlx::query(query).bind(org_id).fetch_all(&self.pool).await.map_err(|e| e.to_string())?;
 

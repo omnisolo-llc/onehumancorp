@@ -339,7 +339,6 @@ async fn handle_affiliate_generate_link(
             Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to generate affiliate link: {:?}");
             tracing::error!("Failed to generate affiliate link: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
@@ -723,7 +722,6 @@ async fn handle_onboarding_metrics(
             Ok(Json(OnboardingMetricsResponse { metrics }))
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch onboarding metrics: {:?}");
             tracing::error!("Failed to fetch onboarding metrics: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }

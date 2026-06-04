@@ -151,32 +151,3 @@ mod tests {
         assert_eq!(token, "tss_mock_token_for_test_tenant");
     }
 }
-
-impl StripeClient {
-    pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
-        let mut form = std::collections::HashMap::new();
-        form.insert("amount".to_string(), amount_cents.to_string());
-        form.insert("currency".to_string(), currency.to_string());
-        form.insert("payment_method_types[]".to_string(), "card_present".to_string());
-        form.insert("capture_method".to_string(), "manual".to_string());
-        form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
-
-        let res = reqwest::Client::new().post("https://api.stripe.com/v1/payment_intents")
-            .basic_auth(&self.api_key, Some(""))
-            .form(&form)
-            .send()
-            .await
-            .map_err(|e| format!("Stripe API request failed: {}", e))?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let text = res.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error ({}): {}", status, text));
-        }
-
-        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        let secret = json["client_secret"].as_str().ok_or_else(|| "Missing client_secret in response".to_string())?;
-
-        Ok(secret.to_string())
-    }
-}

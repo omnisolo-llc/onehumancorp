@@ -103,7 +103,6 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                ::server_telemetry::record_error_signal("Failed to securely create DB directory");
                                 tracing::error!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -111,7 +110,6 @@ impl DB {
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                ::server_telemetry::record_error_signal("Failed to create DB directory");
                                 tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -128,7 +126,6 @@ impl DB {
 
                     if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
                         if sym_meta.file_type().is_symlink() {
-                            ::server_telemetry::record_error_signal("Security error: DB path is a symlink. Aborting.");
                             tracing::error!("Security error: DB path is a symlink. Aborting.");
                             return Err("Security error: DB path is a symlink.".into());
                         }
@@ -496,7 +493,6 @@ impl DB {
                         payload TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        tenant_id TEXT NOT NULL DEFAULT 'default_tenant',
                         auto_dreamed BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
@@ -876,10 +872,7 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ? RETURNING session_id, context_data")
-                    .bind(threshold)
-                    .fetch_all(sqlite_pool)
-                    .await?;
+                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?").bind(threshold).fetch_all(sqlite_pool).await?;
                 for row in rows {
                     let id: String = row.get("session_id");
                     let data: String = row.get("context_data");
@@ -887,21 +880,33 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
+                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1").bind(threshold).fetch_all(&self.pool).await?;
+                for row in rows {
+                    let id: String = row.get("session_id");
+                    let data: String = row.get("context_data");
+                    result.push((id, data));
+                }
+            }
+        };
+
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?")
+                    .bind(threshold)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
                 let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-                    let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2 RETURNING session_id, context_data")
+                    sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2")
                         .bind(threshold)
                         .bind(&tenant_id)
-                        .fetch_all(&mut *tx)
+                        .execute(&mut *tx)
                         .await?;
-                    for row in rows {
-                        let id: String = row.get("session_id");
-                        let data: String = row.get("context_data");
-                        result.push((id, data));
-                    }
                     tx.commit().await?;
                 }
             }
@@ -944,7 +949,7 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
+                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -952,7 +957,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
+                let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -966,7 +971,7 @@ impl DB {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-                    let shared_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                    let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                     for row in shared_rows {
                         let id: String = row.get("id");
                         let org_id: String = row.get("tenant_id");
@@ -1142,7 +1147,7 @@ impl DB {
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
-                    .bind(threshold)
+                    .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
             },
@@ -1182,9 +1187,9 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {
-                    "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ?"
+                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?"
                 } else {
-                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ?"
+                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
                 };
                 sqlx::query(query)
                     .bind(task_id)
