@@ -3,6 +3,16 @@ import WebsiteBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
+vi.mock('next/navigation', () => ({
+  useRouter() {
+    return {
+      prefetch: () => null,
+      push: vi.fn(),
+      replace: () => null,
+    };
+  }
+}));
+
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>
@@ -137,22 +147,46 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('can follow the instant-build flow', async () => {
+    vi.useRealTimers();
+    // Mock the specific API call for instant build
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            business_name: 'Mock Bakery',
+            business_type: 'Online Store',
+            initial_products: [{ name: 'Cake', price: '20.00' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/state') {
+          return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve({})
+          })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({})
+      });
+    });
+
     render(<WebsiteBuilderPage />);
 
-    // Step 0
     fireEvent.click(screen.getByText('Instant Build'));
-
-    // Instant build step
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
     fireEvent.click(screen.getByText('Generate Storefront'));
 
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    // Status changes to 'generating', wait for it
+    await waitFor(() => {
+      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    await waitFor(() => {
+        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    }, { timeout: 3500 });
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
