@@ -24,45 +24,17 @@ export default function WebsiteBuilderPage() {
     bio, setBio,
     domainChoice, setDomainChoice,
     aiAgents, setAiAgents,
-    aiAutoRespond, setAiAutoRespond
+    aiAutoRespond, setAiAutoRespond,
+    blocks, setBlocks,
+    status, setStatus,
+    liveUrl, setLiveUrl
   } = useWebsiteBuilderStore();
 
 
-  const [blocks, setBlocks] = useState<any[]>([]);
-  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
-
-  const [liveUrl, setLiveUrl] = useState("");
-
-
-    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
-
-  useEffect(() => {
-    // Load from backend for cross-device resume
-    const loadSavedState = async () => {
-      try {
-        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-        const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-        const res = await fetch('/api/onboarding/state', {
-          headers: {
-            'x-tenant-id': tenant,
-            'x-user-id': user
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Object.keys(data).length > 0 && data.wizardState) {
-            useWebsiteBuilderStore.setState(data.wizardState);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load saved state', e);
-      }
-    };
-    loadSavedState();
-  }, []);
 
   const handleSaveDraft = async () => {
     setStatus("generating"); // Just show some loading state or disable button
@@ -107,79 +79,13 @@ export default function WebsiteBuilderPage() {
 
   const { startWalkthrough } = useWalkthrough();
 
-  useEffect(() => {
-    const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
-    setTenantId(savedTenantId);
-
-
-    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
-    if (savedStatus) setStatus(savedStatus);
-
-    const savedBlocks = localStorage.getItem("ohc_builder_blocks");
-    if (savedBlocks) {
-      try {
-        setBlocks(JSON.parse(savedBlocks));
-      } catch (e) {
-        console.error("Failed to parse saved blocks", e);
-      }
-    }
-
-    const savedLiveUrl = localStorage.getItem("ohc_builder_liveUrl");
-    if (savedLiveUrl) setLiveUrl(savedLiveUrl);
-  }, []);
-
-
-  // Sync full state to backend
-  useEffect(() => {
-    // Only save if there's actual state
-    if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
-      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-      const userId = localStorage.getItem('user_id') || 'test-user';
-
-      const wizardState = {
-        step: wizardStep,
-        businessName,
-        businessType,
-        hasPhysicalProducts,
-        hasDigitalProducts,
-        productName,
-        productPrice,
-        paymentMethod,
-        userName,
-        userEmail,
-        userPassword,
-        template,
-        bio,
-        domainChoice,
-        aiAgents,
-        aiAutoRespond
-      };
-
-      const payload = {
-        builderState: { bio, blocks, status },
-        wizardState
-      };
-
-      const timer = setTimeout(() => {
-        fetch('/api/onboarding/state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-          body: JSON.stringify(payload)
-        }).catch(err => console.error('Failed to sync builder state', err));
-      }, 1000); // debounce 1s
-
-      return () => clearTimeout(timer);
-    }
-  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
-
-
-
   // Read state from server on mount
   useEffect(() => {
-    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+    const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+    setTenantId(tenantIdStr);
     const userId = localStorage.getItem('user_id') || 'test-user';
     fetch('/api/onboarding/state', {
-      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+      headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId }
     })
     .then(res => res.json())
     .then(data => {
@@ -209,6 +115,49 @@ export default function WebsiteBuilderPage() {
     })
     .catch(err => console.error('Failed to load builder state', err));
   }, []);
+
+  // Sync full state to backend
+  useEffect(() => {
+    // Only save if there's actual state
+    if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
+      const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+      const userId = localStorage.getItem('user_id') || 'test-user';
+
+      const wizardState = {
+        step: wizardStep,
+        businessName,
+        businessType,
+        hasPhysicalProducts,
+        hasDigitalProducts,
+        productName,
+        productPrice,
+        paymentMethod,
+        userName,
+        userEmail,
+        userPassword,
+        template,
+        bio,
+        domainChoice,
+        aiAgents,
+        aiAutoRespond
+      };
+
+      const payload = {
+        builderState: { bio, blocks, status },
+        wizardState
+      };
+
+      const timer = setTimeout(() => {
+        fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId },
+          body: JSON.stringify(payload)
+        }).catch(err => console.error('Failed to sync builder state', err));
+      }, 1000); // debounce 1s
+
+      return () => clearTimeout(timer);
+    }
+  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
 
 
 
@@ -724,7 +673,7 @@ export default function WebsiteBuilderPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
-          {blocks.map((b, i) => (
+          {Array.isArray(blocks) && blocks.map((b, i) => (
             <DraggableBlock
               key={b.type + i}
               isSelected={selectedBlockIndex === i}

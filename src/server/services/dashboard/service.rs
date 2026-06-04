@@ -10,6 +10,7 @@ static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = Once
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
+static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOnboardingStateResponse>> = OnceLock::new();
 
 #[derive(Clone)]
 pub struct MyDashboardService {
@@ -30,7 +31,12 @@ impl MyDashboardService {
             return Ok(agents);
         }
 
-        let agents = self.hub.get_agents().await.to_vec();
+        let mut agents = self.hub.get_agents().await.to_vec();
+        if mobile_optimized {
+            for agent in agents.iter_mut() {
+                agent.name = String::new();
+            }
+        }
         cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
         Ok(agents)
     }
@@ -478,6 +484,12 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
+        let cache_key = format!("onboarding_state_{}", org_id);
+        let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        if let Some(cached) = cache.get(&cache_key).await {
+            return Ok(Response::new(cached));
+        }
+
         use sqlx::Row;
         let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
             .bind(&org_id)
@@ -489,14 +501,17 @@ impl DashboardService for MyDashboardService {
             let state_json: serde_json::Value = row
                 .try_get("state_json")
                 .unwrap_or_else(|_| serde_json::json!({}));
-            Ok(Response::new(GetOnboardingStateResponse {
+
+            let response = GetOnboardingStateResponse {
                 state: Some(OnboardingState {
                     organization_id: org_id,
                     user_id: row.try_get("user_id").unwrap_or_default(),
                     current_step: row.try_get("current_step").unwrap_or_default(),
                     state_json: state_json.to_string(),
                 }),
-            }))
+            };
+            cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+            Ok(Response::new(response))
         } else {
             Err(Status::not_found("Onboarding state not found"))
         }
@@ -565,15 +580,23 @@ impl DashboardService for MyDashboardService {
         }).await;
 
         match update_res {
-            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse { success: true })),
+            Ok(Ok(_)) => {
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+            },
             Ok(Err(e)) => {
                 tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
             Err(_) => {
                 tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
         }
