@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use crate::compression;
+use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
@@ -139,6 +140,80 @@ impl CompressedEmbeddingCache {
     }
 }
 
+pub struct ExchangeRateCache {
+    redis_client: Option<redis::Client>,
+    memory_fallback: DashMap<String, (f64, Instant)>,
+    ttl: Duration,
+}
+
+impl ExchangeRateCache {
+    pub fn new(redis_client: Option<redis::Client>, ttl: Duration) -> Self {
+        Self {
+            redis_client,
+            memory_fallback: DashMap::new(),
+            ttl,
+        }
+    }
+
+    fn cache_key(from: &str, to: &str) -> String {
+        format!("fx_rate:{}:{}", from.to_uppercase(), to.to_uppercase())
+    }
+
+    pub async fn get_rate(&self, from: &str, to: &str, pool: &PgPool) -> Result<f64, String> {
+        if from.eq_ignore_ascii_case(to) {
+            return Ok(1.0);
+        }
+
+        let key = Self::cache_key(from, to);
+
+        // 1. Try Redis
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                use redis::AsyncCommands;
+                let cached_val: Result<Option<f64>, _> = conn.get(&key).await;
+                if let Ok(Some(rate)) = cached_val {
+                    return Ok(rate);
+                }
+            }
+        }
+
+        // 2. Try Memory Fallback
+        if let Some(entry) = self.memory_fallback.get(&key) {
+            if Instant::now() <= entry.1 {
+                return Ok(entry.0);
+            }
+        }
+
+        // 3. Try DB
+        let row = sqlx::query("SELECT rate FROM ohc_fx_rates WHERE from_currency = $1 AND to_currency = $2")
+            .bind(from.to_uppercase())
+            .bind(to.to_uppercase())
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(r) = row {
+            use sqlx::Row;
+            let rate: f64 = r.get("rate");
+
+            // Cache in Redis
+            if let Some(client) = &self.redis_client {
+                if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                    use redis::AsyncCommands;
+                    let _: Result<(), _> = conn.set_ex(&key, rate, self.ttl.as_secs() as u64).await;
+                }
+            }
+
+            // Cache in memory
+            self.memory_fallback.insert(key, (rate, Instant::now() + self.ttl));
+
+            return Ok(rate);
+        }
+
+        Err(format!("Exchange rate not found for {} to {}", from, to))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +260,31 @@ mod tests {
         // Wait for expiration
         thread::sleep(Duration::from_millis(150));
         assert_eq!(cache.get("prompt1"), None);
+    }
+
+    #[tokio::test]
+    async fn test_exchange_rate_cache_same_currency() {
+        // We can pass a dummy PgPool because it shouldn't be hit for identical currencies
+        let pool = sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+        let cache = ExchangeRateCache::new(None, Duration::from_secs(60));
+
+        let rate = cache.get_rate("USD", "USD", &pool).await.unwrap();
+        assert_eq!(rate, 1.0);
+        let rate2 = cache.get_rate("eur", "EUR", &pool).await.unwrap();
+        assert_eq!(rate2, 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_exchange_rate_cache_memory_fallback() {
+        let pool = sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+        let cache = ExchangeRateCache::new(None, Duration::from_secs(60));
+
+        // Populate local dashmap directly
+        let key = "fx_rate:EUR:USD".to_string();
+        cache.memory_fallback.insert(key, (1.10, Instant::now() + Duration::from_secs(60)));
+
+        // This should hit the memory fallback and NOT the database
+        let rate = cache.get_rate("EUR", "USD", &pool).await.unwrap();
+        assert_eq!(rate, 1.10);
     }
 }

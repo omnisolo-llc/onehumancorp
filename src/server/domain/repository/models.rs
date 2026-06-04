@@ -42,6 +42,7 @@ pub struct Tenant {
     pub industry: Option<String>,
     pub tier: Option<String>,
     pub owner_email: Option<String>,
+    pub base_currency: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
     pub version: Option<i64>,

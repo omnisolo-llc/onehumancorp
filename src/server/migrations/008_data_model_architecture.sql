@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     id TEXT PRIMARY KEY,
     business_name TEXT NOT NULL,
     plan_tier TEXT DEFAULT 'free',
+    base_currency TEXT DEFAULT 'USD',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

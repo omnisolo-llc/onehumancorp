@@ -1212,12 +1212,20 @@ impl HubService for MyHubService {
 
         let is_china = req.plan_id.ends_with("_china");
         let is_latam = req.plan_id.ends_with("_latam");
+
+        let target_currency = if is_china { "CNY" } else if is_latam { "BRL" } else { "USD" };
+
+        // Convert the base USD amount to the target currency before generating the checkout session link
+        let cache = crate::pricing::cache::ExchangeRateCache::new(None, std::time::Duration::from_secs(3600));
+        let rate = cache.get_rate("USD", target_currency, &crate::db::get_pool()).await.unwrap_or(1.0);
+        let converted_amount = amount * rate;
+
         let url = if let Some(alipay_client) = alipay_client.filter(|_| is_china) {
             alipay_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
-            client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
+            client.create_checkout_session(&req.plan_id, &tenant_id, converted_amount, Some(target_currency)).await
         }
             .map_err(|e| tonic::Status::internal(e))?;
 

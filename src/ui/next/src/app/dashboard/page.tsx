@@ -19,6 +19,8 @@ type Order = {
   total_amount?: number;
   status?: string;
   created_at?: string;
+  original_currency?: string;
+  original_amount?: number;
 };
 
 type InboxMessage = {
@@ -320,7 +322,14 @@ export default function Dashboard() {
                       <tr key={order.id}>
                         <td><Link href={`/orders/${order.id}`} className="font-semibold text-blue-700">{order.id}</Link></td>
                         <td>{order.customer_name || "Unknown"}</td>
-                        <td>{money(order.total_amount)}</td>
+                        <td>
+                          {money(order.total_amount)}
+                          {order.original_currency && order.original_currency !== 'USD' && (
+                            <span className="block text-[10px] text-gray-500 mt-0.5">
+                              (originally {new Intl.NumberFormat("en-US", { style: "currency", currency: order.original_currency }).format(order.original_amount || 0)})
+                            </span>
+                          )}
+                        </td>
                         <td><span className={`app-badge ${statusTone(order.status)}`}>{order.status || "Unknown"}</span></td>
                       </tr>
                     ))}
