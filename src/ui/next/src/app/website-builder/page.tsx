@@ -603,8 +603,7 @@ export default function WebsiteBuilderPage() {
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                      style={{ borderRadius: '8px' }}
+                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
@@ -690,8 +689,7 @@ export default function WebsiteBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
-            style={{ borderRadius: '8px' }}
+            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5] rounded-[8px]"
             onClick={() => router.push('/dashboard')}
           >
             View Welcome Checklist
@@ -745,12 +743,11 @@ export default function WebsiteBuilderPage() {
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
+        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
-              style={{ borderRadius: '8px' }}
+              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[8px]"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
