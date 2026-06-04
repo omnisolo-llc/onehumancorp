@@ -81,6 +81,7 @@ pub async fn offline_sync_handler(
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
             }
             Err(e) => {
+                ::server_telemetry::record_error_signal("Failed to deduct inventory for product ");
                 tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
             }
         }
