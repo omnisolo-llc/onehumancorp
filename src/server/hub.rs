@@ -11,7 +11,7 @@ use crate::scheduler::Scheduler;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
-use crate::services::billing::auditor::CostAuditor;
+use crate::services::billing::auditor::{CostAuditor, BillingEvent};
 use ::server_pricing::calculator::CostConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,7 +23,7 @@ pub struct HubEvent {
 
 pub struct Hub {
     pub semantic_router: crate::orchestration::router::SemanticRouter,
-    telemetry_tx: tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent>,
+    telemetry_tx: tokio::sync::mpsc::UnboundedSender<BillingEvent>,
     agents: RwLock<HashMap<String, Agent>>,
     meetings: RwLock<HashMap<String, MeetingRoom>>,
     inbox: RwLock<HashMap<String, Vec<Message>>>,
@@ -61,7 +61,7 @@ impl Hub {
             None
         };
 
-        let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::BillingEvent>();
+        let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<BillingEvent>();
         let pool_clone = pool.clone();
         let cost_auditor = Arc::new({
             let mut config = CostConfig::default();
@@ -77,7 +77,6 @@ impl Hub {
 
         let cost_auditor_clone = cost_auditor.clone();
         tokio::spawn(async move {
-            use crate::services::billing::auditor::BillingEvent;
             while let Some(billing_event) = telemetry_rx.recv().await {
                 match billing_event {
                     BillingEvent::Token(event) => {
@@ -188,7 +187,7 @@ impl Hub {
         self.cost_auditor.clone()
     }
 
-    pub fn get_telemetry_tx(&self) -> tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent> {
+    pub fn get_telemetry_tx(&self) -> tokio::sync::mpsc::UnboundedSender<BillingEvent> {
         self.telemetry_tx.clone()
     }
 
