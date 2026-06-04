@@ -2723,16 +2723,17 @@ impl Agent {
                         }
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: msg.clone(),
+                            result: self_correct_msg.clone(),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: self_correct_msg,
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -2915,13 +2916,14 @@ impl Agent {
                             }
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: msg.clone(),
+                                result: self_correct_msg.clone(),
                                 iteration,
                             });
-                            error = msg;
+                            error = self_correct_msg;
                             content = String::new();
                             break;
                         }
