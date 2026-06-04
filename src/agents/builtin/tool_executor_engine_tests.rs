@@ -172,7 +172,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pydantic_to_engine_integration() {
-        use crate::tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
         #[derive(Deserialize)]
