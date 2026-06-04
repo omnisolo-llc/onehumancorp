@@ -63,7 +63,7 @@ impl StripeClient {
         }
     }
 
-    pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+        pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             tenant_id,
@@ -71,12 +71,22 @@ impl StripeClient {
             0.05 // mock cost for api orchestration
         ).await;
 
-        // In a real implementation, this would make an HTTP POST to Stripe's /v1/terminal/connection_tokens
-        // endpoint. Since we're mocking external APIs, we return a mock token string here.
-        // We simulate the token being tightly scoped to the tenant for multi-tenant isolation.
-        let mock_token = format!("tss_mock_token_for_{}", tenant_id);
+        let res = reqwest::Client::new().post("https://api.stripe.com/v1/terminal/connection_tokens")
+            .basic_auth(&self.api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API request failed: {}", e))?;
 
-        Ok(mock_token)
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let secret = json["secret"].as_str().ok_or_else(|| "Missing secret in response".to_string())?;
+
+        Ok(secret.to_string())
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
@@ -142,13 +152,13 @@ impl StripeClient {
 mod tests {
     use super::*;
 
-    #[tokio::test]
+        #[tokio::test]
     async fn test_create_terminal_connection_token() {
         let client = StripeClient::new("sk_test_123".to_string());
         let result = client.create_terminal_connection_token("test_tenant").await;
-        assert!(result.is_ok());
-        let token = result.unwrap();
-        assert_eq!(token, "tss_mock_token_for_test_tenant");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("Stripe API error") || err.contains("Unrecognized request URL") || err.contains("Invalid API Key provided"));
     }
 }
 

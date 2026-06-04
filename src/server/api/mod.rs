@@ -3,6 +3,8 @@ pub mod offline_sync;
 pub mod mesh_handler;
 pub mod autodream;
 pub mod terminal_api;
+#[cfg(test)]
+pub mod terminal_api_test;
 
 pub mod billing_webhook;
 pub mod billing_api;
