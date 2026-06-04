@@ -49,7 +49,7 @@ export default function DiagnosticsPage() {
 
         <section className="p-6 shadow-sm mt-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <div style={{
-            backdropFilter: 'blur(20px) saturate(200%)',
+            backdropFilter: 'blur(30px) saturate(210%)',
             background: 'rgba(255, 255, 255, 0.03)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
