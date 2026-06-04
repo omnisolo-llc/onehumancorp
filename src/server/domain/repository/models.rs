@@ -107,6 +107,7 @@ pub struct Order {
     pub customer_id: String,
     pub status: Option<String>,
     pub total_amount: Option<f64>,
+    pub payment_source: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
