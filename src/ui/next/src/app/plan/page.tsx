@@ -20,11 +20,7 @@ export default function MyPlanPage() {
   useEffect(() => {
     async function fetchPlanData() {
       try {
-<<<<<<< HEAD
         const token = localStorage.getItem('token');
-=======
-        const token = localStorage.getItem('token') || 'test-token';
->>>>>>> origin/jules-16694998170452612735-ddd41a45
         const res = await fetch('http://127.0.0.1:18789/my-plan', {
             headers: {
                 'Authorization': `Bearer ${token}`

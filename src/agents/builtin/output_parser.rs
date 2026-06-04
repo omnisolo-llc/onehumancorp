@@ -48,13 +48,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                                 format!("{}", e)
                             };
                             Err(format!(
-<<<<<<< HEAD
                                 "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nPlease strictly follow the tool's JSON schema and try again.", detail
-=======
-                                "Failed to parse tool call arguments as valid JSON matching the schema.
-Reason: {}
-Please fix the JSON and retry calling the tool.", detail
->>>>>>> origin/jules-16694998170452612735-ddd41a45
                             ))
                         }
                     };
