@@ -12,6 +12,7 @@ rust_library(
         "payment_routing.rs",
         "prompt_caching.rs",
         "rate_limit.rs",
+        "cost_aggregator.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -31,6 +32,7 @@ rust_library(
         "@crates//:opentelemetry",
         "@crates//:hex",
         "@crates//:image",
+        "@crates//:sqlx",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
