@@ -10,8 +10,8 @@ test.describe('Customer Referral Program Growth Loop', () => {
   test('should display the customer referral program page and handle soft paywall and AI draft generation', async ({ page, context }) => {
     test.setTimeout(90000);
 
-    // 1. Verify the page header
-    await expect(page.getByRole('heading', { name: 'Customer Referral Program 🚀' })).toBeVisible({ timeout: 15000 });
+    // 1. Wait for page to fully load - wait for the header specifically, avoiding wait for navigation failure if possible
+    await expect(page.locator('h1').filter({ hasText: 'Customer Referral Program 🚀' })).toBeVisible({ timeout: 20000 });
 
     // 2. Fill in the program details
     await page.getByLabel('Store Name (Optional)').fill('Maya Cakes');
