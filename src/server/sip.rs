@@ -40,10 +40,11 @@ impl SipDB {
                     "UPDATE agent_missions
                      SET status = 'blocked',
                          mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2 AND tenant_id = $3"
+                         updated_at = $2
+                     WHERE id = $3 AND tenant_id = $4"
                 )
                 .bind(blockers)
+                .bind(chrono::Utc::now())
                 .bind(mission_id)
                 .bind(&self.org_id)
                 .execute(&mut *tx)
@@ -104,7 +105,8 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
+                sqlx::query("UPDATE agent_missions SET updated_at = $1 WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $2 ORDER BY created_at ASC LIMIT 10) RETURNING id")
+                    .bind(chrono::Utc::now())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -358,10 +360,13 @@ impl SipDB {
 
         let mut updated = false;
 
+        let now = chrono::Utc::now();
+
         if force_local {
-            let row = sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4 RETURNING id")
+            let row = sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5 RETURNING id")
                 .bind(&final_status)
                 .bind(payload)
+                .bind(now)
                 .bind(mission_id)
                 .bind(&self.org_id)
                 .fetch_optional(&mut **tx)
@@ -374,10 +379,12 @@ impl SipDB {
             // Either force_local was false, or the update found no row.
             // If it exists, ON CONFLICT will do nothing.
             // If force_local was false but row exists, it skips update but ON CONFLICT will skip insert.
-            sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT(id) DO NOTHING")
                 .bind(mission_id)
                 .bind(&final_status)
                 .bind(payload)
+                .bind(now)
+                .bind(now)
                 .bind(&self.org_id)
                 .execute(&mut **tx)
                 .await?;
