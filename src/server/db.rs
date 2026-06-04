@@ -173,7 +173,41 @@ impl DB {
             let key = if let Some(k) = database_url.split("key=").nth(1) {
                 k.split('&').next().unwrap_or("").to_string()
             } else {
-                std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| { panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode."); })
+                std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
+                    let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
+                    if secret_path.exists() {
+                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
+                            if !bytes.trim().is_empty() {
+                                return bytes.trim().to_string();
+                            }
+                        }
+                    }
+
+                    let mut key_bytes = [0u8; 32];
+                    use rand::RngCore;
+                    rand::thread_rng().fill_bytes(&mut key_bytes);
+                    let new_key = hex::encode(key_bytes);
+
+                    #[cfg(unix)]
+                    {
+                        use std::io::Write;
+                        use std::os::unix::fs::OpenOptionsExt;
+                        if let Ok(mut file) = std::fs::OpenOptions::new()
+                            .write(true)
+                            .create_new(true)
+                            .mode(0o600)
+                            .open(secret_path)
+                        {
+                            let _ = file.write_all(new_key.as_bytes());
+                        }
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::write(secret_path, &new_key);
+                    }
+
+                    new_key
+                })
             };
 
             if key.trim().is_empty() {

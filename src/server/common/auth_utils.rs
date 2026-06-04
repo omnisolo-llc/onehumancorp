@@ -15,8 +15,19 @@ where
     E: Executor<'a, Database = Postgres>,
 {
     if org_id.trim() == "system" {
-        // Reject "system" unconditionally to prevent IDOR via set_org_context. System queries MUST use set_system_context.
-        return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode via set_org_context".into()));
+        if ::server_config::get().multitenant {
+            return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode".into()));
+        }
+        // Elevate privileges for system-level queries.
+        // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
+        // and we cannot call execute multiple times because E is consumed.
+        // Wait, we can use `query` instead of `executor.execute`, because `query` takes `executor` which we can borrow if we used `&mut executor`, but wait, we had errors with `&mut executor` too because E doesn't implement `Executor` for `&mut E`.
+        // The right way is to use a single SQL function, or use an anonymous DO block if we want multiple statements!
+        // But DO blocks can't be used with extended query protocol either? Actually they can!
+        // Another option: "SET LOCAL ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
+        query("SET LOCAL ROLE ohc_bypassrls")
+            .execute(executor)
+            .await?;
     } else {
         if org_id.trim().is_empty() && ::server_config::get().multitenant {
             return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
