@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useTranslation, useCurrency } from '../../../lib/localizationStore';
+import { useTranslation, useCurrency, useLocalizationStore } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 
 // Offline storage helper for staff data
@@ -29,6 +29,8 @@ export default function TerminalPage() {
   const [offlineConversion, setOfflineConversion] = useState(false);
 
   // Background sync
+  const { syncFromBackend } = useLocalizationStore();
+  useEffect(() => { syncFromBackend(); }, [syncFromBackend]);
   useEffect(() => {
     const syncInterval = setInterval(async () => {
       const events = OfflineStore.getEvents();

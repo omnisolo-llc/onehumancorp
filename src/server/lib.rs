@@ -2574,6 +2574,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+    let api_localization_router = axum::Router::new()
+        .route("/translations/:locale", axum::routing::get(api::localization::get_translations))
+        .route("/fx_rates", axum::routing::get(api::localization::get_fx_rates))
+        .with_state(db.pool.clone());
+
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
@@ -3080,6 +3085,7 @@ async fn create_ui_bom_item_handler(
     );
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
+        .nest("/api/v1/localization", api_localization_router)
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();

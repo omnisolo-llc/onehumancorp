@@ -5,7 +5,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
-use crate::common::auth::Claims;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct I18nString {
@@ -21,18 +20,19 @@ pub struct FxRateResponse {
 }
 
 pub async fn get_translations(
-    claims: Claims,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     State(pool): State<Arc<PgPool>>,
     Path(locale): Path<String>,
 ) -> Result<Json<Vec<I18nString>>, String> {
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-    ::server_common::auth_utils::set_org_context(&mut *tx, &claims.organization_id).await.map_err(|e| e.to_string())?;
+    let org_id = claims.organization_id.unwrap_or_else(|| "".to_string());
+    ::server_common::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
 
     let rows = sqlx::query(
         "SELECT key, value FROM ohc_i18n_strings
          WHERE (tenant_id = $1 OR tenant_id = 'SYSTEM') AND locale = $2"
     )
-    .bind(&claims.organization_id)
+    .bind(&org_id)
     .bind(locale)
     .fetch_all(&mut *tx)
     .await

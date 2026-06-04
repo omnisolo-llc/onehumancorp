@@ -44,3 +44,22 @@ impl LocalizationHelper {
             .or(Ok("USD".to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_localization_helper() {
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
+        if !db_url.contains("test") {
+            return;
+        }
+        let pool = sqlx::PgPool::connect(&db_url).await.unwrap();
+        let helper = LocalizationHelper::new(Arc::new(pool));
+
+        let result = helper.get_tenant_currency("some-tenant").await;
+        // Since we fallback to USD, we can expect this to return USD on an empty DB
+        assert_eq!(result.unwrap(), "USD");
+    }
+}

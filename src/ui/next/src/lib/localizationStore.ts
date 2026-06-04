@@ -16,6 +16,7 @@ interface LocalizationState {
   setCurrency: (currency: string) => void;
   setTranslations: (translations: Record<string, string>) => void;
   setFxRates: (rates: FxRate[]) => void;
+  syncFromBackend: () => Promise<void>;
   t: (key: string) => string;
   convert: (amount: number, from: string, to: string) => { amount: number; rate: number; isOffline: boolean };
 }
@@ -27,10 +28,35 @@ export const useLocalizationStore = create<LocalizationState>()(
       currency: 'USD',
       translations: {},
       fxRates: [],
-      setLocale: (locale) => set({ locale }),
+      setLocale: (locale) => {
+        set({ locale });
+        get().syncFromBackend();
+      },
       setCurrency: (currency) => set({ currency }),
       setTranslations: (translations) => set({ translations }),
       setFxRates: (fxRates) => set({ fxRates }),
+      syncFromBackend: async () => {
+        if (!navigator.onLine) return;
+        try {
+          const locale = get().locale;
+          const [transRes, fxRes] = await Promise.all([
+            fetch(`/api/v1/localization/translations/${locale}`),
+            fetch('/api/v1/localization/fx_rates')
+          ]);
+          if (transRes.ok) {
+            const data: { key: string; value: string }[] = await transRes.json();
+            const map: Record<string, string> = {};
+            data.forEach(item => map[item.key] = item.value);
+            set({ translations: map });
+          }
+          if (fxRes.ok) {
+            const fxData: FxRate[] = await fxRes.json();
+            set({ fxRates: fxData });
+          }
+        } catch (e) {
+          console.error("Localization sync failed", e);
+        }
+      },
       t: (key) => get().translations[key] || key,
       convert: (amount, from, to) => {
         if (from === to) return { amount, rate: 1.0, isOffline: false };

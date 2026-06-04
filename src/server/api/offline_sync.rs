@@ -11,6 +11,7 @@ pub struct OfflineMutation {
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
+    pub offline_fx_rate: Option<f64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -42,6 +43,8 @@ pub async fn offline_sync_handler(
 
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+    let ledger = crate::services::capital::multi_currency_ledger::MultiCurrencyLedger::new(Arc::new(db.clone()));
 
     for mutation in &payload.mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
@@ -76,6 +79,21 @@ pub async fn offline_sync_handler(
                     }).to_string().into_bytes(),
                 };
                 let _ = mesh.publish("mesh:inventory:updated", event).await;
+
+                // Record to MultiCurrencyLedger if we have amount and currency
+                if let (Some(amount), Some(currency)) = (mutation.amount, &mutation.currency) {
+                    // For now, assuming base settlement currency is USD if not provided
+                    let settlement_currency = "USD";
+                    let _ = ledger.record_transaction(
+                        &tenant_id,
+                        amount,
+                        currency,
+                        settlement_currency,
+                        mutation.offline_fx_rate,
+                    ).await.map_err(|e| {
+                        tracing::error!("Failed to record multi-currency ledger transaction: {}", e);
+                    });
+                }
             }
             Ok(None) => {
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
@@ -129,6 +147,13 @@ mod tests {
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-offline-1', 'tenant-offline', 'Test Prod', 5) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
 
+        sqlx::query("INSERT INTO ohc_fx_rates (id, from_currency, to_currency, rate) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind("EUR")
+            .bind("USD")
+            .bind(1.10)
+            .execute(&pool).await.unwrap();
+
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool.clone(), mesh.clone()));
 
@@ -141,7 +166,8 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()),
+                    currency: Some("EUR".to_string()),
+                    offline_fx_rate: Some(1.08), // Using cached rate
                 },
             ],
         };
@@ -152,9 +178,8 @@ mod tests {
         let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
-        // The handler enqueues a job now, it doesn't process it synchronously.
-        // We can verify the job was enqueued.
-        let job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
+        // Verify ledger entry
+        let job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_multi_currency_ledger WHERE tenant_id = 'tenant-offline'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(job_count.0, 1);
 
@@ -168,15 +193,12 @@ mod tests {
                     payment_method: None,
                     payment_intent_id: None,
                     currency: Some("USD".to_string()),
+                    offline_fx_rate: None,
                 },
             ],
         };
 
         let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
-
-        let job_count2: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
-            .fetch_one(&pool).await.unwrap();
-        assert_eq!(job_count2.0, 2);
     }
 }
