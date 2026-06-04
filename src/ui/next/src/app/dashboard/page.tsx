@@ -411,6 +411,32 @@ export default function Dashboard() {
             </Link>
           </div>
         </section>
+
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="app-panel-title">Proactive Intelligence</h2>
+              <p className="app-list-subtitle">Review agent proposals to optimize your business.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1">
+             <Link href="/unified-agent-feed" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-4">
+                  <span className="flex h-3 w-3 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                  </span>
+               </div>
+              <div className="flex items-center gap-4 mb-2">
+                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform shadow-inner">🤖</div>
+                 <div>
+                    <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Unified Agent Feed</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">2 pending proposals require your review</p>
+                 </div>
+              </div>
+            </Link>
+          </div>
+        </section>
       </main>
     </AppShell>
   );
