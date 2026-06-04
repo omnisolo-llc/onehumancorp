@@ -599,18 +599,52 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
+                      disabled={!bio.trim()}
+                      onClick={async () => {
+                        if (!bio.trim()) return;
                         setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
+                        try {
+                          const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+                          const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+                          const res = await fetch('/api/onboarding/intake', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'X-Tenant-ID': tenantIdStr,
+                              'X-User-ID': userIdStr,
+                            },
+                            body: JSON.stringify({ description: bio })
+                          });
+
+                          const data = await res.json();
+                          if (res.ok) {
+                            setBusinessName(data.business_name || 'My Business');
+                            setBusinessType(data.business_type || 'Online Store');
+                            setProductName(data.initial_products?.[0]?.name || 'First Product');
+                            setProductPrice(data.initial_products?.[0]?.price || '10.00');
+
+                            // Let the debounce save it
+                            setTimeout(() => setStatus('live'), 2000);
+                          } else {
+                            console.error('Failed to generate storefront:', data);
+                            setStatus('idle');
+                            alert('Failed to generate storefront. Please try again.');
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          setStatus('idle');
+                          alert('Failed to generate storefront. Please try again.');
+                        }
                       }}
                     >
                       Generate Storefront
