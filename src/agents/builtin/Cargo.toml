@@ -3,14 +3,5 @@ name = "ohc_builtin_agent"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-tonic = { workspace = true }
-prost = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-tokio = { workspace = true }
-tracing = "0.1"
-async-trait = "0.1"
-
 [lib]
 path = "lib.rs"

@@ -192,9 +192,6 @@ describe('OnboardingWizard', () => {
     });
 
     // Fill in Account Setup fields
-    const nameInput2 = screen.getByPlaceholderText(/e.g. Maya Smith/i);
-    await user.type(nameInput2, 'Maya Smith');
-
     const emailInput = screen.getByPlaceholderText(/you@example.com/i);
     await user.type(emailInput, 'maya@example.com');
 
@@ -211,10 +208,6 @@ describe('OnboardingWizard', () => {
     });
 
     // Check that start API was called with the correct credentials
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"admin_name":"Maya Smith"'),
-    }));
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
       method: 'POST',
       body: expect.stringContaining('"admin_email":"maya@example.com"'),
@@ -411,8 +404,7 @@ describe('OnboardingWizard', () => {
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
-    // Checkbox might be hidden by sr-only or similar, use label text instead or get by id
-    const toggle = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const toggle = screen.getByRole('checkbox');
     expect(toggle).toBeChecked();
 
     // Select Sales Agent

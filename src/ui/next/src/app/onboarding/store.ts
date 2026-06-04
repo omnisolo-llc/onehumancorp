@@ -14,7 +14,6 @@ interface OnboardingState {
   domainChoice: string;
   firstProductName: string;
   firstProductPrice: string;
-  adminName: string;
   adminEmail: string;
   adminPassword: string;
   aiAgents: string[];
@@ -34,7 +33,6 @@ interface OnboardingState {
   setDomainChoice: (domain: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
-  setAdminName: (name: string) => void;
   setAdminEmail: (email: string) => void;
   setAdminPassword: (password: string) => void;
   setAiAgents: (agents: string[]) => void;
@@ -59,7 +57,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
-      adminName: '',
       adminEmail: '',
       adminPassword: '',
       aiAgents: [],
@@ -79,7 +76,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
-      setAdminName: (adminName) => set({ adminName }),
       setAdminEmail: (adminEmail) => set({ adminEmail }),
       setAdminPassword: (adminPassword) => set({ adminPassword }),
       setAiAgents: (aiAgents) => set({ aiAgents }),

@@ -13,33 +13,19 @@ export default function CheckoutPage() {
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [deliveryRadius] = useState(5); // Fixed for demo, would come from business settings
   const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
-  const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
   const checkDeliveryEligibility = async () => {
     if (!deliveryAddress) return;
     setIsCheckingDelivery(true);
-    setDeliveryError(null);
 
-    try {
-      const response = await fetch("/api/checkout/delivery-quote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deliveryAddress }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setDeliveryFee(data.fee);
-      } else {
-        setDeliveryFee(null);
-        setDeliveryError(data.message || "Delivery is not available.");
-      }
-    } catch (e) {
-      console.error("Failed to check delivery eligibility", e);
-      setDeliveryError("Error checking delivery.");
-    } finally {
+    // Simulate checking if address is within radius
+    setTimeout(() => {
+      // Mock DoorDash Drive API call
+      setDeliveryFee(8.50); // Flat fee from DoorDash
       setIsCheckingDelivery(false);
-    }
+    }, 800);
   };
 
   const [isSubscription, setIsSubscription] = useState(false);
@@ -72,12 +58,12 @@ export default function CheckoutPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Checkout</h1>
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <div className="p-6 shadow-sm flex flex-col gap-4 mb-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <div className="p-6 shadow-sm flex flex-col gap-4 mb-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <h2 className="text-lg font-semibold text-gray-900">Local Delivery</h2>
           <p className="text-sm text-gray-600">Enter your address to see if we can deliver to you via DoorDash Drive (flat fee).</p>
           <div className="flex gap-2">
@@ -96,7 +82,7 @@ export default function CheckoutPage() {
               {isCheckingDelivery ? 'Checking...' : 'Check'}
             </button>
           </div>
-          {deliveryFee !== null && !deliveryError && (
+          {deliveryFee !== null && (
             <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-between">
               <span className="text-sm text-indigo-900 font-medium flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -105,16 +91,11 @@ export default function CheckoutPage() {
               <span className="text-sm font-bold text-indigo-900">+${deliveryFee.toFixed(2)}</span>
             </div>
           )}
-          {deliveryError && (
-             <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg">
-              <span className="text-sm text-red-900 font-medium">{deliveryError}</span>
-            </div>
-          )}
         </div>
 
         <p className="text-gray-700 font-medium">Payment Details</p>
 
-        <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
           {deliveryFee !== null && (
             <div className="flex justify-between py-2 border-b border-gray-200">
@@ -133,13 +114,13 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
 
-          <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using saved wallet payment for frictionless vaulting.">
+          <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using Apple/Google Pay for frictionless vaulting.">
             <button
               onClick={() => handlePayment(true)}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
-              {isProcessing ? 'Processing...' : 'Subscribe Monthly (Wallet Pay)'}
+              {isProcessing ? 'Processing...' : 'Subscribe Monthly (Apple Pay)'}
             </button>
           </WithTooltip>
 

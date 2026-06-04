@@ -39,7 +39,6 @@ async fn handoff_mission_endpoint(
     match sip_db.handoff_mission(&id, &payload.blockers).await {
         Ok(_) => (StatusCode::OK, Json(HandoffResponse { success: true })).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to handoff mission : {:?}");
             tracing::error!("Failed to handoff mission {}: {:?}", id, e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(HandoffResponse { success: false })).into_response()
         }

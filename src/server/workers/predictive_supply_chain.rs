@@ -27,7 +27,6 @@ impl PredictiveSupplyChainWorker {
             loop {
                 interval.tick().await;
                 if let Err(e) = Self::run_analysis(&db).await {
-                    ::server_telemetry::record_error_signal("PredictiveSupplyChainWorker analysis error");
                     tracing::error!("PredictiveSupplyChainWorker analysis error: {}", e);
                 }
 
@@ -36,7 +35,6 @@ impl PredictiveSupplyChainWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            ::server_telemetry::record_error_signal("PredictiveSupplyChainWorker draft error");
                             tracing::error!("PredictiveSupplyChainWorker draft error: {}", e);
                             break;
                         }

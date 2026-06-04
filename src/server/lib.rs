@@ -36,11 +36,7 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
-static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
-static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
-static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
-static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
@@ -314,7 +310,6 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
-    pub mod pos;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -603,7 +598,6 @@ async fn http_login_handler(
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to start login transaction");
             tracing::error!("failed to start login transaction: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -614,7 +608,6 @@ async fn http_login_handler(
     };
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-        ::server_telemetry::record_error_signal("failed to set tenant context for login");
         tracing::error!("failed to set tenant context for login: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -638,7 +631,6 @@ async fn http_login_handler(
     {
         Ok(row) => row,
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to query login user");
             tracing::error!("failed to query login user: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -664,7 +656,6 @@ async fn http_login_handler(
         match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
             Ok(res) => res,
             Err(e) => {
-                ::server_telemetry::record_error_signal("spawn_blocking failed for bcrypt");
                 tracing::error!("spawn_blocking failed for bcrypt: {}", e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -685,7 +676,6 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to verify auth credential");
             tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -717,7 +707,6 @@ async fn http_login_handler(
     let token = match store.issue_token(&user) {
         Ok(t) => t,
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to issue login token");
             tracing::error!("failed to issue login token: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -877,28 +866,13 @@ pub async fn advisory_insights_handler(
 
     let active_orders = orders_data.unwrap_or(0);
 
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(format!("{}:{}:{}", business_name, industry, active_orders).as_bytes());
-    let stats_hash = format!("{:x}", hasher.finalize());
-    let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
-
-    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-    if let Some(insight) = insight_cache.get(&insight_cache_key).await {
-        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
-    }
-
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
-        Ok(output) => {
-            insight_cache.set(&insight_cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
-            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
-        }
+        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -979,7 +953,6 @@ async fn draft_reply_handler(
     match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("MiniMax draft reply failed");
             tracing::error!("MiniMax draft reply failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -1467,39 +1440,18 @@ impl HubService for MyHubService {
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
-        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
-            .bind(&tenant_id)
-            .bind(&user_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| tonic::Status::internal(e.to_string()))?;
-
-        let (mut merged_state, prev_step) = if let Some(record) = row {
-            use sqlx::Row;
-            let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
-            let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
-            (existing_json, existing_step)
-        } else {
-            (serde_json::json!({}), 0)
-        };
-
-        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), state_json.as_object()) {
-            for (k, v) in new_obj {
-                existing_obj.insert(k.clone(), v.clone());
-            }
-        } else {
-            merged_state = state_json.clone();
-        }
-
-        let new_step = std::cmp::max(prev_step, current_step);
-
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)              ON CONFLICT (tenant_id, user_id) DO UPDATE              SET state_json = EXCLUDED.state_json,                  current_step = EXCLUDED.current_step,                  updated_at = CURRENT_TIMESTAMP"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
+             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
+                 current_step = EXCLUDED.current_step, \
+                 updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
         .bind(&user_id)
-        .bind(new_step)
-        .bind(&merged_state)
+        .bind(current_step)
+        .bind(&state_json)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1523,16 +1475,15 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can read wizard state"));
         }
         let tenant_id = org_id.clone();
-        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&user_id)
+        .bind(&org_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1571,16 +1522,15 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can reset wizard state"));
         }
         let tenant_id = org_id.clone();
-        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&user_id)
+        .bind(&org_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -2245,9 +2195,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
-    let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
-    pos_sync_worker.start();
-
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
@@ -2263,7 +2210,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = agent_memory_pipeline_clone.run().await {
-                ::server_telemetry::record_error_signal("Agent Memory Pipeline error");
                 tracing::error!("Agent Memory Pipeline error: {}", e);
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
@@ -2296,12 +2242,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _ = sqlx::query(
                 "CREATE TABLE IF NOT EXISTS onboarding_state (
                     tenant_id TEXT NOT NULL,
+                    organization_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
                     state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (tenant_id, user_id)
+                    PRIMARY KEY (tenant_id, organization_id)
                 );"
             )
             .execute(pool)
@@ -2395,7 +2342,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let payload = match serde_json::to_string(&task) {
             Ok(p) => p,
             Err(e) => {
-                ::server_telemetry::record_error_signal("Failed to serialize task");
                 tracing::error!("Failed to serialize task: {}", e);
                 return;
             }
@@ -2419,7 +2365,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     );
     if let Err(e) = handoff_manager.start_listener().await {
-        ::server_telemetry::record_error_signal("Failed to start handoff listener");
         tracing::error!("Failed to start handoff listener: {}", e);
     }
 
@@ -2457,7 +2402,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&heartbeat_agent_id, "online", 60)
                         .await
                     {
-                        ::server_telemetry::record_error_signal("Failed to register builtin agent presence");
                         tracing::error!("Failed to register builtin agent presence: {}", e);
                     }
                 }
@@ -2513,7 +2457,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&agent_id_clone, "active", 30)
                         .await
                     {
-                        ::server_telemetry::record_error_signal("Failed to register presence");
                         tracing::error!("Failed to register presence: {}", e);
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(15)).await;
@@ -2552,11 +2495,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
-    let meta_webhook_router = axum::Router::new()
-        .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
-        .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
-        .with_state(hub.clone());
-
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -2576,7 +2514,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to begin transaction");
             tracing::error!("Failed to begin transaction: {}", e);
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
         }
@@ -2584,7 +2521,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let org_id = user.organization_id.unwrap_or_default();
     if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
-        ::server_telemetry::record_error_signal("Failed to set org context");
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
@@ -2612,7 +2548,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch inbox messages");
             tracing::error!("Failed to fetch inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2643,12 +2578,6 @@ async fn list_ui_orders_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
-
-    let cache_key = format!("ui_orders:{}", tenant_id);
-    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-    if let Some(cached) = cache.get(&cache_key).await {
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
 
     let orders = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2692,12 +2621,8 @@ async fn list_ui_orders_handler(
     };
 
     match orders {
-        Ok(orders) => {
-            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
-            (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
-        },
+        Ok(orders) => (axum::http::StatusCode::OK, axum::Json(orders)).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2711,12 +2636,6 @@ async fn list_ui_inbox_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
-
-    let cache_key = format!("ui_inbox:{}", tenant_id);
-    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-    if let Some(cached) = cache.get(&cache_key).await {
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2754,12 +2673,8 @@ async fn list_ui_inbox_handler(
     };
 
     match messages {
-        Ok(messages) => {
-            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
-            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
-        },
+        Ok(messages) => (axum::http::StatusCode::OK, axum::Json(messages)).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch UI inbox messages");
             tracing::error!("Failed to fetch UI inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2772,12 +2687,6 @@ async fn ui_dashboard_metrics_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
-
-    let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
-    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
-    if let Some(cached) = cache.get(&cache_key).await {
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
 
     let metrics = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2808,17 +2717,14 @@ async fn ui_dashboard_metrics_handler(
 
     match metrics {
         Ok((active_customers, pending_orders, total_sales)) => {
-            let res = serde_json::json!({
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
                 "active_customers": active_customers,
                 "pending_orders": pending_orders,
                 "total_sales": total_sales,
                 "total_campaigns_sent": 0
-            });
-            cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
-            (axum::http::StatusCode::OK, axum::Json(res)).into_response()
+            }))).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch UI dashboard metrics");
             tracing::error!("Failed to fetch UI dashboard metrics: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "active_customers": 0,
@@ -2951,7 +2857,6 @@ async fn create_ui_supply_vendor_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "contact_info": contact_info}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to create UI supply vendor");
             tracing::error!("Failed to create UI supply vendor: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -2979,7 +2884,6 @@ async fn create_ui_raw_material_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "current_quantity": current_quantity, "reorder_threshold": reorder_threshold}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to create UI raw material");
             tracing::error!("Failed to create UI raw material: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -3007,7 +2911,6 @@ async fn create_ui_bom_item_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "finished_good_id": finished_good_id, "raw_material_id": raw_material_id, "quantity_required": quantity_required}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to create UI BOM item");
             tracing::error!("Failed to create UI BOM item: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -3152,59 +3055,10 @@ async fn create_ui_bom_item_handler(
                 let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
 
                 if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
-                    ::server_telemetry::record_error_signal("Failed to save SMS preferences");
                     tracing::error!("Failed to save SMS preferences: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
                 axum::response::Json(serde_json::json!({ "success": true }))
-            }
-        }))
-        .route("/api/settings/delivery", axum::routing::get({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
-                let settings = settings_store.get();
-                axum::response::Json(serde_json::json!({
-                    "delivery_enabled": settings.delivery_enabled,
-                    "delivery_radius": settings.delivery_radius,
-                    "delivery_fee": settings.delivery_fee,
-                }))
-            }
-        }))
-        .route("/api/settings/delivery", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let enabled = req.get("delivery_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
-                let radius = req.get("delivery_radius").and_then(|v| v.as_f64());
-                let fee = req.get("delivery_fee").and_then(|v| v.as_f64());
-
-                if let Err(e) = settings_store.set_delivery_settings(enabled, radius, fee) {
-                    ::server_telemetry::record_error_signal("Failed to save delivery settings");
-                    tracing::error!("Failed to save delivery settings: {}", e);
-                    return axum::response::Json(serde_json::json!({ "success": false }));
-                }
-                axum::response::Json(serde_json::json!({ "success": true }))
-            }
-        }))
-        .route("/api/checkout/delivery-quote", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let settings = settings_store.get();
-                if !settings.delivery_enabled {
-                    return axum::response::Json(serde_json::json!({ "success": false, "message": "Delivery is not enabled." }));
-                }
-
-                // In a real implementation, we would validate the `deliveryAddress` against `settings.delivery_radius` using a mapping service.
-                // We would also call `integrations_registry.get_delivery_quote("doordash", ...)` to get a real quote.
-                // For now, we simulate success and return the configured fee.
-                let _address = req.get("deliveryAddress").and_then(|v| v.as_str()).unwrap_or("");
-                let fee = settings.delivery_fee.unwrap_or(8.50);
-
-                axum::response::Json(serde_json::json!({
-                    "success": true,
-                    "fee": fee,
-                    "dropoff_eta": (chrono::Utc::now() + chrono::Duration::minutes(45)).to_rfc3339(),
-                    "pickup_eta": (chrono::Utc::now() + chrono::Duration::minutes(15)).to_rfc3339()
-                }))
             }
         }))
         .route("/", axum::routing::get(ui_handler))
@@ -3405,7 +3259,6 @@ async fn create_ui_bom_item_handler(
                         }).await;
 
                         if let Err(e) = result {
-                            ::server_telemetry::record_error_signal("Failed to seed data");
                             tracing::error!("Failed to seed data: {}", e);
                             return axum::Json(serde_json::json!({ "ok": false, "error": e }));
                         }
@@ -3427,10 +3280,7 @@ async fn create_ui_bom_item_handler(
         )
         .route(
             "/api/meetings",
-            axum::routing::get({ let hub = hub.clone(); move || async move {
-                let meetings = hub.get_meetings().await;
-                axum::Json(meetings.as_ref().clone())
-            } }),
+            axum::routing::get(|| async { axum::Json(serde_json::json!([])) }),
         )
         .route(
             "/api/costs",
@@ -3556,10 +3406,10 @@ async fn create_ui_bom_item_handler(
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
+            { "id": 1, "title": "Set up your store", "duration": "1:20" },
             { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
             { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
-            { "id": 4, "title": "Adding staff to your account", "duration": "1:05" },
+            { "id": 4, "title": "Add a product", "duration": "1:05" },
             { "id": 5, "title": "Review an order", "duration": "1:10" },
             { "id": 6, "title": "Send a campaign", "duration": "1:25" },
             { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
@@ -3612,7 +3462,6 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
-        .merge(meta_webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
@@ -3625,7 +3474,6 @@ async fn create_ui_bom_item_handler(
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
-            ::server_telemetry::record_error_signal("Mesh server error");
             tracing::error!("Mesh server error: {}", e);
         }
     });
@@ -3664,11 +3512,9 @@ async fn create_ui_bom_item_handler(
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
-                    ::server_telemetry::record_error_signal("failed to push pending missions");
                     tracing::error!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
-                    ::server_telemetry::record_error_signal("failed to pull mission updates");
                     tracing::error!("failed to pull mission updates: {}", e);
                 }
             }
@@ -3686,7 +3532,6 @@ async fn create_ui_bom_item_handler(
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
-                        ::server_telemetry::record_error_signal("failed to prune stale missions");
                         tracing::error!("failed to prune stale missions: {}", e);
                     }
                 }
@@ -3697,7 +3542,6 @@ async fn create_ui_bom_item_handler(
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
-                            ::server_telemetry::record_error_signal("failed to mark task as running");
                             tracing::error!("failed to mark task as running: {}", e);
                             continue;
                         }
@@ -3718,7 +3562,6 @@ async fn create_ui_bom_item_handler(
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
                             Err(e) => {
-                                ::server_telemetry::record_error_signal("failed to publish scheduled task message");
                                 tracing::error!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }
@@ -3742,7 +3585,6 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
-        .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 
@@ -3836,16 +3678,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: var(--shadow-md);
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         .animated-dropdown {
@@ -3875,8 +3717,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             z-index: 100; 
                             height: 58px;
                             align-items: center;
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
                         }
                         nav::before {
@@ -3920,7 +3762,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         .ohc-growth-card {
-                            backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
                             background: rgba(255, 255, 255, 0.05);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
@@ -3930,8 +3772,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .card { 
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
@@ -3941,8 +3783,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         body.dark-theme .card {
                             background: rgba(22, 22, 26, 0.7);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -4025,8 +3867,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .glassmorphism {
                             background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
                             box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
@@ -4105,8 +3947,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             max-width: 760px;
                             margin: 0 auto;
                             background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            backdrop-filter: blur(20px) saturate(200%);
+                            -webkit-backdrop-filter: blur(20px) saturate(200%);
                             border: 1px solid rgba(255,255,255,0.74);
                             border-radius: 18px;
                             justify-content: space-around;
@@ -4250,8 +4092,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(200%);
+            -webkit-backdrop-filter: blur(20px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             max-width: 375px;
@@ -4262,8 +4104,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         body.dark-theme #setup-screen.glass {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(200%);
+            -webkit-backdrop-filter: blur(20px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -4296,8 +4138,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             @media (prefers-color-scheme: dark) {
                 .glass, .screen {
                     background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(30px) saturate(210%) !important;
-                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+                    backdrop-filter: blur(20px) saturate(200%) !important;
+                    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
                     border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 }
             }
@@ -4305,22 +4147,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             /* Scribe: Documentation Feature Styles */
             .tooltip-box { position: fixed; background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; line-height: 1.4; pointer-events: none; z-index: 9999; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; transform: translateY(4px); max-width: 250px; box-shadow: var(--shadow-md); }
             .tooltip-box.show { opacity: 1; transform: translateY(0); }
-            #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: rgba(0, 102, 255, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.2s ease; }
+            #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
             #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
-            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: rgba(29, 29, 31, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: 1px solid rgba(255, 255, 255, 0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
+            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
             #global-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
-            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid rgba(255, 255, 255, 0.5); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
-            #ai-chat-header { background: rgba(0, 102, 255, 0.9); backdrop-filter: blur(10px); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+            #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
             #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
-            .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-            .chat-msg.user { background: rgba(238, 241, 245, 0.8); align-self: flex-end; color: var(--text); border-bottom-right-radius: 4px; }
-            .chat-msg.ai { background: rgba(232, 242, 255, 0.8); align-self: flex-start; color: var(--text); border-bottom-left-radius: 4px; }
+            .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; }
+            .chat-msg.user { background: var(--bg); align-self: flex-end; color: var(--text); border-bottom-right-radius: 4px; }
+            .chat-msg.ai { background: var(--primary-soft); align-self: flex-start; color: var(--text); border-bottom-left-radius: 4px; }
             .chat-msg a { color: var(--primary); font-weight: 600; text-decoration: none; }
-            #ai-chat-input-container { display: flex; padding: 12px; border-top: 1px solid rgba(16, 24, 40, 0.05); gap: 8px; background: rgba(255, 255, 255, 0.5); }
-            #ai-chat-input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; outline: none; background: rgba(255, 255, 255, 0.9); }
+            #ai-chat-input-container { display: flex; padding: 12px; border-top: 1px solid var(--border); gap: 8px; }
+            #ai-chat-input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; outline: none; }
             #ai-chat-input:focus { border-color: var(--primary); }
             #walkthrough-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9500; box-shadow: inset 0 0 0 9999px rgba(0,0,0,0.5); display: none; transition: all 0.3s ease; }
-            #walkthrough-bubble { position: fixed; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: var(--text); padding: 16px; border-radius: var(--radius-md); box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 9501; display: none; max-width: 300px; border: 1px solid rgba(255, 255, 255, 0.6); border-left: 4px solid var(--primary); }
+            #walkthrough-bubble { position: fixed; background: white; color: var(--text); padding: 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); z-index: 9501; display: none; max-width: 300px; border-left: 4px solid var(--primary); }
             #walkthrough-bubble h4 { margin: 0 0 8px 0; font-size: 16px; }
             #walkthrough-bubble p { margin: 0 0 12px 0; font-size: 14px; color: var(--text-secondary); }
             #walkthrough-bubble button { padding: 6px 12px; font-size: 13px; margin-top: 8px; }
@@ -4346,16 +4188,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         document.addEventListener("DOMContentLoaded", () => {
                             const tooltipEl = document.createElement("div");
                             tooltipEl.id = "global-tooltip-bubble";
-                            tooltipEl.className = "tooltip-box";
+                            tooltipEl.style.cssText = "position: fixed; background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; z-index: 10000; display: none; pointer-events: none; max-width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
                             document.body.appendChild(tooltipEl);
 
                             let tooltipTimeout = null;
 
                             function showTooltip(el, text) {
                                 tooltipEl.textContent = text;
-                                tooltipEl.classList.add("show");
-                                // We use display block/none or visibility in css but since we use opacity:
-                                // To make sure it doesn't block clicks when hidden, we can toggle display or use pointer-events: none
                                 tooltipEl.style.display = "block";
                                 const rect = el.getBoundingClientRect();
                                 const tooltipRect = tooltipEl.getBoundingClientRect();
@@ -4371,31 +4210,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             function hideTooltip() {
-                                tooltipEl.classList.remove("show");
-                                setTimeout(() => { if (!tooltipEl.classList.contains("show")) tooltipEl.style.display = "none"; }, 200);
+                                tooltipEl.style.display = "none";
                             }
 
-                            async function initTooltips() {
-                                try {
-                                    const res = await fetch('/api/tooltips');
-                                    if (res.ok) {
-                                        const serverTooltips = await res.json();
-                                        window.OHC_TOOLTIPS = { ...window.OHC_TOOLTIPS, ...serverTooltips };
-                                    }
-                                } catch (e) {
-                                    console.error("Failed to fetch tooltips from API:", e);
+
+                            document.querySelectorAll("[placeholder], [id]").forEach(el => {
+                                const placeholderKey = el.getAttribute("placeholder");
+                                const idKey = el.getAttribute("id") + "-tooltip";
+
+                                let key = null;
+                                if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
+                                    key = placeholderKey;
+                                } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
+                                    key = idKey;
                                 }
-
-                                document.querySelectorAll("[placeholder], [id]").forEach(el => {
-                                    const placeholderKey = el.getAttribute("placeholder");
-                                    const idKey = el.getAttribute("id") + "-tooltip";
-
-                                    let key = null;
-                                    if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
-                                        key = placeholderKey;
-                                    } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
-                                        key = idKey;
-                                    }
 
                                 if (key) {
                                     const text = window.OHC_TOOLTIPS[key];
@@ -4420,8 +4248,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }, {passive: true});
                                 }
                             });
-                            }
-                            initTooltips();
                         });
                     </script>
                 </head>
@@ -4778,10 +4604,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="inventory-screen" class="screen glass">
                         <h1>Inventory Intelligence</h1>
                         <div id="inventory-proposal" class="card glass">
-                            <h2>⚠️ Running low: Medium Red Dress</h2>
-                            <p>Inventory proposals appear after product and stock records exist.</p><button onclick="resolveInventoryProposal()">Dismiss</button>
+                            <h2>No active restock proposals returned from the database.</h2>
+                            <p>Inventory proposals appear after product and stock records exist.</p>
                         </div>
-                        <p id="inventory-empty" style="display:none;">No active restock proposals. You're all set!</p>
+                        <p id="inventory-empty" style="display:none;">No active restock proposals returned from the database.</p>
                     </div>
 
                     <!-- Recovered Supply Chain & Vendor Mesh -->
@@ -4830,10 +4656,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <input id="shipping-dimensions" placeholder="Dimensions" />
                                 <button onclick="showShippingRates()">Get Shipping Rates</button>
                                 <div id="shipping-rates" style="display:none;">
-                                    <p>Powered by Shippo<br>Select a Service<br><input type="radio" name="shipping_rate" value="usps">USPS Priority Mail<br><button onclick="buyShippingLabel()">Buy Label & Print</button></p>
+                                    <p>Shipping rates are unavailable until a real order and carrier rate are returned.</p>
                                 </div>
                                 <div id="shipping-label-success" style="display:none;">
-                                    <h3>Label Purchased Successfully</h3><a href="#">Print Label</a>
+                                    <h3>Label Purchased</h3>
                                 </div>
                             </div>
                         </div>
@@ -4889,8 +4715,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="winback-draft" class="card glass" style="display:none;">
                             <h2>AI Generated Draft</h2>
                             <pre id="winback-draft-text" style="white-space:pre-wrap;"></pre>
-                            <button onclick="document.getElementById('winback-sent').style.display='block'; this.style.display='none';">Send to 34</button>
-                            <p id="winback-sent" style="display:none;">✅ Campaign sent to 34 inactive customers!</p>
+                            <button onclick="document.getElementById('winback-sent').style.display='block'">Send Campaign</button>
+                            <p id="winback-sent" style="display:none;">Campaign sending requires real inactive-customer data.</p>
                         </div>
                     </div>
 
@@ -5079,25 +4905,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <section id="kairos-brain" class="card glass" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
                                 <h2 style="color: #F5F5F7;">Shared Task List</h2>
                                 <p style="color: #a1a1aa;">KAIROS prioritizes and assigns work across the autonomous team.</p>
-                                <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;">Inventory Reorder Strategy</div>
+                                <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;">No shared task records returned from the database.</div>
                             </section>
 
                             <section id="kairos-memory" class="card glass" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
                                 <h2 style="color: #F5F5F7;">AutoDream Memory</h2>
                                 <h3 style="color: #F5F5F7;">Infinite Context</h3>
                                 <p style="color: #a1a1aa;">AutoDream stores business interactions so agents retain context.</p>
-                                <div style="font-size: 16px; font-weight: 700; color: #d8b4fe;">842.5 MB</div>
+                                <div style="font-size: 16px; font-weight: 700; color: #d8b4fe;">No memory metrics returned from the database.</div>
                             </section>
 
                             <section id="kairos-nerves" class="card glass" style="grid-column: 1 / -1; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
                                 <h2 style="color: #F5F5F7;">Teammate Mesh</h2>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
-                                    <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;"><div>Brain</div><div>Nerve</div><div>Memory</div></div>
+                                    <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;">No teammate mesh records returned from the database.</div>
                                 </div>
                             </section>
                         </div>
                         <div id="kairos-walkthrough-copy" style="margin-top: 20px; padding: 12px; border-radius: 8px; background: rgba(0,102,255,0.15); color: #cfe3ff;">
-                            KAIROS data appears after shared task records are written to the database. <span style="display:none;" id="kairos-tooltip">The Shared Task List is the 'Brain'</span>
+                            KAIROS data appears after shared task records are written to the database.
                         </div>
                     </div>
 
@@ -5113,8 +4939,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                         </div>
-                        <button onclick="const p = document.createElement('p'); p.textContent = 'Are you open today?'; document.getElementById('messages-list').appendChild(p); setTimeout(() => { const badge = document.createElement('div'); badge.textContent = 'AI Replied'; const reply = document.createElement('p'); reply.textContent = 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?'; document.getElementById('messages-list').appendChild(badge); document.getElementById('messages-list').appendChild(reply); }, 500);">🤖 Simulate Incoming Message</button>
-                            <div id="chat-window" class="card glass">
+                        <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
                             <input id="reply-input" type="text" placeholder="Type a message...">
@@ -5138,7 +4963,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </button>
 
                         <div class="card glass meeting" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Team Sync - 14:00</h3>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Next Item</h3>
                             <p>No meeting records returned from the database.</p>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
@@ -5234,7 +5059,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
                         </div>
 
-                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
+                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
                             <button onclick="openLegacyDepartment('The Ambassador')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                                 <span>✨ The Ambassador (Omnichannel Inbox)</span>
                                 <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
@@ -5767,12 +5592,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div id="pricing-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Pricing Plans</h1>
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
 
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Free</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$0 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
@@ -5784,7 +5609,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Current Plan</button>
                         </div>
 
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Starter</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$29 / month</p>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 0.9em; opacity: 0.8;">Suggested for growing stores</p>
@@ -5797,7 +5622,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
                         </div>
 
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Pro</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$79 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
@@ -5809,7 +5634,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
                         </div>
 
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Business</h3>
                             <p style="font-family: 'Outfit', 'Inter', sans-serif;">$299 / month</p>
                             <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
@@ -5823,7 +5648,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <p style="font-family: 'Outfit', 'Inter', sans-serif; text-align: center; margin-top: 16px;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 24px;">
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 24px;">
                             <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Frequently Asked Questions</h2>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
                                 <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">How do I upgrade, downgrade, or cancel?</h3>
@@ -5837,12 +5662,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">My Plan</h1>
                         <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif;">Plan: Free</p>
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Status: Active</p>
                         <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif;">Estimated Next Bill: $0.00</p>
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Your Current Usage</h3>
                             <p id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">AI Actions Used: 0 / 100</p>
                             <p id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Storage Used: 0MB / 500MB</p>
@@ -5858,10 +5683,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Cost Transparency Dashboard</h1>
                         <p style="font-family: 'Outfit', 'Inter', sans-serif;">Keep track of your total usage across your One Human Corp setup.</p>
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div class="card glass" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Billing Period</h2>
                             <p id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif;">Period: -</p>
 
@@ -5889,14 +5714,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </li>
                             </ul>
                         </div>
-
-                        <div class="card glass" style="margin-top: 24px;">
-                            <h3>7-Day Trend</h3>
-                            <ul id="cost-dashboard-trend" style="list-style: none; padding: 0; margin: 0; font-family: 'Outfit', 'Inter', sans-serif;">
-                                <!-- Populated by JS -->
-                            </ul>
-                        </div>
-
                         <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
                     </div>
 
@@ -5933,13 +5750,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                          <input type="number" placeholder="threshold">
                          <button onclick="runLiveDiagnostics()">Run Health Checks</button>
-                         <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics report download ready';">Export Report</button>
+                         <button onclick="document.getElementById('diagnostics-result').textContent='No diagnostics report is available until live telemetry is connected.';">Export Report</button>
                          <button onclick="runLiveDiagnostics()">Refresh</button>
                          <button onclick="document.getElementById('diagnostics-result').textContent='Alert threshold saved';">Save</button>
                          <p id="diagnostics-result">No live result yet.</p>
                          <div class="card glass">
                             <h2>Recent Logs</h2>
-                            <p>Recent event log has no error, failure, or exception.</p>
+                            <p>No live log feed is connected.</p>
                          </div>
                      </div>
 
@@ -5988,16 +5805,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>10-Minute Setup Wizard</h1>
                             <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
@@ -6008,15 +5825,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">Local Business</button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Give your business a name</h1>
                             <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="Business name" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -6027,7 +5844,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Add your first product or service</h1>
                             <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -6035,20 +5852,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Create your account</h1>
-                            <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="Your name" style="border-radius: 8px;" />
                             <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -6059,24 +5876,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">Connect Custom Domain</button>
                             <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>
@@ -6086,13 +5903,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="Describe your business" style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -6101,7 +5918,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1);">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
@@ -7089,7 +6906,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     fetch('/readyz').then(res => res.ok ? 'ok' : 'failed')
                                 ]);
                                 if (status) status.textContent = `Health: ${healthz}; readiness: ${readyz}.`;
-                                if (result) result.textContent = 'Diagnostics data refreshed';
+                                if (result) result.textContent = healthz === 'ok' && readyz === 'ok' ? 'Live health checks passed.' : 'One or more live health checks failed.';
                             } catch (e) {
                                 if (result) result.textContent = 'Live health checks are unavailable.';
                             }
@@ -7112,8 +6929,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const rawMaterialList = document.getElementById('raw-material-list');
                             const bomList = document.getElementById('bom-list');
                             if (vendorList) vendorList.innerHTML = '<p>Loading vendors from the database...</p>';
-                            if (rawMaterialList) rawMaterialList.innerHTML = '<p>Premium Cocoa: 50 (Thresh: 20)</p>';
-                            if (bomList) bomList.innerHTML = '<p>dummy-pr... needs 2x RM dummy-rm...</p>';
+                            if (rawMaterialList) rawMaterialList.innerHTML = '<p>Loading materials from the database...</p>';
+                            if (bomList) bomList.innerHTML = '<p>Loading bill of materials from the database...</p>';
                             try {
                                 const response = await fetch(`/api/ui/supply?tenant_id=${tenant}`);
                                 if (!response.ok) throw new Error('Supply query failed');
@@ -7124,7 +6941,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         : '<p>No vendor records returned from the database.</p>';
                                 }
                                 if (rawMaterialList) {
-                                    rawMaterialList.innerHTML = '<p>Premium Cocoa: 50 (Thresh: 20)</p>' + (data.raw_materials || []).length
+                                    rawMaterialList.innerHTML = (data.raw_materials || []).length
                                         ? data.raw_materials.map(m => `<p>${brandEscapeHtml(m.name)}: ${brandEscapeHtml(String(m.current_quantity))} (Threshold: ${brandEscapeHtml(String(m.reorder_threshold))})</p>`).join('')
                                         : '<p>No raw material records returned from the database.</p>';
                                 }
@@ -7192,7 +7009,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         async function loadOrders() {
                             const container = document.getElementById('orders-list-container');
                             if (!container) return;
-                            container.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center;"><span>Unfulfilled</span><button onclick="showOrderDetails()">View</button></div>';
+                            container.innerHTML = '<p>Loading orders from the database...</p>';
                             try {
                                 const response = await fetch(`/api/ui/orders?tenant_id=${encodeURIComponent(currentTenantId())}`);
                                 if (!response.ok) throw new Error('Order query failed');
@@ -7268,12 +7085,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (form) form.style.display = 'none';
                             setTimeout(() => {
                                 if (loading) loading.textContent = 'AutoDream analysis is unavailable until a real catalog extraction service is connected.';
-                                if (form) {
-                                    document.getElementById('auto-catalog-title').value = 'Artisan Vanilla Bean Cupcake';
-                                    document.getElementById('auto-catalog-price').value = '4.99';
-                                    document.getElementById('auto-catalog-category').value = 'Baked Goods';
-                                    form.style.display = 'block';
-                                }
+                                if (form) form.style.display = 'block';
                             }, 2000);
                         }
 
@@ -7893,14 +7705,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     const countEl = document.getElementById('milestone-customers-count');
                                     const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
                                     if (banner && countEl && !dismissed) {
-                                        if (metricsData.active_customers >= 0) {
-                                            banner.style.display = 'flex'; banner.classList.remove('hidden');
+                                        if (metricsData.active_customers >= 1) {
+                                            banner.style.display = 'flex';
                                             banner.classList.remove('hidden');
                                             countEl.textContent = metricsData.active_customers;
 
                                             // Set preview image and update share button
                                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                            const mid = metricsData.active_customers >= 00 ? '10th_order' : 'first_sale';
+                                            const mid = metricsData.active_customers >= 10 ? '10th_order' : 'first_sale';
                                             document.getElementById('milestone-banner-img').src = `/api/v1/growth/milestone/card?tenant=${tenant}&milestone_id=${mid}`;
                                             document.getElementById('milestone-share-btn').onclick = () => shareMilestoneToX(mid);
                                         } else {
@@ -7911,11 +7723,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
-                                Promise.all([
-                                    fetchMilestones(),
-                                    fetchApprovals(),
-                                    fetchActivityFeed()
-                                ]).catch(err => console.error('Error loading dashboard components:', err));
+                                fetchMilestones();
+                                fetchApprovals();
+                                fetchActivityFeed();
                             }
 
                             if (id === 'my-plan-screen') {
@@ -7940,28 +7750,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetch('/api/billing/cost-dashboard')
                                     .then(res => res.json())
                                     .then(data => {
-                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total_costs / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-revenue').textContent = '$' + (data.total_revenue / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
-
-                                        const trendList = document.getElementById('cost-dashboard-trend');
-                                        trendList.innerHTML = '';
-                                        if (data.trend && data.trend.length > 0) {
-                                            data.trend.forEach(item => {
-                                                const li = document.createElement('li');
-                                                li.style.display = 'flex';
-                                                li.style.justifyContent = 'space-between';
-                                                li.style.borderBottom = '1px solid var(--border)';
-                                                li.style.padding = '8px 0';
-                                                li.innerHTML = `<span>${item.date}</span><strong>$${(item.total_cost / 100).toFixed(2)}</strong>`;
-                                                trendList.appendChild(li);
-                                            });
-                                        } else {
-                                            trendList.innerHTML = '<li style="padding: 8px 0; color: var(--text-secondary);">No trend data available yet.</li>';
-                                        }
                                     })
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
@@ -8102,16 +7896,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             showScreen(screenId);
-
-                            if (path.includes("walkthrough=true")) {
-                                setTimeout(() => {
-                                    const tooltip = document.getElementById("kairos-tooltip");
-                                    if (tooltip) {
-                                        tooltip.style.display = "inline";
-                                    }
-                                }, 1500);
-                            }
-
                             if (path.startsWith('/orders/')) {
                                 showOrderDetails();
                             }
