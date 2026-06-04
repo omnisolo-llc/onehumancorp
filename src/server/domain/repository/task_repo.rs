@@ -43,7 +43,6 @@ impl TaskRepository {
                 .map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
-                let _lock = self.sqlite_mutex.lock().await;
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
@@ -86,7 +85,6 @@ impl TaskRepository {
                 .map_err(|e| e.to_string())?
             }
             DbStore::Sqlite(sqlite_pool) => {
-                let _lock = self.sqlite_mutex.lock().await;
                 sqlx::query_as::<_, Task>(
                     r#"
                     SELECT id, organization_id, parent_task_id, title, description,
@@ -396,9 +394,22 @@ mod tests {
         .await
         .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
+
+        // create table in pg test pool if not exists (although normally migrations would be run)
+        let _ = sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS task_dependencies (
+                task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
+                PRIMARY KEY (task_id, depends_on_task_id)
+            );
+            "#
+        )
+        .execute(&pg_pool)
+        .await;
 
         Arc::new(DB {
             pool: pg_pool,
