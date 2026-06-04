@@ -181,6 +181,10 @@ echo "[playwright] Starting E2E infrastructure..."
 
 
 
+
+
+
+
 echo "[playwright] Pre-pulling docker images with retries..."
 for i in {1..3}; do docker pull pgvector/pgvector:pg16 >/dev/null 2>&1 && break || sleep 2; done
 for i in {1..3}; do docker pull valkey/valkey:8-alpine >/dev/null 2>&1 && break || sleep 2; done
