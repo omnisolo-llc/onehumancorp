@@ -234,35 +234,9 @@ export default function OnboardingWizard() {
   };
 
   const handleStartOnboarding = async () => {
-    const errors: Record<string, string> = {};
-    if (!adminName.trim()) {
-      errors.adminName = 'Admin Name is required';
-    }
-    if (!adminEmail.trim()) {
-      errors.adminEmail = 'Admin Email is required';
-    } else if (!/^\S+@\S+\.\S+$/.test(adminEmail)) {
-      errors.adminEmail = 'Invalid email format';
-    }
-    if (!adminPassword.trim()) {
-      errors.adminPassword = 'Password is required';
-    } else if (adminPassword.length < 8) {
-      errors.adminPassword = 'Password must be at least 8 characters';
-    }
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors({});
     setIsLoading(true);
     setError('');
     setStep(4); // Go to loading screen
-    const safetyTimeout = setTimeout(() => {
-      // Fallback if API fails to respond in time
-      setStartResult({ message: 'Fallback: Your business has been successfully launched.' });
-      setStep(5);
-      setIsLoading(false);
-    }, 3000);
-
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -293,13 +267,11 @@ export default function OnboardingWizard() {
         })
       });
 
-      const result = await startRes.json().catch(() => ({}));
+      const result = await startRes.json();
       if (!startRes.ok) {
-        clearTimeout(safetyTimeout);
         throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
-      clearTimeout(safetyTimeout);
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       setStep(5); // Go to "You're Live" screen
@@ -307,7 +279,6 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      clearTimeout(safetyTimeout);
       setStep(3); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
@@ -774,9 +745,8 @@ export default function OnboardingWizard() {
                         value={adminName}
                         onChange={(e) => setAdminName(e.target.value)}
                         placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
-                      {validationErrors.adminName && <p className="text-red-500 text-xs mt-1">{validationErrors.adminName}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
@@ -785,9 +755,8 @@ export default function OnboardingWizard() {
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
-                      {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
@@ -796,9 +765,8 @@ export default function OnboardingWizard() {
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
-                      {validationErrors.adminPassword && <p className="text-red-500 text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>
                   </div>
                 </div>

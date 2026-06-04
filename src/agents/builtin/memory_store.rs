@@ -762,7 +762,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> { None }
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
 pub struct PersistentMemoryStore {
@@ -877,7 +877,7 @@ impl Anthropic3TierMemoryStore {
 }
 
 #[async_trait]
-impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
+impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
         let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
@@ -981,7 +981,7 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         }
         Ok(results)
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
     }
 }

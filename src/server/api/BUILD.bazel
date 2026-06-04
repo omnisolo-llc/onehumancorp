@@ -62,7 +62,6 @@ rust_library(
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -160,7 +159,6 @@ rust_test(
     size = "large",
     crate = ":server_api",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     env = {
         "RUST_TEST_THREADS": "1",
     },

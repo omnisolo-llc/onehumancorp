@@ -1,15 +1,4 @@
 {
-  "status": "failed",
-<<<<<<< Updated upstream
+  "status": "passed",
   "failedTests": []
-=======
-  "failedTests": [
-    "4a2c21da111d788eee04-f353086d3ea62d245a61",
-    "85abecbad70f223e4ab5-9fa6a6078809f8522e7f",
-    "85abecbad70f223e4ab5-55eda4a2fab01c6c0ad7",
-    "85abecbad70f223e4ab5-4d1bd24ff584dfe466a0",
-    "85abecbad70f223e4ab5-61a82525f1e8ff956b8a",
-    "85abecbad70f223e4ab5-7d2b2bf823134984ecd1"
-  ]
->>>>>>> Stashed changes
 }

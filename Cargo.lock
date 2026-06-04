@@ -5590,7 +5590,6 @@ dependencies = [
  "server_integrations_convertkit",
  "server_integrations_core",
  "server_integrations_daily",
- "server_integrations_doordash",
  "server_integrations_easypost",
  "server_integrations_google_calendar",
  "server_integrations_jitsi",
@@ -5645,112 +5644,13 @@ dependencies = [
 name = "ohc_builtin_agent"
 version = "0.1.0"
 dependencies = [
- "async-nats",
- "async-recursion",
  "async-trait",
- "axum 0.8.9",
- "base64 0.22.1",
- "chrono",
- "dashmap 5.5.3",
- "flate2",
- "futures",
- "futures-util",
- "glob",
- "hex",
- "hmac",
- "ohc_builtin_agent_core",
- "ohc_builtin_agent_llm",
- "ohc_builtin_agent_tools",
- "once_cell",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
  "prost",
- "qrcode",
- "rand 0.8.6",
- "redis",
- "regex",
- "reqwest 0.12.28",
  "serde",
  "serde_json",
- "server_harness",
- "server_ohc",
- "server_pricing",
- "server_telemetry",
- "sha2",
- "sqlx",
- "temp-env",
- "tempfile",
  "tokio",
- "tokio-stream",
  "tonic",
- "tower 0.4.13",
  "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "tree-sitter",
- "tree-sitter-bash",
- "urlencoding",
- "uuid",
-]
-
-[[package]]
-name = "ohc_builtin_agent_core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "futures",
- "hmac",
- "once_cell",
- "regex",
- "serde",
- "serde_json",
- "sha2",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "ohc_builtin_agent_llm"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "ohc_builtin_agent_core",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "ohc_builtin_agent_tools"
-version = "0.1.0"
-dependencies = [
- "async-recursion",
- "async-trait",
- "base64 0.22.1",
- "chrono",
- "dashmap 5.5.3",
- "glob",
- "ohc_builtin_agent_core",
- "once_cell",
- "qrcode",
- "regex",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_ohc",
- "sqlx",
- "temp-env",
- "tempfile",
- "tokio",
- "tracing",
- "urlencoding",
- "uuid",
 ]
 
 [[package]]
@@ -8337,28 +8237,6 @@ dependencies = [
 [[package]]
 name = "server_auth"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "axum 0.8.9",
- "bcrypt",
- "chrono",
- "hex",
- "hmac",
- "jsonwebtoken",
- "rand 0.8.6",
- "redis",
- "serde",
- "serde_json",
- "server_common",
- "server_config",
- "server_ohc",
- "server_oidc",
- "sha2",
- "sqlx",
- "tokio",
- "tonic",
- "tracing",
-]
 
 [[package]]
 name = "server_common"
@@ -8405,138 +8283,38 @@ dependencies = [
 [[package]]
 name = "server_integrations_acuity"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_alipay"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_ayrshare"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_buffer"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_cal_com"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_calendly"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_chatwoot"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_chromadb"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "temp-env",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_convertkit"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_core"
@@ -8551,209 +8329,56 @@ dependencies = [
  "serde",
  "serde_json",
  "server_integrations_core",
- "sqlx",
  "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "server_integrations_doordash"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
 ]
 
 [[package]]
 name = "server_integrations_easypost"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_google_calendar"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_jitsi"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_listmonk"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_mailchimp"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_manychat"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_mcp_config_sync"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_mercadopago"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_messagebird"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_meta"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_nats"
 version = "0.1.0"
-dependencies = [
- "async-nats",
- "async-trait",
- "futures",
- "opentelemetry",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_nylas"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_pubsub"
@@ -8762,211 +8387,66 @@ dependencies = [
  "async-trait",
  "ohc_builtin_agent",
  "prost",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
  "server_ohc",
- "sqlx",
- "tokio",
- "tracing",
  "uuid",
 ]
 
 [[package]]
 name = "server_integrations_razorpay"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_resend"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_restic"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "temp-env",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_sendgrid"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_shipengine"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_shippo"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_stripe"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_common",
- "server_integrations_core",
- "server_integrations_mercadopago",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_task_scheduler"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "temp-env",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_teams"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_twilio"
 version = "0.1.0"
-dependencies = [
- "async-trait",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "server_integrations_zoom"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "reqwest 0.12.28",
- "serde",
  "serde_json",
  "server_integrations_core",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
 ]
 
 [[package]]
 name = "server_ohc"
 version = "0.1.0"
-dependencies = [
- "prost",
- "serde",
- "tonic",
- "tonic-build",
-]
 
 [[package]]
 name = "server_oidc"
 version = "0.1.0"
-dependencies = [
- "chrono",
- "jsonwebtoken",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_common",
- "server_telemetry",
- "temp-env",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "server_pricing"
@@ -9013,22 +8493,6 @@ dependencies = [
 [[package]]
 name = "server_utils"
 version = "0.1.0"
-dependencies = [
- "axum 0.8.9",
- "chrono",
- "flate2",
- "rand 0.8.6",
- "redis",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_auth",
- "server_common",
- "server_config",
- "server_pricing",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "servo_arc"

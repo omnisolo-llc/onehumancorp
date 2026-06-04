@@ -84,15 +84,6 @@ for candidate in "src/server/server" "../_main/src/server/server"; do
   fi
 done
 
-# Resolve built-in agent binary path for workflow-spawned agents.
-AGENT_BIN=""
-for candidate in "src/agents/builtin/ohc-builtin-agent" "../_main/src/agents/builtin/ohc-builtin-agent"; do
-  if [[ -x "$candidate" ]]; then
-    AGENT_BIN="$(realpath "$candidate")"
-    break
-  fi
-done
-
 export HOME="${HOME:-$TEST_TMPDIR/home}"
 mkdir -p "$HOME"
 
@@ -247,26 +238,6 @@ if [[ -z "$SERVER_BIN" ]]; then
   done
 fi
 
-if [[ -z "$AGENT_BIN" ]]; then
-  for candidate in "$workspace_root/bazel-bin/src/agents/builtin/ohc-builtin-agent" "$workspace_root/src/agents/builtin/ohc-builtin-agent"; do
-    if [[ -x "$candidate" ]]; then
-      AGENT_BIN="$candidate"
-      break
-    fi
-  done
-fi
-
-if [[ -n "${MINIMAX_API_KEY:-}" ]]; then
-  export OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-minimax}"
-  export OHC_LLM_MODEL="${OHC_LLM_MODEL:-MiniMax-M3}"
-  export MINIMAX_MODEL="${MINIMAX_MODEL:-MiniMax-M3}"
-fi
-export OHC_AGENT_TASK_TIMEOUT_SECS="${OHC_AGENT_TASK_TIMEOUT_SECS:-240}"
-export OHC_LLM_TIMEOUT_SECS="${OHC_LLM_TIMEOUT_SECS:-180}"
-if [[ -n "$AGENT_BIN" ]]; then
-  export OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-$AGENT_BIN}"
-fi
-
 # Pick currently free ports for the server to avoid collisions during parallel tests.
 OHC_SERVER_PORT="$(pick_free_port)"
 OHC_GRPC_SERVER_PORT="$(pick_free_port)"
@@ -282,13 +253,6 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   REDIS_URL="redis://127.0.0.1:$VK_PORT" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
-  MINIMAX_API_KEY="${MINIMAX_API_KEY:-}" \
-  OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
-  OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \
-  MINIMAX_MODEL="${MINIMAX_MODEL:-}" \
-  OHC_AGENT_TASK_TIMEOUT_SECS="$OHC_AGENT_TASK_TIMEOUT_SECS" \
-  OHC_LLM_TIMEOUT_SECS="$OHC_LLM_TIMEOUT_SECS" \
-  OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-}" \
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \

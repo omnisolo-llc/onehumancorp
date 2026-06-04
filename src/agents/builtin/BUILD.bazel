@@ -115,7 +115,6 @@ rust_library(
         "//src/proto:common_prost",
         "//src/proto:hub_prost",
         "//src/proto:interop_prost",
-        "//src/server/ohc:server_ohc",
         "//src/server/pricing:server_pricing",
         "//src/server/telemetry:server_telemetry",
         "//src/server/harness:server_harness",

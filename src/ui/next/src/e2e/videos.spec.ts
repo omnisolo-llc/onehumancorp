@@ -10,8 +10,7 @@ test.describe('In-App Video Tutorials', () => {
         await expect(helpButton).toBeVisible();
 
         // Click the help widget floating button to open the menu
-        await page.waitForTimeout(2000);
-        await helpButton.click({ force: true, timeout: 60000 });
+        await helpButton.click();
 
         // Check that tabs are visible
         const videosTabButton = page.locator('button', { hasText: 'Videos' });

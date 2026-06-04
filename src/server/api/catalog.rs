@@ -1,14 +1,13 @@
-use crate::hub::Hub;
-use axum::http::StatusCode;
 use axum::{
-    Router,
     extract::{Extension, Json},
     response::IntoResponse,
     routing::post,
+    Router,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use std::sync::Arc;
+use crate::hub::Hub;
+use axum::http::StatusCode;
 
 #[derive(Deserialize)]
 pub struct CreateProductRequest {
@@ -34,35 +33,36 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
-async fn count_tenant_products(
-    conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
-    tenant_id: &str,
-) -> Result<i64, sqlx::Error> {
-    let row = sqlx::query("SELECT COUNT(*)::BIGINT AS count FROM products WHERE tenant_id = $1")
-        .bind(tenant_id)
-        .fetch_one(&mut **conn)
-        .await?;
-
-    Ok(row.try_get::<i64, _>("count").unwrap_or(0))
-}
-
-fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
-    match tier {
-        ::server_pricing::rate_limit::PlanTier::Free => "Free",
-        ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
-        ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
-        ::server_pricing::rate_limit::PlanTier::Business => "Business",
-    }
-}
-
 async fn handle_create_product(
     Extension(hub): Extension<Arc<Hub>>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<CreateProductRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "system".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "system".to_string());
+
+    // Check product quota
+    let quota_status = hub.tracker().check_product_quota(&tenant_id).await.unwrap_or_else(|e| {
+        tracing::warn!("Failed to check product quota for tenant {}: {}", tenant_id, e);
+        ::server_pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        }
+    });
+
+    if quota_status.soft_limit_reached && !quota_status.is_allowed {
+        let msg = quota_status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string());
+        return (
+            StatusCode::PAYMENT_REQUIRED,
+            Json(ErrorResponse {
+                error: "LIMIT_EXCEEDED".to_string(),
+                message: msg,
+            }),
+        ).into_response();
+    }
+
+    // Record product addition
+    let _ = hub.tracker().record_product_added(&tenant_id).await;
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
@@ -75,47 +75,9 @@ async fn handle_create_product(
                     error: "DATABASE_ERROR".to_string(),
                     message: "Failed to connect to database".to_string(),
                 }),
-            )
-                .into_response();
+            ).into_response();
         }
     };
-
-    let tier = hub
-        .tracker()
-        .get_tenant_tier(&tenant_id)
-        .await
-        .unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
-
-    if let Some(limit) = tier.max_products() {
-        match count_tenant_products(&mut conn, &tenant_id).await {
-            Ok(total_products) if total_products >= limit as i64 => {
-                return (
-                    StatusCode::PAYMENT_REQUIRED,
-                    Json(ErrorResponse {
-                        error: "LIMIT_EXCEEDED".to_string(),
-                        message: format!(
-                            "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
-                            plan_name(&tier),
-                            limit
-                        ),
-                    }),
-                ).into_response();
-            }
-            Ok(_) => {}
-            Err(e) => {
-                ::server_telemetry::record_error_signal("Failed to count products for quota check");
-                tracing::error!("Failed to count products for tenant {}: {}", tenant_id, e);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorResponse {
-                        error: "DATABASE_ERROR".to_string(),
-                        message: "Failed to verify product limit".to_string(),
-                    }),
-                )
-                    .into_response();
-            }
-        }
-    }
 
     let product_id = uuid::Uuid::new_v4().to_string();
 
@@ -139,24 +101,12 @@ async fn handle_create_product(
                 error: "DATABASE_ERROR".to_string(),
                 message: "Failed to create product".to_string(),
             }),
-        )
-            .into_response();
-    }
-
-    if let Err(e) = hub.tracker().record_product_added(&tenant_id).await {
-        tracing::warn!(
-            "Failed to update product usage counter for tenant {}: {}",
-            tenant_id,
-            e
-        );
+        ).into_response();
     }
 
     if payload.is_subscription.unwrap_or(false) {
         let plan_id = uuid::Uuid::new_v4().to_string();
-        let interval = payload
-            .subscription_interval
-            .unwrap_or_else(|| "Monthly".to_string())
-            .to_lowercase();
+        let interval = payload.subscription_interval.unwrap_or_else(|| "Monthly".to_string()).to_lowercase();
         let discount = payload.subscription_discount.unwrap_or(0);
 
         let insert_plan = sqlx::query(
@@ -193,14 +143,7 @@ async fn handle_create_product(
 
     let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
 
-    (
-        StatusCode::OK,
-        Json(CreateProductResponse {
-            success: true,
-            message: Some(format!("Created {}", payload.name)),
-        }),
-    )
-        .into_response()
+    (StatusCode::OK, Json(CreateProductResponse { success: true, message: Some(format!("Created {}", payload.name)) })).into_response()
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {

@@ -23,8 +23,8 @@ impl ToolExecutionEngine {
 
         #[cfg(not(test))]
         {
-            tracing::info!("\n[Agent Harness] USER INTERVENTION REQUIRED:");
-            tracing::info!("{}", msg);
+            println!("\n[Agent Harness] USER INTERVENTION REQUIRED:");
+            println!("{}", msg);
             print!("Please provide input to resolve this (or type 'abort' to cancel): ");
             tokio::task::spawn_blocking(|| {
                 use std::io::{self, Write};

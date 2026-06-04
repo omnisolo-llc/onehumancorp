@@ -7,9 +7,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-#[cfg(ohc_bazel_package)]
-use ::server_lib::autodream::AutoDreamWorker;
-#[cfg(not(ohc_bazel_package))]
 use crate::autodream::AutoDreamWorker;
 
 #[derive(Deserialize)]
