@@ -94,7 +94,7 @@ async fn test_social_commerce_webhook_handler_quote() {
     let resp_payload: SocialWebhookResponse = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(resp_payload.status, "success");
-    assert!(resp_payload.reply_message.unwrap().contains("2000"));
+    assert!(resp_payload.reply_message.unwrap().contains("20.00"));
     assert!(resp_payload.checkout_link.unwrap().contains("checkout.stripe.com"));
 }
 
