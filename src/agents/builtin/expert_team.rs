@@ -125,8 +125,23 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
             let fut = async move {
                 let mut local_trace = SkillTrace::new();
                 let expert_instance = DomainExpert { role: role_name, llm: llm_clone };
-                let output = expert_instance.execute(&task_clone, &mut local_trace).await;
-                (output, local_trace.skills_used)
+
+                let mut retries = 3;
+                let mut last_err = String::new();
+
+                while retries > 0 {
+                    match expert_instance.execute(&task_clone, &mut local_trace).await {
+                        Ok(res) => return (Ok(res), local_trace.skills_used),
+                        Err(e) => {
+                            last_err = e;
+                            retries -= 1;
+                            if retries > 0 {
+                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            }
+                        }
+                    }
+                }
+                (Err(last_err), local_trace.skills_used)
             };
             futures.push(fut);
         }
@@ -308,7 +323,7 @@ mod tests {
         let manager = ExpertTeamManager::new("Lead", experts);
         let res = QualityGates::pre_flight(&manager, "Task");
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("Exactly 6 agent initialization is required"));
+        assert!(matches!(res, Err(e) if e.contains("Exactly 6 agent initialization is required")));
     }
 
     #[test]
@@ -319,7 +334,7 @@ mod tests {
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("High similarity detected"));
+        assert!(matches!(res, Err(e) if e.contains("High similarity detected")));
     }
 
     #[test]
@@ -330,7 +345,7 @@ mod tests {
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("Missing: Chapter 5, Chapter 6, Chapter 7, Chapter 8"));
+        assert!(matches!(res, Err(e) if e.contains("Missing: Chapter 5, Chapter 6, Chapter 7, Chapter 8")));
     }
 
     #[test]
@@ -340,7 +355,7 @@ mod tests {
         trace.record_skill("test_skill");
         let res = QualityGates::pre_deliver(&final_output, &trace);
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("Missing required chart/analysis verification"));
+        assert!(matches!(res, Err(e) if e.contains("Missing required chart/analysis verification")));
     }
 
     #[test]
@@ -349,6 +364,6 @@ mod tests {
         let trace = SkillTrace::new(); // Empty trace
         let res = QualityGates::pre_deliver(&final_output, &trace);
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("Skill-trace is incomplete"));
+        assert!(matches!(res, Err(e) if e.contains("Skill-trace is incomplete")));
     }
 }
