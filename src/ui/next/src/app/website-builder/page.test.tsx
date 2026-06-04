@@ -58,6 +58,9 @@ describe('WebsiteBuilderPage', () => {
       domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: false,
+      blocks: [],
+      status: "idle",
+      liveUrl: ""
     });
   });
 
@@ -83,15 +86,14 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Start My Business'));
 
     // Step 1
-    fireEvent.change(screen.getByPlaceholderText('e.g., Coffee Shop, Marketing Agency, Bakery'), { target: { value: 'Online Store' } });
-    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByText('Online Store'));
 
     // Step 2
-    fireEvent.change(screen.getByPlaceholderText('Enter your business name'), { target: { value: 'My Shop' } });
+    fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
     fireEvent.click(screen.getByText('Next'));
 
     // Step 3
-    fireEvent.click(screen.getByText('Physical Products'));
+    fireEvent.click(screen.getByLabelText('Physical Products'));
     fireEvent.click(screen.getByText('Next'));
 
     // Step 4
@@ -159,8 +161,7 @@ describe('WebsiteBuilderPage', () => {
       { type: 'Catalog', props: { title: '2' } },
       { type: 'Booking', props: { title: '3' } }
     ];
-    localStorage.setItem('ohc_builder_blocks', JSON.stringify(initialBlocks));
-    localStorage.setItem('ohc_builder_status', 'draft');
+    useWebsiteBuilderStore.setState({ blocks: initialBlocks, status: 'draft' });
 
     render(<WebsiteBuilderPage />);
 
@@ -195,8 +196,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles launch from draft mode', async () => {
-    localStorage.setItem('ohc_builder_status', 'draft');
-    localStorage.setItem('ohc_builder_blocks', JSON.stringify([{ type: 'Hero', props: {} }]));
+    useWebsiteBuilderStore.setState({ status: 'draft', blocks: [{ type: 'Hero', props: {} }] });
 
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('publish_draft')) {

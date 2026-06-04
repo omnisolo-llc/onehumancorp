@@ -13,19 +13,33 @@ export default function CheckoutPage() {
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const [deliveryRadius] = useState(5); // Fixed for demo, would come from business settings
   const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
   const checkDeliveryEligibility = async () => {
     if (!deliveryAddress) return;
     setIsCheckingDelivery(true);
+    setDeliveryError(null);
 
-    // Simulate checking if address is within radius
-    setTimeout(() => {
-      // Mock DoorDash Drive API call
-      setDeliveryFee(8.50); // Flat fee from DoorDash
+    try {
+      const response = await fetch("/api/checkout/delivery-quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliveryAddress }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setDeliveryFee(data.fee);
+      } else {
+        setDeliveryFee(null);
+        setDeliveryError(data.message || "Delivery is not available.");
+      }
+    } catch (e) {
+      console.error("Failed to check delivery eligibility", e);
+      setDeliveryError("Error checking delivery.");
+    } finally {
       setIsCheckingDelivery(false);
-    }, 800);
+    }
   };
 
   const [isSubscription, setIsSubscription] = useState(false);
@@ -82,13 +96,18 @@ export default function CheckoutPage() {
               {isCheckingDelivery ? 'Checking...' : 'Check'}
             </button>
           </div>
-          {deliveryFee !== null && (
+          {deliveryFee !== null && !deliveryError && (
             <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center justify-between">
               <span className="text-sm text-indigo-900 font-medium flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 Delivery Available!
               </span>
               <span className="text-sm font-bold text-indigo-900">+${deliveryFee.toFixed(2)}</span>
+            </div>
+          )}
+          {deliveryError && (
+             <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg">
+              <span className="text-sm text-red-900 font-medium">{deliveryError}</span>
             </div>
           )}
         </div>

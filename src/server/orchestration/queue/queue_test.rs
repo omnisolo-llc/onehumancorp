@@ -28,7 +28,7 @@ async fn test_sqlite_task_queue() {
 
     let job = Job {
         id: "job-1".to_string(),
-        tenant_id: "system".to_string(),
+        tenant_id: "test_org".to_string(),
         parent_task_id: "parent-1".to_string(),
         job_type: "test-role".to_string(),
         payload: "{}".to_string(),
@@ -46,7 +46,7 @@ async fn test_sqlite_task_queue() {
     let dequeued_opt = queue.dequeue(vec!["test-role".to_string()], 100, 100).await.unwrap();
     if dequeued_opt.is_none() { return; } let dequeued = dequeued_opt.unwrap();
     assert_eq!(dequeued.id, "job-1");
-    assert_eq!(dequeued.tenant_id, "system");
+    assert_eq!(dequeued.tenant_id, "test_org");
 
     queue.complete(&dequeued.id).await.unwrap();
 }
@@ -103,7 +103,7 @@ async fn test_sqlite_fail_backoff() {
 
     let job = super::Job {
         id: "job-fail-1".to_string(),
-        tenant_id: "system".to_string(),
+        tenant_id: "test_org".to_string(),
         parent_task_id: "parent-1".to_string(),
         job_type: "test-role".to_string(),
         payload: "{}".to_string(),

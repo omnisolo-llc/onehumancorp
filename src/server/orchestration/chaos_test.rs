@@ -399,6 +399,7 @@ mod chaos_tests {
 
     #[tokio::test]
     async fn test_agent_lock_race_conditions() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let mesh = Arc::new(RacingLockMesh::new());
 
         let mut join_handles = vec![];
@@ -432,6 +433,7 @@ mod chaos_tests {
 
     #[tokio::test]
     async fn test_pubsub_message_loss() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let transport = Arc::new(DroppingMockTransport::new(50)); // 50% drop rate
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -470,6 +472,7 @@ mod chaos_tests {
 
     #[tokio::test]
     async fn test_cloud_degradation_fallback() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
         let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
@@ -498,6 +501,7 @@ mod chaos_tests {
 
     #[tokio::test]
     async fn test_llm_api_failure_recovery() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Simulates LLM API failures and ensuring circuit breaker/fallback behavior.
         use crate::workers::OperationsWorker;
 
@@ -542,6 +546,7 @@ mod chaos_tests {
 
     #[tokio::test]
     async fn test_host_memory_exhaustion_degradation() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // We simulate host memory exhaustion by synthetically increasing database operation latency
         // and verifying that the 2-second timeout triggers graceful degradation.
         let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(3000));
