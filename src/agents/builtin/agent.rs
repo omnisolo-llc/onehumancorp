@@ -5126,7 +5126,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant(r#"{"correctness_score": 1.0, "completeness_score": 1.0, "security_score": 1.0, "reasoning": "The answer is incomplete.", "suggested_fixes": ["Add details"]}"#),
+                    message: crate::types::Message::assistant(r#"{"correctness_score": 1.0, "completeness_score": 1.0, "security_score": 1.0, "reasoning": "The answer is incomplete.", "suggested_fixes": ["Fix this"]}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5138,7 +5138,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant(r#"{"correctness_score": 5.0, "completeness_score": 5.0, "security_score": 5.0, "reasoning": "Looks good", "suggested_fixes": []}"#),
+                    message: crate::types::Message::assistant(r#"{"correctness_score": 5.0, "completeness_score": 5.0, "security_score": 5.0, "reasoning": "The answer is good.", "suggested_fixes": []}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
