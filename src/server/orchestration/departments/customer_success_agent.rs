@@ -45,25 +45,35 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;
-            let original = payload.get("original_payload");
+            let original = payload.get("payload");
+
             let message = if let Some(orig) = original {
                 orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
             } else {
                 "Unknown response"
             };
-            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
+
+            let source = original.and_then(|o| o.get("source")).and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = original.and_then(|o| o.get("sender_id")).and_then(|v| v.as_str()).unwrap_or("");
+
+            tracing::info!("EXECUTING APPROVED DRAFT: Sending message to {} via {}: {}", sender_id, source, message);
+
+            if source == "instagram" && !sender_id.is_empty() {
+                let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
+                if let Err(e) = meta_provider.send_message("instagram", sender_id, message).await {
+                    tracing::error!("Failed to send meta message: {}", e);
+                }
+            }
 
             let content = format!("Sent response to customer: {}", message);
 
-            // Log the action in the agent's memory, handling errors and using proper defaults
-            // Assuming we don't have an embedding service here, we use a zero vector
-            // but properly await and map the error.
+            // Log the action in the agent's memory
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
                 agent_id: "customer_success_agent".to_string(),
                 content,
-                embedding: vec![0.0; 1536], // Simple dummy embedding since we don't have an embedder
+                embedding: vec![0.0; 1536],
                 source_type: "AGENT_ACTION".to_string(),
                 created_at: chrono::Utc::now(),
                 last_referenced_at: chrono::Utc::now(),
@@ -79,34 +89,75 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let inbox_message_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
 
-            // Dummy query embedding for simulation
-            let query_embedding = vec![0.5; 1536];
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
+            // 1. Fetch real inventory
+            let pool = crate::db::get_pool();
+            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+            crate::common::auth_utils::set_org_context(&mut *tx, &event.tenant_id).await.map_err(|e| e.to_string())?;
 
-            let context_summary = if !memories.is_empty() {
-                memories.join("\n")
+            // Using query_as since products table has title, description, inventory_count
+            let products: Vec<(String, String, i32)> = sqlx::query_as(
+                "SELECT title, COALESCE(description, ''), COALESCE(inventory_count, 0) FROM products WHERE tenant_id = $1"
+            )
+            .bind(&event.tenant_id)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap_or_default();
+
+            let _ = tx.commit().await;
+
+            let mut inventory_context = String::new();
+            for (title, desc, count) in products {
+                inventory_context.push_str(&format!("- {} ({}): {} in stock\n", title, desc, count));
+            }
+            if inventory_context.is_empty() {
+                inventory_context = "No products in inventory.".to_string();
+            }
+
+            // 2. Generate Draft Reply using LLM
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            let generated_response = if !api_key.is_empty() {
+                let prompt = format!(
+                    "Write one concise, warm customer-service reply. Business Inventory: {} Customer message: {}",
+                    inventory_context, message
+                );
+                let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+                let client = crate::minimax::MinimaxClient::new(api_key);
+                client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for reaching out! We will get back to you shortly.".to_string())
             } else {
-                "No relevant memory found.".to_string()
+                "Thank you for your message. We will get back to you shortly.".to_string()
             };
 
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
-                "Yes, we do vegan cakes!"
-            } else {
-                "Thank you for your message. We will get back to you shortly."
-            };
+            // 3. Update the inbox_messages row with the generated draft
+            if !inbox_message_id.is_empty() {
+                let mut tx2 = pool.begin().await.map_err(|e| e.to_string())?;
+                crate::common::auth_utils::set_org_context(&mut *tx2, &event.tenant_id).await.map_err(|e| e.to_string())?;
+                let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2")
+                    .bind(&generated_response)
+                    .bind(inbox_message_id)
+                    .execute(&mut *tx2)
+                    .await;
+                let _ = tx2.commit().await;
+            }
 
+            // 4. Create Approval Action
             let description = if risk == ActionRisk::AutoExecute {
-                format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
+                format!("Auto-replied to message: '{}'", message)
             } else {
-                "Draft email for review".to_string()
+                format!("Draft reply for Instagram message from {}: {}", sender_id, message)
             };
 
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
                 "original_message": message,
                 "generated_response": generated_response,
-                "context_used": context_summary,
+                "source": source,
+                "sender_id": sender_id,
+                "inbox_message_id": inbox_message_id,
+                "context_used": inventory_context,
             });
 
             self.orchestrator.execute_action(
