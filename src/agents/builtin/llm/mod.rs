@@ -127,7 +127,8 @@ pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{Message, Role, ToolResult};
+    use ohc_builtin_agent_core::types::{ChatRequest, Role, ToolResult};
+
 
     #[test]
     fn test_minify_json_string() {
@@ -180,7 +181,7 @@ mod tests {
                 "system": "instruction"
             }"#.to_string(),
             messages: vec![
-                Message {
+                ohc_builtin_agent_core::types::Message {
                     role: Role::User,
                     content: r#"{
                         "user": "input"
@@ -211,3 +212,140 @@ mod tests {
         assert_eq!(minified.messages[0].tool_results[0].content, r#"{"tool":"result"}"#);
     }
 }
+
+    #[test]
+    fn test_truncate_by_word_count() {
+        assert_eq!(truncate_by_word_count("hello world", 0), "");
+        assert_eq!(truncate_by_word_count("hello world", 1), "hello");
+        assert_eq!(truncate_by_word_count("hello world", 2), "hello world");
+        assert_eq!(truncate_by_word_count("hello world", 5), "hello world");
+        assert_eq!(truncate_by_word_count("  hello   world  test  ", 2), "hello world");
+    }
+
+    #[test]
+    fn test_truncate_chat_request_no_op() {
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::User,
+                    content: "hello world".to_string(),
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                }
+            ],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+        let truncated = truncate_chat_request(req.clone(), 1);
+        assert_eq!(truncated.messages.len(), 1);
+        assert_eq!(truncated.messages[0].content, "hello world"); // <=1 message is a no-op
+    }
+
+    #[test]
+    fn test_truncate_chat_request_preserves_system_and_last() {
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::System,
+                    content: "system instruction".to_string(),
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::User,
+                    content: "first message".to_string(),
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::Assistant,
+                    content: "long middle message that should be skipped entirely".to_string(), // 8 words
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::User,
+                    content: "last message is always kept".to_string(), // 5 words
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                }
+            ],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+
+        // Budget of 6 words.
+        // Last message is 5 words, so it's kept.
+        // Remaining budget is 1 word. 1 < 20, so the middle message is skipped entirely.
+        // First message is also skipped.
+        // System message is always preserved.
+        let truncated = truncate_chat_request(req, 6);
+        assert_eq!(truncated.messages.len(), 2);
+        assert_eq!(truncated.messages[0].role, Role::System);
+        assert_eq!(truncated.messages[1].role, Role::User);
+        assert_eq!(truncated.messages[1].content, "last message is always kept");
+    }
+
+    #[test]
+    fn test_truncate_chat_request_partial_truncation() {
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::User,
+                    content: "one two three".to_string(),
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::Assistant,
+                    content: "a very very very very very very very very very very very very very very very very very very very very very very very very very long message".to_string(), // 27 words
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                ohc_builtin_agent_core::types::Message {
+                    role: Role::User,
+                    content: "last".to_string(), // 1 word
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                }
+            ],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+
+        // Budget of 25 words.
+        // Last message is 1 word -> budget remaining is 24 words.
+        // Next message is 27 words -> we truncate it to 24 words because 24 > 20.
+        // The first message is skipped.
+        let truncated = truncate_chat_request(req, 25);
+        assert_eq!(truncated.messages.len(), 2);
+
+        let expected_middle = "a very very very very very very very very very very very very very very very very very very very very very very very";
+        assert_eq!(truncated.messages[0].content, expected_middle);
+        assert_eq!(truncated.messages[1].content, "last");
+    }
