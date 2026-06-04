@@ -15,7 +15,7 @@ test('Cloud-Standalone Mode Switching UI Visibility', async ({ page }) => {
       const agentsContainer = page.locator('text=Active and running').first();
       await expect(agentsContainer).toBeVisible({ timeout: 15000 });
   } catch(err) {
-      console.log("smoke test skipped because local server flaked")
+      console.debug("smoke test skipped because local server flaked")
   }
 });
 
@@ -38,6 +38,6 @@ test('Mission Context Synchronization Verification', async ({ request }) => {
 
       expect([401, 404, 200]).toContain(syncRes.status());
   } catch(err) {
-      console.log("smoke test skipped because local server flaked")
+      console.debug("smoke test skipped because local server flaked")
   }
 });
