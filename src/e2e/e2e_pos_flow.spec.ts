@@ -7,10 +7,7 @@ test.describe('End-to-End In-Person Payment Flow', () => {
     await page.goto('/pos/terminal');
 
     // 2. Unlock the terminal with PIN 1234
-    // We expect the staff "Carlos" to be in the database and loaded properly,
-    // but the current terminal implementation is using localStorage for offline
-    // first functionality. We will use the proper login fixture and UI flow.
-    // However, the offline store requires initialization.
+    // Set the localStorage directly before reloading to bypass the mock data missing issue
     await page.evaluate(() => {
         window.localStorage.setItem('ohc_offline_staff', JSON.stringify([{
             id: 'e2e-team-member',
@@ -34,12 +31,12 @@ test.describe('End-to-End In-Person Payment Flow', () => {
     await page.getByRole('button', { name: 'Clock In' }).click();
     await expect(page.getByText('Clocked In')).toBeVisible();
 
-    // 3. Initiate Payment via "New Order" Quick Action
-    // Real API call, no mocking!
+    // Track network requests
     const tokenRequestPromise = page.waitForRequest(request =>
         request.url().includes('/api/v1/payments/terminal/token') && request.method() === 'GET'
     );
 
+    // We expect the intent API to be called when the token returns successfully
     const intentRequestPromise = page.waitForRequest(request =>
         request.url().includes('/api/v1/payments/terminal/intent') && request.method() === 'POST'
     );

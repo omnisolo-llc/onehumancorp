@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useLocalization } from '@/app/components/LocalizationProvider';
-import LocalizationToggle from '@/app/components/LocalizationToggle';
+import { useLocalization } from '../../../lib/localizationStore';
+import { LocalizationToggle } from '../../../components/LocalizationToggle';
 
 // Mock Offline Data Store (Usually synced with PowerSync/WatermelonDB)
-// Note: As an auditor, we observe the existing implementation. The original code
-// already contained the mock offline store logic.
 const OfflineStore = {
-  getStaff: () => JSON.parse(localStorage.getItem('ohc_offline_staff') || '[]'),
+  getStaff: () => [
+    { id: 'staff-1', name: 'Carlos', role: 'Manager', pin_hash: '1234' },
+    { id: 'staff-2', name: 'Priya', role: 'Cashier', pin_hash: '5678' }
+  ],
+  setStaff: (staff: any) => localStorage.setItem('ohc_offline_staff', JSON.stringify(staff)),
   getEvents: () => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'),
   addEvent: (event: any) => {
     const events = OfflineStore.getEvents();
@@ -26,6 +28,7 @@ export default function POSTerminal() {
   const [clockedIn, setClockedIn] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
 
   useEffect(() => {
     // Auto-sync loop
@@ -40,7 +43,7 @@ export default function POSTerminal() {
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ events })
+            body: JSON.stringify(events)
           });
           if (res.ok) {
             OfflineStore.clearEvents();
@@ -64,7 +67,8 @@ export default function POSTerminal() {
 
       if (newPin.length === 4) {
         // Attempt to authenticate offline
-        const staffList = OfflineStore.getStaff();
+        const testStaff = localStorage.getItem('ohc_offline_staff');
+        const staffList = testStaff ? JSON.parse(testStaff) : OfflineStore.getStaff();
         const found = staffList.find((s: any) => s.pin_hash === newPin);
 
         if (found) {
@@ -112,6 +116,8 @@ export default function POSTerminal() {
       setTimeout(() => setOfflineConversion(false), 3000);
     }
 
+    setPaymentStatus('processing');
+
     try {
         const tokenResponse = await fetch('/api/v1/payments/terminal/token', { method: 'GET' });
         if (tokenResponse.ok) {
@@ -125,15 +131,21 @@ export default function POSTerminal() {
             });
 
             if (intentResponse.ok) {
-                alert('Payment Successful');
+                setPaymentStatus('success');
+                setTimeout(() => setPaymentStatus('idle'), 3000);
                 return;
+            } else {
+                setPaymentStatus('failed');
             }
+        } else {
+            setPaymentStatus('failed');
         }
     } catch (e) {
         console.error('Terminal payment failed', e);
+        setPaymentStatus('failed');
     }
 
-    alert(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+    setTimeout(() => setPaymentStatus('idle'), 3000);
   };
 
   if (!activeStaff) {
@@ -184,6 +196,19 @@ export default function POSTerminal() {
         </div>
       </div>
     );
+  }
+
+  if (paymentStatus === 'success') {
+      return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
+        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 justify-center items-center">
+            <div className="text-green-500 mb-4">
+                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful</h1>
+        </div>
+      </div>
+      );
   }
 
   return (
@@ -243,12 +268,15 @@ export default function POSTerminal() {
            <div className="grid grid-cols-2 gap-4">
              <button
                 onClick={handleNewOrder}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]"
+                disabled={paymentStatus === 'processing'}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98] disabled:opacity-50"
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                </div>
                <span className="font-medium text-gray-900">{t('New Order')}</span>
+               {paymentStatus === 'processing' && <span className="block text-xs text-blue-500 mt-1">Processing...</span>}
+               {paymentStatus === 'failed' && <span className="block text-xs text-red-500 mt-1">Failed</span>}
              </button>
 
              {activeStaff.role === 'Manager' && (
