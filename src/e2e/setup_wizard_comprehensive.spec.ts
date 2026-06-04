@@ -13,7 +13,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
+    await page.getByRole('button', { name: /Start My Business/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Alex Art');
     await page.getByPlaceholder("e.g. Maya's Cakes").fill('Original art and prints');

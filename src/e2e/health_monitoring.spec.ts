@@ -6,9 +6,9 @@ test.describe('Health Monitoring Resilience E2E', () => {
     const screen = page.locator('#diagnostics-screen');
 
     await expect(screen).toBeVisible();
-    await expect(screen).toContainText('API Server: healthy');
-    await expect(screen).toContainText('Component Health');
-    await expect(screen).toContainText('Database component healthy');
+    await expect(screen).toContainText('Operational Telemetry');
+    await expect(screen).toContainText('Response time latency');
+    await expect(screen).toContainText('AutoDream Memory Pipeline');
   });
 
   test('renders service health state', async ({ page }) => {
