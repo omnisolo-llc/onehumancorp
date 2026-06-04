@@ -12,6 +12,7 @@
     "google-protobuf": "^3.21.4",
     "next": "^16.2.7",
     "pg": "^8.21.0",
+    "react": "^19.2.5",
     "swagger-ui-react": "^5.32.6",
     "ts-proto": "^2.11.6",
     "zod": "^3.23.0"
@@ -27,7 +28,7 @@
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@vitejs/plugin-react": "^6.0.2",
-    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.8",
     "autoprefixer": "^10.5.0",
     "c8": "^11.0.0",
     "ink-spinner": "^5.0.0",
