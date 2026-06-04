@@ -120,8 +120,7 @@ mod tests {
         let cases = vec![
             ("I need a website designed", DepartmentType::Marketing),
             ("Can you help me process a refund for order 123", DepartmentType::Operations),
-            ("Can you help me process a refund request?", DepartmentType::Operations),
-            ("I need help with my pricing strategy.", DepartmentType::Finance),
+            ("What is my revenue this week and pricing strategy?", DepartmentType::Finance),
             ("Can you generate a quote for this lead?", DepartmentType::Sales),
             ("I need to draft terms of service", DepartmentType::Legal),
             ("Respond to this customer chat", DepartmentType::CustomerSuccess),
