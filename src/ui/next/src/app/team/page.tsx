@@ -32,34 +32,6 @@ export default function TeamPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://ohc.app/invite/team-default');
-  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
-
-  const handleGenerateInvite = async () => {
-    setIsGeneratingInvite(true);
-    try {
-      const tenantId = typeof window !== 'undefined' && window.localStorage ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default') : 'team-default';
-      const inviterId = typeof window !== 'undefined' && window.localStorage ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
-
-      const res = await fetch('/api/v1/growth/team-invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          team_id: tenantId,
-          inviter_id: inviterId,
-          invitee_id: 'pending-invitee-' + Math.random().toString(36).substring(2, 10),
-        }),
-      });
-
-      if (res.ok) {
-        setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
-      }
-    } catch (e) {
-      console.error("Failed to generate trackable team invite", e);
-    } finally {
-      setIsGeneratingInvite(false);
-      setShowInviteModal(true);
-    }
-  };
 
   const fetchApprovals = async () => {
     try {
@@ -158,11 +130,10 @@ export default function TeamPage() {
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
               <p className="text-sm text-gray-600 mt-1 mb-3">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
               <button
-                onClick={handleGenerateInvite}
-                disabled={isGeneratingInvite}
-                className={`w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98] ${isGeneratingInvite ? 'opacity-70 cursor-wait' : ''}`}
+                onClick={() => setShowInviteModal(true)}
+                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all active:scale-[0.98]"
               >
-                {isGeneratingInvite ? 'Generating...' : 'Invite to Cloud Team'}
+                Invite to Cloud Team
               </button>
             </div>
           </div>
@@ -192,19 +163,14 @@ export default function TeamPage() {
         {showInviteModal && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
-              className="rounded-t-3xl p-6 shadow-2xl transition-transform duration-300 ohc-growth-card"
-              style={{
-                animation: 'slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-                backdropFilter: 'blur(20px) saturate(200%)',
-                background: 'rgba(255, 255, 255, 0.85)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}
+              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              style={{ animation: 'slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
             >
               <div className="flex justify-between items-start mb-2">
                 <h2 className="text-xl font-bold font-outfit text-gray-900">Cloud Bridge Invite</h2>
                 <button
                   onClick={() => setShowInviteModal(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100/50 text-gray-600 hover:bg-gray-200 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
                   aria-label="Close Cloud Bridge Invite"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

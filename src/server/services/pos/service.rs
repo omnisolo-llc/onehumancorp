@@ -4,11 +4,13 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-pub struct MyPosService {}
+pub struct MyPosService {
+    db: Arc<crate::db::DB>,
+}
 
 impl MyPosService {
-    pub fn new(_db: Arc<crate::db::DB>) -> Self {
-        Self { }
+    pub fn new(db: Arc<crate::db::DB>) -> Self {
+        Self { db }
     }
 }
 

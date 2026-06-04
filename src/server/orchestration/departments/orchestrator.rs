@@ -1037,44 +1037,6 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64)>, String> {
-        let pattern = format!("%{}%", name);
-        match &self.db.store {
-            crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT name, CAST(price AS DOUBLE PRECISION) as price_f64 FROM services WHERE tenant_id = $1 AND name ILIKE $2 LIMIT 1")
-                    .bind(tenant_id)
-                    .bind(&pattern)
-                    .fetch_optional(&self.db.pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                if let Some(r) = row {
-                    use sqlx::Row;
-                    let n: String = r.get("name");
-                    let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
-                } else {
-                    Ok(None)
-                }
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT name, CAST(price AS REAL) as price_f64 FROM services WHERE tenant_id = ? AND name LIKE ? LIMIT 1")
-                    .bind(tenant_id)
-                    .bind(&pattern)
-                    .fetch_optional(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                if let Some(r) = row {
-                    use sqlx::Row;
-                    let n: String = r.get("name");
-                    let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
-                } else {
-                    Ok(None)
-                }
-            }
-        }
-    }
-
     pub async fn get_booking(&self, tenant_id: &str, booking_id: &str) -> Result<Option<String>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
