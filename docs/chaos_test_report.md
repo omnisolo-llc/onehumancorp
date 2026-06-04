@@ -17,7 +17,7 @@ To ensure absolute mode parity and graceful failure recovery between Cloud and S
 ## Metrics Before vs. After Chaos Execution
 
 *   **Before Sentry Audit:** `ohc_job_queue` exhibited flaky tracking of the `next_retry_at` timestamp.
-*   **After Sentry Audit:** The exponential backoff time (e.g., `1 << retry_count`) parses `chrono::Utc` reliably, ensuring accurate retry bounds across the database boundary. Verified by the `test_worker_pool_chaos_timeout` script.
+*   **After Sentry Audit:** The exponential backoff time (e.g., `1 << retry_count`) parses `chrono::Utc` reliably by formatting the `DateTime<Utc>` using `.to_rfc3339()` before binding to `sqlx` queries, ensuring accurate retry bounds across the database boundary (particularly SQLite text-binding issues). Verified by the `test_worker_pool_chaos_timeout` script.
 
 ## Resolution
 The system is 100% green and verified under chaos. The fixes applied conform strictly to the Apple / Ubiquiti UniFi macOS-style Translucent Glass visual standards and the repository's 100% unit test coverage requirement.
