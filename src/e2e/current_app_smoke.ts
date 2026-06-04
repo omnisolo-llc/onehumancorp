@@ -2,6 +2,10 @@ import { expect, test } from './fixtures';
 
 export function currentAppSmoke(label: string) {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     test.setTimeout(60000);
 
     try {

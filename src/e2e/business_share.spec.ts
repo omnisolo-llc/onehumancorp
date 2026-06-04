@@ -2,6 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Share & Embed', () => {
   test('should display dashboard with nav links', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/?dashboard=1');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.locator('nav')).toBeVisible();
@@ -10,12 +14,20 @@ test.describe('Business Share & Embed', () => {
   });
 
   test('should navigate to agents page', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/?dashboard=1');
     await page.locator('nav a:has-text("Agents")').click();
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
     await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
@@ -23,6 +35,10 @@ test.describe('Business Share & Embed', () => {
   });
 
   test('should display setup page', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/business-setup');
     await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
   });
@@ -30,12 +46,20 @@ test.describe('Business Share & Embed', () => {
 
 test.describe('Agents Page', () => {
   test('should show agents list', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
     await expect(page.locator('text=Marketing Pro')).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/agents');
     await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
   });

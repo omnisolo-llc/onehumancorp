@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('Generate visual screenshots for User Guide', async ({ page }) => {
+<<<<<<< HEAD
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(5000); // Give the UI time to settle

@@ -5,6 +5,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe.skip('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, context }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     // 1. Owner starts from the home page
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');

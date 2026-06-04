@@ -7,17 +7,29 @@ test.describe('Canvas: Telemetry Sync UI Tests', () => {
   });
 
   test('should display dashboard telemetry-adjacent status', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await expect(page.getByText("Today's Sales")).toBeVisible();
     await expect(page.getByText('Business Snapshot')).toBeVisible();
   });
 
   test('should navigate to settings', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.getByRole('button', { name: 'Settings' }).first().click();
 
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   });
 
   test('should display notification settings toggles', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.getByRole('button', { name: 'Settings' }).first().click();
 
     await expect(page.getByText('Enable Email Notifications')).toBeVisible();
@@ -25,6 +37,10 @@ test.describe('Canvas: Telemetry Sync UI Tests', () => {
   });
 
   test('should save settings and return to dashboard', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.getByRole('button', { name: 'Settings' }).first().click();
     await page.getByRole('button', { name: 'Save' }).first().click();
 
@@ -32,6 +48,10 @@ test.describe('Canvas: Telemetry Sync UI Tests', () => {
   });
 
   test('should return to dashboard after cancelling settings', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.getByRole('button', { name: 'Settings' }).first().click();
     await page.getByRole('button', { name: 'Cancel' }).first().click();
 

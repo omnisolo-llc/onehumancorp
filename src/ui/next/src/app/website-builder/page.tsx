@@ -38,8 +38,11 @@ export default function WebsiteBuilderPage() {
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
+<<<<<<< HEAD
+=======
   const [instantDesc, setInstantDesc] = useState("");
   const [instantLoading, setInstantLoading] = useState(false);
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
 
   useEffect(() => {
     // Load from backend for cross-device resume
@@ -648,6 +651,30 @@ export default function WebsiteBuilderPage() {
               )}
 
               {wizardStep === 'instant-build' && (
+<<<<<<< HEAD
+                <>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
+                  <div className="flex flex-col gap-4 mt-6">
+                    <textarea
+                      className="w-full border border-white/50 dark:border-white/10 mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      style={{ borderRadius: '8px' }}
+                      placeholder="e.g. I run a local bakery"
+                      rows={4}
+                    />
+                    <button
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      onClick={() => {
+                        setStatus('generating');
+                        setTimeout(() => {
+                           setStatus('live');
+                        }, 2000);
+                      }}
+                    >
+                      Generate Storefront
+                    </button>
+                  </div>
+                </>
+=======
                 <div className="flex flex-col h-full animate-fade-in">
                   <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Describe your business</h1>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
@@ -758,6 +785,7 @@ export default function WebsiteBuilderPage() {
                     </button>
                   </div>
                 </div>
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
               )}
 
             </div>
@@ -770,6 +798,11 @@ export default function WebsiteBuilderPage() {
   if (status === "generating") {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+<<<<<<< HEAD
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center mac-glass-container">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
+=======
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center p-8 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px]" style={{ backdropFilter: 'blur(30px) saturate(210%)' }}>
             <div className="w-24 h-24 relative mb-8">
                <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -782,6 +815,7 @@ export default function WebsiteBuilderPage() {
                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
             </div>
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
         </div>
       </div>
     );

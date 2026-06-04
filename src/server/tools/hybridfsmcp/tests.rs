@@ -76,7 +76,11 @@ async fn test_hybrid_fs_mcp_server() {
     };
     let resp = server.invoke_tool(&req, None).await.unwrap();
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
+<<<<<<< HEAD
+    assert_eq!(payload["content"].as_str().unwrap(), "from server");
+=======
     assert_eq!(payload["content"], "from server");
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
 }
 
 #[tokio::test]

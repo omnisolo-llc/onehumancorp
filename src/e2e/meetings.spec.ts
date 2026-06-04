@@ -2,6 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Meetings Page', () => {
   test('shows upcoming meeting and scheduler', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/meetings');
     await expect(page.locator('#meetings-screen')).toBeVisible();
     await expect(page.getByRole('button', { name: /\+ Schedule New Appointment/ })).toBeVisible();
@@ -16,6 +20,10 @@ test.describe('Meetings Page', () => {
   });
 
   test('opens meeting room controls', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/meetings');
     await page.getByRole('button', { name: 'Join Start' }).click();
 

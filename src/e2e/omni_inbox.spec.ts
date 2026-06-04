@@ -2,7 +2,13 @@ import { test, expect } from './fixtures';
 
 test.describe('Omni-Inbox Auto-Reply Agent', () => {
   test('simulates incoming message and auto-replies correctly', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/inbox');
+    await page.waitForLoadState('networkidle');
+=======
+    await page.goto('/inbox');
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
 
     // Click Simulate Incoming Message
     await page.getByRole('button', { name: '🤖 Simulate Incoming Message' }).click();

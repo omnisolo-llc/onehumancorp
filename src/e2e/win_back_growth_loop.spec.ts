@@ -8,6 +8,10 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
   });
 
   test('should display the win-back campaign page and handle soft paywall', async ({ page, context }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Customer Win-back Campaign 💌' })).toBeVisible();
 
@@ -41,7 +45,11 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     await shareBtn.click();
 
     // 6. Verify soft paywall is closed
+<<<<<<< HEAD
+    await expect(paywallHeading).toBeHidden({ timeout: 15000 });
+=======
     await expect(paywallHeading).toBeHidden({ timeout: 5000 });
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
 
     // Wait until the modal overlay is completely gone before clicking anything else
     // Using evaluate to force remove the modal background just in case it is still lingering
@@ -72,6 +80,10 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     });
 
     // Verify success message
+<<<<<<< HEAD
+    await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 15000 });
+=======
     await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 5000 });
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
   });
 });

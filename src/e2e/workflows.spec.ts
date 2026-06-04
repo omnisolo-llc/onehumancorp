@@ -2,6 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Agent Workflows', () => {
   test('user can create a workflow and dispatch it to the backend agent CLI', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     const workflowName = `Branch review ${Date.now()}`;
 
     await page.goto('/agents');

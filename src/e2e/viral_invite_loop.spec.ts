@@ -2,6 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Viral Invite Loop on Team Page', () => {
   test('should display Cloud Bridge invite modal and generate a link', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/team');
 
     // Check if the growth component is visible

@@ -4,6 +4,10 @@ import { currentAppSmoke } from './current_app_smoke';
 test.describe('Autonomous Voice AI Phone Attendant Engine', () => {
 
     test('Carlos activates and configures AI Voice Attendant', async ({ page }) => {
+<<<<<<< HEAD
+      test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
         // 1. Carlos logs in to the dashboard
         await page.goto('/dashboard');
         await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();

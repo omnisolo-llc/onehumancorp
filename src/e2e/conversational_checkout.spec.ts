@@ -2,6 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Conversational Checkout & Instant Deposit Engine', () => {
   test('Sales AI generates conversational checkout link from inbox intent', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     // 1. Navigate to Unified Inbox
     await page.goto('/inbox');
 

@@ -1,6 +1,10 @@
 import { test, expect } from './fixtures';
 
 test('Maya operates her custom cake business', async ({ page }) => {
+<<<<<<< HEAD
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
   const id = `operate-business-${Date.now()}-${Math.random()}`;
   const email = `maya+${Date.now()}@example.com`;
   await page.addInitScript((tenantId) => {
@@ -10,10 +14,18 @@ test('Maya operates her custom cake business', async ({ page }) => {
   }, id);
 
   await page.goto('/website-builder');
+<<<<<<< HEAD
+  await page.waitForLoadState('networkidle');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
 
   await page.getByRole('button', { name: /Start My Business/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
+<<<<<<< HEAD
+  await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').waitFor({ state: 'visible', timeout: 10000 });
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
   await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
 

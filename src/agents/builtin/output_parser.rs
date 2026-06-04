@@ -38,8 +38,24 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
                         Err(e) => {
+<<<<<<< HEAD
+                            let detail = if e.is_data() {
+                                format!("Semantic validation failed: {}", e)
+                            } else if e.is_syntax() {
+                                format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
+                            } else if e.is_eof() {
+                                format!("Incomplete JSON structure (unexpected EOF): {}", e)
+                            } else {
+                                format!("{}", e)
+                            };
+                            Err(format!(
+                                "Failed to parse tool call arguments as valid JSON matching the schema.
+Reason: {}
+Please fix the JSON and retry calling the tool.", detail
+=======
                             Err(format!(
                                 "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
                             ))
                         }
                     };
@@ -143,6 +159,26 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
 /// Implements the Output Parsing mechanic from the Master Catalog:
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
 /// the failed completion, and the parsing error back to the model)."
+<<<<<<< HEAD
+
+/// Parses structured output from the LLM, relying heavily on the native `tool_calls` API.
+///
+/// **Contract / Industry Standard:**
+/// This function implements the industry standard "Pydantic-first tool schema validation" and "Legacy RetryWithErrorOutputParser" fallback mechanic.
+///
+/// 1. **Pydantic-First**: It attempts to parse the LLM's response strictly according to the defined generic schema `T`.
+/// 2. **Error Classification**: If parsing fails, it deeply inspects the `serde_json::Error` (identifying if it's semantic/data-related, syntax-related, or an unexpected EOF).
+/// 3. **Self-Correction Feedback Loop**: It feeds these highly specific, categorized parsing errors directly back into the prompt history as an LLM-recoverable `ToolMessage` or system reminder, giving the LLM precise instructions on how to correct its previous output in subsequent retry attempts.
+///
+/// **Arguments:**
+/// * `llm`: A reference to the LLM client implementing `LlmClientForParser`.
+/// * `req`: The initial chat request configuration containing system prompts and conversation history.
+/// * `max_retries`: The maximum number of retry attempts allowed before aborting.
+///
+/// **Returns:**
+/// Returns the parsed strongly-typed output `T` on success, or a `ToolError` on failure (typically `ToolError::LlmRecoverable` or `ToolError::Transient`).
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
 pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
@@ -156,6 +192,46 @@ pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
 #[cfg(test)]
 mod tests {
     use super::*;
+<<<<<<< HEAD
+
+    #[tokio::test]
+    async fn test_parse_structured_output_serde_error_classification() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})), // Should be a string
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "recovered"}}))
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+
+        // It should recover on the second try
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered");
+
+        // Need to check the requests to ensure the prompt contained the "Semantic validation failed"
+        // Let's modify the test to just check if it fails with the right message when max_retries = 0
+        let client_fail = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})),
+            ]),
+        });
+
+        let req2 = create_test_req();
+        let result_fail: Result<TestOutput, _> = parse_structured_output(&(client_fail as Arc<dyn LlmClientForParser>), req2, 0).await;
+
+        assert!(result_fail.is_err());
+        match result_fail {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Semantic validation failed"));
+            },
+            _ => panic!("Expected LlmRecoverable error for schema mismatch"),
+        }
+    }
+
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     use crate::types::{ChatResponse, Usage};
     use serde::Deserialize;
     use tokio::sync::Mutex;

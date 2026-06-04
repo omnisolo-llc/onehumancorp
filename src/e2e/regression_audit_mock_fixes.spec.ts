@@ -3,6 +3,10 @@ import { test, expect } from './fixtures';
 test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () => {
 
   test('verify seasonal promo generation without setTimeout', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/seasonal-promo');
 
     // Fill out form
@@ -37,6 +41,10 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
   test('verify saving a new service navigates away', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/services/new');
 
     // Fill out title
@@ -56,12 +64,20 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
   test('verify Kairos walkthrough has no delay', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/kairos?walkthrough=true');
     // Ensure the walkthrough elements exist immediately
     await expect(page.getByText(/The Shared Task List is the 'Brain'/)).toBeVisible({ timeout: 2000 });
   });
 
   test('verify dashboard VIP customer referral campaign modal', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
     await page.goto('/dashboard');
 
     const sendButton = page.getByRole('button', { name: /Send Campaign to 12 Customers/ });
@@ -72,6 +88,10 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
   test('verify onboarding intake hits backend successfully', async ({ request }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+=======
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
      const res = await request.post('/api/onboarding/intake', {
         data: { description: 'Maya' }
      });

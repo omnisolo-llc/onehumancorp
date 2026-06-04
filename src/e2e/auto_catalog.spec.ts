@@ -2,7 +2,13 @@ import { test, expect } from './fixtures';
 
 test.describe('Auto-Catalog flow', () => {
   test('generates product details from photo upload', async ({ page }) => {
+<<<<<<< HEAD
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+=======
+    await page.goto('/dashboard');
+>>>>>>> b068d07b (feat: Implement instant build storefront wizard)
 
     // Click Auto-Catalog button
     await page.getByRole('link', { name: '✨ Auto-Catalog' }).click();
