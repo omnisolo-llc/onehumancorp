@@ -55,6 +55,15 @@ impl Department for CustomerSuccessAgent {
 
             let content = format!("Sent response to customer: {}", message);
 
+            if let Some(inbox_id) = original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str())) {
+                let orchestrator_clone = self.orchestrator.clone();
+                let id_clone = inbox_id.to_string();
+                let tenant_id_clone = event.tenant_id.clone();
+                tokio::spawn(async move {
+                    let _ = orchestrator_clone.update_inbox_message_status(&id_clone, &tenant_id_clone, "sent").await;
+                });
+            }
+
             // Log the action in the agent's memory, handling errors and using proper defaults
             // Assuming we don't have an embedding service here, we use a zero vector
             // but properly await and map the error.
@@ -107,6 +116,7 @@ impl Department for CustomerSuccessAgent {
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
+                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
             });
 
             self.orchestrator.execute_action(
