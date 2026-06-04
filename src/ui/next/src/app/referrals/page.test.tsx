@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReferralsPage from './page';
 
@@ -23,7 +23,9 @@ describe('ReferralsPage', () => {
     // Return an unresolved promise to keep it in loading state
     (global.fetch as any).mockImplementation(() => new Promise(() => {}));
 
-    render(<ReferralsPage />);
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
     expect(screen.getByText('Generating your unique link...')).toBeDefined();
 
     // Copy button should be disabled
@@ -31,8 +33,17 @@ describe('ReferralsPage', () => {
     expect(copyButton.hasAttribute('disabled')).toBe(true);
   });
 
-  it('renders how it works section', () => {
-    render(<ReferralsPage />);
+  it('renders how it works section', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        referral_link: 'https://ohc.app/ref/test1234'
+      })
+    });
+
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
     expect(screen.getByText('How it works')).toBeDefined();
     expect(screen.getByText('Share Link')).toBeDefined();
     expect(screen.getByText('They Sign Up')).toBeDefined();
@@ -45,7 +56,9 @@ describe('ReferralsPage', () => {
       json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
     });
 
-    render(<ReferralsPage />);
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
 
     // Wait for the fetch to resolve
     await waitFor(() => {
@@ -65,7 +78,9 @@ describe('ReferralsPage', () => {
     (global.fetch as any).mockRejectedValueOnce(new Error('API failed'));
     (window.localStorage.getItem as any).mockReturnValue('my-tenant-store');
 
-    render(<ReferralsPage />);
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Generating your unique link...')).toBeNull();

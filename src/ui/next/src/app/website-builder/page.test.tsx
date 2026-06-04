@@ -29,6 +29,13 @@ vi.mock('../builder/components', () => ({
   )
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter() {
+    return {
+      push: vi.fn(),
+    };
+  },
+}));
 
 import { useWebsiteBuilderStore } from './store';
 
