@@ -304,16 +304,16 @@ export default function OnboardingWizard() {
       actions={[{ label: "Dashboard", href: "/dashboard" }]}
     >
       <div className="app-grid two">
-        <div id="setup-screen" className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] mac-glass-container">
+        <div id="setup-screen" className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[560px] sm:min-h-[812px] relative rounded-[16px] mac-glass-container shadow-2xl">
         {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
+        <div className="h-1.5 w-full bg-gray-200 dark:bg-[#1D1D1F] overflow-hidden">
           <div
             className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
           ></div>
         </div>
 
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+        <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[8px] text-sm animate-shake">
               {error}
@@ -385,7 +385,8 @@ export default function OnboardingWizard() {
                         setChatStep(2);
                       }}
                       disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Next step"
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                     >
                       <IconLabel icon="next">Next</IconLabel>
                     </button>
@@ -552,81 +553,105 @@ export default function OnboardingWizard() {
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={businessName}
-                    onChange={(e) => {
-                      setBusinessName(e.target.value);
-                      if (e.target.value.trim().length < 3) {
-                        setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
-                      }
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                  />
-                  {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
-                    value={businessType}
-                    onChange={(e) => {
-                      setBusinessType(e.target.value);
-                      if (e.target.value.trim().length === 0) {
-                        setValidationErrors(prev => ({ ...prev, businessType: 'Required field.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
-                      }
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                  />
-                  {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
+              <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-widest mb-1.5 ml-1">Business Name</label>
                       <input
                         type="text"
-                        value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={firstProductPrice}
+                        autoFocus
+                        value={businessName}
                         onChange={(e) => {
-                           setFirstProductPrice(e.target.value);
-                           if (e.target.value.trim().length === 0) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Required field.' }));
-                           } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
-                           } else {
-                              setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
-                           }
+                          setBusinessName(e.target.value);
+                          if (e.target.value.trim().length < 3) {
+                            setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                          } else {
+                            setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
+                          }
                         }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 rounded-[8px] border ${validationErrors.businessName ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-sm shadow-sm transition-all`}
                       />
-                      {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
-                   </div>
+                      {validationErrors.businessName && <p className="text-[#FF3B30] text-[10px] mt-1 ml-1 font-bold">{validationErrors.businessName}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-widest mb-1.5 ml-1">Business Type</label>
+                      <input
+                        type="text"
+                        value={businessType}
+                        onChange={(e) => {
+                          setBusinessType(e.target.value);
+                          if (e.target.value.trim().length === 0) {
+                            setValidationErrors(prev => ({ ...prev, businessType: 'Required field.' }));
+                          } else {
+                            setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
+                          }
+                        }}
+                        className={`w-full p-3 rounded-[8px] border ${validationErrors.businessType ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-sm shadow-sm transition-all`}
+                      />
+                      {validationErrors.businessType && <p className="text-[#FF3B30] text-[10px] mt-1 ml-1 font-bold">{validationErrors.businessType}</p>}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-widest mb-1.5 ml-1">Categories</label>
+                      <input
+                        type="text"
+                        value={categories.join(', ')}
+                        onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-sm shadow-sm transition-all"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                       <div>
+                          <label className="block text-[10px] font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-widest mb-1.5 ml-1">First Product</label>
+                          <input
+                            type="text"
+                            value={firstProductName}
+                            onChange={(e) => setFirstProductName(e.target.value)}
+                            className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-sm shadow-sm transition-all"
+                          />
+                       </div>
+                       <div>
+                          <label className="block text-[10px] font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-widest mb-1.5 ml-1">Price</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">$</span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={firstProductPrice}
+                              onChange={(e) => {
+                                 setFirstProductPrice(e.target.value);
+                                 if (e.target.value.trim().length === 0) {
+                                    setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Required field.' }));
+                                 } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
+                                    setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
+                                 } else {
+                                    setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
+                                 }
+                              }}
+                              className={`w-full pl-6 pr-3 py-3 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-sm shadow-sm transition-all`}
+                            />
+                          </div>
+                          {validationErrors.firstProductPrice && <p className="text-[#FF3B30] text-[10px] mt-1 ml-1 font-bold">{validationErrors.firstProductPrice}</p>}
+                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 mac-glass-container rounded-[12px] border border-[#0066FF]/20 bg-[#0066FF]/5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#0066FF]/20 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#0066FF] uppercase tracking-widest mb-1">AI Recommendation</h4>
+                      <p className="text-xs text-[#1D1D1F]/70 dark:text-[#F5F5F7]/70 leading-relaxed">
+                        Based on your description, we recommend starting with a <strong>{businessType}</strong> model. This optimizes your dashboard for {categories.includes('food') ? 'orders and pickups' : 'sales and shipping'}.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -737,24 +762,36 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
-                  <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Departments</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { id: 'Operations', name: 'Operations', role: 'The Manager', desc: 'Handles orders, inventory, and delivery.' },
+                      { id: 'Marketing', name: 'Marketing & Advertising', role: 'The Promoter', desc: 'Designs your site and posts to social media.' },
+                      { id: 'Sales', name: 'Sales & Acquisition', role: 'The Salesperson', desc: 'Finds customers and sends quotes.' },
+                      { id: 'Success', name: 'Customer Success', role: 'The Ambassador', desc: 'Replies to messages and keeps customers happy.' },
+                      { id: 'Finance', name: 'Finance & Payments', role: 'The Accountant', desc: 'Tracks revenue and manages your money.' },
+                    ].map(dept => {
+                       const isSelected = aiAgents.includes(dept.id);
                        return (
                          <div
-                           key={agent}
+                           key={dept.id}
                            onClick={() => {
                              if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
+                               setAiAgents(aiAgents.filter(a => a !== dept.id));
                              } else {
-                               setAiAgents([...aiAgents, agent]);
+                               setAiAgents([...aiAgents, dept.id]);
                              }
                            }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white'}`}
+                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400'} text-[#1D1D1F] dark:text-[#F5F5F7]`}
                          >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
+                           <div className="flex flex-col gap-0.5">
+                             <div className="flex items-center gap-2">
+                               <span className="font-bold text-sm">{dept.name}</span>
+                               <span className="text-[10px] uppercase tracking-wider opacity-60 font-bold">{dept.role}</span>
+                             </div>
+                             <p className="text-[11px] opacity-70 leading-tight">{dept.desc}</p>
+                           </div>
+                           <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ml-4 ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
                               {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                            </div>
                          </div>

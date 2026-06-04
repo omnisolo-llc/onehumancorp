@@ -468,28 +468,52 @@ body {
 }
 
 .ohc-hybrid-panel {
-    backdrop-filter: blur(30px) saturate(210%);
-    background: rgba(255, 255, 255, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    font-family: 'Outfit', 'Inter', sans-serif;
-    color: #ffffff;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  color: #1D1D1F;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 .mac-glass-container {
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
+  .ohc-hybrid-panel {
+    background: rgba(22, 22, 26, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #F5F5F7;
+  }
   .mac-glass-container {
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
+}
+
+/* OHC Premium Rounded Corners */
+.rounded-control { border-radius: 8px; }
+.rounded-card { border-radius: 16px; }
+
+/* OHC Premium Colors */
+:root {
+  --ohc-blue: #0066FF;
+  --ohc-apple-blue: #0071E3;
+  --ohc-green: #34C759;
+  --ohc-unifi-green: #00C24B;
+  --ohc-orange: #FF9500;
+  --ohc-unifi-orange: #FF9F1A;
+  --ohc-red: #FF3B30;
+  --ohc-unifi-red: #DE1B1B;
+  --ohc-text-light: #1D1D1F;
+  --ohc-text-dark: #F5F5F7;
 }
 
 @keyframes fade-in {

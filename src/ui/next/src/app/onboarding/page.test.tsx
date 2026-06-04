@@ -77,6 +77,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Review Details")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
+      expect(screen.getByText("AI Recommendation")).toBeInTheDocument();
     });
   });
 
@@ -381,7 +382,7 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select Web Address, AI Departments and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
@@ -399,23 +400,25 @@ describe('OnboardingWizard', () => {
     // Select Custom Domain
     await user.click(customOption);
 
-    // Verify initial state
-    const salesAgent = screen.getByText('Sales Agent');
-    expect(salesAgent).toBeInTheDocument();
+    // Verify Department display
+    const salesDept = screen.getByText('Sales & Acquisition');
+    const marketingDept = screen.getByText('Marketing & Advertising');
+    expect(salesDept).toBeInTheDocument();
+    expect(marketingDept).toBeInTheDocument();
 
     // Check toggle
     const toggle = screen.getByRole('checkbox');
     expect(toggle).toBeChecked();
 
-    // Select Sales Agent
-    await user.click(salesAgent);
+    // Select Sales Department
+    await user.click(salesDept);
 
     // Toggle auto respond
     await user.click(toggle);
 
     await waitFor(() => {
       const state = useOnboardingStore.getState();
-      expect(state.aiAgents).toContain('Sales Agent');
+      expect(state.aiAgents).toContain('Sales');
       expect(state.aiAutoRespond).toBe(false);
       expect(state.domainChoice).toBe('custom');
     });
