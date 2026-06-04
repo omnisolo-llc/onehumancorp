@@ -21,7 +21,7 @@ export default function MyPlanPage() {
     async function fetchPlanData() {
       try {
         const token = localStorage.getItem('token') || 'test-token';
-        const res = await fetch('/api/billing/my-plan', {
+        const res = await fetch('http://127.0.0.1:18789/my-plan', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }

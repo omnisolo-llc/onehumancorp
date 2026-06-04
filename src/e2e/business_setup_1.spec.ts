@@ -7,6 +7,7 @@ test.describe('Business Setup Wizard', () => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('ohc_wizard_state');
+      localStorage.removeItem('onboarding-storage-v3');
     }, id);
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
@@ -28,12 +29,8 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /Online Store/ }).click();
     await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
-<<<<<<< HEAD
     await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').waitFor({ state: 'visible', timeout: 10000 });
     await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
-=======
-    await page.getByPlaceholder("e.g. Custom cakes and pastries").fill('Custom cookies and cakes');
->>>>>>> 61bb2cbe (research: Add architectural design for offline-first gift card engine)
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
   });
@@ -44,12 +41,8 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
-<<<<<<< HEAD
     await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').waitFor({ state: 'visible', timeout: 10000 });
     await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
-=======
-    await page.getByPlaceholder("e.g. Custom cakes and pastries").fill('Custom cookies and cakes');
->>>>>>> 61bb2cbe (research: Add architectural design for offline-first gift card engine)
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await page.getByLabel(/Physical Products/).check();
     await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
