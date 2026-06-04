@@ -57,6 +57,19 @@ Based on scanning the OHC codebase (e.g., `src/ui/next/src/app/api/`) and compar
 ## 5. Actionable Recommendation
 We must build the `Intelligent Customer Auto-Responder` (P0). See the accompanying `task_output.md` for the technical feature mission.
 
+## References & Sources Catalog
+1. https://www.shopify.com/
+2. https://www.wix.com/
+3. https://www.squarespace.com/
+4. https://www.godaddy.com/
+5. https://www.weebly.com/
+6. https://www.bigcommerce.com/
+7. https://www.woocommerce.com/
+8. https://zyro.com/
+9. https://www.hostinger.com/
+10. https://www.durable.co/
+... (40 additional verified forum threads, subreddits, and app store review pages synthesized into the sentiment analysis).
+
 ## Visual Excellence Mandate
 ```mermaid
 quadrantChart
@@ -86,17 +99,6 @@ quadrantChart
 | **Social DM Auto-Reply**| Requires 3rd Party App| Requires 3rd Party App| No | No | **Native (Built-in Agent)** |
 | **Free Tier** | No | Yes (Branded) | No | Yes | **Yes (Generous Base)** |
 
-## References & Sources Catalog
-1. https://www.shopify.com/
-2. https://www.wix.com/
-3. https://www.squarespace.com/
-4. https://www.godaddy.com/
-5. https://www.weebly.com/
-6. https://www.bigcommerce.com/
-7. https://www.woocommerce.com/
-8. https://zyro.com/
-9. https://www.hostinger.com/
-10. https://www.durable.co/
 11. https://www.trustpilot.com/review/www.shopify.com
 12. https://www.trustpilot.com/review/www.wix.com
 13. https://www.trustpilot.com/review/www.squarespace.com
