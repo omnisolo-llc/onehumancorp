@@ -131,14 +131,26 @@ mod tests {
         assert!(!mission_payload_str.contains("test@example.com"));
         assert!(mission_payload_str.contains("safe_data"));
 
+        let pii_payload_1 = json!({
+            "email": "cloud_user@example.com",
+            "safe_data": "cloud_payload_data"
+        }).to_string();
+
+        let pii_payload_2 = json!({
+            "credit_card": "1234-5678-9012-3456",
+            "safe_data": "burst_payload_data"
+        }).to_string();
+
         // Test sync_cloud_escalations
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_cloud_1', 'CLOUD_ESCALATION', 'payload_data', false)")
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_cloud_1', 'CLOUD_ESCALATION', $1, false)")
+            .bind(&pii_payload_1)
             .execute(&sqlite_pool)
             .await
             .unwrap();
 
         // Test BURSTING sync
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_burst_1', 'BURSTING', 'burst_data', false)")
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_burst_1', 'BURSTING', $1, false)")
+            .bind(&pii_payload_2)
             .execute(&sqlite_pool)
             .await
             .unwrap();
@@ -157,10 +169,11 @@ mod tests {
                 .fetch_one(&pg_pool)
                 .await
                 .unwrap();
-        assert_eq!(
-            row_cloud_mission.get::<String, _>("payload"),
-            "payload_data"
-        );
+
+        let retrieved_payload_1 = row_cloud_mission.get::<String, _>("payload");
+        assert!(retrieved_payload_1.contains("[REDACTED]"));
+        assert!(!retrieved_payload_1.contains("cloud_user@example.com"));
+        assert!(retrieved_payload_1.contains("cloud_payload_data"));
 
         let row_local_burst =
             sqlx::query("SELECT synced_to_cloud FROM agent_missions WHERE id = 'test_burst_1'")
@@ -174,10 +187,11 @@ mod tests {
                 .fetch_one(&pg_pool)
                 .await
                 .unwrap();
-        assert_eq!(
-            row_cloud_burst.get::<String, _>("payload"),
-            "burst_data"
-        );
+
+        let retrieved_payload_2 = row_cloud_burst.get::<String, _>("payload");
+        assert!(retrieved_payload_2.contains("[REDACTED]"));
+        assert!(!retrieved_payload_2.contains("1234-5678-9012-3456"));
+        assert!(retrieved_payload_2.contains("burst_payload_data"));
     }
 }
 
