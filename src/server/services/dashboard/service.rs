@@ -634,9 +634,9 @@ mod tests {
         sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
         // Add dummy data for tests
-        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'system', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'system', 50.0, 'completed')").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('system', 'System Org', 'free')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'test_org', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'test_org', 50.0, 'completed')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
@@ -649,7 +649,7 @@ mod tests {
             id: "agent_1".to_string(),
             name: "A detailed assistant that is very helpful and provides lots of information about everything".to_string(), // Redundant words to test compression
             role: "assistant".to_string(),
-            organization_id: "system".to_string(),
+            organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         });
@@ -674,11 +674,11 @@ mod tests {
     async fn test_dashboard_mobile_payload_optimization() {
         let service = setup_test_dashboard_service().await;
 
-        let req_mobile = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+        let req_mobile = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
         let mut request_mobile = Request::new(req_mobile);
         request_mobile.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
+            org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
 
@@ -706,11 +706,11 @@ mod tests {
     async fn test_dashboard_desktop_payload() {
         let service = setup_test_dashboard_service().await;
 
-        let req_desktop = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req_desktop = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request_desktop = Request::new(req_desktop);
         request_desktop.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
+            org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
 
@@ -724,11 +724,11 @@ mod tests {
     #[tokio::test]
     async fn test_dashboard_ai_token_efficiency() {
         let service = setup_test_dashboard_service().await;
-        let req = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
+            org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
 
@@ -738,29 +738,29 @@ mod tests {
         // the tokens should be mathematically reduced (compressed < original).
         // The mock might return 0 total_tokens, so we just verify it doesn't crash and returns the struct.
         // If cost auditor returned > 0 tokens, we would see compression.
-        assert_eq!(cost_summary.organization_id, "system");
+        assert_eq!(cost_summary.organization_id, "test_org");
     }
 
     #[tokio::test]
     async fn test_dashboard_caching() {
         let service = setup_test_dashboard_service().await;
 
-        let req1 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req1 = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request1 = Request::new(req1);
         request1.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
+            org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
         let start1 = std::time::Instant::now();
         let _res1 = service.get_dashboard(request1).await.unwrap().into_inner();
         let _elapsed1 = start1.elapsed();
 
-        let req2 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req2 = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request2 = Request::new(req2);
         request2.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
-            org_id: "system".to_string(),
+            org_id: "test_org".to_string(),
             agent_id: "test".to_string(),
         });
         let start2 = std::time::Instant::now();
@@ -776,7 +776,7 @@ mod tests {
         let service = setup_test_dashboard_service().await;
 
         // Missing AuthInfo should return Unauthenticated
-        let req = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let request = Request::new(req);
 
         let res = service.get_dashboard(request).await;
@@ -793,7 +793,7 @@ mod tests {
         // but DOES check auth_info.org_id != org_id.
         let service = setup_test_dashboard_service().await;
 
-        let req = ::server_ohc::app::GetOnboardingStateRequest { organization_id: "system".to_string() };
+        let req = ::server_ohc::app::GetOnboardingStateRequest { organization_id: "test_org".to_string() };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
