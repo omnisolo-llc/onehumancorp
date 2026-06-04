@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -8,8 +8,6 @@ exports_files(
     ],
     visibility = ["//visibility:public"],
 )
-
-load("@rules_rust//rust:defs.bzl", "rust_test")
 
 rust_library(
     name = "server_orchestration_departments_memory",
