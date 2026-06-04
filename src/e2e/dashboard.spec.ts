@@ -2,7 +2,6 @@ import { test, expect } from './fixtures';
 
 test.describe('Dashboard Core', () => {
   test('loads the dashboard and business snapshot', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByText("Today's Sales")).toBeVisible();
@@ -10,7 +9,6 @@ test.describe('Dashboard Core', () => {
   });
 
   test('navigates to login and agents screens', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
 
@@ -19,7 +17,6 @@ test.describe('Dashboard Core', () => {
   });
 
   test('opens setup from dashboard quick actions', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/dashboard');
     await page.getByRole('button', { name: 'Launch Site' }).click();
     await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
