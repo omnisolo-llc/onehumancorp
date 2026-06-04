@@ -92,7 +92,7 @@ pub async fn offline_sync_handler(
             RETURNING id, (SELECT inventory_count FROM old_data) as original_count
         ";
 
-        let result = sqlx::query_as::<(String, Option<i32>), _>(query)
+        let result = sqlx::query_as::<_, (String, Option<i32>)>(query)
             .bind(mutation.quantity_deducted)
             .bind(&mutation.product_id)
             .bind(&tenant_id)
