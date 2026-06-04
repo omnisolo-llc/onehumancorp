@@ -3037,13 +3037,13 @@ impl Agent {
                     created_at: chrono::Utc::now(),
                 };
                 if let Err(e) = checkpointer.put_checkpoint(cp).await {
-                    tracing::warn!("Failed to save checkpoint to database: {}", e);
+                    tracing::warn!("Failed to save checkpoint: {}", e);
                 } else {
                     last_checkpoint_id = Some(checkpoint_id.clone());
                     checkpoint_history.push(checkpoint_id.clone());
                     on_event(AgentEvent::CheckpointSaved {
                         iteration,
-                        path: format!("db:{}", checkpoint_id),
+                        path: format!("{}:{}", checkpointer.storage_prefix(), checkpoint_id),
                     });
                 }
             }
@@ -5976,6 +5976,7 @@ mod tests {
         agent.checkpointer = Some(Arc::new(cp));
 
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_state_checkpointing = true;
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
         cfg.thread_id = Some("test-thread".to_string());
 
@@ -5989,7 +5990,7 @@ mod tests {
         let mut found_checkpoint_event = false;
         for e in events {
             if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path.starts_with("db:") {
+                if path.starts_with("git:") {
                     found_checkpoint_event = true;
                 }
             }
@@ -6289,6 +6290,7 @@ mod tests {
         let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
 
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_state_checkpointing = true;
         cfg.thread_id = Some("git-thread-123".to_string());
 
         let mut events = vec![];
