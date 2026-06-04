@@ -47,8 +47,36 @@ impl StripeClient {
             },
             crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
+            },
+            crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
+                // Return razorpay checkout dummy link here since routing was updated
+                Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string())
+            },
+            crate::integrations::stripe::routing::PaymentMethod::MercadoPago => {
+                if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
+                    let mp_client = crate::integrations::mercadopago::client::MercadoPagoClient::new(token);
+                    mp_client.create_checkout_preference(_price_id, customer_id).await
+                } else {
+                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
+                }
             }
         }
+    }
+
+    pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            tenant_id,
+            "stripe_terminal_connection_token",
+            0.05 // mock cost for api orchestration
+        ).await;
+
+        // In a real implementation, this would make an HTTP POST to Stripe's /v1/terminal/connection_tokens
+        // endpoint. Since we're mocking external APIs, we return a mock token string here.
+        // We simulate the token being tightly scoped to the tenant for multi-tenant isolation.
+        let mock_token = format!("tss_mock_token_for_{}", tenant_id);
+
+        Ok(mock_token)
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
@@ -82,5 +110,44 @@ impl StripeClient {
             status: "canceled".to_string(),
             current_period_end: 1714560000,
         })
+    }
+}
+
+impl StripeClient {
+    /// Dispatches a batch payout check. If batched amount > threshold, actually performs payout.
+    pub async fn process_payout_with_batching(
+        &self,
+        account_id: &str,
+        amount_cents: i64,
+        batcher: &crate::integrations::stripe::payout_batcher::PayoutBatcher,
+    ) -> Result<Option<String>, String> {
+        let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
+        if let Some(total_cents) = payout_amount {
+            let _ = ::server_telemetry::record_api_call_cost(
+                &crate::db::get_pool(),
+                account_id,
+                "stripe_payout",
+                0.25 // Standard Stripe Payout Fee
+            ).await;
+
+            // Execute real payout call here...
+            Ok(Some(format!("po_test_{}", total_cents)))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_create_terminal_connection_token() {
+        let client = StripeClient::new("sk_test_123".to_string());
+        let result = client.create_terminal_connection_token("test_tenant").await;
+        assert!(result.is_ok());
+        let token = result.unwrap();
+        assert_eq!(token, "tss_mock_token_for_test_tenant");
     }
 }

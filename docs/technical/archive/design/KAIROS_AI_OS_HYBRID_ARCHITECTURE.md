@@ -1,3 +1,0 @@
-# KAIROS_AI_OS_HYBRID_ARCHITECTURE.md
-
-Stub file.

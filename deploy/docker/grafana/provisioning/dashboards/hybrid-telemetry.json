@@ -33,7 +33,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
       },
       "transparent": true,
       "id": 1
@@ -47,7 +47,7 @@
       },
       "id": 2,
       "options": {
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  OHC Premium Telemetry\n</div>",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -355,7 +355,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "ohc_token_burn_rate_forecast",
+          "expr": "ohc_token_burn_rate_predicted_24h",
           "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
@@ -436,7 +436,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "ohc_token_burn_rate_forecast",
+          "expr": "ohc_token_burn_rate_predicted_24h",
           "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
@@ -1372,7 +1372,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1385,7 +1385,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_mesh_broadcast_total[5m])) by (deployment_mode)",
           "legendFormat": "{{deployment_mode}}",
@@ -1631,6 +1631,46 @@
       "title": "Postgres Lock Contention Rate",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "id": 999,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 71
+      },
+      "type": "timeseries",
+      "title": "LLM Network Latency",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} 95th Percentile"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} 99th Percentile"
+        }
+      ],
+      "transparent": true,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "axisLabel": "Seconds",
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 55,
@@ -1914,7 +1954,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1927,7 +1967,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_sync_duration_seconds_bucket[5m])))",
           "legendFormat": "{{deployment_mode}}",
@@ -1995,7 +2035,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -2008,7 +2048,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, deployment_mode) (rate(ohc_autodream_query_duration_seconds_bucket[5m])))",
           "legendFormat": "{{deployment_mode}}",
@@ -3507,7 +3547,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Latency",
           "range": true,
           "refId": "A"
@@ -4035,7 +4075,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Seconds",
           "range": true,
           "refId": "A"
@@ -4297,6 +4337,191 @@
         },
         "overrides": []
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "Token Burn Rate Forecast",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 999,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "ohc_token_burn_rate_predicted_24h",
+          "legendFormat": "{{organization_id}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Forecast",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "PostgreSQL Job Queue Batch Size",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ohc_sync_daemon_batch_size_bucket[5m])))",
+          "legendFormat": "P95 Batch Size",
+          "refId": "A"
+        },
+        {
+          "expr": "ohc_sync_daemon_batch_size",
+          "legendFormat": "Batch Size",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "drawStyle": "line",
+            "axisPlacement": "auto"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 200
+      },
+      "id": 9991
+    },
+    {
+      "type": "timeseries",
+      "title": "Agent Execution Traces",
+      "targets": [
+        {
+          "expr": "sum by (agent_id, trace_type) (rate(ohc_agent_execution_traces_total[5m]))",
+          "legendFormat": "{{agent_id}} - {{trace_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "drawStyle": "line",
+            "axisPlacement": "auto"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 200
+      },
+      "id": 9992
+    },
+    {
+      "id": 69025,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 200
+      },
+      "type": "heatmap",
+      "title": "Token Efficiency by Agent Role",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_token_usage_by_outcome[5m])) by (agent_role)",
+          "legendFormat": "{{agent_role}}"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "id": 69026,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 200
+      },
+      "type": "stat",
+      "title": "Swarm ROI",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[5m])) / sum(rate(ohc_agent_cost[5m]))",
+          "legendFormat": "Total Successes / Total USD Cost"
+        }
+      ],
+      "transparent": true
     }
   ],
   "refresh": "",

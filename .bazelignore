@@ -10,4 +10,5 @@ bazel-bin
 bazel-out
 bazel-testlogs
 .bazel-output-jetski
-srcs
+.bazel-output-root
+%workspace%

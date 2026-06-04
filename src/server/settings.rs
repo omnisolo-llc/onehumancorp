@@ -24,6 +24,13 @@ pub struct AppSettings {
     pub minimax_api_key: Option<String>,
     pub ai_providers: Vec<AiProvider>,
     pub extras: HashMap<String, String>,
+    pub sms_critical_phone: Option<String>,
+    pub sms_alert_urgent_booking: bool,
+    pub sms_alert_failed_payment: bool,
+    pub sms_alert_new_order: bool,
+    pub delivery_enabled: bool,
+    pub delivery_radius: Option<f64>,
+    pub delivery_fee: Option<f64>,
 }
 
 #[allow(dead_code)]
@@ -38,6 +45,13 @@ impl AppSettings {
             minimax_api_key: None,
             ai_providers: vec![],
             extras: HashMap::new(),
+            sms_critical_phone: None,
+            sms_alert_urgent_booking: false,
+            sms_alert_failed_payment: false,
+            sms_alert_new_order: false,
+            delivery_enabled: false,
+            delivery_radius: Some(5.0),
+            delivery_fee: Some(8.50),
         }
     }
 }
@@ -100,6 +114,25 @@ impl Store {
     pub fn set_extra(&self, key: String, value: String) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.extras.insert(key, value);
+        drop(data);
+        self.save()
+    }
+
+    pub fn set_sms_preferences(&self, phone: String, urgent_booking: bool, failed_payment: bool, new_order: bool) -> Result<(), String> {
+        let mut data = self.data.write().unwrap();
+        data.sms_critical_phone = Some(phone);
+        data.sms_alert_urgent_booking = urgent_booking;
+        data.sms_alert_failed_payment = failed_payment;
+        data.sms_alert_new_order = new_order;
+        drop(data);
+        self.save()
+    }
+
+    pub fn set_delivery_settings(&self, enabled: bool, radius: Option<f64>, fee: Option<f64>) -> Result<(), String> {
+        let mut data = self.data.write().unwrap();
+        data.delivery_enabled = enabled;
+        data.delivery_radius = radius;
+        data.delivery_fee = fee;
         drop(data);
         self.save()
     }

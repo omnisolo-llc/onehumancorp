@@ -1,0 +1,36 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files([
+    "mod.rs",
+    "engine.rs",
+    "router.rs",
+], visibility = ["//visibility:public"])
+
+rust_library(
+    name = "voice",
+    srcs = glob(["**/*.rs"]),
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/integrations/twilio:server_integrations_twilio",
+        "//src/server/domain:server_domain",
+        "//src/server/orchestration:server_orchestration",
+        "@crates//:tokio",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:chrono",
+        "@crates//:uuid",
+        "@crates//:sqlx",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "voice_test",
+    crate = ":voice",
+    deps = [
+        "@crates//:tokio",
+    ],
+)

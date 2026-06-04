@@ -95,7 +95,7 @@ The system is designed to degrade gracefully based on environment context.
 | Feature Area | Cloud-Native Mode | Standalone Desktop Mode |
 | :--- | :--- | :--- |
 | **Shared Task Locking** | PostgreSQL `FOR UPDATE SKIP LOCKED` | Local SQLite Transactions & Go Mutexes |
-| **Teammate Mesh** | Redis Pub/Sub (Centrifuge WebSocket hubs) | In-Memory Go channel broadcast |
+| **Teammate Mesh** | Redis Pub/Sub (Centrifuge WebSocket hubs) | Local in-process transport |
 | **Memory Vector Store** | pgvector / Pinecone | Local SQLite FTS/Vector extensions |
 
 ## 6. Visual Excellence Mandate

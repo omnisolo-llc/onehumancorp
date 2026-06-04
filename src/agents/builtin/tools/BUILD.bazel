@@ -6,6 +6,8 @@ rust_library(
         "agent_tool.rs",
         "anthropic_memory.rs",
         "bash.rs",
+        "booking.rs",
+        "checkout.rs",
         "edit.rs",
         "finance.rs",
         "generative_visibility.rs",
@@ -19,21 +21,30 @@ rust_library(
         "marketing.rs",
         "mcp_dynamic.rs",
         "mod.rs",
+        "marketplace.rs",
+        "marketplace_tool.rs",
+        "pydantic.rs",
+        "native_state.rs",
+        "repo_map.rs",
+        "aider_repo_map.rs",
         "ollama.rs",
         "read.rs",
         "recall.rs",
+        "restic.rs",
         "runner.rs",
         "screenshot.rs",
         "sendmessage.rs",
+        "skill.rs",
+        "create_skill.rs",
         "sleep.rs",
         "subagent.rs",
         "tail.rs",
         "task.rs",
         "todowrite.rs",
-        "todowrite_test.rs",
         "toolsearch.rs",
         "webfetch.rs",
         "websearch.rs",
+        "workflow.rs",
         "write.rs",
     ],
     crate_root = "mod.rs",
@@ -48,6 +59,7 @@ rust_library(
         "@crates//:chrono",
         "@crates//:dashmap",
         "@crates//:glob",
+        "@crates//:once_cell",
         "@crates//:qrcode",
         "@crates//:regex",
         "@crates//:reqwest",
@@ -57,10 +69,65 @@ rust_library(
         "@crates//:tracing",
         "@crates//:urlencoding",
         "@crates//:uuid",
+        "@crates//:sqlx",
     ],
     proc_macro_deps = [
         "@crates//:async-recursion",
         "@crates//:async-trait",
     ],
 
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "pydantic_test",
+    srcs = ["pydantic_test.rs"],
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":tools",
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+        "@crates//:serde_json",
+        "@crates//:serde",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "todowrite_test",
+    srcs = ["todowrite_test.rs"],
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":tools",
+        "@crates//:tokio",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "runner_test",
+    srcs = ["runner.rs"],
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
 )

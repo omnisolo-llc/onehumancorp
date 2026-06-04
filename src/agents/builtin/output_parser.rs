@@ -11,164 +11,216 @@ pub trait LlmClientForParser: Send + Sync {
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
 
-/// Implements the Output Parsing mechanic from the Master Catalog:
-/// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
-/// the failed completion, and the parsing error back to the model)."
-pub async fn parse_structured_output<T: DeserializeOwned>(
-    llm: &Arc<dyn LlmClientForParser>,
-    req: ChatRequest,
-    max_retries: usize,
-) -> Result<T, ToolError> {
-    let mut current_req = req.clone();
 
-    // Inject the schema as a tool definition to encourage the model to use tool_calls API
-    // Note: Since we don't have the schema definition here natively because it's a generic parsing function without it,
-    // we instruct the LLM via a generic tool to emit structured JSON. However, a full implementation would pass the JSON schema.
-    let schema_tool = crate::types::ToolDefinition {
-        name: "structured_output".to_string(),
-        description: "Call this tool to output the parsed structured data.".to_string(),
-        parameters: serde_json::json!({
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "description": "The structured data matching the requested schema."
-                }
-            },
-            "required": ["data"]
-        }),
-    };
 
-    if !current_req.tools.iter().any(|t| t.name == "structured_output") {
-        current_req.tools.push(schema_tool);
+pub trait OutputParser<T> {
+    fn parse_message(&self, msg: &Message) -> Result<T, String>;
+}
+
+pub struct StructuredOutputParser<T> {
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> StructuredOutputParser<T> {
+    pub fn new() -> Self {
+        Self { _marker: std::marker::PhantomData }
     }
+}
 
-    let mut attempt = 0;
-
-    loop {
-        attempt += 1;
-        let resp = match llm.chat(current_req.clone()).await {
-            Ok(r) => r,
-            Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
-        };
-
-        let msg = &resp.message;
+impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
+    fn parse_message(&self, msg: &Message) -> Result<T, String> {
+        let _completion = msg.content.clone();
 
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty() {
             if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
                 if let Some(data) = call.arguments.get("data") {
-                    match serde_json::from_value::<T>(data.clone()) {
-                        Ok(parsed) => return Ok(parsed),
+                    return match serde_json::from_value::<T>(data.clone()) {
+                        Ok(parsed) => Ok(parsed),
                         Err(e) => {
-                            if attempt >= max_retries {
-                                return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
-                            }
-
-                            // Let the LLM know the tool call arguments were invalid
-                            // Return the raw error as a ToolMessage directly to the model so it can self-correct.
-                            let mut assistant_msg = msg.clone();
-                            assistant_msg.content = String::new(); // Just a tool call
-                            current_req.messages.push(assistant_msg);
-
-                            let error_msg = format!("Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e);
-                            current_req.messages.push(Message {
-                                role: crate::types::Role::Tool,
-                                content: String::new(),
-                                tool_calls: vec![],
-                                tool_results: vec![crate::types::ToolResult {
-                                    tool_call_id: call.id.clone(),
-                                    content: String::new(),
-                                    error: error_msg,
-                                }],
-                                response_id: None,
-                                previous_response_id: None,
-                            });
-                            continue;
+                            let detail = if e.is_data() {
+                                format!("Semantic validation failed: {}", e)
+                            } else if e.is_syntax() {
+                                format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
+                            } else if e.is_eof() {
+                                format!("Incomplete JSON structure (unexpected EOF): {}", e)
+                            } else {
+                                format!("{}", e)
+                            };
+                            Err(format!(
+                                "Failed to parse tool call arguments as valid JSON matching the schema.
+Reason: {}
+Please fix the JSON and retry calling the tool.", detail
+                            ))
                         }
-                    }
+                    };
                 } else {
-                    if attempt >= max_retries {
-                        return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: Missing 'data' parameter in structured_output tool.", max_retries)));
-                    }
-
-                    let mut assistant_msg = msg.clone();
-                    assistant_msg.content = String::new();
-                    current_req.messages.push(assistant_msg);
-
-                    let error_msg = "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string();
-                    current_req.messages.push(Message {
-                        role: crate::types::Role::Tool,
-                        content: String::new(),
-                        tool_calls: vec![],
-                        tool_results: vec![crate::types::ToolResult {
-                            tool_call_id: call.id.clone(),
-                            content: String::new(),
-                            error: error_msg,
-                        }],
-                        response_id: None,
-                        previous_response_id: None,
-                    });
-                    continue;
+                    return Err(
+                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                    );
                 }
             }
         }
 
-        // Fallback mechanic: Legacy RetryWithErrorOutputParser
-        // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
-        let completion = msg.content.clone();
+        // Strict enforcement: Rely entirely on native tool_calls API objects.
+        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
+    }
+}
 
-        let mut json_str = completion.trim();
-        let obj_start = json_str.find('{');
-        let arr_start = json_str.find('[');
+pub struct RetryWithErrorOutputParser<'a, T> {
+    parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
+    llm: Arc<dyn LlmClientForParser>,
+}
 
-        let start_idx = match (obj_start, arr_start) {
-            (Some(o), Some(a)) => std::cmp::min(o, a),
-            (Some(o), None) => o,
-            (None, Some(a)) => a,
-            (None, None) => 0,
+impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
+    pub fn new(parser: Box<dyn OutputParser<T> + Send + Sync + 'a>, llm: Arc<dyn LlmClientForParser>) -> Self {
+        Self { parser, llm }
+    }
+
+    pub async fn parse_with_prompt(&self, req: ChatRequest, max_retries: usize) -> Result<T, ToolError> {
+        let mut current_req = req.clone();
+
+        // Inject the schema as a tool definition to encourage the model to use tool_calls API
+        let schema_tool = crate::types::ToolDefinition {
+            name: "structured_output".to_string(),
+            description: "Call this tool to output the parsed structured data.".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "object",
+                        "description": "The structured data matching the requested schema."
+                    }
+                },
+                "required": ["data"]
+            }),
         };
 
-        if start_idx > 0 {
-            json_str = &json_str[start_idx..];
+        if !current_req.tools.iter().any(|t| t.name == "structured_output") {
+            current_req.tools.push(schema_tool);
         }
 
-        let obj_end = json_str.rfind('}');
-        let arr_end = json_str.rfind(']');
+        let mut attempt = 0;
+        loop {
+            let resp = match self.llm.chat(current_req.clone()).await {
+                Ok(r) => r,
+                Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
+            };
 
-        let end_idx = match (obj_end, arr_end) {
-            (Some(o), Some(a)) => std::cmp::max(o, a),
-            (Some(o), None) => o,
-            (None, Some(a)) => a,
-            (None, None) => json_str.len().saturating_sub(1),
-        };
+            let msg = &resp.message;
+            match self.parser.parse_message(msg) {
+                Ok(parsed) => return Ok(parsed),
+                Err(parse_error_msg) => {
+                    if attempt >= max_retries {
+                        return Err(ToolError::LlmRecoverable(format!(
+                            "Output parsing failed after {} retries. Last error: {}",
+                            max_retries, parse_error_msg
+                        )));
+                    }
 
-        if end_idx < json_str.len() {
-            json_str = &json_str[..=end_idx];
-        }
+                    // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
+                    if !msg.tool_calls.is_empty() {
+                        current_req.messages.push(msg.clone());
+                        let detailed_error = format!("Parsing error: {}. Please correct your tool arguments to match the required schema.", parse_error_msg);
+                        let tool_results = msg.tool_calls.iter().map(|tc| crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: detailed_error.clone(),
+                        }).collect();
 
-        if json_str.is_empty() {
-            json_str = "null"; // If empty, fall back to null to trigger serde error
-        }
-
-        match serde_json::from_str::<T>(json_str) {
-            Ok(parsed) => return Ok(parsed),
-            Err(e) => {
-                if attempt >= max_retries {
-                    return Err(ToolError::Fatal(format!("Output parsing failed after {} retries. Last error: {}", max_retries, e)));
+                        current_req.messages.push(Message {
+                            role: crate::types::Role::Tool,
+                            content: String::new(),
+                            tool_calls: vec![],
+                            tool_results,
+                            response_id: None,
+                            previous_response_id: msg.response_id.clone(),
+                        });
+                    } else {
+                        current_req.messages.push(msg.clone());
+                        let error_context = format!(
+                            "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
+                            msg.content, parse_error_msg
+                        );
+                        current_req.messages.push(Message::user(error_context));
+                    }
+                    attempt += 1;
                 }
-
-                current_req.messages.push(Message::assistant(completion));
-                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting.", e);
-                current_req.messages.push(Message::user(error_msg));
             }
         }
     }
 }
 
+/// Implements the Output Parsing mechanic from the Master Catalog:
+/// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
+/// the failed completion, and the parsing error back to the model)."
+
+/// Parses structured output from the LLM, relying heavily on the native `tool_calls` API.
+///
+/// **Contract / Industry Standard:**
+/// This function implements the industry standard "Pydantic-first tool schema validation" and "Legacy RetryWithErrorOutputParser" fallback mechanic.
+///
+/// 1. **Pydantic-First**: It attempts to parse the LLM's response strictly according to the defined generic schema `T`.
+/// 2. **Error Classification**: If parsing fails, it deeply inspects the `serde_json::Error` (identifying if it's semantic/data-related, syntax-related, or an unexpected EOF).
+/// 3. **Self-Correction Feedback Loop**: It feeds these highly specific, categorized parsing errors directly back into the prompt history as an LLM-recoverable `ToolMessage` or system reminder, giving the LLM precise instructions on how to correct its previous output in subsequent retry attempts.
+///
+/// **Arguments:**
+/// * `llm`: A reference to the LLM client implementing `LlmClientForParser`.
+/// * `req`: The initial chat request configuration containing system prompts and conversation history.
+/// * `max_retries`: The maximum number of retry attempts allowed before aborting.
+///
+/// **Returns:**
+/// Returns the parsed strongly-typed output `T` on success, or a `ToolError` on failure (typically `ToolError::LlmRecoverable` or `ToolError::Transient`).
+pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
+    llm: &Arc<dyn LlmClientForParser>,
+    req: ChatRequest,
+    max_retries: usize,
+) -> Result<T, ToolError> {
+    let parser = Box::new(StructuredOutputParser::<T>::new());
+    let retry_parser = RetryWithErrorOutputParser::new(parser, llm.clone());
+    retry_parser.parse_with_prompt(req, max_retries).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_parse_structured_output_serde_error_classification() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})), // Should be a string
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "recovered"}}))
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+
+        // It should recover on the second try
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered");
+
+        // Need to check the requests to ensure the prompt contained the "Semantic validation failed"
+        // Let's modify the test to just check if it fails with the right message when max_retries = 0
+        let client_fail = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})),
+            ]),
+        });
+
+        let req2 = create_test_req();
+        let result_fail: Result<TestOutput, _> = parse_structured_output(&(client_fail as Arc<dyn LlmClientForParser>), req2, 0).await;
+
+        assert!(result_fail.is_err());
+        match result_fail {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Semantic validation failed"));
+            },
+            _ => panic!("Expected LlmRecoverable error for schema mismatch"),
+        }
+    }
+
     use crate::types::{ChatResponse, Usage};
     use serde::Deserialize;
     use tokio::sync::Mutex;
@@ -240,59 +292,51 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_parse_structured_output_markdown_wrapper() {
+    async fn test_parse_structured_output_markdown_wrapper_fallback() {
+        // Now, raw text fails first, then we retry and hopefully get a tool call
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```")
+                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```"),
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_markdown_tool_call"}})),
             ]),
         });
 
         let req = create_test_req();
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success_markdown");
-    }
-
-    #[tokio::test]
-    async fn test_parse_structured_output_success() {
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_text_resp(r#"{"result": "success"}"#)]),
-        });
-
-        let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success");
+        assert_eq!(result.result, "success_markdown_tool_call");
     }
 
     #[tokio::test]
     async fn test_parse_structured_output_retry_success() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_text_resp("invalid json"),
-                create_text_resp(r#"{"result": "success after retry"}"#)
+                create_text_resp("invalid plain text json"),
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success after retry"}})),
             ]),
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success after retry");
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success after retry");
     }
 
     #[tokio::test]
     async fn test_parse_structured_output_failure() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
-                create_text_resp("invalid json"),
-                create_text_resp("still invalid"),
+                create_text_resp("invalid plain text"),
+                create_text_resp("still invalid plain text"),
             ]),
         });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::Fatal(msg)) = result {
-            assert!(msg.contains("Output parsing failed after 2 retries"));
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Expected native tool_calls API object"));
         } else {
-            panic!("Expected Fatal error");
+            panic!("Expected LlmRecoverable error, got {:?}", result);
         }
     }
 
@@ -319,8 +363,9 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success_tool_call_retry");
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success_tool_call_retry");
     }
 
     #[tokio::test]
@@ -335,10 +380,62 @@ mod tests {
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::Fatal(msg)) = result {
-            assert!(msg.contains("Output parsing failed after 2 retries"));
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Failed to parse tool call arguments"));
         } else {
-            panic!("Expected Fatal error");
+            panic!("Expected LlmRecoverable error, got {:?}", result);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_retry_parser_malformed_json_recovery() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_text_resp("this is completely { malformed JSON ["),
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "recovered"}}))
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered");
+    }
+
+    #[tokio::test]
+    async fn test_retry_parser_schema_mismatch_correction() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"wrong_schema": true}})),
+                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "corrected_schema"}})),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "corrected_schema");
+    }
+
+    #[tokio::test]
+    async fn test_retry_parser_exhaustion_returns_recoverable_error() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_text_resp("bad 1"),
+                create_text_resp("bad 2"),
+                create_text_resp("bad 3"),
+                create_text_resp("bad 4"),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Output parsing failed after 2 retries"));
+            },
+            _ => panic!("Expected LlmRecoverable error for exhaustion"),
         }
     }
 }

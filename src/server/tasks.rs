@@ -92,6 +92,7 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
+    pub(crate) broadcaster: std::sync::RwLock<Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>>,
 }
 
 impl TaskManager {
@@ -99,6 +100,7 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
+            broadcaster: std::sync::RwLock::new(None),
         }
     }
 
@@ -106,6 +108,17 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
+            broadcaster: std::sync::RwLock::new(None),
+        }
+    }
+
+    pub fn set_broadcaster(&self, broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>) {
+        *self.broadcaster.write().unwrap_or_else(|e| e.into_inner()) = Some(broadcaster);
+    }
+
+    fn broadcast(&self, task: &SharedTask, event_type: &str) {
+        if let Some(ref b) = *self.broadcaster.read().unwrap_or_else(|e| e.into_inner()) {
+            b(task.clone(), event_type.to_string());
         }
     }
 
@@ -115,6 +128,7 @@ impl TaskManager {
 
     pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
         let id = uuid::Uuid::new_v4().to_string();
+        self.check_circular_dependency(&id, &dependencies)?;
         let now = Utc::now();
         
         let approval_status = if priority == "P1" || priority == "HIGH" {
@@ -153,27 +167,48 @@ impl TaskManager {
             proposed_content: None,
         };
         
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         tasks.insert(id, task.clone());
         
         Ok(task)
     }
 
+
+    pub fn check_circular_dependency(&self, task_id: &str, dependencies: &[String]) -> Result<(), String> {
+        let tasks = self.tasks.read().unwrap_or_else(|e| e.into_inner());
+        let mut to_visit = dependencies.to_vec();
+        let mut visited = std::collections::HashSet::new();
+
+        while let Some(dep_id) = to_visit.pop() {
+            if dep_id == task_id {
+                return Err("Circular dependency detected".to_string());
+            }
+            if visited.insert(dep_id.clone()) {
+                if let Some(dep_task) = tasks.get(&dep_id) {
+                    to_visit.extend(dep_task.dependencies.clone());
+                }
+            }
+        }
+        Ok(())
+    }
+
+
     pub fn insert_task(&self, task: SharedTask) {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         tasks.insert(task.id.clone(), task);
     }
 
     pub fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
-        let tasks = self.tasks.read().unwrap();
+        let tasks = self.tasks.read().unwrap_or_else(|e| e.into_inner());
         tasks.get(task_id).cloned().ok_or_else(|| "task not found".to_string())
     }
 
     pub fn update_task_status(&self, task_id: &str, new_status: String) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
+            self.broadcast(&task, "task_status_updated");
             Ok(())
         } else {
             Err("task not found".to_string())
@@ -181,12 +216,14 @@ impl TaskManager {
     }
 
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
-            if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
+            let is_valid_state = task.status == "PENDING" || task.ultraplan_phase.as_deref() == Some("APPROVED");
+            if is_valid_state && task.approval_status.as_deref() != Some("PENDING") {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
+                self.broadcast(&task, "task_claimed");
                 return Ok(Some(task.clone()));
             }
         }
@@ -194,11 +231,12 @@ impl TaskManager {
     }
 
     pub fn review_task(&self, task_id: &str, agent_id: &str) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
+                self.broadcast(&task, "task_review");
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -208,7 +246,7 @@ impl TaskManager {
     }
 
     pub fn complete_task(&self, task_id: &str, agent_id: &str, result: String) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "COMPLETED".to_string();
@@ -237,7 +275,7 @@ impl TaskManager {
 
 
     pub fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "FAILED".to_string();
@@ -263,9 +301,73 @@ impl TaskManager {
         Err("task not found".to_string())
     }
 
+
+    pub async fn submit_for_approval(&self, task_id: &str, org_id: &str, proposed_content: &str, action_risk: &str) -> Result<(), String> {
+        let (new_approval_status, new_updated_at, new_proposed_content, new_action_risk) = {
+            let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
+            if let Some(task) = tasks.get_mut(task_id) {
+                if task.organization_id != org_id {
+                    return Err("Unauthorized".to_string());
+                }
+                task.approval_status = Some("PENDING".to_string());
+                task.proposed_content = Some(proposed_content.to_string());
+                let risk = match action_risk {
+                    "HIGH" => ActionRisk::High,
+                    "LOW" => ActionRisk::Low,
+                    _ => ActionRisk::Unspecified,
+                };
+                task.action_risk = Some(risk.clone());
+                task.updated_at = Utc::now();
+                (task.approval_status.clone(), task.updated_at, task.proposed_content.clone(), task.action_risk.clone())
+            } else {
+                return Err("task not found".to_string());
+            }
+        };
+
+        let db_clone = self.db.read().unwrap_or_else(|e| e.into_inner()).clone();
+        if let Some(db) = db_clone {
+            let risk_str = match new_action_risk {
+                Some(ActionRisk::High) => "HIGH",
+                Some(ActionRisk::Low) => "LOW",
+                _ => "UNSPECIFIED",
+            };
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let _res = sqlx::query(
+                        "UPDATE shared_tasks_decomposition SET approval_status = $1, proposed_content = $2, action_risk = $3, updated_at = $4 WHERE id = $5 AND organization_id = $6"
+                    )
+                    .bind(&new_approval_status)
+                    .bind(&new_proposed_content)
+                    .bind(risk_str)
+                    .bind(new_updated_at)
+                    .bind(task_id)
+                    .bind(org_id)
+                    .execute(&db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let _res = sqlx::query(
+                        "UPDATE shared_tasks_decomposition SET approval_status = ?, proposed_content = ?, action_risk = ?, updated_at = ? WHERE id = ? AND organization_id = ?"
+                    )
+                    .bind(&new_approval_status)
+                    .bind(&new_proposed_content)
+                    .bind(risk_str)
+                    .bind(new_updated_at.to_rfc3339())
+                    .bind(task_id)
+                    .bind(org_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub async fn approve_task(&self, task_id: &str, is_approved: bool, required_org_id: &str) -> Result<(), String> {
         let (new_approval_status, new_status, new_payload_opt, new_updated_at, org_id) = {
-            let tasks_read = self.tasks.read().unwrap();
+            let tasks_read = self.tasks.read().unwrap_or_else(|e| e.into_inner());
             if let Some(task) = tasks_read.get(task_id) {
                 if task.organization_id != required_org_id {
                     return Err("Unauthorized".to_string());
@@ -296,7 +398,7 @@ impl TaskManager {
             }
         };
 
-        let db_clone = self.db.read().unwrap().clone();
+        let db_clone = self.db.read().unwrap_or_else(|e| e.into_inner()).clone();
         if let Some(db) = db_clone {
             if let Some(new_payload) = &new_payload_opt {
                 match &db.store {
@@ -332,7 +434,7 @@ impl TaskManager {
             }
         }
 
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         if let Some(task) = tasks.get_mut(task_id) {
             task.approval_status = new_approval_status;
             task.status = new_status;
@@ -340,13 +442,14 @@ impl TaskManager {
                 task.payload = payload;
             }
             task.updated_at = new_updated_at;
+            self.broadcast(&task, "task_approved");
         }
 
         Ok(())
     }
 
     pub fn get_pending_approvals(&self, org_id: &str) -> Vec<SharedTask> {
-        let tasks = self.tasks.read().unwrap();
+        let tasks = self.tasks.read().unwrap_or_else(|e| e.into_inner());
         tasks.values()
             .filter(|t| t.organization_id == org_id && t.approval_status.as_deref() == Some("PENDING"))
             .cloned()
@@ -354,7 +457,7 @@ impl TaskManager {
     }
 
     pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
-        let mut tasks = self.tasks.write().unwrap();
+        let mut tasks = self.tasks.write().unwrap_or_else(|e| e.into_inner());
         let mut claimed_tasks = Vec::new();
         
         for task in tasks.values_mut() {
@@ -380,7 +483,34 @@ impl TaskManager {
 mod tests {
     use super::*;
     #[test]
-    fn test_create_and_get_task() {
+    fn test_task_manager_mesh_broadcast() {
+        let tm = TaskManager::new();
+        let broadcast_called = std::sync::Arc::new(std::sync::Mutex::new(false));
+        let payload_captured = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+        let event_type_captured = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+
+        let broadcast_called_clone = broadcast_called.clone();
+        let payload_captured_clone = payload_captured.clone();
+        let event_type_captured_clone = event_type_captured.clone();
+
+        tm.set_broadcaster(std::sync::Arc::new(move |task, event_type| {
+            *broadcast_called_clone.lock().unwrap() = true;
+            *payload_captured_clone.lock().unwrap() = serde_json::to_string(&task).unwrap();
+            *event_type_captured_clone.lock().unwrap() = event_type;
+        }));
+
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+
+        // Trigger an update to invoke broadcaster
+        tm.update_task_status(&task.id, "IN_PROGRESS".to_string()).unwrap();
+
+        assert!(*broadcast_called.lock().unwrap(), "Broadcaster should have been called");
+        assert_eq!(*event_type_captured.lock().unwrap(), "task_status_updated");
+        assert!(!payload_captured.lock().unwrap().is_empty(), "Payload should not be empty");
+    }
+    #[tokio::test]
+
+    async fn test_create_and_get_task() {
         let tm = TaskManager::new();
         let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
         
@@ -506,8 +636,6 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
         assert_eq!(payload["error"], "Task was rejected by user");
     }
-}
-
     #[tokio::test]
     async fn test_approve_task_integration() {
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -538,3 +666,5 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(row.0, "APPROVED");
     }
+
+}

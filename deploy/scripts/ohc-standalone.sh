@@ -19,10 +19,13 @@ echo ""
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-export TOKIO_WORKER_THREADS=1
-export MALLOC_ARENA_MAX=1
-export RAYON_NUM_THREADS=2
-export OHC_STANDALONE=true
+export OHC_STANDALONE_MODE=true
+# Tuning memory limits for standalone wrapper
+export TOKIO_WORKER_THREADS=2
+export MALLOC_ARENA_MAX=2
+export RAYON_NUM_THREADS=4
+export GOMEMLIMIT=256MiB
+export GOGC=50
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
 export RUST_LOG="info"
@@ -41,20 +44,21 @@ chmod 700 "${OHC_RUNTIME_DIR}" "${OHC_MEMORY_DIR}" "${OHC_STATUS_DIR}" "${OHC_ME
 find "${OHC_RUNTIME_DIR}" -type f -exec chmod 600 {} \+
 find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
 
-if [ -z "$OHC_LOCAL_DB_KEY" ]; then
+if [ -z "$OHC_SQLITE_KEY" ]; then
   KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
     (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
   fi
-  export OHC_LOCAL_DB_KEY="$(cat "$KEY_FILE")"
+  export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
 fi
 
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
 # Build optimized binaries instead of running through Bazelisk repeatedly
 echo -e "${DIM}  Compiling optimized binaries...${RESET}"
-npx @bazel/bazelisk build -c opt //src/server:server //src/app:app > /dev/null 2>&1
+# Optimize caching
+npx @bazel/bazelisk build -c opt --disk_cache=~/.cache/bazel-disk-cache //src/server:server //src/ui/tauri:app --//src/ui/tauri:build_tauri=true > /dev/null 2>&1
 echo -e "  ${GREEN}✓ Binaries compiled${RESET}"
 
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
@@ -79,20 +83,21 @@ until curl -s http://localhost:8080/health > /dev/null 2>&1; do
   sleep 1
 done
 
-./bazel-bin/src/app/app > /dev/null 2>&1 &
+./bazel-bin/src/ui/tauri/app > /dev/null 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 
 # Launch the Prometheus agent
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
-  docker run -d --name ohc-prometheus-agent \
+  docker run --name ohc-prometheus-agent \
     --memory="32m" --cpus="0.05" \
     --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
     --network host \
     -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
-    prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1
-  echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained)${RESET}"
+    prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1 &
+  PROMETHEUS_PID=$!
+  echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained) with PID $PROMETHEUS_PID${RESET}"
 fi
 
 # Trap INT and EXIT signals to gracefully shutdown all local processes

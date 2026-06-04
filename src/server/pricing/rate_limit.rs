@@ -11,6 +11,17 @@ pub enum PlanTier {
 
 impl PlanTier {
     pub fn monthly_action_limit(&self) -> Option<u32> {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_ACTIONS",
+            PlanTier::Starter => "OHC_STARTER_TIER_ACTIONS",
+            _ => "",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
+                return Some(v);
+            }
+        }
+
         match self {
             PlanTier::Free => Some(100),
             PlanTier::Starter => Some(1000),
@@ -27,6 +38,18 @@ impl PlanTier {
     }
 
     pub fn storage_limit_mb(&self) -> Option<u32> {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_STORAGE_MB",
+            PlanTier::Starter => "OHC_STARTER_TIER_STORAGE_MB",
+            PlanTier::Pro => "OHC_PRO_TIER_STORAGE_MB",
+            PlanTier::Business => "OHC_BUSINESS_TIER_STORAGE_MB",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
+                return Some(v);
+            }
+        }
+
         match self {
             PlanTier::Free => Some(500),
             PlanTier::Starter => Some(5000), // 5GB
@@ -51,8 +74,25 @@ impl PlanTier {
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
-}
 
+    pub fn base_price(&self) -> f64 {
+        match self {
+            PlanTier::Free => 0.0,
+            PlanTier::Starter => 29.0,
+            PlanTier::Pro => 79.0,
+            PlanTier::Business => 299.0,
+        }
+    }
+
+    pub fn get_prompt_cache_ttl(&self) -> std::time::Duration {
+        match self {
+            PlanTier::Free => std::time::Duration::from_secs(60 * 60), // 1 hour
+            PlanTier::Starter => std::time::Duration::from_secs(24 * 60 * 60), // 24 hours
+            PlanTier::Pro => std::time::Duration::from_secs(7 * 24 * 60 * 60), // 7 days
+            PlanTier::Business => std::time::Duration::from_secs(30 * 24 * 60 * 60), // 30 days
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct RateLimitStatus {
     pub is_allowed: bool,
@@ -76,7 +116,7 @@ impl RedisRateLimiter {
         self
     }
 
-    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self.connection.get_or_try_init(|| async {
             self.client.get_multiplexed_async_connection().await
         }).await.map_err(|e| e.to_string())?;
@@ -123,6 +163,10 @@ impl RedisRateLimiter {
     }
 
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+        if let Some(store) = &self.telemetry_store {
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+        }
+
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -141,8 +185,11 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.monthly_action_limit() {
             if tenant_used >= limit {
+                if let Some(store) = &self.telemetry_store {
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
@@ -159,8 +206,11 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.agent_action_limit() {
             if agent_used >= limit {
+                if let Some(store) = &self.telemetry_store {
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
@@ -183,6 +233,10 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+        if let Some(store) = &self.telemetry_store {
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+        }
+
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -192,8 +246,11 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.max_products() {
             if total_products >= limit {
+                if let Some(store) = &self.telemetry_store {
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
@@ -223,6 +280,10 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
+        if let Some(store) = &self.telemetry_store {
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+        }
+
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -232,8 +293,11 @@ impl RedisRateLimiter {
 
         if let Some(limit) = tier.max_agents() {
             if total_agents >= limit {
+                if let Some(store) = &self.telemetry_store {
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
@@ -263,6 +327,10 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
+        if let Some(store) = &self.telemetry_store {
+            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+        }
+
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
@@ -283,8 +351,11 @@ impl RedisRateLimiter {
         if let Some(limit_mb) = tier.storage_limit_mb() {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;
             if total_storage > limit_bytes {
+                if let Some(store) = &self.telemetry_store {
+                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                }
                 return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit - allow but warn
+                    is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
@@ -336,6 +407,11 @@ mod tests {
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
+
+        assert_eq!(PlanTier::Free.base_price(), 0.0);
+        assert_eq!(PlanTier::Starter.base_price(), 29.0);
+        assert_eq!(PlanTier::Pro.base_price(), 79.0);
+        assert_eq!(PlanTier::Business.base_price(), 299.0);
     }
 
     #[tokio::test]
@@ -400,7 +476,7 @@ mod tests {
                 // Increment storage by an amount crossing the 500MB limit
                 let large_delta: i64 = 450 * 1024 * 1024;
                 let status = limiter.check_storage_quota(tenant_id, large_delta).await.unwrap();
-                assert!(status.is_allowed); // Soft limit allows it
+                assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // But flag is set
                 assert!(status.user_message.unwrap().contains("500MB storage"));
             }

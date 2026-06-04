@@ -1,8 +1,9 @@
-#![allow(dead_code)]
+
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
+/// Represents a defined role within the organization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoleDefinition {
     #[serde(default)]

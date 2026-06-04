@@ -235,13 +235,13 @@ pub async fn create_teammate_mesh(redis_url: Option<&str>, is_cloud: bool) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mesh::transport::MemoryTransport;
+    use crate::mesh::transport::InProcessTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
 
     #[tokio::test]
     async fn test_teammate_mesh_client() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let mesh = TeammateMeshClient::new(transport);
 
         let tasks_received = Arc::new(AtomicBool::new(false));
@@ -289,12 +289,12 @@ mod tests {
         mesh.publish_task(b"test".to_vec()).await.unwrap();
         sleep(Duration::from_millis(50)).await;
 
-        assert!(received.load(Ordering::SeqCst), "Fallback MemoryTransport should successfully process messages");
+        assert!(received.load(Ordering::SeqCst), "Fallback InProcessTransport should successfully process messages");
     }
 
     #[tokio::test]
     async fn test_mesh_acquire_lock() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let mesh = TeammateMeshClient::new(transport);
 
         let acquired = mesh.acquire_lock("test_resource", "agent_1", 10).await.unwrap();
@@ -311,7 +311,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_register_presence() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let mesh = TeammateMeshClient::new(transport);
 
         mesh.register_presence("agent_1", "online", 10).await.unwrap();
@@ -327,7 +327,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_ping_pong() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let mesh = TeammateMeshClient::new(transport);
 
         let _cancel_responder = mesh.start_health_responder().await.unwrap();
@@ -341,7 +341,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_state_handoff() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let mesh = TeammateMeshClient::new(transport);
 
         let received = Arc::new(AtomicBool::new(false));
@@ -361,7 +361,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_publish_with_ack() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let mesh = TeammateMeshClient::new(transport.clone());
 
         let transport_clone = transport.clone();

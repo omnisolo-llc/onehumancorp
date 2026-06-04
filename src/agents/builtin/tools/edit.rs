@@ -1,9 +1,17 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct EditArgs {
+    path: String,
+    old_str: String,
+    new_str: String,
+}
 
 struct EditExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -11,18 +19,11 @@ struct EditExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for EditExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("edit: path is required".to_string()))?;
-        let old_str = args["old_str"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("edit: old_str is required".to_string()))?;
-        let new_str = args["new_str"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("edit: new_str is required".to_string()))?;
+impl PydanticToolExecutor<EditArgs> for EditExecutor {
+    async fn execute_typed(&self, args: EditArgs) -> Result<String, ToolError> {
+        let path = &args.path;
+        let old_str = &args.old_str;
+        let new_str = &args.new_str;
 
         let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
@@ -46,26 +47,35 @@ impl ToolExecutor for EditExecutor {
         }
 
         let new_content = content.replacen(old_str, new_str, 1);
-        fs::write(&actual_path, &new_content)
-            .await
-            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         // Verification Loop: Computational/Guides (feedforward linters/type-checkers)
         if actual_path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            let actual_path_str = actual_path.to_string_lossy();
-            match self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &actual_path_str], None, vec![]).await {
+            let tmp_path = actual_path.with_extension("tmp.rs");
+            fs::write(&tmp_path, &new_content)
+                .await
+                .map_err(|e| format!("edit: temp file {}: {}", tmp_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+            let tmp_path_str = tmp_path.to_string_lossy();
+            let res = self.runner.run("rustc", &["--emit=metadata", "--edition=2021", &tmp_path_str], None, vec![]).await;
+
+            // Clean up temp file
+            let _ = fs::remove_file(&tmp_path).await;
+
+            match res {
                 Ok(output) => {
                     if !output.status.success() {
                         let stderr = String::from_utf8_lossy(&output.stderr);
                         if !stderr.contains("E0432") && !stderr.contains("E0463") && !stderr.contains("E0433") {
+                            let actual_path_str = actual_path.to_string_lossy();
+                            let clean_stderr = stderr.replace(&*tmp_path_str, &actual_path_str);
                             return Err(ToolError::LlmRecoverable(format!(
-                                "Verification Loop Failed: `rustc` reported syntax errors after editing {}.
+                                "Verification Loop Failed: `rustc` reported syntax errors before editing {}.
 
 Compiler Output:
 {}
 
 Please fix the errors and try again.",
-                                path, stderr
+                                path, clean_stderr
                             )));
                         }
                     }
@@ -75,6 +85,10 @@ Please fix the errors and try again.",
                 }
             }
         }
+
+        fs::write(&actual_path, &new_content)
+            .await
+            .map_err(|e| format!("edit: write {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
 
 
@@ -107,7 +121,7 @@ pub fn edit_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["path", "old_str", "new_str"]
         }),
-        execute: Arc::new(EditExecutor { working_dir, runner }),
+        execute: Arc::new(PydanticAdapter::new(EditExecutor { working_dir, runner })),
     }
 }
 
@@ -123,7 +137,7 @@ mod tests {
         fs::write(&file_path, "hello old world").await.unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = PydanticAdapter::new(EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
             "path": "test.txt",
@@ -131,7 +145,7 @@ mod tests {
             "new_str": "new"
         });
 
-        let result = executor.execute(args).await.unwrap();
+        let result = super::super::ToolExecutor::execute(&executor, args).await.unwrap();
         assert_eq!(result, "File edited: test.txt");
 
         let content = fs::read_to_string(file_path).await.unwrap();
@@ -141,11 +155,16 @@ mod tests {
     #[tokio::test]
     async fn test_edit_tool_missing_args() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: None, runner };
+        let executor = PydanticAdapter::new(EditExecutor { working_dir: None, runner });
 
         let args = json!({ "path": "test.txt", "old_str": "old" });
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
     }
 
     #[tokio::test]
@@ -155,7 +174,7 @@ mod tests {
         fs::write(&file_path, "hello old old world").await.unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = PydanticAdapter::new(EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
             "path": "test.txt",
@@ -163,7 +182,7 @@ mod tests {
             "new_str": "new"
         });
 
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("must match exactly once"));
@@ -179,7 +198,7 @@ mod tests {
         fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = PydanticAdapter::new(EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
             "path": "test.rs",
@@ -188,7 +207,7 @@ mod tests {
         });
 
         // Should succeed and pass verification
-        let result = executor.execute(args).await.unwrap();
+        let result = super::super::ToolExecutor::execute(&executor, args).await.unwrap();
         assert_eq!(result, "File edited: test.rs");
     }
 
@@ -202,7 +221,7 @@ mod tests {
         // Simulate rustc failure
         runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
 
-        let executor = EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = PydanticAdapter::new(EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
             "path": "test.rs",
@@ -211,12 +230,16 @@ mod tests {
         });
 
         // Should fail verification due to syntax error
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err(), "Expected error from mock rustc verification");
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));
         } else {
             panic!("Expected LlmRecoverable error");
         }
+
+        // Assert the target file was NOT modified since validation failed
+        let content = fs::read_to_string(&file_path).await.unwrap();
+        assert_eq!(content, "fn main() { println!(\"old\"); }", "Target file should not be modified if verification fails");
     }
 }

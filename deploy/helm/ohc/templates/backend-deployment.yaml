@@ -1,3 +1,4 @@
+{{- $backendEnv := default dict .Values.backend.env -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,9 +44,15 @@ spec:
               value: "info"
             - name: PORT
               value: "{{ .Values.backend.service.port }}"
-            {{- if .Values.redis.enabled }}
+            - name: OHC_PORT
+              value: "{{ .Values.backend.service.port }}"
+            {{- if and .Values.valkey.enabled (not (hasKey $backendEnv "REDIS_ADDR")) }}
             - name: REDIS_ADDR
-              value: "{{ .Release.Name }}-redis-master:6379"
+              value: {{ include "ohc.valkey.addr" . | quote }}
+            {{- end }}
+            {{- if and .Values.valkey.enabled (not (hasKey $backendEnv "REDIS_URL")) }}
+            - name: REDIS_URL
+              value: {{ include "ohc.valkey.url" . | quote }}
             {{- end }}
             {{- if .Values.cnpg.enabled }}
             - name: DATABASE_URL
@@ -73,16 +80,22 @@ spec:
               value: "{{ .Values.multiTenant.enabled }}"
             - name: OHC_HEADLESS
               value: "{{ .Values.backend.headless }}"
+            {{- range $name, $value := $backendEnv }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
             {{- if .Values.ohcCore.enabled }}
             - name: OHC_CORE_URL
               value: "http://{{ .Release.Name }}-ohc-core:{{ .Values.ohcCore.service.port }}"
             {{- end }}
+            {{- if not (hasKey $backendEnv "JWT_SECRET") }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-backend-secret
                   key: jwtSecret
                   optional: true
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz

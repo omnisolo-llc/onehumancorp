@@ -47,6 +47,10 @@ message RunTaskRequest {
   ToolsetConfig toolset_config = 10;
   // The OHC department handling the task.
   string department = 12;
+  // Enable tools gating feature
+  bool enable_tools_gating = 14;
+  // Enable TAO Orchestration Loop
+  bool enable_tao_orchestration_loop = 15;
 }
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
@@ -107,6 +111,10 @@ message SubAgentRequest {
   // Toolset configuration for the sub-agent.
   ToolsetConfig toolset_config = 10;
   string parent_context_json = 12;
+  // Enable tools gating feature
+  bool enable_tools_gating = 13;
+  // Enable TAO Orchestration Loop
+  bool enable_tao_orchestration_loop = 14;
 }
 
 // SubAgentResponse carries the sub-agent's final answer.

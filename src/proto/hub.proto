@@ -282,6 +282,15 @@ service HubService {
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
+  rpc CreateTerminalConnectionToken(CreateTerminalTokenRequest) returns (CreateTerminalTokenResponse);
+}
+
+message CreateTerminalTokenRequest {
+}
+
+message CreateTerminalTokenResponse {
+  bool success = 1;
+  string token = 2;
 }
 
 message StartOnboardingRequest {
@@ -298,6 +307,7 @@ message StartOnboardingRequest {
   string admin_name = 11;
   string admin_password = 12;
   string price_type = 13;
+  string location = 14;
 }
 
 message StartOnboardingResponse {
@@ -1564,6 +1574,11 @@ service IntegrationService {
   rpc CreateIssue(CreateIssueRequest) returns (Issue);
   rpc UpdateIssueStatus(IssueStatusRequest) returns (Issue);
   rpc AssignIssue(IssueAssignRequest) returns (Issue);
+
+  rpc GetFreeBusy(GetFreeBusyRequest) returns (GetFreeBusyResponse);
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+  rpc GetBookingLink(GetBookingLinkRequest) returns (GetBookingLinkResponse);
+  rpc GenerateMeetingForBooking(GenerateMeetingForBookingRequest) returns (GenerateMeetingForBookingResponse);
 }
 
 message McpToolProto {
@@ -1644,6 +1659,8 @@ message CostDashboardResponse {
   int64 payment_fees = 5;
   string period_start = 6;
   string period_end = 7;
+  int64 bandwidth_savings = 8;
+  int64 network_cost = 9;
 }
 
 message SelectPlanRequest {
@@ -1669,4 +1686,44 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
+}
+
+message GetFreeBusyRequest {
+  string integration_id = 1;
+  string time_min = 2;
+  string time_max = 3;
+}
+
+message GetFreeBusyResponse {
+  string free_busy_data = 1;
+}
+
+message CreateEventRequest {
+  string integration_id = 1;
+  string summary = 2;
+  string start_time = 3;
+  string end_time = 4;
+}
+
+message CreateEventResponse {
+  string event_id = 1;
+}
+
+message GetBookingLinkRequest {
+  string integration_id = 1;
+  string event_type = 2;
+}
+
+message GetBookingLinkResponse {
+  string link = 1;
+}
+
+message GenerateMeetingForBookingRequest {
+  string integration_id = 1;
+  string booking_id = 2;
+  string topic = 3;
+}
+
+message GenerateMeetingForBookingResponse {
+  string link = 1;
 }

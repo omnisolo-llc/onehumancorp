@@ -100,13 +100,23 @@ impl CompetitorAuditWorker {
 mod tests {
     // use super::*;
 
+    use super::*;
+    use std::sync::Arc;
+
     #[tokio::test]
     async fn test_worker_initialization() {
-        // Skip full DB initialization in fast unit tests because connection timeout
-        // makes the test suite flaky. We can manually create a simplified DB struct
-        // if we needed to, but for this test's scope (90% cover logic), we verify the
-        // struct builds. In a real environment we'd use a MockPool or sqlite in-memory.
-        // For now, let's just assert our basic understanding.
-        assert_eq!(2 + 2, 4);
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
+
+        let worker = CompetitorAuditWorker::new(db);
+        worker.start();
+        // Since it spawns a task, just make sure it doesn't crash on start
+        assert!(true);
     }
 }

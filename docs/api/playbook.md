@@ -74,7 +74,7 @@ Returns a list of all configured agents within the OHC swarm.
 The OHC API routes dynamically based on the active OHC Hybrid Architecture mode.
 
 ### Cloud-Native Mode
-- Queue requests are routed to Rueidis ZSETs backed by K8s pods.
+- Queue requests are routed to Redis ZSETs backed by K8s pods.
 - Sub-agent coordination uses Redis Pub/Sub channels.
 
 ### Standalone Desktop Mode
@@ -100,6 +100,15 @@ curl -X POST "http://localhost:8080/api/mesh/v2/broadcast" \
     "channel": "mesh:test",
     "event_type": "PING",
     "data": {}
+  }'
+
+# Enqueue a new task
+curl -X POST "http://localhost:8080/api/queue/subagent" \
+  -H "Content-Type: application/json" \
+  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -d '{
+    "parent_task_id": "T-123",
+    "action": "summarize"
   }'
 
 # Claim a PENDING task
@@ -221,19 +230,53 @@ Claims a `PENDING` task from the shared task queue. Behind the scenes, KAIROS us
 }
 ```
 
-#### Task Claiming Workflow
+**Error Responses:**
+- `404 Not Found`: No pending tasks available for the requested role. Wait and retry.
+  ```json
+  {
+    "error_code": "NO_TASKS_AVAILABLE",
+    "message": "No pending tasks available for role: swe",
+    "resolution": "Retry after 5 seconds or wait for queue mesh events"
+  }
+  ```
+- `403 Forbidden`: Agent role is invalid or not authorized to claim this task queue.
+  ```json
+  {
+    "error_code": "INVALID_AGENT_ROLE",
+    "message": "Agent swe_007 is not authorized for role: swe",
+    "resolution": "Verify agent_id and role configuration"
+  }
+  ```
+
+#### Shared Task List Workflow
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'Outfit'}}}%%
 sequenceDiagram
-    participant Agent as Worker Agent
-    participant Hub as Orchestration Hub
+    participant Orchestrator as KAIROS Orchestrator
+    participant Hub as API Hub
     participant DB as Shared Task DB
+    participant Agent as Worker Agent
+
+    Orchestrator->>Hub: POST /api/queue/subagent (Enqueue)
+    Hub->>DB: INSERT PENDING Task
+    DB-->>Hub: Task Enqueued
 
     Agent->>Hub: POST /api/v1/tasks/claim
-    Note over Hub,DB: Uses FOR UPDATE SKIP LOCKED (Postgres)
+    Note over Hub,DB: Uses FOR UPDATE SKIP LOCKED (Cloud)<br/>or SQLite Mutex (Standalone)
     Hub->>DB: Query for next PENDING task
     DB-->>Hub: Return Task & Row Lock
-    Hub-->>Agent: Task Payload + Context
-    Note right of Agent: Agent begins execution
+    Hub-->>Agent: Task Payload (Status: IN_PROGRESS)
+    Note right of Agent: Agent executes task
+
+    Agent->>Hub: POST /api/v1/tasks/{task_id}/complete
+    Hub->>DB: Update Task Status to COMPLETED
+    Note over Hub,DB: KAIROS DAG Engine evaluates downstream dependencies
+    Hub->>DB: Unlock dependent tasks
+    DB-->>Hub: Return Unlocked Tasks List
+    Hub-->>Agent: Success Response + Unlocked Tasks
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Orchestrator,Hub,DB,Agent premium;
 ```
 
 ### 7.3 Complete a Task
@@ -257,6 +300,33 @@ Marks a task as `COMPLETED`. This transition triggers the KAIROS DAG engine to e
   "unlocked_tasks": ["task_125", "task_126"]
 }
 ```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid transition, or missing payload fields.
+  ```json
+  {
+    "error_code": "INVALID_TASK_TRANSITION",
+    "message": "Cannot complete a task that is in state PENDING",
+    "resolution": "Claim the task first to transition it to IN_PROGRESS"
+  }
+  ```
+- `404 Not Found`: Task does not exist.
+  ```json
+  {
+    "error_code": "TASK_NOT_FOUND",
+    "message": "Task 123e4567-e89b-12d3-a456-426614174000 does not exist",
+    "resolution": "Check the task_id"
+  }
+  ```
+- `409 Conflict`: Task is already completed or assigned to a different agent.
+  ```json
+  {
+    "error_code": "TASK_CONFLICT",
+    "message": "Task is assigned to agent_swe_008, cannot complete",
+    "resolution": "Ensure agent_id matches the claimer"
+  }
+  ```
+
 
 ## 8. Hybrid Health Probes
 
@@ -364,7 +434,7 @@ The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session
           "results": [
             {
               "memory_id": "987e6543-e21b-12d3-a456-426614174000",
-              "content": "The Teammate Mesh degrades gracefully to in-memory Go channels in Standalone Mode, ensuring the OS functions entirely offline.",
+              "content": "The Teammate Mesh degrades gracefully to local in-process transport in Standalone Mode, ensuring the OS functions offline.",
               "distance": 0.124
             }
           ]

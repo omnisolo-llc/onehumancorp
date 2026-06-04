@@ -8,6 +8,8 @@ pub struct ReferralTracker {
     user_codes: RwLock<HashMap<String, String>>,
     code_to_user: RwLock<HashMap<String, String>>,
     channel_stats: RwLock<HashMap<String, i32>>,
+    clicks: RwLock<HashMap<String, i32>>,
+    conversions: RwLock<HashMap<String, i32>>,
 }
 
 impl ReferralTracker {
@@ -18,6 +20,8 @@ impl ReferralTracker {
             user_codes: RwLock::new(HashMap::new()),
             code_to_user: RwLock::new(HashMap::new()),
             channel_stats: RwLock::new(HashMap::new()),
+            clicks: RwLock::new(HashMap::new()),
+            conversions: RwLock::new(HashMap::new()),
         }
     }
 
@@ -90,6 +94,30 @@ impl ReferralTracker {
         let channel_stats = self.channel_stats.read().unwrap();
         channel_stats.clone()
     }
+
+    pub fn record_click(&self, code: &str) -> bool {
+        let mut clicks = self.clicks.write().unwrap();
+        let current = clicks.entry(code.to_string()).or_insert(0);
+        *current += 1;
+        true
+    }
+
+    pub fn record_conversion(&self, code: &str) -> bool {
+        let mut conversions = self.conversions.write().unwrap();
+        let current = conversions.entry(code.to_string()).or_insert(0);
+        *current += 1;
+        true
+    }
+
+    pub fn get_clicks(&self, code: &str) -> i32 {
+        let clicks = self.clicks.read().unwrap();
+        *clicks.get(code).unwrap_or(&0)
+    }
+
+    pub fn get_conversions(&self, code: &str) -> i32 {
+        let conversions = self.conversions.read().unwrap();
+        *conversions.get(code).unwrap_or(&0)
+    }
 }
 
 pub fn calculate_referral_tier(referrals: i32) -> &'static str {
@@ -139,6 +167,12 @@ mod tests {
         
         let stats = tracker.get_channel_stats();
         assert_eq!(*stats.get("twitter").unwrap(), 1);
+
+        assert!(tracker.record_click(&code));
+        assert_eq!(tracker.get_clicks(&code), 1);
+
+        assert!(tracker.record_conversion(&code));
+        assert_eq!(tracker.get_conversions(&code), 1);
     }
 
     #[test]

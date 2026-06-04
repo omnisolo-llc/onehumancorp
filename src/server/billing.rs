@@ -50,8 +50,8 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
                 Ok(status) => Ok(status),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                Err(_) => {
+                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -72,8 +72,8 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_product_quota(tenant_id).await {
                 Ok(status) => Ok(status),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                Err(_) => {
+                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -94,8 +94,8 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.record_product_added(tenant_id).await {
                 Ok(_) => Ok(()),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                Err(_) => {
+                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(())
                 }
             }
@@ -108,8 +108,8 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.record_action(tenant_id, agent_id).await {
                 Ok(status) => Ok(status),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                Err(_) => {
+                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -130,8 +130,8 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_agent_quota(tenant_id).await {
                 Ok(status) => Ok(status),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                Err(_) => {
+                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(RateLimitStatus {
                         is_allowed: true,
                         soft_limit_reached: false,
@@ -152,8 +152,8 @@ impl Tracker {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.record_agent_added(tenant_id).await {
                 Ok(_) => Ok(()),
-                Err(e) => {
-                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                Err(_) => {
+                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(())
                 }
             }
@@ -194,8 +194,27 @@ impl Tracker {
         }
     }
 
+    pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
+        if let Some(ref auditor) = self.auditor {
+            auditor.get_tenant_tokens(tenant_id)
+        } else {
+            0
+        }
+    }
+
+    pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) {
+        if let Some(ref auditor) = self.auditor {
+            auditor.record_bandwidth_compression(tenant_id, original_bytes, compressed_bytes);
+        }
+    }
+
     pub fn summary(&self, _scope: &str) -> TokenSummary {
-        TokenSummary::default()
+        let total_tokens = if let Some(auditor) = &self.auditor {
+            auditor.get_total_tokens()
+        } else {
+            0
+        };
+        TokenSummary { total_tokens }
     }
 }
 

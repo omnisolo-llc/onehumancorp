@@ -1,18 +1,23 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
     name = "core",
     srcs = [
+        "acon_context.rs",
         "auth.rs",
         "budget.rs",
         "caveman.rs",
+        "code_native.rs",
         "core.rs",
-
-        "pubsub.rs",
+        "dynamic_workflows.rs",
+        "expert_team.rs",
+        "hnsw_memory.rs",
         "output_parser.rs",
+        "human_in_loop.rs",
+        "pubsub.rs",
         "types.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
@@ -23,6 +28,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:chrono",
+        "@crates//:futures",
         "@crates//:hmac",
         "@crates//:once_cell",
         "@crates//:regex",
@@ -40,28 +46,56 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
-        "auth.rs",
-        "codex_runner.rs",
+        "actor_model.rs",
         "agent.rs",
-        "checkpointer.rs",
-        "departments.rs",
-        "guardrails.rs",
-        "harness.rs",
-        "langgraph.rs",
+        "agent_protocol.rs",
+        "auth.rs",
         "autogen.rs",
-        "masking_tests.rs",
-        "lib.rs",
+        "checkpointer.rs",
+        "codex_runner.rs",
+        "consolidation_worker.rs",
+        "departments.rs",
+        "gpt_researcher.rs",
+        "plan_and_execute.rs",
+
+        "harness.rs",
+        "hibernation.rs",
+        "json_rpc_server.rs",
         "json_store.rs",
+        "langgraph.rs",
+        "lib.rs",
+        "local_provider.rs",
+        "marketplace.rs",
+        "memory_exhaustive_tests.rs",
         "memory_store.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
+        "observability.rs",
+        "observation_masking.rs",
+        "output_parser.rs",
+        "human_in_loop.rs",
         "plane.rs",
+        "plugins.rs",
+        "progressive_skills.rs",
         "proto.rs",
         "provider.rs",
         "ralph_loop.rs",
         "registry.rs",
+        "ruflo.rs",
+        "openhands.rs",
+        "goose/mod.rs",
+        "guardrails/mod.rs",
+        "guardrails/openai_hooks.rs",
+    "ruflo_plugins.rs",
+        "scalable_multi_agent.rs",
         "service.rs",
-        "consolidation_worker.rs",
+        "sona_patterns.rs",
+        "sqlite_memory.rs",
+        "swarm_topology.rs",
+        "tools_gating.rs",
+        "tool_executor_engine.rs",
+        "verification_loops.rs",
+        "visual_workflow.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -71,24 +105,29 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "@crates//:temp-env",
         ":core",
+        "//src/agents/builtin/llm",
+        "//src/agents/builtin/tools",
         "//src/proto:agent_service_tonic",
         "//src/proto:common_prost",
         "//src/proto:hub_prost",
         "//src/proto:interop_prost",
-        "//src/agents/builtin/llm",
-        "//src/agents/builtin/tools",
+        "//src/server/pricing:server_pricing",
+        "//src/server/telemetry:server_telemetry",
+        "//src/server/harness:server_harness",
+        "@crates//:temp-env",
+        "@crates//:tree-sitter",
+        "@crates//:tree-sitter-bash",
     ] + [
-        "@crates//:tempfile",
+        "@crates//:async-nats",
+        "@crates//:axum",
         "@crates//:base64",
         "@crates//:chrono",
+        "@crates//:dashmap",
         "@crates//:flate2",
         "@crates//:futures",
-        "@crates//:glob",
-        "@crates//:dashmap",
-        "@crates//:async-nats",
         "@crates//:futures-util",
+        "@crates//:glob",
         "@crates//:hex",
         "@crates//:hmac",
         "@crates//:once_cell",
@@ -105,9 +144,11 @@ rust_library(
         "@crates//:serde_json",
         "@crates//:sha2",
         "@crates//:sqlx",
+        "@crates//:tempfile",
         "@crates//:tokio",
         "@crates//:tokio-stream",
         "@crates//:tonic",
+        "@crates//:tower",
         "@crates//:tracing",
         "@crates//:tracing-opentelemetry",
         "@crates//:tracing-subscriber",
@@ -161,14 +202,105 @@ rust_binary(
     ],
 )
 
+AGENT_UNIT_TEST_FILTERS = [
+    "agent",
+    "auth",
+    "budget",
+    "caveman",
+    "checkpointer",
+    "dynamic_workflows",
+    "deerflow",
+    "codex_runner",
+    "verification_loops",
+    "guardrails",
+    "harness",
+    "hibernation",
+    "memory_store",
+    "sqlite_memory",
+    "memory_exhaustive_tests",
+    "consolidation_worker",
+    "ruflo",
+    "openhands",
+    "ruflo_plugins",
+    "observability",
+    "output_parser",
+    "ralph_loop",
+    "pubsub",
+    "tools_gating",
+    "registry",
+    "gpt_researcher",
+    "local_provider",
+    "sona_patterns",
+]
+
 rust_test(
-    name = "unit_tests",
+    name = "ohc_builtin_agent_lib_unit_test",
+    size = "large",
+    args = AGENT_UNIT_TEST_FILTERS,
     crate = ":ohc_builtin_agent_lib",
     edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+)
+
+# Filtered module targets are useful for local debugging, but each one builds a
+# separate test harness for the same crate. Keep them out of wildcard test runs.
+[
+    rust_test(
+        name = module + "_unit_test",
+        size = "small",
+        args = [module],
+        crate = ":ohc_builtin_agent_lib",
+        edition = "2024",
+        tags = ["manual"],
+        target_compatible_with = select({
+            "@platforms//os:linux": [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        }),
+    )
+    for module in AGENT_UNIT_TEST_FILTERS
+]
+
+rust_test(
+    name = "masking_tests",
+    size = "small",
+    srcs = ["masking_tests.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "@crates//:dashmap",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
+
+rust_test(
+    name = "compaction_tests",
+    size = "small",
+    srcs = ["compaction_tests.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "@crates//:dashmap",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
 )
 
 exports_files([
@@ -182,4 +314,18 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
-# Adding langgraph to srcs
+
+rust_test(
+    name = "tool_executor_engine_tests",
+    srcs = ["tool_executor_engine_tests.rs", "tool_executor_engine.rs"],
+    deps = [
+        "//src/agents/builtin:core",
+        "//src/agents/builtin/tools:tools",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:serde_json",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)

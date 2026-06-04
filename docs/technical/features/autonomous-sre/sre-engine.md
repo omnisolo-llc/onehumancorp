@@ -27,15 +27,16 @@ A dedicated MCP server provides agents with tools to query:
 
 ## 3. Data Model Extensions
 
-### 3.1 Incident State (`src/domain/sre.go`)
-```go
-type Incident struct {
-    ID           string    `json:"id"`
-    Severity     string    `json:"severity"` // P0, P1, P2
-    Summary      string    `json:"summary"`
-    RCA          string    `json:"root_cause_analysis"`
-    ResolutionID string    `json:"resolution_plan_id"`
-    Status       string    `json:"status"` // INVESTIGATING, PROPOSED, RESOLVED
+### 3.1 Incident State (`src/server/domain/sre.rs`)
+```rust
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Incident {
+    id: String,
+    severity: String,
+    summary: String,
+    root_cause_analysis: String,
+    resolution_plan_id: String,
+    status: String,
 }
 ```
 

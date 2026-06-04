@@ -44,20 +44,18 @@ CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
 );
 
 CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-    id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
-    title TEXT NOT NULL,
+    id VARCHAR PRIMARY KEY,
+    organization_id VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
     description TEXT,
-    status TEXT NOT NULL DEFAULT 'PENDING',
-    agent_id TEXT,
-    priority TEXT NOT NULL DEFAULT 'P2',
+    status VARCHAR NOT NULL DEFAULT 'PENDING',
+    agent_id VARCHAR,
+    priority VARCHAR NOT NULL DEFAULT 'P2',
     payload TEXT,
     parent_plan_id TEXT,
-    dependencies JSONB DEFAULT '[]',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    _sync_status TEXT DEFAULT 'pending',
-    version INTEGER DEFAULT 1
+    dependencies TEXT NOT NULL DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- shared_tasks is used in many places, it might be an alias or separate from 'tasks'
@@ -88,6 +86,7 @@ CREATE TABLE IF NOT EXISTS agent_approvals (
     description TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'PENDING',
     action_risk TEXT NOT NULL,
+    payload JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     _sync_status TEXT DEFAULT 'pending',
@@ -95,17 +94,17 @@ CREATE TABLE IF NOT EXISTS agent_approvals (
 );
 
 CREATE TABLE IF NOT EXISTS swarm_tasks (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mission_id TEXT NOT NULL,
     parent_plan_id TEXT,
-    dependencies JSONB DEFAULT '[]',
+    dependencies JSONB NOT NULL DEFAULT '[]',
     title TEXT NOT NULL,
     description TEXT,
     priority TEXT,
     status TEXT NOT NULL DEFAULT 'PENDING',
     assigned_agent_id TEXT,
     locked_until TIMESTAMPTZ,
-    payload TEXT,
+    payload JSONB,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     auto_dreamed BOOLEAN DEFAULT FALSE,
@@ -193,6 +192,9 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     action_risk TEXT,
     approval_status TEXT,
     proposed_content TEXT,
+    tokens_consumed INTEGER DEFAULT 0,
+    agent_role TEXT,
+    model TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     _sync_status TEXT DEFAULT 'pending',
@@ -240,6 +242,8 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     _sync_status TEXT DEFAULT 'pending',
     version INTEGER DEFAULT 1
 );
+CREATE INDEX IF NOT EXISTS idx_sm_entity ON state_machine_transitions(entity_id, entity_type);
+
 
 CREATE TABLE IF NOT EXISTS pages (
     id TEXT PRIMARY KEY,
@@ -306,3 +310,60 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     content TEXT NOT NULL DEFAULT '',
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE shared_tasks_v4 ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks_v4 ON shared_tasks_v4 USING (organization_id::text = current_setting('app.current_tenant', true)) WITH CHECK (organization_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE agent_approvals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_agent_approvals ON agent_approvals USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE onboarding_state ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_onboarding_state ON onboarding_state USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_referrals ON referrals USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE competitor_metrics ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_competitor_metrics ON competitor_metrics USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE agent_violations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_agent_violations ON agent_violations USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (organization_id::text = current_setting('app.current_tenant', true)) WITH CHECK (organization_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE department_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_department_tasks ON department_tasks USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_autodream_memories ON autodream_memories USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE state_machine_transitions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_state_machine_transitions ON state_machine_transitions USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE pages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_pages ON pages USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_memories ON memories USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE consolidated_memory ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_consolidated_memory ON consolidated_memory USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE agent_inbox ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_agent_inbox ON agent_inbox USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE meeting_rooms ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_meeting_rooms ON meeting_rooms USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_meeting_transcripts ON meeting_transcripts USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE INDEX IF NOT EXISTS swarm_truth_embeddings_embedding_hnsw_idx ON swarm_truth_embeddings USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS autodream_memories_embedding_hnsw_idx ON autodream_memories USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS memories_embedding_hnsw_idx ON memories USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS consolidated_memory_embedding_hnsw_idx ON consolidated_memory USING hnsw (embedding vector_cosine_ops);

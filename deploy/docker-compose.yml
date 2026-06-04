@@ -1,16 +1,15 @@
-version: "3.9"
-
 # One Human Corp — Docker Compose
 #
-# Single-docker deployment: high-performance mode.
-#   The `ohc-core` service runs the Rust core library (settings, agent
-#   scheduling, meeting rooms, chat integration) for maximum performance.
+# Single-machine deployment defaults to the same lean cloud/web shape exercised
+# by deploy/tests/kind_e2e_test.sh: server + pgvector Postgres + Valkey.
+# Optional sidecars are available through Compose profiles.
 #
 # Cloud-native (k8s) deployment: see deploy/helm/ for multi-tenant Helm charts.
 
 services:
   # ─── Rust Core (settings · agent scheduler · meeting rooms · chat) ────────
   ohc-core:
+    profiles: ["ohc-core"]
     logging:
       driver: "json-file"
       options:
@@ -24,19 +23,17 @@ services:
         reservations:
           cpus: "0.1"
           memory: 64M
-    build:
-      context: ..
-      dockerfile: deploy/docker/ohc-core/Dockerfile
+    image: onehumancorp/mono-core:latest
     environment:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
       LISTEN_ADDR: "0.0.0.0:18789"
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://valkey:6379
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      valkey:
         condition: service_healthy
     ports:
       - "18789:18789"
@@ -59,34 +56,31 @@ services:
     environment:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
-      REDIS_ADDR: redis:6379
+      PORT: "8080"
+      OHC_PORT: "8080"
+      REDIS_ADDR: valkey:6379
+      REDIS_URL: redis://valkey:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       CHATWOOT_URL: http://chatwoot:3000
       CHATWOOT_ADMIN_EMAIL: admin@ohc.local
       CHATWOOT_ADMIN_PASSWORD: changeme
-      CHATWOOT_ENABLED: "true"
-      MANIMAX_API_KEY: ${MANIMAX_API_KEY}
+      CHATWOOT_ENABLED: ${CHATWOOT_ENABLED:-false}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
       # Multi-tenant mode is disabled by default in single-docker deployment.
       # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
       OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
       # Set to "true" for API-only / remote-client deployments.
       OHC_HEADLESS: ${OHC_HEADLESS:-false}
-      # Rust core sidecar address.
-      OHC_CORE_URL: http://ohc-core:18789
       # Initial admin credentials read by the one-time bootstrap script.
       SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
       SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
     depends_on:
-      ohc-core:
-        condition: service_started
-      redis:
+      valkey:
         condition: service_healthy
       postgres:
         condition: service_healthy
-      chatwoot:
-        condition: service_started
     ports:
-      - "8080:8080"
+      - "${OHC_DOCKER_SERVER_PORT:-8080}:8080"
 
   # ─── One-time admin bootstrap ─────────────────────────────────────────────
   # Runs once at install time: waits for `server` to be healthy, then creates
@@ -118,17 +112,17 @@ services:
           cpus: "0.1"
           memory: 32M
 
-  redis:
+  valkey:
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    image: redis:7-alpine
+    image: valkey/valkey:8-alpine
     ports:
-      - "6379:6379"
+      - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -144,7 +138,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       LOG_LEVEL: "info"
@@ -155,7 +149,7 @@ services:
     volumes:
       - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
     ports:
-      - "5432:5432"
+      - "${OHC_DOCKER_POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ohc"]
       interval: 5s
@@ -168,6 +162,7 @@ services:
           memory: 128M
 
   powersync:
+    profiles: ["sync"]
     logging:
       driver: "json-file"
       options:
@@ -192,6 +187,7 @@ services:
           memory: 128M
 
   chatwoot-migrate:
+    profiles: ["chatwoot"]
     logging:
       driver: "json-file"
       options:
@@ -203,7 +199,7 @@ services:
       LOG_LEVEL: "info"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://valkey:6379
       RAILS_ENV: production
       INSTALLATION_ENV: docker
       DEFAULT_LOCALE: en
@@ -211,10 +207,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      valkey:
         condition: service_healthy
 
   chatwoot:
+    profiles: ["chatwoot"]
     logging:
       driver: "json-file"
       options:
@@ -226,7 +223,7 @@ services:
       LOG_LEVEL: "info"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://valkey:6379
       RAILS_ENV: production
       INSTALLATION_ENV: docker
       DEFAULT_LOCALE: en
@@ -242,6 +239,7 @@ services:
           memory: 128M
 
   chatwoot-worker:
+    profiles: ["chatwoot"]
     logging:
       driver: "json-file"
       options:
@@ -253,7 +251,7 @@ services:
       LOG_LEVEL: "info"
       SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://valkey:6379
       RAILS_ENV: production
       INSTALLATION_ENV: docker
       DEFAULT_LOCALE: en
@@ -267,6 +265,7 @@ services:
           memory: 128M
 
   prometheus:
+    profiles: ["observability"]
     logging:
       driver: "json-file"
       options:
@@ -287,6 +286,7 @@ services:
           memory: 64M
 
   grafana:
+    profiles: ["observability"]
     logging:
       driver: "json-file"
       options:
@@ -302,6 +302,7 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/custom.css:/usr/share/grafana/public/css/custom.css:ro
     depends_on:
       - prometheus
     deploy:
@@ -314,6 +315,7 @@ services:
 
 
   pushgateway:
+    profiles: ["observability"]
     logging:
       driver: "json-file"
       options:
@@ -329,6 +331,7 @@ services:
           memory: 128M
 
   telemetry-mcp-bridge:
+    profiles: ["telemetry-mcp"]
     logging:
       driver: "json-file"
       options:
@@ -338,7 +341,7 @@ services:
     environment:
       LOG_LEVEL: "info"
       PROMETHEUS_URL: http://prometheus:9090
-      OHC_STANDALONE: $${OHC_STANDALONE:-false}
+      OHC_STANDALONE_MODE: $${OHC_STANDALONE_MODE:-false}
     depends_on:
       prometheus:
         condition: service_started

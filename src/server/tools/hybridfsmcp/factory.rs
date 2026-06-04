@@ -14,7 +14,7 @@ impl Default for FactoryConfig {
     fn default() -> Self {
         Self {
             is_multitenant: env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true",
-            is_standalone: env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true",
+            is_standalone: env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true",
             mount_point: env::var("OHC_CLOUD_FS_MOUNT").unwrap_or_else(|_| "/mnt/data/tenant_volumes".to_string()),
             workspace: env::var("OHC_LOCAL_WORKSPACE").unwrap_or_else(|_| "./workspace".to_string()),
         }
@@ -24,6 +24,9 @@ impl Default for FactoryConfig {
 pub fn create_fs_provider_with_config(config: &FactoryConfig, tenant_id: Option<String>) -> Arc<dyn FileSystemProvider> {
     if config.is_multitenant && !config.is_standalone {
         let tenant = tenant_id.unwrap_or_else(|| "system".to_string());
+        if tenant == "system" || tenant.trim().is_empty() {
+            tracing::error!("Invalid tenant_id for cloud fs provider.");
+        }
         Arc::new(CloudFSProvider::new(tenant, PathBuf::from(&config.mount_point)))
     } else {
         Arc::new(LocalFSProvider::new(PathBuf::from(&config.workspace)))

@@ -1,6 +1,4 @@
-# Scout: Tool Integration Research Q2
-
-## 3. Email Marketing
+## [Email Marketing] Listmonk Integration
 **Title**: Integrate Listmonk for Embedded, No-Jargon Email Campaigns
 **Problem Statement**: Priya the Boutique Owner wants to email her past customers when new stock arrives but finds Mailchimp confusing and expensive. She just wants to say "send this to everyone who bought last month."
 **Research Report**:

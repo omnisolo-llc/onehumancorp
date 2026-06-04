@@ -13,15 +13,25 @@
 
 # AI likes to create temporary files, which we don't want to commit
 /*.py
+/*.rs
+/*.png
 /*.txt
 /*.sh
+/get_business_context_code*
+/.empty_commit_trigger*
+/cleanup_padding.json
+/replies.json
 /bazelisk
+/bazelisk-*
+**/bazelisk-linux-amd64
 /CLAUDE_OHC.md
 /test-results
 /code_review_response.md
 /code_review_reply.json
 /mcp_code_review_response.md
 /.[jJ]ules
+*.key
+*.certSigningRequest
 
 # Test binary, built with `go test -c`
 *.test
@@ -41,6 +51,7 @@ go.work.sum
 
 # env file
 .env
+.ohc/
 
 .claude-code/
 .kilo/
@@ -50,9 +61,10 @@ go.work.sum
 # .vscode/
 
 # Bazel outputs
-bazel-*
+/bazel-*
 
 coverage_html/
+/coverage/
 /artifacts/
 
 # See https://www.dartlang.org/guides/libraries/private-files
@@ -82,9 +94,6 @@ doc/api/
 *.js.deps
 *.js.map
 
-.flutter-plugins
-.flutter-plugins-dependencies
-
 node_modules/
 *.log
 .vscode/
@@ -98,20 +107,18 @@ Chart.lock
 !/README.md
 !/CHANGELOG.md
 !/RELEASE_NOTES.md
-/*.go
+
+# Golang is not allowed in this project
+*.go
+
 
 # Rust build artifacts
 /target/
+
+# Tauri v2 generated ACL/capability schemas
+/src/ui/tauri/gen/
 site/
 
-# Android/Flutter local properties (auto-generated, machine-specific)
-/src/app/android/local.properties
-/src/app/android/.gradle/
-/src/app/ios/Flutter/Flutter.podspec
-/src/app/ios/Flutter/Generated.xcconfig
-/src/app/macos/Flutter/Flutter.podspec
-/src/app/macos/Flutter/GeneratedPluginRegistrant.swift
-/src/app/**/ephemeral/
 playwright-report/
 debian-binary
 /*.diff
@@ -119,3 +126,7 @@ debian-binary
 /scratch/
 *.db
 
+dummy.*
+dummy_*
+.next/
+/*.patch

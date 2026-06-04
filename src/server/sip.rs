@@ -1,5 +1,4 @@
 use sqlx::PgPool;
-use sqlx::Row;
 use chrono::Utc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
@@ -28,24 +27,56 @@ impl SipDB {
     }
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
-        let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
+        let mut attempt = 0;
+        let max_attempts = 3;
+        let mut backoff = std::time::Duration::from_millis(50);
 
-        sqlx::query(
-            "UPDATE agent_missions
-             SET status = 'blocked',
-                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $2 AND tenant_id = $3"
-        )
-        .bind(blockers)
-        .bind(mission_id)
-        .bind(&self.org_id)
-        .execute(&mut *tx)
-        .await?;
+        loop {
+            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
-        tx.commit().await?;
-        Ok(())
+                sqlx::query(
+                    "UPDATE agent_missions
+                     SET status = 'blocked',
+                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE id = $2 AND tenant_id = $3"
+                )
+                .bind(blockers)
+                .bind(mission_id)
+                .bind(&self.org_id)
+                .execute(&mut *tx)
+                .await?;
+
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }).await;
+
+            match res {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if !err_str.contains("deadlock detected") && !err_str.contains("database is locked") && !err_str.contains("database is busy") && !err_str.contains("sqlite_busy") {
+                        return Err(err);
+                    }
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(err);
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
+                }
+                Err(_) => {
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "handoff_mission timed out")));
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
+                }
+            }
+        }
     }
 
     pub fn with_context_root(mut self, root: String) -> Self {
@@ -62,17 +93,12 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = async {
+            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(stuck_threshold)
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND tenant_id = $1")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                    .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -97,13 +123,86 @@ impl SipDB {
 
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
-            }.await;
+            }).await;
             
+            match res {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
+                    let mut retry = false;
+                    if let Some(db_err) = err.as_database_error() {
+                        let code = db_err.code();
+                        if code.as_deref() == Some("40P01") || code.as_deref() == Some("40001") {
+                            retry = true; // deadlock_detected or serialization_failure
+                        }
+                    }
+                    let err_str = err.to_string().to_lowercase();
+                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                        retry = true;
+                    }
+
+                    if retry {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else if err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        return Err(err);
+                    } else {
+                        return Err(err);
+                    }
+                }
+                Err(timeout_err) => {
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+
+    pub async fn drain_mission_queue(&self) -> Result<(), sqlx::Error> {
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let mut backoff = std::time::Duration::from_millis(50);
+
+        loop {
+            let res = async {
+                let mut tx = self.pool.begin().await?;
+                sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1 AND status = 'PENDING'")
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }.await;
+
             match res {
                 Ok(_) => return Ok(()),
                 Err(err) => {
+                    let mut retry = false;
+                    if let Some(db_err) = err.as_database_error() {
+                        let code = db_err.code();
+                        if code.as_deref() == Some("40P01") || code.as_deref() == Some("40001") {
+                            retry = true;
+                        }
+                    }
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") {
+                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                        retry = true;
+                    }
+
+                    if retry {
                         attempt += 1;
                         if attempt >= max_attempts {
                             return Err(err);
@@ -121,23 +220,26 @@ impl SipDB {
     }
 
 
-
-
-
-
-
     pub async fn load_grounding_content(&self) -> Option<String> {
         if let Some(ref root) = self.context_root {
             let root_path = std::path::Path::new(root);
 
             let agents_path = root_path.join("AGENTS.md");
-            if let Ok(content) = tokio::fs::read_to_string(&agents_path).await {
-                return Some(content);
+            match tokio::fs::read_to_string(&agents_path).await {
+                Ok(content) => return Some(content),
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                    tracing::warn!("Failed to read AGENTS.md: {}", e);
+                }
+                _ => {}
             }
 
             let claude_path = root_path.join("CLAUDE.md");
-            if let Ok(content) = tokio::fs::read_to_string(&claude_path).await {
-                return Some(content);
+            match tokio::fs::read_to_string(&claude_path).await {
+                Ok(content) => return Some(content),
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                    tracing::warn!("Failed to read CLAUDE.md: {}", e);
+                }
+                _ => {}
             }
         }
         None
@@ -181,17 +283,23 @@ impl SipDB {
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
-        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
 
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let _permit = if is_standalone {
-                    Some(get_sqlite_limiter().acquire().await.unwrap())
+                    match get_sqlite_limiter().try_acquire() {
+                        Ok(p) => Some(p),
+                        Err(_) => {
+                            let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "upsert_mission").await;
+                            Some(get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
+                        }
+                    }
                 } else {
                     None
                 };
                 let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
                 self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
@@ -204,7 +312,15 @@ impl SipDB {
                     if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
                         attempt += 1;
                         if attempt >= max_attempts {
+                            if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                                let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, "upsert_mission").await;
+                            }
                             return Err(err);
+                        }
+                        if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
+                            let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, "upsert_mission").await;
+                        } else if !is_standalone && (err_str.contains("deadlock") || err_str.contains("timeout") || err_str.contains("database is locked") || err_str.contains("serialization")) {
+                            crate::telemetry::record_postgres_lock_contention("upsert_mission");
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
@@ -213,6 +329,9 @@ impl SipDB {
                     }
                 }
                 Err(timeout_err) => {
+                    if !is_standalone {
+                        crate::telemetry::record_postgres_lock_contention("upsert_mission");
+                    }
                     attempt += 1;
                     if attempt >= max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
@@ -274,12 +393,12 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
     use std::env;
+    use sqlx::Row;
 
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap()
@@ -425,9 +544,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_logic_success() {
-        let database_url = match std::env::var("DATABASE_URL") {
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(val) => val,
-            Err(_) => return,
+            Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
 
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -499,17 +618,230 @@ mod tests {
 
     #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
-        // Just verify it doesn't crash on execution with a valid pool.
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        // First verify it doesn't crash on execution with an invalid/dummy pool.
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
             .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string());
+        let sip_db_dummy = SipDB::new(dummy_pool, "test_org".to_string());
 
-        let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+        let res_dummy = sip_db_dummy.prune_stale_missions(chrono::Duration::hours(24)).await;
         // Should error out gracefully with our dummy pool timeout instead of panicking
-        assert!(res.is_err());
+        assert!(res_dummy.is_err());
+
+        // Now, if a real database is available, test the actual logic.
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
+        };
+
+        if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await
+        {
+            let mut tx = pool.begin().await.unwrap();
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+            let old_time = chrono::Utc::now() - chrono::Duration::hours(2);
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_mission_id")
+                .bind("STUCK")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_running_mission_id")
+                .bind("RUNNING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_in_progress_mission_id")
+                .bind("IN_PROGRESS")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            let very_old_time = chrono::Utc::now() - chrono::Duration::hours(48);
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, created_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stale_pending_mission_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(very_old_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            let recent_time = chrono::Utc::now() - chrono::Duration::minutes(5);
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+                .bind("normal_pending_mission_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(recent_time.naive_utc())
+                .bind(recent_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            tx.commit().await.unwrap();
+
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+            let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+            assert!(res.is_ok());
+
+            // Verify STUCK mission was marked FAILED
+            let row_stuck = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            use sqlx::Row;
+            let status_stuck: String = row_stuck.get("status");
+            assert_eq!(status_stuck, "FAILED");
+
+            // Verify stuck RUNNING mission was marked FAILED
+            let row_running = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_running_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_running: String = row_running.get("status");
+            assert_eq!(status_running, "FAILED");
+
+            // Verify stuck IN_PROGRESS mission was marked FAILED
+            let row_in_progress = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_in_progress_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_in_progress: String = row_in_progress.get("status");
+            assert_eq!(status_in_progress, "FAILED");
+
+            // Verify stale PENDING mission was marked FAILED
+            let row_stale = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stale_pending_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_stale: String = row_stale.get("status");
+            assert_eq!(status_stale, "FAILED");
+
+            // Verify normal PENDING mission is still PENDING
+            let row_normal = sqlx::query("SELECT status FROM agent_missions WHERE id = 'normal_pending_mission_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_normal: String = row_normal.get("status");
+            assert_eq!(status_normal, "PENDING");
+
+            // Clean up using a transaction
+            let mut tx_clean = pool.begin().await.unwrap();
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stuck_running_mission_id', 'stuck_in_progress_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
+                .execute(&mut *tx_clean)
+                .await
+                .unwrap();
+            tx_clean.commit().await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_drain_mission_queue_success() {
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return, // Skip test instead of failing silently when no db url is present
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .max_connections(1)
+            .connect(&database_url)
+            .await;
+
+        if let Ok(pool) = pool {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+            // Insert initial record
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("drain_test_mission_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Insert another org record
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("drain_other_mission_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("other_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            // Call drain
+            let res = sip_db.drain_mission_queue().await;
+            assert!(res.is_ok());
+
+            // Verify test_org mission is deleted
+            let count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE tenant_id = 'test_org'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(count, 0);
+
+            // Verify other_org mission is intact
+            let count2: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE tenant_id = 'other_org'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(count2, 1);
+
+            // Clean up
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('drain_test_mission_id', 'drain_other_mission_id')").execute(&pool).await.unwrap();
+        }
     }
 }

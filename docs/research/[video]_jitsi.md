@@ -1,6 +1,4 @@
-# Scout: Tool Integration Research Q2
-
-## 7. Video Conferencing
+## [Video] Jitsi Meet Integration
 **Title**: Embed Jitsi Meet for Zero-Setup Online Lessons
 **Problem Statement**: Leo the Music Tutor currently has to manually create Zoom links, email them to students, and deal with students losing the link. He needs an automated, branded video room.
 **Research Report**:

@@ -114,33 +114,10 @@ impl AutoDreamWorker {
                 }
              };
 
-             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
+             db.inject_truth("system", &format!("session-summary-{}", id), &summary, &embedding).await?;
 
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
-             if db.is_sqlite() {
-                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                     .bind(&format!("session-summary-{}", id))
-                     .bind("system")
-                     .bind("system_agent")
-                     .bind(&id)
-                     .bind(&summary)
-                     .bind(&embedding)
-                     .bind("SESSION_SUMMARY")
-                     .execute(&db.pool)
-                     .await?;
-             } else {
-                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                     .bind(&format!("session-summary-{}", id))
-                     .bind("system")
-                     .bind("system_agent")
-                     .bind(&id)
-                     .bind(&summary)
-                     .bind(&embedding)
-                     .bind("SESSION_SUMMARY")
-                     .execute(&db.pool)
-                     .await?;
-             }
         }
         
         Ok(())
@@ -189,8 +166,8 @@ impl AutoDreamWorker {
             let source_type = format!("TASK_{}", table.to_uppercase());
             
             // Insert into the proper KAIROS knowledge_embeddings table
-            db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
-            db.mark_task_auto_dreamed(&id, &table).await?;
+            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+            db.mark_task_auto_dreamed("system", &id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
         }
@@ -214,7 +191,7 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content FROM autodream_memories ORDER BY updated_at DESC LIMIT $1")
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -230,7 +207,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <-> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <-> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
@@ -306,29 +283,6 @@ impl AutoDreamWorker {
                     
                     db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
                     
-                    if db.is_sqlite() {
-                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                            .bind(&mem_id)
-                            .bind("system")
-                            .bind("system_agent")
-                            .bind(&session_id)
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .bind("SESSION_DATA")
-                            .execute(&db.pool)
-                            .await?;
-                    } else {
-                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                            .bind(&mem_id)
-                            .bind("system")
-                            .bind("system_agent")
-                            .bind(&session_id)
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .bind("SESSION_DATA")
-                            .execute(&db.pool)
-                            .await?;
-                    }
 
                     sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
                         .bind(&session_id)
@@ -368,30 +322,6 @@ impl AutoDreamWorker {
                         
                         db.insert_autodream_memory(&mem_id, "system", "fs-agent", "fs-task", &content, &emb_str, "FS_MEMORY").await?;
 
-                        if db.is_sqlite() {
-                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                                .bind(&mem_id)
-                                .bind("system")
-                                .bind("fs-agent")
-                                .bind("fs-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("FS_MEMORY")
-                                .execute(&db.pool)
-                                .await?;
-                        } else {
-                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                                .bind(&mem_id)
-                                .bind("system")
-                                .bind("fs-agent")
-                                .bind("fs-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("FS_MEMORY")
-                                .execute(&db.pool)
-                                .await?;
-                        }
-
                         tokio::fs::remove_file(path).await?;
                     }
                     Err(e) => {
@@ -422,38 +352,35 @@ impl AutoDreamWorker {
                 match client.generate_embedding(&content).await {
                     Ok(embedding) => {
                         counter.add(1, &[]);
-                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        db.insert_autodream_memory(&mem_id, "system", "system_agent", "agent-task", &content, &emb_str, "TASK_SUMMARY").await?;
+                        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                            id: mem_id,
+                            tenant_id: "system".to_string(),
+                            agent_id: "system_agent".to_string(),
+                            content: content.clone(),
+                            embedding: embedding,
+                            source_type: "TASK_SUMMARY".to_string(),
+                            created_at: chrono::Utc::now(),
+                            last_referenced_at: chrono::Utc::now(),
+                            reference_count: 0,
+                            reliability_score: 50,
+                            owner_override: false,
+                            metadata: None,
+                        };
 
-                        if db.is_sqlite() {
-                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                                .bind(&mem_id)
-                                .bind("system") // Placeholder since we don't have org_id in yml name
-                                .bind("system_agent")
-                                .bind("agent-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("TASK_SUMMARY")
-                                .execute(&db.pool)
-                                .await?;
+                        let repository = match &db.store {
+                            ::server_lib::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                            ::server_lib::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                        };
+
+                        if let Err(e) = repository.upsert(&record).await {
+                            debug!("AutoDreamWorker: failed to upsert agent-task memory {:?}: {}", path, e);
                         } else {
-                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                                .bind(&mem_id)
-                                .bind("system") // Placeholder since we don't have org_id in yml name
-                                .bind("system_agent")
-                                .bind("agent-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("TASK_SUMMARY")
-                                .execute(&db.pool)
-                                .await?;
+                            let path_clone = path.clone();
+                            tokio::fs::remove_file(path).await?;
+                            debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                         }
-
-                        let path_clone = path.clone();
-                        tokio::fs::remove_file(path).await?;
-                        debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                     }
                     Err(e) => {
                         debug!("AutoDreamWorker: failed to embed agent-task memory {:?}: {}", path, e);
@@ -482,7 +409,7 @@ mod tests {
     #[test]
     async fn test_autodream_worker_init() {
         // Skip actual db execution to prevent CI timeouts
-        if std::env::var("DATABASE_URL").is_err() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
@@ -508,6 +435,26 @@ mod tests {
             let result = worker_sqlite.consolidate_epoch().await;
             assert!(result.is_ok());
         }
+    }
+
+    #[tokio::test]
+    async fn test_consolidate_agent_task_memories_empty() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let db = Arc::new(DB { pool: pool.clone(), store: ::server_lib::db::DbStore::Postgres });
+        let worker = AutoDreamWorker::new(db.clone());
+
+        let res = AutoDreamWorker::consolidate_agent_task_memories(&db, &worker.embedded_counter).await;
+        assert!(res.is_ok());
     }
 }
 

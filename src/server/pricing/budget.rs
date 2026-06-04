@@ -30,14 +30,6 @@ impl BudgetManager {
             return Err("spend amount cannot be negative".to_string());
         }
 
-        if *current + amount > self.total_limit {
-            return Err(format!(
-                "budget exceeded: cannot spend {:.2}, remaining budget is {:.2}",
-                amount,
-                self.total_limit - *current
-            ));
-        }
-
         *current += amount;
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
@@ -50,7 +42,11 @@ impl BudgetManager {
             }
         }
 
-        Ok(true)
+        if *current > self.total_limit {
+            Ok(false)
+        } else {
+            Ok(true)
+        }
     }
 
     pub fn get_remaining(&self) -> f64 {
@@ -78,20 +74,19 @@ mod tests {
         
         assert_eq!(manager.get_remaining(), 100.0);
         
-        assert!(manager.record_spend(50.0).is_ok());
+        assert_eq!(manager.record_spend(50.0).unwrap(), true);
         assert_eq!(manager.get_remaining(), 50.0);
         
-        let err = manager.record_spend(60.0).unwrap_err();
-        assert!(err.contains("budget exceeded"));
-
-        assert_eq!(manager.get_remaining(), 50.0); // Should not change!
+        // Exceed budget, it's a soft limit so it returns false but updates current
+        assert_eq!(manager.record_spend(60.0).unwrap(), false);
+        assert_eq!(manager.get_remaining(), -10.0);
         
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 
-        // test cents
-        assert!(manager.record_spend_cents(1000).is_ok()); // spend $10
-        assert_eq!(manager.get_remaining(), 40.0);
-        assert_eq!(manager.get_remaining_cents(), 4000);
+        // test cents (soft limit still applies)
+        assert_eq!(manager.record_spend_cents(1000).unwrap(), false); // spend $10
+        assert_eq!(manager.get_remaining(), -20.0);
+        assert_eq!(manager.get_remaining_cents(), -2000);
     }
 }

@@ -56,7 +56,7 @@ The Teammate Mesh provides low-latency communication across the swarm, serving a
 - **Unified API:** A single gateway (`POST /api/mesh/broadcast`) handles event routing.
 - **Hybrid Transport:**
     - **Cloud:** Powered by Redis Pub/Sub connected to Centrifuge hubs for WebSocket propagation to thin clients and sub-agents.
-    - **Standalone:** Powered by a sharded in-memory Go transport for maximum host-machine efficiency.
+    - **Standalone:** Powered by local in-process transport for maximum host-machine efficiency.
 
 **Payload Contract (OHC-SIP Compliance):**
 ```json

@@ -4,6 +4,12 @@ use ::server_ohc::orchestration::org_service_server::OrgService;
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
+
+static DOMAINS_CACHE: OnceLock<HybridCache<Vec<DomainInfoProto>>> = OnceLock::new();
+static MARKETPLACE_ITEMS_CACHE: OnceLock<HybridCache<Vec<MarketplaceItemProto>>> = OnceLock::new();
+
 pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
     settings: RwLock<SettingsResponse>,
@@ -28,19 +34,29 @@ impl MyOrgService {
 impl OrgService for MyOrgService {
     async fn get_domains(
         &self,
-        _request: Request<EmptyRequest>,
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<DomainsResponse>, Status> {
+        let cache_key = "org_domains".to_string();
+        let cache = DOMAINS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(domains) = cache.get(&cache_key).await {
+            return Ok(Response::new(DomainsResponse { domains }));
+        }
+
         let domains = vec![
             DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
             DomainInfoProto { id: "digital_marketing_agency".to_string(), name: "Digital Marketing Agency".to_string(), description: "Full-service agency...".to_string() },
             DomainInfoProto { id: "accounting_firm".to_string(), name: "Accounting Firm".to_string(), description: "Financial services firm...".to_string() },
         ];
+
+        cache.set(&cache_key, domains.clone(), std::time::Duration::from_secs(3600)).await;
+
         Ok(Response::new(DomainsResponse { domains }))
     }
 
     async fn get_settings(
         &self,
-        _request: Request<EmptyRequest>,
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<SettingsResponse>, Status> {
         let settings = self.settings.read().unwrap();
         Ok(Response::new(settings.clone()))
@@ -59,17 +75,27 @@ impl OrgService for MyOrgService {
 
     async fn get_marketplace_items(
         &self,
-        _request: Request<EmptyRequest>,
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
+        let cache_key = "org_marketplace_items".to_string();
+        let cache = MARKETPLACE_ITEMS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(items) = cache.get(&cache_key).await {
+            return Ok(Response::new(MarketplaceItemsResponse { items }));
+        }
+
         let items = vec![
             MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
         ];
+
+        cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
+
         Ok(Response::new(MarketplaceItemsResponse { items }))
     }
 
     async fn get_analytics(
         &self,
-        _request: Request<EmptyRequest>,
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
         let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
@@ -81,14 +107,19 @@ impl OrgService for MyOrgService {
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
         let hub3 = self.hub.clone();
-        let (agents_res, meetings_res, summary_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || hub3.tracker().summary("system"))
+        let hub4 = self.hub.clone();
+        let org_id_clone = org_id.clone();
+
+        let (agents_res, meetings_res, summary_res, quota_res) = tokio::join!(
+            tokio::spawn(async move { hub1.get_agents().await }),
+            tokio::spawn(async move { hub2.get_meetings().await }),
+            tokio::task::spawn_blocking(move || hub3.tracker().summary("system")),
+            tokio::spawn(async move { hub4.tracker().check_agent_quota(&org_id_clone).await })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
+        let quota_result = quota_res.map_err(|e| Status::internal(e.to_string()))?;
         
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
@@ -121,7 +152,7 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let status = self.hub.tracker().check_agent_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+        let status = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
             user_message: None,
@@ -161,19 +192,19 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let mut request1 = Request::new(EmptyRequest {});
+        let mut request1 = Request::new(::server_ohc::orchestration::EmptyRequest {});
         request1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start = std::time::Instant::now();
         let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
-        let elapsed1 = start.elapsed();
+        let _elapsed1 = start.elapsed();
 
-        let mut request2 = Request::new(EmptyRequest {});
+        let mut request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
         request2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start2 = std::time::Instant::now();
         let _res2 = service.get_analytics(request2).await.unwrap().into_inner();
-        let elapsed2 = start2.elapsed();
+        let _elapsed2 = start2.elapsed();
 
         // The second call should be faster, but we just verify it works properly via caching
         assert!(_res1.total_agents == _res2.total_agents);

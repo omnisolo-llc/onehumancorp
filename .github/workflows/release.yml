@@ -7,458 +7,841 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('/pr/{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: write
   packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  # ── Build cross-platform ironclaw archives ──────────────────────────────────
-  build-archives:
-    name: Build release archives
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-
-      - name: Build ironclaw archives (all platforms)
-        run: |
-          bazelisk build \
-            //release:ironclaw-x86_64-unknown-linux-gnu \
-            //release:ironclaw-aarch64-unknown-linux-gnu \
-            //release:ironclaw-x86_64-apple-darwin \
-            //release:ironclaw-aarch64-apple-darwin \
-            //release:ironclaw-x86_64-pc-windows-msvc
-
-      - name: Collect archives and generate checksums
-        run: |
-          mkdir -p dist
-          # Copy all built archives into dist/ using their canonical names
-          for target in \
-            ironclaw-x86_64-unknown-linux-gnu \
-            ironclaw-aarch64-unknown-linux-gnu \
-            ironclaw-x86_64-apple-darwin \
-            ironclaw-aarch64-apple-darwin \
-            ironclaw-x86_64-pc-windows-msvc; do
-            src=$(bazelisk cquery --output=files //release:${target} 2>/dev/null | head -1)
-            if [ -n "$src" ] && [ -f "$src" ]; then
-              cp "$src" "dist/${target}.tar.gz"
-            fi
-          done
-          ls -lh dist/
-          cd dist && sha256sum *.tar.gz > checksums.txt
-          cat checksums.txt
-
-      - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-archives
-          path: dist/
-          retention-days: 7
-
-  # ── Build Flutter Android APK + App Bundle ──────────────────────────────────
-  build-flutter-android:
-    name: Build Flutter Android
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-
-      - name: Set up Java (for Android build tools)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Build Android APK
-        run: bazelisk run //release:flutter-build-android-apk
-
-      - name: Build Android App Bundle
-        run: bazelisk run //release:flutter-build-android-aab
-
-      - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-android
-          path: |
-            srcs/app/build/app/outputs/flutter-apk/*.apk
-            srcs/app/build/app/outputs/bundle/release/*.aab
-          retention-days: 7
-
-  # ── Build Flutter iOS app (macOS runner) ────────────────────────────────────
-  build-flutter-ios:
-    name: Build Flutter iOS
-    runs-on: macos-latest
+  build-release-artifacts:
+    name: Build release artifacts (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            bazel_config: linux_x86_64
+            artifact_name: ohc-x86_64-unknown-linux-gnu.tar.gz
+            install_linux_deps: true
+          - name: windows-x86_64
+            runner: ubuntu-latest
+            bazel_config: windows_x86_64
+            artifact_name: ohc-x86_64-pc-windows-gnu.zip
+            install_linux_deps: true
+          - name: macos-aarch64
+            runner: macos-15
+            bazel_config: macos_aarch64
+            artifact_name: ohc-aarch64-apple-darwin.tar.gz
+            install_linux_deps: false
+          - name: linux-arm64
+            runner: ubuntu-22.04-arm
+            bazel_config: linux_arm64
+            artifact_name: ohc-aarch64-unknown-linux-gnu.tar.gz
+            install_linux_deps: true
+          - name: windows-arm64
+            runner: windows-11-arm
+            bazel_config: windows_arm64
+            artifact_name: ohc-aarch64-pc-windows-msvc.zip
+            install_linux_deps: false
+          - name: macos-x86_64
+            runner: macos-15-intel
+            bazel_config: macos_x86_64
+            artifact_name: ohc-x86_64-apple-darwin.tar.gz
+            install_linux_deps: false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.2
 
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-
-      - name: Build iOS (no code sign)
-        run: bazelisk run //release:flutter-build-ios
-
-      - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-ios
-          path: srcs/app/build/ios/iphoneos/
-          retention-days: 7
-
-  # ── Build Flutter macOS desktop app ─────────────────────────────────────────
-  build-flutter-macos:
-    name: Build Flutter macOS
-    runs-on: macos-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-
-      - name: Build macOS app
-        run: bazelisk run //release:flutter-build-macos
-
-      - name: Archive macOS .app
-        run: |
-          cd srcs/app/build/macos/Build/Products/Release
-          zip -r ../../../../../../../dist/ohc-app-macos.zip *.app
-          mkdir -p "$GITHUB_WORKSPACE/dist"
-          cp ../../../../../../../dist/ohc-app-macos.zip "$GITHUB_WORKSPACE/dist/" 2>/dev/null || \
-            zip -r "$GITHUB_WORKSPACE/dist/ohc-app-macos.zip" .
-
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-macos
-          path: dist/ohc-app-macos.zip
-          retention-days: 7
-
-  # ── Build Flutter Windows desktop app ───────────────────────────────────────
-  build-flutter-windows:
-    name: Build Flutter Windows
-    runs-on: windows-latest
-    timeout-minutes: 60
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-
-      - name: Build Windows app
-        run: bazelisk run //release:flutter-build-windows
-
-      - name: Archive Windows build
-        run: |
-          mkdir -p dist
-          cd srcs/app/build/windows/x64/runner/Release
-          7z a ../../../../../../../dist/ohc-app-windows.zip . || \
-            powershell Compress-Archive -Path . -DestinationPath "$GITHUB_WORKSPACE/dist/ohc-app-windows.zip"
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-windows
-          path: dist/ohc-app-windows.zip
-          retention-days: 7
-
-  # ── Build Flutter Linux desktop app ─────────────────────────────────────────
-  build-flutter-linux:
-    name: Build Flutter Linux
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-
-      - name: Install Linux desktop dependencies
+      - name: Install Linux build dependencies
+        if: matrix.install_linux_deps
         run: |
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends --fix-missing \
-            clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev
-
-      - name: Build Linux app
-        run: bazelisk run //release:flutter-build-linux
-
-      - name: Archive Linux build
-        run: |
-          mkdir -p dist
-          tar -C srcs/app/build/linux/x64/release/bundle \
-            -czf dist/ohc-app-linux-x86_64.tar.gz .
-
-      - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-linux
-          path: dist/ohc-app-linux-x86_64.tar.gz
-          retention-days: 7
-
-  # ── Build Flutter Web app ────────────────────────────────────────────────────
-  build-flutter-web:
-    name: Build Flutter Web
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git rpm
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          disk-cache: ${{ github.workflow }}-release-artifacts-${{ matrix.name }}
           repository-cache: true
           external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
             build --show_timestamps
 
-      - name: Build Web app
-        run: bazelisk run //release:flutter-build-web
+      - name: Build packaged application
+        env:
+          MSYS2_ARG_CONV_EXCL: "*"
+        run: bazelisk build //release:release_archive --config=release --config=${{ matrix.bazel_config }}
 
-      - name: Archive Web build
-        run: |
-          mkdir -p dist
-          tar -C srcs/app/build/web -czf dist/ohc-app-web.tar.gz .
-
-      - name: Upload Web artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v7.0.1
         with:
-          name: flutter-web
-          path: dist/ohc-app-web.tar.gz
+          name: release-${{ matrix.name }}
+          path: bazel-bin/release/${{ matrix.artifact_name }}
+          if-no-files-found: error
           retention-days: 7
 
-  # ── Publish GitHub Release ──────────────────────────────────────────────────
+  build-desktop-installers:
+    name: Build desktop installers (${{ matrix.name }})
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    env:
+      MACOS_SIGNING_ENABLED: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_KEYCHAIN_PASSWORD != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x86_64
+            runner: windows-latest
+            os_name: windows
+            arch: x86_64
+            bazel_config: windows_x86_64
+            tauri_cli_bazel_flags: --config=windows_x86_64
+            install_linux_deps: false
+          - name: macos-universal
+            runner: macos-15
+            os_name: macos
+            arch: universal
+            bazel_config: macos_aarch64
+            tauri_cli_bazel_flags: --config=macos_aarch64
+            install_linux_deps: false
+          - name: linux-x86_64
+            runner: ubuntu-22.04
+            os_name: linux
+            arch: x86_64
+            bazel_config: linux_x86_64
+            tauri_cli_bazel_flags: --config=linux_x86_64
+            install_linux_deps: true
+          - name: linux-arm64
+            runner: ubuntu-22.04-arm
+            os_name: linux
+            arch: arm64
+            bazel_config: linux_arm64
+            tauri_cli_bazel_flags: --config=linux_arm64
+            install_linux_deps: true
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Install Linux desktop packaging dependencies
+        if: matrix.install_linux_deps
+        run: |
+          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends --fix-missing \
+            build-essential pkg-config libssl-dev curl wget file \
+            libdbus-1-dev libglib2.0-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
+            ca-certificates git patchelf rpm xdg-utils
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
+            || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add macOS universal Rust targets
+        if: matrix.os_name == 'macos'
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Cache Cargo and Tauri build outputs
+        uses: actions/cache@v5.0.5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+            target/release/.fingerprint
+            target/release/build
+            target/release/deps
+            target/*/release/.fingerprint
+            target/*/release/build
+            target/*/release/deps
+          key: ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'src/ui/tauri/Cargo.toml', 'src/ui/tauri/tauri.conf.json') }}
+          restore-keys: |
+            ${{ runner.os }}-desktop-${{ matrix.name }}-cargo-tauri-
+            ${{ runner.os }}-desktop-cargo-tauri-
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-desktop-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
+          bazelrc: |
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
+            build --build_metadata=ROLE=CI
+            build --show_timestamps
+
+      - name: Build Tauri CLI with Bazel
+        run: |
+          if ! bazelisk build @crates//:tauri-cli__cargo-tauri --config=release ${{ matrix.tauri_cli_bazel_flags }}; then
+            if [[ "${{ runner.os }}" != "Windows" ]]; then
+              exit 1
+            fi
+            echo "::warning::Bazel failed to build cargo-tauri on Windows; falling back to cargo install until the Windows rules_rust host toolchain is fixed."
+            cargo install tauri-cli --version 2.11.2 --locked
+            echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
+            exit 0
+          fi
+
+          tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri --config=release ${{ matrix.tauri_cli_bazel_flags }} | tail -n 1)"
+          cli_ext=""
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cli_ext=".exe"
+          fi
+          mkdir -p "$RUNNER_TEMP/tauri-cli-bin"
+          cp "$(pwd)/$tauri_cli" "$RUNNER_TEMP/tauri-cli-bin/cargo-tauri$cli_ext"
+          chmod +x "$RUNNER_TEMP/tauri-cli-bin/cargo-tauri$cli_ext"
+          echo "$RUNNER_TEMP/tauri-cli-bin" >> "$GITHUB_PATH"
+
+      - name: Prepare release version and updater signing
+        env:
+          TAURI_SIGNING_PUBLIC_KEY_SECRET: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_SECRET: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ -z "$VERSION" || ( "$GITHUB_REF_NAME" != v* && "$VERSION" == "$GITHUB_REF_NAME" ) ]]; then
+            VERSION="0.0.0-${GITHUB_RUN_NUMBER}"
+          fi
+
+          if [[ -z "${TAURI_SIGNING_PUBLIC_KEY_SECRET:-}" || -z "${TAURI_SIGNING_PRIVATE_KEY_SECRET:-}" ]]; then
+            echo "TAURI_SIGNING_PUBLIC_KEY and TAURI_SIGNING_PRIVATE_KEY GitHub secrets are required for updater-signed desktop release artifacts." >&2
+            exit 1
+          fi
+
+          normalize_tauri_signing_key() {
+            local value="$1"
+            if [[ "$value" == *"untrusted comment:"* ]]; then
+              printf '%s' "$value" | base64 | tr -d '\r\n'
+              return
+            fi
+
+            local decoded
+            decoded="$(printf '%s' "$value" | base64 --decode 2>/dev/null || printf '%s' "$value" | base64 -D 2>/dev/null || true)"
+            if [[ "$decoded" == *"untrusted comment:"* ]]; then
+              printf '%s' "$decoded" | base64 | tr -d '\r\n'
+            else
+              printf '%s' "$value"
+            fi
+          }
+
+          TAURI_SIGNING_PUBLIC_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PUBLIC_KEY_SECRET")"
+          TAURI_SIGNING_PRIVATE_KEY_SECRET="$(normalize_tauri_signing_key "$TAURI_SIGNING_PRIVATE_KEY_SECRET")"
+          echo "::add-mask::$TAURI_SIGNING_PRIVATE_KEY_SECRET"
+
+          export VERSION
+          node <<'NODE'
+          const fs = require('fs');
+          const version = process.env.VERSION;
+          const pubkey = process.env.TAURI_SIGNING_PUBLIC_KEY_SECRET;
+          const configPath = 'src/ui/tauri/tauri.conf.json';
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          config.version = version;
+          config.plugins ??= {};
+          config.plugins.updater ??= {};
+          config.plugins.updater.pubkey = pubkey;
+          fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
+          const cargoPath = 'src/ui/tauri/Cargo.toml';
+          let cargo = fs.readFileSync(cargoPath, 'utf8');
+          cargo = cargo.replace(/^version = ".*"$/m, `version = "${version}"`);
+          fs.writeFileSync(cargoPath, cargo);
+          NODE
+
+          private_key_path="$RUNNER_TEMP/tauri-updater-signing.key"
+          printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_SECRET" > "$private_key_path"
+          chmod 600 "$private_key_path" 2>/dev/null || true
+          echo "TAURI_SIGNING_PRIVATE_KEY=$private_key_path" >> "$GITHUB_ENV"
+
+          if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
+          fi
+          echo "OHC_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "OHC_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
+
+      - name: Install macOS signing assets
+        if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
+        env:
+          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in MACOS_CERTIFICATE_BASE64 MACOS_CERTIFICATE_PASSWORD MACOS_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID KEYCHAIN_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "$name is required to sign and notarize macOS release artifacts" >&2
+              exit 1
+            fi
+          done
+
+          certificate_path="$RUNNER_TEMP/ohc-macos-signing.p12"
+          keychain_path="$RUNNER_TEMP/ohc-macos-signing.keychain-db"
+
+          ORIGINAL_DEFAULT_KEYCHAIN="$(security default-keychain -d user | tr -d '"' | xargs)"
+          echo "ORIGINAL_DEFAULT_KEYCHAIN=$ORIGINAL_DEFAULT_KEYCHAIN" >> "$GITHUB_ENV"
+          echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security default-keychain -s "$keychain_path"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security import "$certificate_path" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+          security list-keychain -d user -s "$keychain_path" $(security list-keychains -d user | sed s/\"//g)
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
+
+          {
+            echo "APPLE_SIGNING_IDENTITY=$MACOS_SIGNING_IDENTITY"
+            echo "APPLE_ID=$APPLE_ID"
+            echo "APPLE_PASSWORD=$APPLE_PASSWORD"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Build Tauri desktop bundles
+        working-directory: src/ui/tauri
+        run: |
+          set -euo pipefail
+          case "${{ matrix.os_name }}" in
+            macos)
+              cargo tauri build --target universal-apple-darwin
+              ;;
+            windows)
+              cargo tauri build --bundles msi
+              ;;
+            linux)
+              cargo tauri build --bundles appimage,deb,rpm
+              ;;
+            *)
+              echo "Unsupported desktop OS: ${{ matrix.os_name }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Prepare macOS release assets
+        if: matrix.os_name == 'macos'
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          VERSION_TAG="$GITHUB_REF_NAME"
+          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          if [[ ! -d "$BUNDLE_ROOT" ]]; then
+            BUNDLE_ROOT="target/release/bundle"
+          fi
+
+          APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
+          DMG_PATH="$(find "$BUNDLE_ROOT/dmg" -type f -name '*.dmg' | head -1 || true)"
+          TAR_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.tar.gz' -type f | head -1 || true)"
+          if [[ -z "$APP_PATH" || -z "$DMG_PATH" || -z "$TAR_PATH" ]]; then
+            echo "Missing macOS .app/.dmg/.tar.gz artifacts under $BUNDLE_ROOT" >&2
+            find "$BUNDLE_ROOT" -maxdepth 4 \( -type f -o -type d \) >&2
+            exit 1
+          fi
+
+          cp "$DMG_PATH" "dist/OHC-${VERSION_TAG}-macOS.dmg"
+          cp "$TAR_PATH" "dist/OHC-${VERSION_TAG}-macOS.tar.gz"
+          if [[ -f "$TAR_PATH.sig" ]]; then
+            cp "$TAR_PATH.sig" "dist/OHC-${VERSION_TAG}-macOS.tar.gz.sig"
+          else
+            echo "Missing macOS updater signature: $TAR_PATH.sig" >&2
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/OHC-${VERSION_TAG}-macOS.zip"
+          ls -lh dist/
+
+      - name: Verify macOS signing and notarization
+        if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
+        run: |
+          set -euo pipefail
+          BUNDLE_ROOT="target/universal-apple-darwin/release/bundle"
+          if [[ ! -d "$BUNDLE_ROOT" ]]; then
+            BUNDLE_ROOT="target/release/bundle"
+          fi
+          APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
+          DMG_PATH="$(find dist -maxdepth 1 -name '*.dmg' -type f | head -1 || true)"
+          if [[ -z "$APP_PATH" || -z "$DMG_PATH" ]]; then
+            echo "Missing macOS artifacts for verification" >&2
+            exit 1
+          fi
+
+          xcrun stapler staple "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          spctl -a -t exec -vv "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+
+          xcrun stapler staple "$DMG_PATH"
+          codesign --verify --verbose=2 "$DMG_PATH"
+          spctl -a -t open --context context:primary-signature -vv "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
+
+      - name: Prepare Windows release assets
+        if: matrix.os_name == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $versionTag = $env:GITHUB_REF_NAME
+
+          $bundleRoots = @(
+            'target/release/bundle',
+            'target/x86_64-pc-windows-msvc/release/bundle'
+          ) | Where-Object { Test-Path $_ }
+          $msi = $bundleRoots | ForEach-Object {
+            Get-ChildItem -Path $_ -Recurse -Include *.msi -ErrorAction SilentlyContinue
+          } | Select-Object -First 1
+          if ($null -eq $msi) {
+            throw 'No Windows MSI installer found'
+          }
+          $msiDest = "OHC-$versionTag-Windows.msi"
+          Copy-Item $msi.FullName (Join-Path dist $msiDest)
+          if (Test-Path "$($msi.FullName).sig") {
+            Copy-Item "$($msi.FullName).sig" (Join-Path dist "$msiDest.sig")
+          } else {
+            throw "Missing Windows updater signature: $($msi.FullName).sig"
+          }
+
+          $exeCandidates = @(
+            'target/release/app.exe',
+            'target/x86_64-pc-windows-msvc/release/app.exe'
+          )
+          $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($null -eq $exe) {
+            throw 'No Windows executable found for portable package'
+          }
+          $portableDir = 'dist/OHC-Portable'
+          New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+          Copy-Item $exe (Join-Path $portableDir 'OHC.exe')
+          @('# OHC portable build marker', 'portable=true') | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "dist/OHC-$versionTag-Windows-Portable.zip" -Force
+          Remove-Item -Recurse -Force $portableDir
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Prepare Linux release assets
+        if: matrix.os_name == 'linux'
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          VERSION_TAG="$GITHUB_REF_NAME"
+          ARCH="${{ matrix.arch }}"
+          BUNDLE_ROOT="target/release/bundle"
+
+          APPIMAGE="$(find "$BUNDLE_ROOT" -type f -name '*.AppImage' | head -1 || true)"
+          DEB="$(find "$BUNDLE_ROOT" -type f -name '*.deb' | head -1 || true)"
+          RPM="$(find "$BUNDLE_ROOT" -type f -name '*.rpm' | head -1 || true)"
+          if [[ -z "$APPIMAGE" || -z "$DEB" || -z "$RPM" ]]; then
+            echo "Missing Linux AppImage/deb/rpm artifacts under $BUNDLE_ROOT" >&2
+            find "$BUNDLE_ROOT" -maxdepth 4 -type f >&2
+            exit 1
+          fi
+
+          cp "$APPIMAGE" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage"
+          if [[ -f "$APPIMAGE.sig" ]]; then
+            cp "$APPIMAGE.sig" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage.sig"
+          else
+            echo "Missing Linux AppImage updater signature: $APPIMAGE.sig" >&2
+            exit 1
+          fi
+          cp "$DEB" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.deb"
+          cp "$RPM" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.rpm"
+          ls -lh dist/
+
+      - name: Generate desktop installer checksums
+        run: |
+          cd dist
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum * > checksums-desktop-${{ matrix.name }}.txt
+          else
+            shasum -a 256 * > checksums-desktop-${{ matrix.name }}.txt
+          fi
+          cat checksums-desktop-${{ matrix.name }}.txt
+
+      - name: Upload desktop installer artifacts
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: desktop-${{ matrix.name }}
+          path: dist/
+          retention-days: 7
+
+      - name: Clean up Apple signing keychain
+        if: matrix.os_name == 'macos' && always()
+        run: |
+          if [[ -n "${ORIGINAL_DEFAULT_KEYCHAIN:-}" ]]; then
+            security default-keychain -s "$ORIGINAL_DEFAULT_KEYCHAIN" || true
+          fi
+          if [[ -f "$RUNNER_TEMP/ohc-macos-signing.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/ohc-macos-signing.keychain-db" || true
+          fi
+
+  build-mobile-artifacts:
+    name: Build mobile artifacts (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: android
+            runner: ubuntu-latest
+            targets: "//src/ui/tauri:tauri_android_apk //src/ui/tauri:tauri_android_aab"
+            patterns: "*.apk *.aab"
+          # iOS is supported by //src/ui/tauri:tauri_ios_ipa, but disabled
+          # until the Apple developer signing assets are available.
+          # - name: ios
+          #   runner: macos-latest
+          #   targets: "//src/ui/tauri:tauri_ios_ipa"
+          #   patterns: "*.ipa"
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Install iOS build dependencies
+        if: matrix.name == 'ios'
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install iOS signing assets
+        if: matrix.name == 'ios'
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          for name in APPLE_CERTIFICATE_BASE64 APPLE_CERTIFICATE_PASSWORD APPLE_PROVISIONING_PROFILE_BASE64 KEYCHAIN_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "$name is required to build the iOS IPA" >&2
+              exit 1
+            fi
+          done
+
+          certificate_path="$RUNNER_TEMP/ohc-ios-signing.p12"
+          profile_path="$RUNNER_TEMP/ohc.mobileprovision"
+          keychain_path="$RUNNER_TEMP/ohc-signing.keychain-db"
+
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+          echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security import "$certificate_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+          security list-keychain -d user -s "$keychain_path" $(security list-keychains -d user | sed s/\"//g)
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/ohc.mobileprovision"
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-mobile-${{ matrix.name }}
+          repository-cache: true
+          external-cache: true
+          bazelrc: |
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
+            build --build_metadata=ROLE=CI
+            build --show_timestamps
+
+      - name: Build Tauri mobile artifacts
+        run: bazelisk build ${{ matrix.targets }} --config=release
+
+      - name: Collect mobile artifacts
+        run: |
+          mkdir -p dist
+          : > mobile-files.txt
+          for target in ${{ matrix.targets }}; do
+            bazelisk cquery --output=files "$target" --config=release >> mobile-files.txt
+          done
+          for pattern in ${{ matrix.patterns }}; do
+            while IFS= read -r src; do
+              [[ -f "$src" && "$src" == $pattern ]] && cp "$src" dist/
+            done < mobile-files.txt
+            if ! find dist -maxdepth 1 -type f -name "$pattern" | grep -q .; then
+              echo "No artifact matched $pattern" >&2
+              cat mobile-files.txt >&2
+              exit 1
+            fi
+          done
+          find dist -type f | sort
+
+      - name: Generate mobile checksums
+        run: |
+          cd dist
+          if command -v sha256sum >/dev/null 2>&1; then
+            find . -type f ! -name 'checksums*.txt' -print0 | xargs -0 sha256sum > checksums-mobile-${{ matrix.name }}.txt
+          else
+            find . -type f ! -name 'checksums*.txt' -print0 | xargs -0 shasum -a 256 > checksums-mobile-${{ matrix.name }}.txt
+          fi
+          cat checksums-mobile-${{ matrix.name }}.txt
+
+      - name: Upload mobile artifacts
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: mobile-${{ matrix.name }}
+          path: dist/
+          retention-days: 7
+
+  build-server-web-image:
+    name: Build server web image
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Install Linux build dependencies
+        run: |
+          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends --fix-missing \
+            build-essential pkg-config libssl-dev \
+            ca-certificates curl git
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-server-web-image
+          repository-cache: true
+          external-cache: true
+          bazelrc: |
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
+            build --build_metadata=ROLE=CI
+            build --show_timestamps
+
+      - name: Build server web image tarball
+        run: bazelisk build //deploy:server_web_image_tar --config=release --config=linux_x86_64 --output_groups=+tarball
+
+      - name: Collect server web image artifact
+        run: |
+          mkdir -p dist
+          bazelisk cquery --output=files //deploy:server_web_image_tar --config=release --config=linux_x86_64 > image-files.txt
+          image_tar="$(grep -E '/tarball\.tar$' image-files.txt | head -n 1)"
+          if [[ -z "$image_tar" || ! -f "$image_tar" ]]; then
+            echo "No server web image tarball found" >&2
+            cat image-files.txt >&2
+            exit 1
+          fi
+          cp "$image_tar" dist/ohc-server-web-image-linux-amd64.tar
+          ls -lh dist/
+
+      - name: Generate server web image checksums
+        run: |
+          cd dist
+          sha256sum * > checksums-server-web-image.txt
+          cat checksums-server-web-image.txt
+
+      - name: Upload server web image artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: server-web-image
+          path: dist/
+          retention-days: 7
+
   publish-release:
     name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     needs:
-      - build-archives
-      - build-flutter-android
-      - build-flutter-ios
-      - build-flutter-macos
-      - build-flutter-windows
-      - build-flutter-linux
-      - build-flutter-web
+      - build-release-artifacts
+      - build-desktop-installers
+      - build-mobile-artifacts
+      - build-server-web-image
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: true
-          external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-          bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
-            build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
-            build --show_timestamps
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4.1.3
+      - uses: actions/download-artifact@v8.0.1
         with:
           path: dist/
 
-      - name: Flatten artifact directories
+      - name: Flatten artifacts
         run: |
           find dist -mindepth 2 -type f -exec mv -t dist/ {} +
+          find dist -type d -empty -delete
           ls -lh dist/
 
       - name: Generate combined checksums
         run: |
           cd dist
-          # Build a list of all release files and generate checksums.
-          # Individual patterns are checked separately so a missing platform
-          # (e.g. no APK when the Android job was skipped) does not abort.
           files=()
-          for pat in "*.tar.gz" "*.zip" "*.aab" "*.apk"; do
-            # shellcheck disable=SC2206
-            found=( $pat ) 2>/dev/null || true
-            for f in "${found[@]}"; do
-              [[ -f "${f}" ]] && files+=("${f}")
-            done
-          done
-          if [[ ${#files[@]} -gt 0 ]]; then
-            sha256sum "${files[@]}" > checksums.txt
-          else
-            echo "(no release files found)" > checksums.txt
-          fi
+          while IFS= read -r -d '' file; do
+            files+=("$file")
+          done < <(find . -maxdepth 1 -type f ! -name 'checksums*.txt' -print0)
+          sha256sum "${files[@]}" > checksums.txt
           cat checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3.0.0
         with:
           files: |
             dist/*.tar.gz
+            dist/*.sig
+            dist/*.tar
             dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+            dist/*.msi
+            dist/*.exe
+            dist/*.dmg
+            dist/*.apk
             dist/*.aab
+            dist/*.ipa
             dist/checksums.txt
           generate_release_notes: true
+          body: |
+            ## OHC ${{ github.ref_name }}
+
+            ### Download & Installation
+
+            - **Windows**: `OHC-${{ github.ref_name }}-Windows.msi` or `OHC-${{ github.ref_name }}-Windows-Portable.zip`
+            - **macOS**: `OHC-${{ github.ref_name }}-macOS.dmg`, `OHC-${{ github.ref_name }}-macOS.zip`, or updater/Homebrew artifact `OHC-${{ github.ref_name }}-macOS.tar.gz`
+            - **Linux x86_64**: `OHC-${{ github.ref_name }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
+            - **Linux ARM64**: `OHC-${{ github.ref_name }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
+
+            `latest.json` is uploaded after artifact publication for the Tauri desktop updater.
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Push Docker images to GHCR ─────────────────────────────────────────────
+  assemble-latest-json:
+    name: Assemble latest.json
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: publish-release
+    permissions:
+      contents: write
+    timeout-minutes: 15
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p dl
+          gh release download "$GITHUB_REF_NAME" --dir dl --repo "$GITHUB_REPOSITORY"
+          ls -lh dl
+
+      - name: Generate latest.json
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          BASE_URL="https://github.com/$REPO/releases/download/$TAG"
+
+          mac_url=""; mac_sig=""
+          win_url=""; win_sig=""
+          linux_x64_url=""; linux_x64_sig=""
+          linux_arm64_url=""; linux_arm64_sig=""
+
+          shopt -s nullglob
+          for sig in dl/*.sig; do
+            base="${sig%.sig}"
+            fname="$(basename "$base")"
+            sig_content="$(tr -d '\r\n' < "$sig")"
+            case "$fname" in
+              *-macOS.tar.gz)
+                mac_url="$BASE_URL/$fname"; mac_sig="$sig_content" ;;
+              *-Windows.msi)
+                win_url="$BASE_URL/$fname"; win_sig="$sig_content" ;;
+              *-Linux-x86_64.AppImage)
+                linux_x64_url="$BASE_URL/$fname"; linux_x64_sig="$sig_content" ;;
+              *-Linux-arm64.AppImage)
+                linux_arm64_url="$BASE_URL/$fname"; linux_arm64_sig="$sig_content" ;;
+            esac
+          done
+
+          export VERSION PUB_DATE TAG
+          export mac_url mac_sig win_url win_sig linux_x64_url linux_x64_sig linux_arm64_url linux_arm64_sig
+
+          node <<'NODE'
+          const fs = require('fs');
+          const env = process.env;
+          const latest = {
+            version: env.VERSION,
+            notes: `Release ${env.TAG}`,
+            pub_date: env.PUB_DATE,
+            platforms: {}
+          };
+
+          function add(key, url, signature) {
+            if (url && signature) latest.platforms[key] = { signature, url };
+          }
+
+          add('darwin-aarch64', env.mac_url, env.mac_sig);
+          add('darwin-x86_64', env.mac_url, env.mac_sig);
+          add('windows-x86_64', env.win_url, env.win_sig);
+          add('linux-x86_64', env.linux_x64_url, env.linux_x64_sig);
+          add('linux-aarch64', env.linux_arm64_url, env.linux_arm64_sig);
+
+          if (Object.keys(latest.platforms).length === 0) {
+            throw new Error('No signed updater artifacts found for latest.json');
+          }
+
+          fs.writeFileSync('latest.json', `${JSON.stringify(latest, null, 2)}\n`);
+          NODE
+          cat latest.json
+
+      - name: Upload latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" latest.json --clobber --repo "$GITHUB_REPOSITORY"
+
   push-docker:
-    name: Push Docker images
+    name: Push container images
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4.2.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -467,37 +850,27 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          disk-cache: ${{ github.workflow }}-push-docker
           repository-cache: true
           external-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
-            test --build_metadata=ROLE=CI
-            build --color=yes
             build --show_timestamps
 
-      - name: Push server image
+      - name: Push server web image
         run: |
-          bazelisk run //deploy:server_push_ghcr \
+          bazelisk run --config=release //deploy:server_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          bazelisk run //deploy:server_push_dockerhub \
+          bazelisk run --config=release //deploy:server_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
 
       - name: Push agent image
         run: |
-          bazelisk run //deploy:agent_push_ghcr \
+          bazelisk run --config=release //deploy:agent_push_ghcr \
             -- --tag "${{ github.ref_name }}"
-          bazelisk run //deploy:agent_push_dockerhub \
-            -- --tag "${{ github.ref_name }}"
-
-      - name: Push UI image
-        run: |
-          bazelisk run //deploy:ui_push \
+          bazelisk run --config=release //deploy:agent_push_dockerhub \
             -- --tag "${{ github.ref_name }}"

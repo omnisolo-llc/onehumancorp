@@ -1,29 +1,27 @@
-# [Video Conferencing] Integrate Zoom API for Auto-Meeting Links
+# [Video Conferencing] Auto-Generated Meeting Links
 
 ## Problem Statement
-Service providers who teach or consult online (like Leo the Music Tutor) currently have to manually create a Zoom link, copy it, and email it to the student after they book. They need unique meeting links generated automatically and attached to the calendar invite.
+For online service providers like Leo (music tutor), manually creating a Zoom link and emailing it to a student after every booking is tedious. The system should automatically generate a unique video meeting link and include it in the calendar invite and confirmation email.
 
 ## Research Report
-**Evaluated Tool:** Zoom Meeting API
-**Alternatives Considered:** Google Meet API, Daily.co
-**Pros:** Ubiquitous adoption—almost all customers know how to use Zoom. Robust API for generating scheduled meetings programmatically.
-**Cons:** Requires the tenant to have a paid Zoom account to avoid 40-minute limits. OAuth approval process for the app marketplace can be stringent.
-**Ease of Use for Non-technical Users:** User clicks "Connect Zoom". When a customer books an "Online Lesson", a unique Zoom link appears on the confirmation screen and calendar invite.
-**Pricing:** Free API usage; requires tenant to have a Zoom subscription.
-**Deployment:** Cloud-native (Server-to-Server OAuth or standard OAuth).
+- **Target Tools**: Zoom API, Google Meet API (via Google Workspace integration).
+- **Competitive Analysis**: Calendly does this perfectly. OHC needs parity to be viable for online consultants/tutors.
+- **Ease of Use**: User authenticates their Zoom or Google account once.
+- **Pricing**: Free APIs, though Zoom requires the user to have a licensed Zoom account for meetings over 40 minutes.
+- **Reputation**: Essential tools for remote work and online services.
+- **Advantages and Risks**: Creates a fully automated tutoring business. Risk is OAuth token expiration leading to failed meeting creations.
+- **Cloud vs Standalone**: Same constraints as Calendars. Works perfectly in Cloud. Standalone may have trouble with OAuth redirects unless routed through OHC Cloud.
 
 ## Design Doc
-**Integration with OHC:**
-- **Trigger:** A new booking is created for a service marked as "Online Meeting".
-- **Action:** OHC calls the Zoom API to create a meeting associated with the tenant's Zoom account, retrieving the `join_url`.
-- **AI Agent Interaction:** "The Ambassador" includes the `join_url` in the booking confirmation email and reminder notifications.
-- **User View:** A "Video Conferencing" settings panel to connect Zoom, and an "Online Meeting" toggle when creating a service offering.
+- **Integration Flow**: When setting up a service, the user selects "Location: Online Video Call" and connects their Zoom or Google account.
+- **Actions**: Upon a successful booking, the system calls the respective API to create a scheduled meeting. The returned join URL is saved to the booking record and sent to both the user and the customer.
+- **User Experience**: Completely automated. The user just sees the meeting link appear in their calendar, and the customer gets it in their email. No copy-pasting required.
 
 ## Implementation Prompt
-Integrate the Zoom Meeting API via OAuth. When an online service is booked, automatically generate a unique Zoom meeting link. Display this link in the user's booking dashboard, the customer's confirmation page, and include it in automated email/SMS reminders.
+Integrate video conferencing capabilities allowing users to connect their Zoom or Google Meet accounts. When a customer booked a service designated as "Online Video Call," the system must automatically interact with the external API to generate a unique meeting link. This link must be automatically distributed in the booking confirmation email to the customer and embedded in the event details for the business owner.
 
 ## Priority
-P2
+P1
 
 ## Estimated Scope
 Medium

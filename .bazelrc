@@ -1,9 +1,17 @@
 # Bazel configuration for MCP Any
 
-# ── Default: use BuildBuddy official for all builds and tests ─────────────────
-# Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy-official
-test --config=buildbuddy-official
+build --color=yes
+build --config=remote-cache
+build --config=bes
+
+# ── Default: local builds/tests ───────────────────────────────────────────────
+build --jobs=HOST_CPUS
+# Keep local CPU slots low so large local Rust actions do not oversubscribe RAM.
+build --local_resources=cpu=HOST_CPUS*.8
+build --local_resources=memory=HOST_CPUS*.8
+# Apply host OS-specific rc fragments for plain `bazel build //...` and
+# `bazel test //...` invocations.
+build --enable_platform_specific_config
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -15,15 +23,38 @@ build --remote_download_toplevel
 build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
-build --spawn_strategy=remote,sandboxed,local
+build --spawn_strategy=sandboxed,local
 build --sandbox_add_mount_pair=/var/run/docker.sock
 build --incompatible_strict_action_env
 build --announce_rc
-build --linkopt=-fuse-ld=bfd
-build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
+build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+# TODO: Revisit hermetic LLVM once toolchains_llvm analysis/linking is stable.
+# build --extra_toolchains=@llvm_toolchain//:cc-toolchain-x86_64-linux
+# ── Rust toolchains ─────────────────────────────────────────────────────────────
+# Default Rust toolchain (stable channel)
 build --@rules_rust//rust/toolchain/channel=stable
+
+# ── Release builds ───────────────────────────────────────────────────────────
+# Keep release automation on Bazel's optimized configuration by default.
+build:release -c opt
+
+# Use rust_toolchains for asan and windows builds (like nativelink)
+# because asan explicitly needs to _not_ use the Nix toolchains.
+build:asan --extra_toolchains=@rust_toolchains//:all
+build:windows_common --extra_toolchains=@rust_toolchains//:all
+build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_amd64
+build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_arm64
+build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=--cfg=windows_raw_dylib
+build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=-Clink-self-contained=yes
+build:windows_common --copt=-D_CRT_RAND_S=
+build:windows_common --spawn_strategy=local
+build:windows_common --noenable_platform_specific_config
+build:windows_common --keep_going
+
+# Nightly toolchain
+build:nightly --@rules_rust//rust/toolchain/channel=nightly
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost
@@ -34,15 +65,25 @@ build --rewind_lost_inputs
 # Show test output only on failure
 test --test_output=errors
 test --build_tests_only
+# Keep the default wildcard suite complete: `bazel test //...` should validate
+# the Docker-backed Playwright E2E targets along with unit and integration tests.
 test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
-# Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
-test --local_test_jobs=1
-# Allow up to 200 parallel remote build actions during tests.
-test --jobs=200
+test --local_test_jobs=HOST_CPUS
+
+test --sandbox_add_mount_pair=/var/run/docker.sock
+test --test_output=errors
+test --test_summary=terse
+test --test_timeout=300,600,900,1800
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
+
+# ── High parallelism (use --config=remote-jobs) ──────────────────────────────
+# Useful with a remote executor/cache setup. Keep the default local test path
+# conservative so `bazel test //...` can include Docker-backed Playwright tests
+# without overwhelming the Bazel server or host.
+test:remote-jobs --jobs=50
 
 # ── Test environment pass-through ─────────────────────────────────────────────
 test --test_env=GEMINI_API_KEY
@@ -60,51 +101,43 @@ build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
-# ── BuildBuddy official (default) ─────────────────────────────────────────────
-# Remote cache + executor at onehumancorp.buildbuddy.io with BES streaming.
-common:buildbuddy --bes_timeout=600s
-build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
-build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
-# Upload BES data asynchronously so the build/test result is available sooner.
-build:buildbuddy-official --bes_upload_mode=fully_async
-build:buildbuddy-official --verbose_failures
-common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
-# common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
-# Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
-common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
-common:buildbuddy-official --remote_upload_local_results
-common:buildbuddy-official --remote_timeout=10m
-# common:buildbuddy-official --remote_cache_compression
-common:buildbuddy-official --remote_local_fallback
-# Fall back to direct download when BuildBuddy CAS doesn't have the blob.
-# Prevents CacheNotFoundException from failing repository rule fetches.
-common:buildbuddy-official --experimental_remote_downloader_local_fallback
-common:buildbuddy-official --jobs=200
-# Default read-only API key (public, read-only – cannot push artifacts or
-# modify any BuildBuddy state; safe to keep in version control).
-common:buildbuddy-official --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
+common:bes --bes_timeout=600s
+common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
+common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+common:bes --bes_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 
-# ── BuildBuddy self-hosted ──────────────────────────────────────
+# ── BuildBuddy  ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
-# Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
-# buildbuddy-official which relies on the global sandboxed,local fallback chain.
-common:buildbuddy --bes_timeout=600s
-common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_local_fallback
-common:buildbuddy --remote_upload_local_results
-# common:buildbuddy --remote_cache_compression
+common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
-common:buildbuddy --experimental_remote_downloader_local_fallback
-common:buildbuddy --jobs=200
-# Read only Bazel cache
-common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
+# common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --experimental_remote_downloader_local_fallback
+common:buildbuddy --jobs=50
 common:buildbuddy --remote_timeout=10m
-build:buildbuddy --verbose_failures
-build:buildbuddy --bes_upload_mode=fully_async
+# Read only Bazel cache
+common:buildbuddy-readonly --remote_upload_local_results=false
+common:buildbuddy-readonly --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
+
+# ── Nativelink  ──────────────────────────────────────
+# Alternative self-hosted Nativelink cluster; use with --config=nativelink.
+common:nativelink --experimental_build_event_upload_strategy=local
+common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
+common:nativelink --remote_instance_name=main
+# common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
+common:nativelink --remote_local_fallback
+# Nativelink doesn't support cache compression
+common:nativelink --remote_cache_compression=false
+common:nativelink --jobs=50
+# Read only Bazel cache
+common:nativelink --remote_upload_local_results=false
+common:nativelink --remote_header=x-nativelink-api-key=GZRlHAyqIIcVJw9dJ9n9
+
+common:remote-cache --config=nativelink
+common:remote-cache --remote_download_minimal
+common:remote-cache --remote_local_fallback
+common:remote-cache --remote_timeout=10m
 
 # ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=
@@ -119,13 +152,31 @@ build:local --spawn_strategy=sandboxed,local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
+build:linux --linkopt=-fuse-ld=bfd
+build:linux --host_linkopt=-fuse-ld=bfd
 build:linux_x86_64 --platforms=//bazel/platforms:linux_x86_64
+build:linux_x86_64 --linkopt=-fuse-ld=bfd
+build:linux_x86_64 --host_linkopt=-fuse-ld=bfd
+build:linux_arm64 --platforms=//bazel/platforms:linux_arm64
+build:linux_arm64 --extra_toolchains=@zig_sdk//toolchain:linux_arm64_gnu.2.17
 build:linux_aarch64 --platforms=//bazel/platforms:linux_aarch64
+build:linux_aarch64 --extra_toolchains=@zig_sdk//toolchain:linux_arm64_gnu.2.17
+# build:linux_llvm --platforms=@toolchains_llvm//platforms:linux-x86_64
+# build:linux_llvm --extra_execution_platforms=@toolchains_llvm//platforms:linux-x86_64
 build:android --platforms=//bazel/platforms:android_aarch64
 build:ios --platforms=//bazel/platforms:ios_aarch64
-build:macos --platforms=//bazel/platforms:macos_aarch64
+build:macos --announce_rc
+build:macos_x86_64 --platforms=//bazel/platforms:macos_x86_64
+build:macos_x86_64 --extra_toolchains=@zig_sdk//toolchain:x86_64-macos-none
+build:macos_aarch64 --platforms=//bazel/platforms:macos_aarch64
+build:macos_aarch64 --extra_toolchains=@zig_sdk//toolchain:aarch64-macos-none
+build:windows_x86_64 --config=windows_common
 build:windows_x86_64 --platforms=//bazel/platforms:windows_x86_64
+build:windows_arm64 --config=windows_common
+build:windows_arm64 --platforms=//bazel/platforms:windows_arm64
+build:windows_i686 --config=windows_common
 build:windows_i686 --platforms=//bazel/platforms:windows_i686
 build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
-build:linux --config=linux_x86_64
+# Workaround to fix bazel analysis failure on Windows CI
+build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e

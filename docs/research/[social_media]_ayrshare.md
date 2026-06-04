@@ -1,6 +1,4 @@
-# Scout: Tool Integration Research Q2
-
-## 1. Social Media Integration
+## [Social Media] Ayrshare Integration
 **Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting
 **Problem Statement**: Maya the Baker and Carlos the Handyman spend too much time jumping between Instagram DMs, Facebook Comments, and TikTok. They want a single inbox and a way to post to multiple platforms at once without understanding technical integrations.
 **Research Report**:

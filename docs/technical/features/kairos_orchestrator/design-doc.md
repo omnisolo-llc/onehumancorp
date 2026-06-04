@@ -46,7 +46,7 @@ The Teammate Mesh layer provides real-time IPC (Inter-Process Communication) acr
 
 ### Transport
 Cloud-Native Mode: Redis Pub/Sub via the mesh:events:task_updates channels.
-Standalone Mode: Sharded in-memory Go channels for host-machine efficiency.
+Standalone Mode: Local in-process transport for host-machine efficiency.
 
 ## 3. Phase 3: autoDream (Memory Consolidation)
 Background workers consolidate temporary YAML memories into long-term vector embeddings.

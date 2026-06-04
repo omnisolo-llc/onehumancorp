@@ -1,8 +1,12 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_telemetry",
-    srcs = ["mod.rs"],
+    srcs = [
+        "mod.rs",
+        "forecaster.rs",
+    ],
+    crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,5 +17,18 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tracing",
         "@crates//:opentelemetry",
+        "@crates//:tokio",
+        "@crates//:regex",
     ],
+)
+
+rust_test(
+    name = "server_telemetry_unit_test",
+    size = "small",
+    crate = ":server_telemetry",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

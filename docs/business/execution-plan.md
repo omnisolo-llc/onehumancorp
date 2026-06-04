@@ -24,4 +24,4 @@ Before opening implementation work, attach or reference these documents when the
 
 ## Active Backlog
 
-Use `docs/operations/github-issues-migration.md` for the issue-ready seed list that should be represented in GitHub issues.
+GitHub issues are the canonical source for the active backlog. See the roadmap in `docs/business/roadmap.md` for strategic direction.

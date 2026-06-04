@@ -16,7 +16,7 @@ describe('ToolProgress', () => {
 
     expect(output).toContain('Tools Executed:');
     expect(output).toContain('[✓] ls -la');
-    expect(output).toContain('[ ] npm install');
+    expect(output).toContain('[~] npm install');
     expect(output).toContain('[x] npm test');
   });
 });

@@ -1,6 +1,7 @@
 use axum::{
     extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, State, Query},
     response::IntoResponse,
+    http::HeaderMap,
 };
 use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
@@ -9,6 +10,60 @@ use tokio::sync::mpsc;
 use serde::Deserialize;
 use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+use axum::{
+    extract::Request,
+    middleware::Next,
+    body::Body,
+};
+
+pub async fn validation_middleware(
+    req: Request,
+    next: Next,
+) -> Result<axum::response::Response, axum::response::Response> {
+    let (parts, body) = req.into_parts();
+    // Use a sensible limit of 5MB for the payload to prevent memory exhaustion DoS
+    let bytes = match axum::body::to_bytes(body, 5 * 1024 * 1024).await {
+        Ok(b) => b,
+        Err(_) => {
+            let error_res = serde_json::json!({ "error": "failed to read body or body too large" });
+            return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+        }
+    };
+
+    if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&bytes) {
+        if let Some(obj) = json.as_object() {
+            let required_keys = ["agent_id", "channel", "event_type", "data"];
+            let mut missing_keys = Vec::new();
+
+            // Check for presence of required keys
+            for key in required_keys.iter() {
+                if !obj.contains_key(*key) {
+                    missing_keys.push(*key);
+                }
+            }
+
+            if !missing_keys.is_empty() {
+                let error_res = serde_json::json!({ "error": format!("missing required keys: {:?}", missing_keys) });
+                return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+            }
+
+            // Check for EXACTLY four keys to prevent any additional payload fields, including deprecated ones
+            if obj.len() != 4 {
+                let error_res = serde_json::json!({ "error": "payload must contain exactly four root-level keys: agent_id, channel, event_type, data" });
+                return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+            }
+        } else {
+            let error_res = serde_json::json!({ "error": "json payload must be an object" });
+            return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+        }
+    } else {
+        let error_res = serde_json::json!({ "error": "invalid json payload" });
+        return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+    }
+
+    let req = Request::from_parts(parts, Body::from(bytes));
+    Ok(next.run(req).await)
+}
 
 #[derive(Deserialize)]
 pub struct ConnectQuery {
@@ -29,11 +84,40 @@ pub struct BroadcastRequest {
     pub message: MeshMessage,
 }
 
-pub async fn broadcast_handler(
-    State(transport): State<Arc<dyn MeshTransport>>,
-    axum::Json(payload): axum::Json<BroadcastRequest>,
-) -> impl IntoResponse {
-    match transport.publish(&payload.topic, payload.message.into()).await {
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct DirectRequest {
+    pub target_agent_id: String,
+    pub message: MeshMessage,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct MailboxRequest {
+    pub mailbox_id: String,
+    pub message: MeshMessage,
+}
+
+fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
+    let spiffe_id = headers.get("x-spiffe-id")
+        .and_then(|val| val.to_str().ok())
+        .unwrap_or("");
+
+    if spiffe_id.is_empty() {
+        let error_res = serde_json::json!({ "error": "unauthorized" });
+        return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
+    }
+
+    if let Err(_) = ::server_auth::parse_spiffe_id(spiffe_id) {
+        let error_res = serde_json::json!({ "error": "unauthorized" });
+        return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
+    }
+
+    Ok(spiffe_id.to_string())
+}
+
+
+/// Helper method to format responses
+fn publish_response(result: Result<(), String>) -> axum::response::Response {
+    match result {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -42,6 +126,70 @@ pub async fn broadcast_handler(
     }
 }
 
+/// Handler to broadcast messages via HTTP
+pub async fn orchestration_broadcast_handler(
+    headers: HeaderMap,
+    State(transport): State<Arc<dyn MeshTransport>>,
+    axum::Json(payload): axum::Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    if let Err(err_response) = check_spiffe_auth(&headers) {
+        return err_response;
+    }
+
+    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+}
+
+/// Handler for WebSockets to stream orchestration tasks
+pub async fn orchestration_tasks_stream_handler(
+    ws: WebSocketUpgrade,
+    State(transport): State<Arc<dyn MeshTransport>>,
+    Query(query): Query<ConnectQuery>,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+}
+
+/// Broadcast handler for general mesh communication
+pub async fn broadcast_handler(
+    headers: HeaderMap,
+    State(transport): State<Arc<dyn MeshTransport>>,
+    axum::Json(payload): axum::Json<BroadcastRequest>,
+) -> impl IntoResponse {
+    if let Err(err_response) = check_spiffe_auth(&headers) {
+        return err_response;
+    }
+
+    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+}
+
+/// Handler for direct agent-to-agent communication over HTTP
+pub async fn direct_handler(
+    headers: HeaderMap,
+    State(transport): State<Arc<dyn MeshTransport>>,
+    axum::Json(payload): axum::Json<DirectRequest>,
+) -> impl IntoResponse {
+    if let Err(err_response) = check_spiffe_auth(&headers) {
+        return err_response;
+    }
+
+    let topic = format!("mesh:direct:{}", payload.target_agent_id);
+    publish_response(transport.publish(&topic, payload.message.into()).await)
+}
+
+/// Mailbox handler for delayed message delivery
+pub async fn mailbox_handler(
+    headers: HeaderMap,
+    State(transport): State<Arc<dyn MeshTransport>>,
+    axum::Json(payload): axum::Json<MailboxRequest>,
+) -> impl IntoResponse {
+    if let Err(err_response) = check_spiffe_auth(&headers) {
+        return err_response;
+    }
+
+    let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
+    publish_response(transport.publish(&topic, payload.message.into()).await)
+}
+
+/// Handles the WebSocket connection for mesh communication
 async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, channel: String) {
     let (mut sender, mut receiver) = socket.split();
     let (tx, mut rx) = mpsc::channel::<MeshMessage>(100);
@@ -103,13 +251,13 @@ mod tests {
     };
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
     #[tokio::test]
     async fn test_mesh_ws_handler() {
-        let transport: Arc<dyn MeshTransport> = Arc::new(MemoryTransport::new());
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let transport_clone = transport.clone();
 
         let app = Router::new()
@@ -172,5 +320,91 @@ mod tests {
             }
         }
         assert!(found, "Did not receive the srv_test message");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_direct_handler() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+
+        let app = Router::new()
+            .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/api/mesh/v2/direct", addr);
+
+        let req_body = DirectRequest {
+            target_agent_id: "agent-1".to_string(),
+            message: MeshMessage {
+                agent_id: "test".to_string(),
+                action: "test_action".to_string(),
+                status: "ok".to_string(),
+                payload: b"ws_test".to_vec(),
+                msg_id: uuid::Uuid::new_v4().to_string(),
+            }
+        };
+
+        // Missing x-spiffe-id header
+        let res = client.post(&url).json(&req_body).send().await.unwrap();
+        assert_eq!(res.status(), 401);
+
+        // With x-spiffe-id header
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
+        assert_eq!(res.status(), 200);
+    }
+
+    #[tokio::test]
+    async fn test_mesh_mailbox_handler() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+
+        let app = Router::new()
+            .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/api/mesh/v2/mailbox", addr);
+
+        let req_body = MailboxRequest {
+            mailbox_id: "mailbox-1".to_string(),
+            message: MeshMessage {
+                agent_id: "test".to_string(),
+                action: "test_action".to_string(),
+                status: "ok".to_string(),
+                payload: b"ws_test".to_vec(),
+                msg_id: uuid::Uuid::new_v4().to_string(),
+            }
+        };
+
+        // Missing x-spiffe-id header
+        let res = client.post(&url).json(&req_body).send().await.unwrap();
+        assert_eq!(res.status(), 401);
+
+        // With x-spiffe-id header
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
+        assert_eq!(res.status(), 200);
     }
 }

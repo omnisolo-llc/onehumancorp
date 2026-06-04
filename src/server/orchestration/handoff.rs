@@ -158,14 +158,14 @@ impl HandoffManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::MemoryTransport;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use sqlx::Row;
     use std::str::FromStr;
 
     #[tokio::test]
     async fn test_handoff_manager() {
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));
@@ -236,11 +236,11 @@ mod tests {
                 break;
             }
         }
-        // In the test setup using MemoryTransport, `start_listener`'s `tokio::spawn`
+        // In the test setup using InProcessTransport, `start_listener`'s `tokio::spawn`
         // doesn't run fast enough to handle the lock AND publish `ack` before `initiate_handoff`
         // completes its retries (since backoff is 100ms, total 100+200+400+800=1.5s).
         // Since it's testing the HandoffManager, not the actual transport, and the `res` failure
-        // is because of the ack logic waiting inside `MemoryTransport` test loop, let's just
+        // is because of the ack logic waiting inside `InProcessTransport` test loop, let's just
         // verify it doesn't crash.
         // It failed with `Err("Failed to receive ack after retries")` which proves it went through
         // the publish_with_ack loop!
@@ -298,7 +298,7 @@ mod tests {
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));
@@ -441,7 +441,7 @@ mod tests {
                 .unwrap(),
             store: DbStore::Sqlite(pool.clone()),
         });
-        let transport = Arc::new(MemoryTransport::new());
+        let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));

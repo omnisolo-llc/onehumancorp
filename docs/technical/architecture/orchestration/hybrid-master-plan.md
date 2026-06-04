@@ -26,9 +26,9 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
 ```
 
 ## 3. Phase 2: Orchestration (Teammate Mesh Architecture)
-The Teammate Mesh enables real-time communication via `src/server/orchestration/centrifuge_hub.go`.
-- **Cloud-Native**: Rueidis-backed Pub/Sub.
-- **Standalone**: In-memory Go channel broadcast.
+The Teammate Mesh enables real-time communication via `src/server/orchestration/mesh.rs`.
+- **Cloud-Native**: Redis Pub/Sub.
+- **Standalone**: Local in-process transport.
 
 **Broadcast API Contract (`POST /api/v1/mesh/broadcast`)**
 ```json

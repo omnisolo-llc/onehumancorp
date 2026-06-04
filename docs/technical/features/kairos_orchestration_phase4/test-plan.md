@@ -5,7 +5,7 @@
 ## Test Plan
 
 - **Distributed State Machine Tests**: Verify `FOR UPDATE SKIP LOCKED` behaviors correctly prevent pod collisions under simulated multi-agent concurrency loads.
-- **Teammate Mesh Tests**: Ensure events broadcast via `CentrifugeNode` and `rueidis` reach all subscribed sub-agents accurately and within latency constraints.
+- **Teammate Mesh Tests**: Ensure events broadcast via `CentrifugeNode` and `redis` reach all subscribed sub-agents accurately and within latency constraints.
 - **AutoDream Memory Tests**: Validate generation, storing, and fetching of pgvector embeddings matches generated content inputs via Minimax LLMs.
 
 </div>

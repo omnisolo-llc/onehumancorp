@@ -3,6 +3,8 @@ pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
+pub mod postgres_store;
+pub mod sqlite_store;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -65,14 +67,13 @@ fn verify(password: &str, hash: &str) -> Result<bool, String> {
 }
 
 use serde::{Deserialize, Serialize};
-use jsonwebtoken::{decode, encode, Header, Validation, DecodingKey, EncodingKey};
-use chrono::{Utc, Duration, DateTime};
+use chrono::{DateTime, Utc};
 use rand::RngCore;
-use ::server_common::auth_utils::set_org_context;
 use ::server_common::Claims;
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::auth_service_server::AuthService;
 use ::server_ohc::orchestration::*;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -112,11 +113,13 @@ pub struct OIDCConfig {
 
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
+    #[allow(dead_code)]
     roles: RwLock<HashMap<String, Role>>,
     by_name: RwLock<HashMap<TenantKey, String>>,
     by_email: RwLock<HashMap<TenantKey, String>>,
     by_oidc: RwLock<HashMap<TenantKey, String>>,
     revoked: RwLock<HashMap<String, DateTime<Utc>>>,
+    redis_client: Option<redis::Client>,
     #[allow(dead_code)]
     secret: Vec<u8>,
     #[allow(dead_code)]
@@ -141,14 +144,29 @@ impl Store {
                     }
                 }
 
-                let new_secret = if let Ok(sqlite_key) = std::env::var("OHC_SQLITE_KEY") {
-                    tracing::warn!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
+                let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
+                    let secret_path = std::path::Path::new(".ohc_sqlite_key");
+                    if secret_path.exists() {
+                        if let Ok(bytes) = std::fs::read_to_string(secret_path) {
+                            if !bytes.trim().is_empty() {
+                                return Some(bytes.trim().to_string());
+                            }
+                        }
+                    }
+                    None
+                });
+
+                let new_secret = if let Some(sqlite_key) = sqlite_key_opt {
+                    tracing::debug!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
                     let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::warn!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
-                    panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                    tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
+                    let mut key_bytes = [0u8; 32];
+                    use rand::RngCore;
+                    rand::thread_rng().fill_bytes(&mut key_bytes);
+                    key_bytes.to_vec()
                 };
 
                 #[cfg(unix)]
@@ -198,6 +216,14 @@ impl Store {
         let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
 
+        let redis_client = if ::server_config::get().multitenant {
+            std::env::var("OHC_REDIS_URL")
+                .ok()
+                .and_then(|url| redis::Client::open(url).ok())
+        } else {
+            None
+        };
+
         let store = Store {
             users: RwLock::new(HashMap::new()),
             roles: RwLock::new(roles),
@@ -205,6 +231,7 @@ impl Store {
             by_email: RwLock::new(HashMap::new()),
             by_oidc: RwLock::new(HashMap::new()),
             revoked: RwLock::new(HashMap::new()),
+            redis_client,
             secret,
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
@@ -413,20 +440,40 @@ impl Store {
         Ok(())
     }
 
-    pub fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
-        let mut revoked = self.revoked.write().unwrap();
-        revoked.insert(jti, exp);
+    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, _org_id: &str) {
+        {
+            let mut revoked = self.revoked.write().unwrap();
+            revoked.insert(jti.clone(), exp);
 
-        let now = Utc::now();
-        revoked.retain(|_, v| *v > now);
+            let now = Utc::now();
+            revoked.retain(|_, v| *v > now);
+        }
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
+                let redis_key = format!("revoked_token:{}", jti);
+                let _: redis::RedisResult<()> = redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
+            }
+        }
     }
 
-    pub fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
-        let revoked = self.revoked.read().unwrap();
-        if let Some(exp) = revoked.get(jti) {
-             if exp > &Utc::now() {
-                 return true;
-             }
+    pub async fn is_revoked(&self, jti: &str, _org_id: &str) -> bool {
+        {
+            let revoked = self.revoked.read().unwrap();
+            if let Some(exp) = revoked.get(jti) {
+                 if *exp > Utc::now() {
+                     return true;
+                 }
+            }
+        }
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                let redis_key = format!("revoked_token:{}", jti);
+                let exists: redis::RedisResult<bool> = redis::AsyncCommands::exists(&mut conn, &redis_key).await;
+                if let Ok(true) = exists {
+                    return true;
+                }
+            }
         }
         false
     }
@@ -462,7 +509,17 @@ impl Store {
                     enabled: oidc_cfg_internal.enabled,
                 };
                 if oidc_cfg.enabled {
-                    return crate::oidc::validate_oidc_token(_token, &oidc_cfg).await;
+                    let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?;
+                    if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
+                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                    }
+                    if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
+                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                    }
+                    if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
+                        return Err("token revoked".to_string());
+                    }
+                    return Ok(claims);
                 }
             }
         }
@@ -482,7 +539,10 @@ impl Store {
                     if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
+                    if ::server_config::get().multitenant && data.claims.organization_id.as_deref() == Some("system") {
+                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                    }
+                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
                         return Err("token revoked".to_string());
                     }
                     if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
@@ -500,6 +560,15 @@ impl Store {
                         }
                     };
                     if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                        if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
+                            return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                        }
+                        if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
+                            return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                        }
+                        if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
+                            return Err("token revoked".to_string());
+                        }
                         return Ok(claims);
                     }
                     Err("Invalid token".to_string())
@@ -533,7 +602,7 @@ impl Default for Store {
 
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     let parts: Vec<&str> = spiffe_id.split('/').collect();
-    if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" {
+    if parts.len() < 7 || parts[3] != "org" || parts[5] != "agent" {
          return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
     }
     Ok((parts[4].to_string(), parts[6].to_string()))
@@ -601,7 +670,24 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn logout(&self, _request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+    async fn logout(&self, request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+        if let Some(auth_info) = request.extensions().get::<AuthInfo>() {
+            if let Some(auth_header) = request.metadata().get("authorization") {
+                if let Ok(auth_str) = auth_header.to_str() {
+                    let token = if auth_str.to_lowercase().starts_with("bearer ") {
+                        &auth_str[7..]
+                    } else {
+                        auth_str
+                    };
+
+                    if let Ok(claims) = self.store.validate_token(token).await {
+                        // Securely revoke the session
+                        let exp = chrono::DateTime::from_timestamp(claims.exp, 0).unwrap_or_else(chrono::Utc::now);
+                        self.store.revoke_token(claims.jti, exp, &auth_info.org_id).await;
+                    }
+                }
+            }
+        }
         Ok(Response::new(EmptyResponse {}))
     }
 
@@ -744,7 +830,7 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn create_role(&self, request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
+    async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
     }
 }

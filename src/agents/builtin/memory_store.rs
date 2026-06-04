@@ -27,6 +27,22 @@ pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
+
+fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() || a.is_empty() {
+        return 1.0;
+    }
+    let (dot_product, norm_a, norm_b) = a.iter().zip(b.iter()).fold(
+        (0.0f32, 0.0f32, 0.0f32),
+        |(dot, na, nb), (&x, &y)| (dot + x * y, na + x * x, nb + y * y),
+    );
+    if norm_a == 0.0 || norm_b == 0.0 {
+        return 1.0;
+    }
+    let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
+    1.0 - similarity
+}
+
 impl VectorRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         VectorRepository { store: VectorMemoryStore::Postgres(pool) }
@@ -278,25 +294,6 @@ impl VectorRepository {
                         all_records.push(record);
                     }
 
-                    fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
-                        if a.len() != b.len() || a.is_empty() {
-                            return 1.0;
-                        }
-                        let mut dot_product = 0.0;
-                        let mut norm_a = 0.0;
-                        let mut norm_b = 0.0;
-                        for i in 0..a.len() {
-                            dot_product += a[i] * b[i];
-                            norm_a += a[i] * a[i];
-                            norm_b += b[i] * b[i];
-                        }
-                        if norm_a == 0.0 || norm_b == 0.0 {
-                            return 1.0;
-                        }
-                        let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
-                        1.0 - similarity
-                    }
-
                     let query_emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
                     all_records.sort_by(|a, b| {
                         let dist_a = cosine_distance(&a.embedding, &query_emb);
@@ -383,10 +380,15 @@ impl VectorRepository {
     pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
         let conflicts = self.get_conflicting_pairs().await?;
         let mut resolved_count = 0;
+        let mut deleted_ids = std::collections::HashSet::new();
 
         for (a, b) in conflicts {
+            if deleted_ids.contains(&a.id) || deleted_ids.contains(&b.id) {
+                continue;
+            }
             let (winner, loser) = Self::determine_conflict_winner(&a, &b);
             self.resolve_conflict(winner, loser).await?;
+            deleted_ids.insert(loser.id.clone());
             resolved_count += 1;
         }
 
@@ -414,10 +416,64 @@ impl VectorRepository {
                 (b, a)
             }
         } else {
-            (a, b) // Fallback, just pick 'a'
+            // Fallback, make it deterministic by ID
+            if a.id < b.id {
+                (a, b)
+            } else {
+                (b, a)
+            }
         }
     }
 
+
+    fn parse_conflict_row<R>(row: &R) -> Result<(EmbeddingRecord, EmbeddingRecord), String>
+    where
+        R: sqlx::Row,
+        for<'c> &'c str: sqlx::ColumnIndex<R>,
+        for<'c> String: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> Vec<u8>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> i32: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> bool: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> DateTime<Utc>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+    {
+        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
+        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+
+        let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
+        let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
+
+        let a = EmbeddingRecord {
+            id: row.try_get("a_id").map_err(|e| e.to_string())?,
+            tenant_id: row.try_get("a_tenant_id").map_err(|e| e.to_string())?,
+            agent_id: row.try_get::<Option<String>, _>("a_agent_id").unwrap_or_default().unwrap_or_default(),
+            content: row.try_get("a_content").map_err(|e| e.to_string())?,
+            embedding: a_embedding,
+            source_type: row.try_get("a_source_type").map_err(|e| e.to_string())?,
+            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
+            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+            reference_count: row.try_get("a_reference_count").map_err(|e| e.to_string())?,
+            reliability_score: row.try_get("a_reliability_score").map_err(|e| e.to_string())?,
+            owner_override: row.try_get("a_owner_override").map_err(|e| e.to_string())?,
+            metadata: row.try_get("a_metadata").map_err(|e| e.to_string())?,
+        };
+
+        let b = EmbeddingRecord {
+            id: row.try_get("b_id").map_err(|e| e.to_string())?,
+            tenant_id: row.try_get("b_tenant_id").map_err(|e| e.to_string())?,
+            agent_id: row.try_get::<Option<String>, _>("b_agent_id").unwrap_or_default().unwrap_or_default(),
+            content: row.try_get("b_content").map_err(|e| e.to_string())?,
+            embedding: b_embedding,
+            source_type: row.try_get("b_source_type").map_err(|e| e.to_string())?,
+            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
+            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+            reference_count: row.try_get("b_reference_count").map_err(|e| e.to_string())?,
+            reliability_score: row.try_get("b_reliability_score").map_err(|e| e.to_string())?,
+            owner_override: row.try_get("b_owner_override").map_err(|e| e.to_string())?,
+            metadata: row.try_get("b_metadata").map_err(|e| e.to_string())?,
+        };
+
+        Ok((a, b))
+    }
 
     pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
         let mut conflicts = Vec::new();
@@ -439,43 +495,9 @@ impl VectorRepository {
                     .map_err(|e| e.to_string())?;
 
                 for row in rows {
-                    let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
-                    let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
-
-                    let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
-                    let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
-
-                    let a = EmbeddingRecord {
-                        id: row.get("a_id"),
-                        tenant_id: row.get("a_tenant_id"),
-                        agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
-                        content: row.get("a_content"),
-                        embedding: a_embedding,
-                        source_type: row.get("a_source_type"),
-                        created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
-                        reference_count: row.get("a_reference_count"),
-                        reliability_score: row.get("a_reliability_score"),
-                        owner_override: row.get("a_owner_override"),
-                        metadata: row.get("a_metadata"),
-                    };
-
-                    let b = EmbeddingRecord {
-                        id: row.get("b_id"),
-                        tenant_id: row.get("b_tenant_id"),
-                        agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
-                        content: row.get("b_content"),
-                        embedding: b_embedding,
-                        source_type: row.get("b_source_type"),
-                        created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-                        last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
-                        reference_count: row.get("b_reference_count"),
-                        reliability_score: row.get("b_reliability_score"),
-                        owner_override: row.get("b_owner_override"),
-                        metadata: row.get("b_metadata"),
-                    };
-
-                    conflicts.push((a, b));
+                    if let Ok(pair) = Self::parse_conflict_row(&row) {
+                        conflicts.push(pair);
+                    }
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
@@ -571,25 +593,6 @@ impl VectorRepository {
                             metadata: row.get("metadata"),
                         };
                         all_records.push(record);
-                    }
-
-                    fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
-                        if a.len() != b.len() || a.is_empty() {
-                            return 1.0;
-                        }
-                        let mut dot_product = 0.0;
-                        let mut norm_a = 0.0;
-                        let mut norm_b = 0.0;
-                        for i in 0..a.len() {
-                            dot_product += a[i] * b[i];
-                            norm_a += a[i] * a[i];
-                            norm_b += b[i] * b[i];
-                        }
-                        if norm_a == 0.0 || norm_b == 0.0 {
-                            return 1.0;
-                        }
-                        let similarity = dot_product / (norm_a.sqrt() * norm_b.sqrt());
-                        1.0 - similarity
                     }
 
                     let mut match_count = 0;
@@ -830,7 +833,8 @@ impl LongTermMemory for PersistentMemoryStore {
     }
 }
 
-/// Anthropic 3-Tier Memory Store implementation
+/// Anthropic 3-Tier Memory Store implementation. Mechanic: Anthropic 3-Tier Memory
+/// Crucial rule: Agent must treat memory as a "hint" and verify against actual state before acting.
 /// 1) Lightweight index (~150 chars/entry, always loaded in context)
 /// 2) Detailed topic files (pulled on demand)
 /// 3) Raw transcripts (accessed via search only)
@@ -2287,8 +2291,13 @@ mod determine_conflict_winner_tests {
         let a = create_test_record("a", false, 50, 5);
         let mut b = create_test_record("b", false, 50, 5); // identical stats
         b.created_at = a.created_at; // Ensure created_at is identical
+
         let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
         assert_eq!(winner.id, "a"); // fallback to a
+        assert_eq!(loser.id, "b");
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner.id, "a"); // fallback to a, because a.id < b.id
         assert_eq!(loser.id, "b");
     }
 }
@@ -2560,6 +2569,72 @@ mod e2e_consolidation_tests {
         assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
         assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
         assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
+    }
+
+
+    #[tokio::test]
+    async fn test_pruning_edge_cases_override() {
+        let repo = setup_sqlite_repo().await;
+
+        let now = chrono::Utc::now();
+        let stale_time = now - chrono::Duration::days(200);
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+
+        // A stale record with very high reliability, but no owner_override -> should NOT be pruned by first rule, but... wait, let's check the pruning logic.
+        // The rule is: (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)
+
+        let stale_but_high_rel = EmbeddingRecord {
+            id: "stale_high_rel".to_string(),
+            tenant_id: "org_test".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old stuff".to_string(),
+            embedding: v1.clone(),
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: stale_time,
+            last_referenced_at: stale_time,
+            reference_count: 1, // less than 5
+            reliability_score: 99, // very high reliability
+            owner_override: false, // NO owner override
+            metadata: None,
+        };
+
+        let stale_low_rel_but_override = EmbeddingRecord {
+            id: "stale_low_rel_override".to_string(),
+            tenant_id: "org_test".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old stuff but overridden".to_string(),
+            embedding: v1.clone(),
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: stale_time,
+            last_referenced_at: stale_time,
+            reference_count: 1,
+            reliability_score: 10, // low reliability
+            owner_override: true, // WITH owner override
+            metadata: None,
+        };
+
+        repo.upsert(&stale_but_high_rel).await.unwrap();
+        repo.upsert(&stale_low_rel_but_override).await.unwrap();
+
+        // Run pruning with threshold 180 days ago
+        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+
+        // Check which ones remain
+        let results = repo.cross_department_search("org_test", &v1, 10).await.unwrap();
+        let remaining_ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+
+        // The logic is:
+        // (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY')
+        // OR (reliability_score < 20 AND owner_override = FALSE)
+
+        // stale_high_rel should be PRUNED because it meets the first condition (stale, no override, < 5 refs, TASK_SUMMARY), even though its reliability is high.
+        // stale_low_rel_override should be KEPT because it has owner_override = TRUE, which bypasses both conditions.
+
+        assert_eq!(remaining_ids.len(), 1, "Only one record should remain");
+        assert!(!remaining_ids.contains(&"stale_high_rel".to_string()), "stale_high_rel should be pruned despite high reliability because no override");
+        assert!(remaining_ids.contains(&"stale_low_rel_override".to_string()), "stale_low_rel_override should be kept because of owner_override");
     }
 
     #[tokio::test]

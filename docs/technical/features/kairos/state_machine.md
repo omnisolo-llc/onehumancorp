@@ -31,7 +31,7 @@ stateDiagram-v2
 
 To ensure transitions survive worker pod failures and prevent race conditions, the state machine utilizes distributed locks:
 
-- **Cloud Mode:** Uses Redis (`rueidis`) `SET NX EX` to acquire an exclusive lock on the entity ID before reading current state and transitioning.
+- **Cloud Mode:** Uses Redis (`redis`) `SET NX EX` to acquire an exclusive lock on the entity ID before reading current state and transitioning.
 - **Standalone Mode:** Uses SQLite/PostgreSQL transaction (`FOR UPDATE` if Postgres) or SQLite database lock to serialize transitions.
 
 ## 3. Database Schema Integration

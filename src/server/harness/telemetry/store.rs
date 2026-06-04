@@ -11,15 +11,19 @@ pub struct ViolationStore {
     pub token_usage_counter: Counter<u64>,
     pub llm_cost_counter: Counter<u64>,
     pub storage_bytes_counter: Counter<u64>,
+    pub rate_limit_checks_total: Counter<u64>,
+    pub rate_limit_exceeded_total: Counter<u64>,
 }
 
 impl ViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.harness.telemetry");
-        let violation_counter = meter.u64_counter("ohc_agent_violations_total").build();
+        let violation_counter = meter.u64_counter("ohc_harness_violations_total").build();
         let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
-        let llm_cost_counter = meter.u64_counter("ohc_tenant_llm_cost_cents").build();
+        let llm_cost_counter = meter.u64_counter("ohc_mission_cost_cents").build();
         let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
+        let rate_limit_checks_total = meter.u64_counter("ohc_rate_limit_checks_total").build();
+        let rate_limit_exceeded_total = meter.u64_counter("ohc_rate_limit_exceeded_total").build();
 
         Self {
             pool,
@@ -27,6 +31,8 @@ impl ViolationStore {
             token_usage_counter,
             llm_cost_counter,
             storage_bytes_counter,
+            rate_limit_checks_total,
+            rate_limit_exceeded_total,
         }
     }
 
@@ -112,7 +118,7 @@ mod tests {
     #[tokio::test]
     async fn test_record_violation_with_pool() {
         // To accurately test DB logic locally, try connecting to Postgres.
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,

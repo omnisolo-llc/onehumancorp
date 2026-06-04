@@ -7,7 +7,7 @@ use tokio::time::{sleep, Duration};
 pub struct AutoDreamPipeline {
     db: Arc<DB>,
     llm_client: Arc<dyn LLMClient>,
-    pub cache: Option<Arc<::server_pricing::cache::LocalEmbeddingCache>>,
+    pub cache: Option<Arc<crate::pricing::cache::LocalEmbeddingCache>>,
 }
 
 impl AutoDreamPipeline {
@@ -15,17 +15,22 @@ impl AutoDreamPipeline {
         AutoDreamPipeline { db, llm_client, cache: None }
     }
 
-    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<::server_pricing::cache::LocalEmbeddingCache>) -> Self {
+    pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Self {
         AutoDreamPipeline { db, llm_client, cache: Some(cache) }
     }
 
     pub fn start_worker(&self) {
         let db = self.db.clone();
         let llm_client = self.llm_client.clone();
+        let cache = self.cache.clone();
 
         tokio::spawn(async move {
             loop {
-                let pipeline = AutoDreamPipeline::new(db.clone(), llm_client.clone());
+                let pipeline = AutoDreamPipeline {
+                    db: db.clone(),
+                    llm_client: llm_client.clone(),
+                    cache: cache.clone(),
+                };
                 if let Err(e) = pipeline.process_closed_tasks().await {
                     tracing::error!("AutoDreamPipeline worker error: {}", e);
                 }
@@ -59,11 +64,11 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in consolidated_memory
+        // Find tasks that are COMPLETED but not yet in autodream_memories
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
-            LEFT JOIN consolidated_memory m ON t.id = m.task_id
+            LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
         ";
@@ -112,22 +117,19 @@ impl AutoDreamPipeline {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        let insert_query = "
-                            INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id)
-                            VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
-                        ";
+                        self.db.insert_autodream_memory(
+                            &mem_id,
+                            &tenant_id,
+                            agent_id.as_deref().unwrap_or("system"),
+                            &task_id,
+                            &chunk,
+                            &emb_str,
+                            "TASK_SUMMARY"
+                        ).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
 
-                        sqlx::query(insert_query)
-                            .bind(&mem_id)
-                            .bind(&tenant_id)
-                            .bind(&agent_id)
-                            .bind(&chunk)
-                            .bind(&emb_str)
-                            .bind("TASK_SUMMARY")
-                            .bind(&task_id)
-                            .execute(&self.db.pool)
-                            .await
-                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                        if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
+                            tracing::error!("AutoDreamPipeline: Failed to record telemetry: {}", telemetry_err);
+                        }
                     }
                     Err(e) => {
                         tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
@@ -157,9 +159,95 @@ mod tests {
         }
     }
 
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use async_trait::async_trait;
+    use crate::pricing::cache::LocalEmbeddingCache;
+
+    struct TrackingMockLLMClient {
+        embedding: Vec<f32>,
+        call_count: AtomicUsize,
+    }
+
+    impl TrackingMockLLMClient {
+        fn new(embedding: Vec<f32>) -> Self {
+            Self {
+                embedding,
+                call_count: AtomicUsize::new(0),
+            }
+        }
+
+        fn get_call_count(&self) -> usize {
+            self.call_count.load(Ordering::SeqCst)
+        }
+    }
+
+    #[async_trait]
+    impl LLMClient for TrackingMockLLMClient {
+        async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, String> {
+            self.call_count.fetch_add(1, Ordering::SeqCst);
+            Ok(self.embedding.clone())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_process_closed_tasks_with_cache() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        if database_url == "dummy" {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
+
+        let tracking_llm = Arc::new(TrackingMockLLMClient::new(vec![0.5, 0.6, 0.7]));
+
+        let cache = Arc::new(LocalEmbeddingCache::new(Duration::from_secs(60)));
+
+        // Clean up
+        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
+
+        let task_id_1 = "test-task-cache-1";
+        let task_id_2 = "test-task-cache-2";
+
+        // Insert two tasks with identical payload/log so their chunk text is exactly the same.
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
+            .bind(task_id_1)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
+            .bind(task_id_2)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let pipeline = AutoDreamPipeline::new_with_cache(db.clone(), tracking_llm.clone(), cache);
+
+        let res = pipeline.process_closed_tasks().await;
+        assert!(res.is_ok());
+
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id IN ($1, $2)")
+            .bind(task_id_1)
+            .bind(task_id_2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count.0, 2);
+
+        // Since both tasks generated the exact same text chunk, the LLM should have only been called once.
+        assert_eq!(tracking_llm.get_call_count(), 1);
+    }
+
     #[tokio::test]
     async fn test_process_closed_tasks() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
         if database_url == "dummy" {
             return;
         }
@@ -175,7 +263,7 @@ mod tests {
         });
 
         // Clean up
-        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
@@ -189,7 +277,54 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE task_id = $1")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
+            .bind(task_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count.0, 1);
+    }
+
+    #[tokio::test]
+    async fn test_process_closed_tasks_concurrently() {
+        let _ = crate::telemetry::get_error_signal_counter();
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
+        if database_url == "dummy" { return; }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
+        let mock_llm = Arc::new(MockLLMClient { embedding: vec![0.1, 0.2] });
+
+        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
+
+        let task_id = "test-task-concurrent";
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
+            .bind(task_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let pipeline = Arc::new(AutoDreamPipeline::new(db.clone(), mock_llm));
+        let mut handles = vec![];
+
+        for _ in 0..5 {
+            let p = pipeline.clone();
+            handles.push(tokio::spawn(async move {
+                let _ = p.process_closed_tasks().await;
+            }));
+        }
+
+        for h in handles {
+            let _ = h.await;
+        }
+
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
             .bind(task_id)
             .fetch_one(&pool)
             .await

@@ -27,8 +27,6 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
-    - from:
-        - namespaceSelector: {}
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
@@ -54,12 +52,18 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+              - 100.64.0.0/10
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
+        - ipBlock:
+            cidr: "::/0"
+            except:
+              - "fd00::/8"
+              - "fe80::/10"
     {{- if .Values.cnpg.enabled }}
     - to:
         - namespaceSelector:
@@ -72,29 +76,36 @@ spec:
         - protocol: TCP
           port: 5432
     {{- end }}
-    {{- if .Values.redis.enabled }}
+    {{- if .Values.valkey.enabled }}
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ .Release.Name }}-redis-master
+              app.kubernetes.io/name: {{ include "ohc.valkey.name" . }}
+              app.kubernetes.io/instance: {{ .Release.Name }}
       ports:
         - protocol: TCP
-          port: 6379
+          port: {{ .Values.valkey.service.port }}
     {{- end }}
     - to:
         - ipBlock:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+              - 100.64.0.0/10
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
+        - ipBlock:
+            cidr: "::/0"
+            except:
+              - "fd00::/8"
+              - "fe80::/10"
 {{- end }}
 ---
 {{- if .Values.ohcCore.networkPolicy.enabled }}
@@ -144,12 +155,18 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+              - 100.64.0.0/10
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
+        - ipBlock:
+            cidr: "::/0"
+            except:
+              - "fd00::/8"
+              - "fe80::/10"
 {{- end }}
 ---
 {{- if .Values.chatwoot.enabled }}
@@ -199,12 +216,18 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+              - 100.64.0.0/10
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
+        - ipBlock:
+            cidr: "::/0"
+            except:
+              - "fd00::/8"
+              - "fe80::/10"
 {{- end }}
 ---
 {{- if .Values.powersync.enabled }}
@@ -254,25 +277,32 @@ spec:
             cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+              - 100.64.0.0/10
         - ipBlock:
             cidr: 128.0.0.0/1
             except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
+        - ipBlock:
+            cidr: "::/0"
+            except:
+              - "fd00::/8"
+              - "fe80::/10"
 {{- end }}
 ---
-{{- if .Values.redis.enabled }}
+{{- if .Values.valkey.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ohc.fullname" . }}-redis
+  name: {{ include "ohc.fullname" . }}-valkey
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app: {{ .Release.Name }}-redis-master
+      app.kubernetes.io/name: {{ include "ohc.valkey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes:
     - Ingress
     - Egress
@@ -286,7 +316,7 @@ spec:
               app: {{ include "ohc.fullname" . }}-backend
       ports:
         - protocol: TCP
-          port: 6379
+          port: {{ .Values.valkey.service.port }}
   egress:
     - to:
         - namespaceSelector:

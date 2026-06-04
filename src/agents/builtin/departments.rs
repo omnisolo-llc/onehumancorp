@@ -43,7 +43,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
                 - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get"],
+            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get", "booking_get_services", "booking_upsert_service", "booking_list_appointments", "booking_create_appointment"],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {
@@ -65,8 +65,9 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Follows up with interested prospects who haven't booked\n\
                 - Manages lead pipeline and customer inquiry responses\n\
                 - Suggests upsell and cross-sell opportunities\n\
-                - Manages referral program and tracks referrals",
-            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage"],
+                - Manages referral program and tracks referrals\n\
+                - Autonomously generates Conversational Checkout Links for DMs",
+            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage", "conversational_checkout"],
             confidence_threshold: 0.80,
         },
         Department::CustomerSuccess => DepartmentConfig {
@@ -77,7 +78,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\
                 - Manages customer profiles, tags, and notes",
-            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list"],
+            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list", "booking_get_services", "booking_list_appointments", "booking_create_appointment"],
             confidence_threshold: 0.90,
         },
         Department::Finance => DepartmentConfig {
@@ -115,5 +116,86 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
             allowed_tools: vec!["read", "head", "tail", "write", "websearch", "finance_report"],
             confidence_threshold: 0.85,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_department_from_str() {
+        assert!(matches!(Department::from_str("operations"), Ok(Department::Operations)));
+        assert!(matches!(Department::from_str("Operations"), Ok(Department::Operations)));
+        assert!(matches!(Department::from_str("marketing"), Ok(Department::Marketing)));
+        assert!(matches!(Department::from_str("sales"), Ok(Department::Sales)));
+        assert!(matches!(Department::from_str("customersuccess"), Ok(Department::CustomerSuccess)));
+        assert!(matches!(Department::from_str("customer_success"), Ok(Department::CustomerSuccess)));
+        assert!(matches!(Department::from_str("finance"), Ok(Department::Finance)));
+        assert!(matches!(Department::from_str("legal"), Ok(Department::Legal)));
+        assert!(matches!(Department::from_str("businessadvisory"), Ok(Department::BusinessAdvisory)));
+        assert!(matches!(Department::from_str("business_advisory"), Ok(Department::BusinessAdvisory)));
+
+        let err = Department::from_str("invalid_dept");
+        assert!(err.is_err());
+        assert_eq!(err.unwrap_err(), "Unknown department: invalid_dept");
+    }
+
+    #[test]
+    fn test_get_department_config_operations() {
+        let config = get_department_config(Department::Operations);
+        assert!(config.system_prompt.contains("Department: Operations"));
+        assert!(config.allowed_tools.contains(&"read"));
+        assert!(config.allowed_tools.contains(&"task_create"));
+        assert_eq!(config.confidence_threshold, 0.85);
+    }
+
+    #[test]
+    fn test_get_department_config_marketing() {
+        let config = get_department_config(Department::Marketing);
+        assert!(config.system_prompt.contains("Marketing & Advertising"));
+        assert!(config.allowed_tools.contains(&"websearch"));
+        assert_eq!(config.confidence_threshold, 0.70);
+    }
+
+    #[test]
+    fn test_get_department_config_sales() {
+        let config = get_department_config(Department::Sales);
+        assert!(config.system_prompt.contains("Sales & Acquisition"));
+        assert!(config.allowed_tools.contains(&"sendmessage"));
+        assert!(config.allowed_tools.contains(&"conversational_checkout"));
+        assert_eq!(config.confidence_threshold, 0.80);
+    }
+
+    #[test]
+    fn test_get_department_config_customer_success() {
+        let config = get_department_config(Department::CustomerSuccess);
+        assert!(config.system_prompt.contains("Customer Success"));
+        assert!(config.allowed_tools.contains(&"booking_create_appointment"));
+        assert_eq!(config.confidence_threshold, 0.90);
+    }
+
+    #[test]
+    fn test_get_department_config_finance() {
+        let config = get_department_config(Department::Finance);
+        assert!(config.system_prompt.contains("Finance & Payments"));
+        assert!(config.allowed_tools.contains(&"finance_report"));
+        assert_eq!(config.confidence_threshold, 0.95);
+    }
+
+    #[test]
+    fn test_get_department_config_legal() {
+        let config = get_department_config(Department::Legal);
+        assert!(config.system_prompt.contains("Legal & Compliance"));
+        assert!(config.allowed_tools.contains(&"grep"));
+        assert_eq!(config.confidence_threshold, 0.98);
+    }
+
+    #[test]
+    fn test_get_department_config_business_advisory() {
+        let config = get_department_config(Department::BusinessAdvisory);
+        assert!(config.system_prompt.contains("Business Advisory"));
+        assert!(config.allowed_tools.contains(&"finance_report"));
+        assert_eq!(config.confidence_threshold, 0.85);
     }
 }

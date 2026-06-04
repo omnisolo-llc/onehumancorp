@@ -161,3 +161,75 @@ impl std::fmt::Display for ToolError {
 }
 
 impl std::error::Error for ToolError {}
+
+/// SOTA Harness Patterns (2025-2026): 5. Human-in-loop as spectrum -> not binary autonomy vs control
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum HumanInLoopSpectrum {
+    /// Operates without human intervention except for strictly defined high-risk tools.
+    Autonomous,
+    /// Requires human approval for tools that modify state (the classic "Restrictive" mode).
+    ApprovalOnMutate,
+    /// Requires human explicit approval before executing any tool, including read-only ones.
+    ApprovalOnAll,
+    /// Expects the human to actively review and optionally edit the tool arguments before execution.
+    CollaborativeEdit,
+    /// Triggers human intervention only under specific conditions (e.g. low confidence or specific triggers, falling back to Autonomous otherwise).
+    Supervisory,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub enum PermissionArchitecture {
+    /// Permissive (auto-approve): All tools are auto-approved unless explicitly in high-risk.
+    Permissive,
+    /// Restrictive (require approval): All mutating tools require explicit approval.
+    Restrictive,
+}
+
+impl Default for PermissionArchitecture {
+    fn default() -> Self {
+        Self::Permissive
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_role_display() {
+        assert_eq!(Role::User.to_string(), "user");
+        assert_eq!(Role::Assistant.to_string(), "assistant");
+        assert_eq!(Role::System.to_string(), "system");
+        assert_eq!(Role::Tool.to_string(), "tool");
+    }
+
+    #[test]
+    fn test_message_constructors() {
+        let u_msg = Message::user("Hello");
+        assert_eq!(u_msg.role, Role::User);
+        assert_eq!(u_msg.content, "Hello");
+
+        let a_msg = Message::assistant("Hi there");
+        assert_eq!(a_msg.role, Role::Assistant);
+        assert_eq!(a_msg.content, "Hi there");
+
+        let s_msg = Message::system("System instructions");
+        assert_eq!(s_msg.role, Role::System);
+        assert_eq!(s_msg.content, "System instructions");
+    }
+
+    #[test]
+    fn test_tool_error_display() {
+        assert_eq!(ToolError::Transient("timeout".to_string()).to_string(), "Transient error: timeout");
+        assert_eq!(ToolError::LlmRecoverable("bad args".to_string()).to_string(), "Recoverable error: bad args");
+        assert_eq!(ToolError::UserFixable("need approval".to_string()).to_string(), "User intervention required: need approval");
+        assert_eq!(ToolError::Fatal("crash".to_string()).to_string(), "Fatal error: crash");
+        assert_eq!(ToolError::Unexpected("wut".to_string()).to_string(), "Unexpected error: wut");
+        assert_eq!(ToolError::HandoffRequested("agent2".to_string()).to_string(), "Handoff requested to: agent2");
+    }
+
+    #[test]
+    fn test_permission_architecture_default() {
+        assert_eq!(PermissionArchitecture::default(), PermissionArchitecture::Permissive);
+    }
+}

@@ -1,0 +1,23 @@
+load("@next_npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+npm_link_all_packages(name = "node_modules")
+
+sh_test(
+    name = "next_vitest",
+    size = "large",
+    srcs = ["bazel_vitest_test.sh"],
+    data = glob([
+        "src/**/*.ts",
+        "src/**/*.tsx",
+    ]) + [
+        "next-env.d.ts",
+        "package.json",
+        "package-lock.json",
+        "tsconfig.json",
+        "vitest.config.ts",
+        "vitest.setup.ts",
+        ":node_modules",
+        "@nodejs//:node",
+    ],
+)

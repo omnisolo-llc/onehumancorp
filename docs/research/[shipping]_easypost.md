@@ -1,6 +1,4 @@
-# Scout: Tool Integration Research Q2
-
-## 5. Shipping & Logistics
+## [Shipping & Logistics] EasyPost Integration
 **Title**: Integrate EasyPost for Painless Shipping Labels & Tracking
 **Problem Statement**: Priya the Boutique Owner hates manually copying addresses to USPS/FedEx to buy shipping labels. She wants one button to print a label and auto-email the tracking number.
 **Research Report**:

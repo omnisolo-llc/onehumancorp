@@ -1,4 +1,42 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+---
+hide:
+  - navigation
+  - toc
+---
+<style>
+  .glass-panel {
+    backdrop-filter: blur(20px) saturate(200%);
+    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    color: #fff;
+    font-family: 'Outfit', 'Inter', sans-serif;
+  }
+  .glass-panel h1, .glass-panel h2, .glass-panel h3 {
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+  }
+  .glass-panel p, .glass-panel li {
+    font-family: 'Inter', sans-serif;
+    color: #e0e0e0;
+  }
+  .glass-panel code {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .glass-panel pre code {
+    background: transparent;
+    padding: 0;
+  }
+</style>
+
+<div class="glass-panel" markdown="1">
 
 # KAIROS Central Orchestration CLI Guide
 
@@ -16,7 +54,7 @@ To start your agents and prepare the orchestration engine, initialize the swarm.
 ohc-cli swarm init --mode=hybrid
 ```
 
-*This command automatically negotiates with the Central Orchestration Hub and establishes local fallback capabilities (SQLite) via the Hybrid OS architecture.*
+*This command automatically negotiates with the [Central Orchestration Hub](../../architecture/orchestration/hybrid-orchestration-master.md) and establishes local fallback capabilities (SQLite) via the [Hybrid OS architecture](../../architecture/kairos/hybrid-os-design.md).*
 
 ### 2. Task Delegation
 
@@ -26,11 +64,11 @@ Instead of manual sub-agent micro-management, delegate high-level objectives dir
 ohc-cli delegate "Architect the next-gen teammate mesh" --priority P0
 ```
 
-*The task is queued, and specialized agents are dynamically provisioned based on the KAIROS Distributed State Machine.*
+*The task is queued, and specialized agents are dynamically provisioned based on the [KAIROS Distributed State Machine](./distributed_state_machine.md).*
 
 ### 3. Monitoring
 
-To watch the real-time activity, event synchronization, and UltraPlan deliberation of your swarm across the Teammate Mesh, use the monitoring dashboard:
+To watch the real-time activity, event synchronization, and [UltraPlan deliberation](./ultraplan_deliberation.md) of your swarm across the [Teammate Mesh](./teammate_mesh.md), use the monitoring dashboard:
 
 ```bash
 ohc-cli top

@@ -52,16 +52,16 @@ The API queues and routes tasks to the appropriate sub-agents depending on your 
 graph TD
     Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
     API --> QueueInterface{SubAgent Queue Interface}
-    QueueInterface -->|Cloud-Native| Rueidis[(Redis ZSETs)]
+    QueueInterface -->|Cloud-Native| Redis[(Redis ZSETs)]
     QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
-    Rueidis -->|Dequeues| Worker[Sub-Agent Worker]
+    Redis -->|Dequeues| Worker[Sub-Agent Worker]
     SQLite -->|Dequeues| Worker
     Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
     V2Mesh --> Centrifuge[Centrifuge Node Pub/Sub]
     Centrifuge --> Swarm[Teammate Swarm]
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Manager,API,QueueInterface,Rueidis,SQLite,Worker,V2Mesh,Centrifuge,Swarm premium;
+    class Manager,API,QueueInterface,Redis,SQLite,Worker,V2Mesh,Centrifuge,Swarm premium;
 ```
 
 ## 4. Shared Task Claiming

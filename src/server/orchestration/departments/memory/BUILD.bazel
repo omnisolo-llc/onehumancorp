@@ -1,9 +1,30 @@
-filegroup(
-    name = "srcs",
-    srcs = [
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+exports_files(
+    [
         "e2e_journey_test.rs",
         "layer.rs",
         "mod.rs",
     ],
-    visibility = ["//src/server/orchestration/departments:__pkg__"],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_orchestration_departments_memory",
+    srcs = [
+        "bazel_lib.rs",
+        "e2e_journey_test.rs",
+        "layer.rs",
+        "mod.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/agents/builtin:core",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "@crates//:chrono",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+    ],
 )

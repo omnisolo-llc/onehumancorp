@@ -46,22 +46,6 @@ message GetDashboardRequest {
   bool mobile_optimized = 2;
 }
 
-message PostMessageRequest {
-  ohc.agent.AgentMessage message = 1;
-}
-
-message PostMessageResponse {
-  DashboardSnapshot snapshot = 1;
-}
-
-message SeedDashboardRequest {
-  string scenario = 1;
-}
-
-message SeedDashboardResponse {
-  DashboardSnapshot snapshot = 1;
-}
-
 // B2B Collaboration messages
 message TrustAgreement {
   string id = 1;
@@ -133,8 +117,6 @@ message PipelinePromoteRequest {
 
 service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
-  rpc PostMessage(PostMessageRequest) returns (PostMessageResponse);
-  rpc SeedDashboard(SeedDashboardRequest) returns (SeedDashboardResponse);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
@@ -178,4 +160,55 @@ message GetVideoTutorialsRequest {
 
 message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
+}
+service BookingEngineService {
+  rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
+  rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
+  rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
+}
+
+message CheckAvailabilityRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  string date = 3; // YYYY-MM-DD
+}
+
+message TimeSlot {
+  string start_time = 1; // RFC3339
+  string end_time = 2; // RFC3339
+}
+
+message CheckAvailabilityResponse {
+  repeated TimeSlot available_slots = 1;
+}
+
+message ReserveTimeSlotRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string product_id = 3;
+  string start_time = 4; // RFC3339
+  string end_time = 5; // RFC3339
+}
+
+message ReserveTimeSlotResponse {
+  string booking_id = 1;
+  string deposit_stripe_link = 2;
+}
+
+message CreateConversationalCheckoutRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  int64 amount_cents = 3;
+  string product_id = 4;
+}
+
+message ConversationalCheckoutSession {
+  string session_id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  int64 amount_cents = 4;
+  string inventory_lock_id = 5;
+  string checkout_url = 6;
+  string status = 7;
+  int64 expires_at_unix = 8;
 }

@@ -2,14 +2,31 @@
 # Build with: cd src/ui/tauri && cargo build --release
 # Or use: bazel run //src/ui/tauri:app
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("//bazel/rules:tauri_mobile.bzl", "tauri_mobile_package")
+
+bool_flag(
+    name = "build_tauri",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "tauri_enabled",
+    flag_values = {
+        ":build_tauri": "true",
+    },
+)
 
 genrule(
     name = "tauri_context",
     srcs = [
         "tauri.conf.json",
         "capabilities/default.json",
-        "next_out/index.html",
+        "next_out/404.html",
+        "next_out/builder.html",
+        "next_out/dashboard.html",
     ],
     outs = [
         "tauri_out/acl-manifests.json",
@@ -21,7 +38,13 @@ genrule(
     cmd = """
 mkdir -p $(@D)/tauri_out $(@D)/context
 cp $(location capabilities/default.json) $(@D)/tauri_out/capabilities.json
-cp $(location next_out/index.html) $(@D)/context/index.html
+if [ -s "$(location next_out/dashboard.html)" ]; then
+  cp $(location next_out/dashboard.html) $(@D)/context/index.html
+elif [ -s "$(location next_out/builder.html)" ]; then
+  cp $(location next_out/builder.html) $(@D)/context/index.html
+else
+  cp $(location next_out/404.html) $(@D)/context/index.html
+fi
 cp $(location tauri.conf.json) $(@D)/tauri_config.json
 cat > $(@D)/tauri_out/acl-manifests.json << 'ACL_EOF'
 {
@@ -45,7 +68,6 @@ cat > $(@D)/tauri_out/acl-manifests.json << 'ACL_EOF'
 ACL_EOF
 cat > $(@D)/tauri-build-context.rs << 'CTX_EOF'
 use tauri::Context;
-use tauri::utils::acl::manifest::Manifest;
 use tauri::utils::config::Config;
 use std::collections::BTreeMap;
 use std::borrow::Cow;
@@ -54,8 +76,8 @@ pub fn tauri_context() -> Context<tauri::Wry> {
     let config: Config = serde_json::from_str(include_str!("tauri_config.json")).expect("failed to parse tauri_config.json");
     let assets = TauriAssets {};
     let package_info = tauri::PackageInfo {
-        name: "app".into(),
-        version: "0.1.0".parse().expect("invalid version"),
+        name: "OHC".into(),
+        version: "0.4.45".parse().expect("invalid version"),
         authors: "",
         description: "",
         crate_name: "app",
@@ -79,7 +101,7 @@ pub fn tauri_context() -> Context<tauri::Wry> {
 
 struct TauriAssets;
 impl<R: tauri::Runtime> tauri::Assets<R> for TauriAssets {
-    fn get(&self, key: &tauri::utils::assets::AssetKey) -> Option<Cow<[u8]>> {
+    fn get(&self, key: &tauri::utils::assets::AssetKey) -> Option<Cow<'_, [u8]>> {
         if key.as_ref() == "index.html" {
             Some(Cow::Owned(include_bytes!("context/index.html").to_vec()))
         } else {
@@ -97,34 +119,105 @@ impl<R: tauri::Runtime> tauri::Assets<R> for TauriAssets {
 }
 CTX_EOF
 """,
+    target_compatible_with = select({
+        ":tauri_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 rust_library(
     name = "app_lib",
     srcs = ["src/lib.rs"],
-    edition = "2024",
     compile_data = [
         ":tauri_context",
     ],
-    deps = [
-        "@crates//:tauri",
-        "@crates//:tauri-plugin-shell",
-        "@crates//:serde",
-        "@crates//:serde_json",
-    ],
+    edition = "2024",
     rustc_env = {
         "TAURI_ENV_TARGET_TRIPLE": "x86_64-unknown-linux-gnu",
         "OUT_DIR": "bazel-out/k8-fastbuild/bin/src/ui/tauri",
     },
+    rustc_flags = [
+        "--cfg=ohc_bazel_tauri_context",
+    ],
+    target_compatible_with = select({
+        ":tauri_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tauri",
+        "@crates//:tauri-plugin-shell",
+        "@crates//:tauri-plugin-updater",
+    ],
 )
 
 rust_binary(
     name = "app",
     srcs = ["src/main.rs"],
     edition = "2024",
+    target_compatible_with = select({
+        ":tauri_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
     deps = [
         ":app_lib",
     ],
+)
+
+TAURI_MOBILE_SRCS = glob([
+    "src/**/*.rs",
+    "capabilities/**",
+    "icons/**",
+    "next_out/**",
+]) + [
+    "//:Cargo.lock",
+    "//:Cargo.toml",
+    "Cargo.toml",
+    "build.rs",
+    "tauri.conf.json",
+]
+
+tauri_mobile_package(
+    name = "tauri_android_apk",
+    srcs = TAURI_MOBILE_SRCS,
+    out = "ohc-android-aarch64.apk",
+    android_sdk = "@tauri_android_sdk//:sdk",
+    android_sdk_root = "@tauri_android_sdk//:.sdk_root",
+    package_type = "apk",
+    target_compatible_with = select({
+        "//:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+tauri_mobile_package(
+    name = "tauri_android_aab",
+    srcs = TAURI_MOBILE_SRCS,
+    out = "ohc-android-aarch64.aab",
+    android_sdk = "@tauri_android_sdk//:sdk",
+    android_sdk_root = "@tauri_android_sdk//:.sdk_root",
+    package_type = "aab",
+    target_compatible_with = select({
+        "//:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+tauri_mobile_package(
+    name = "tauri_ios_ipa",
+    srcs = TAURI_MOBILE_SRCS,
+    out = "ohc-ios-aarch64.ipa",
+    ios_export_method = "app-store-connect",
+    package_type = "ipa",
+    target_compatible_with = select({
+        "//:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )

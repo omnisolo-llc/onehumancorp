@@ -18,43 +18,65 @@ impl ToolExecutor for ReadExecutor {
         let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
         let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
-        let content = fs::read_to_string(&actual_path)
+        // Just-in-Time (JIT) Retrieval Mechanic:
+        // "Never load full files." We enforce a strict token/line limit and stream the file to prevent loading it entirely into memory.
+        let file = fs::File::open(&actual_path)
             .await
             .map_err(|e| format!("read: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
-        // Just-in-Time (JIT) Retrieval Mechanic:
-        // "Never load full files." We enforce a strict token/line limit.
-        // If the user requests the whole file and it's large, we force them to paginate using start_line/end_line.
-        let lines: Vec<&str> = content.lines().collect();
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        let mut reader = BufReader::new(file);
+        let mut line_buffer = String::new();
+        let mut result_lines = Vec::new();
+        let mut line_count = 0;
 
-        // Optional line range
-        if let (Some(start), Some(end)) = (
-            args["start_line"].as_u64(),
-            args["end_line"].as_u64(),
-        ) {
-            let start = (start as usize).saturating_sub(1);
-            let end = (end as usize).min(lines.len());
-            if start >= end {
-                return Err(ToolError::LlmRecoverable(format!("read: invalid line range {}-{}", start + 1, end)));
+        let req_start = args["start_line"].as_u64().map(|n| n.saturating_sub(1) as usize);
+        let req_end = args["end_line"].as_u64().map(|n| n as usize);
+
+        if let (Some(s), Some(e)) = (req_start, req_end) {
+            if s >= e {
+                return Err(ToolError::LlmRecoverable(format!("read: invalid line range {}-{}", s + 1, e)));
             }
-
-            // Enforce maximum window size
-            if end - start > 1000 {
-                 return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Please use start_line and end_line to paginate.".to_string()));
+            if e - s > 1000 {
+                return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Please use start_line and end_line to paginate.".to_string()));
             }
-
-            return Ok(lines[start..end].join("\n"));
+        } else {
+            // No range specified, check if file is small enough by just reading it line by line
+            // If it exceeds 1000 lines, reject it early without loading it entirely.
+            let mut test_reader = BufReader::new(fs::File::open(&actual_path).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?);
+            let mut test_buffer = String::new();
+            let mut total_lines = 0;
+            while let Ok(bytes) = test_reader.read_line(&mut test_buffer).await {
+                if bytes == 0 { break; }
+                total_lines += 1;
+                test_buffer.clear();
+                if total_lines > 1000 {
+                    return Err(ToolError::LlmRecoverable(
+                        "JIT Retrieval Error: File is too large (> 1000 lines). Never load full files. Please use start_line and end_line to paginate (max 1000 lines per request).".to_string()
+                    ));
+                }
+            }
         }
 
-        // If no range specified and file is large, reject it.
-        if lines.len() > 1000 {
-             return Err(ToolError::LlmRecoverable(format!(
-                 "JIT Retrieval Error: File is too large ({} lines). Never load full files. Please use start_line and end_line to paginate (max 1000 lines per request).",
-                 lines.len()
-             )));
+        let start = req_start.unwrap_or(0);
+        let end = req_end.unwrap_or(1000); // capped at 1000 if not specified (already validated above)
+
+        while let Ok(bytes) = reader.read_line(&mut line_buffer).await {
+            if bytes == 0 {
+                break;
+            }
+            if line_count >= start && line_count < end {
+                result_lines.push(line_buffer.trim_end_matches('\n').trim_end_matches('\r').to_string());
+            }
+            line_count += 1;
+            line_buffer.clear();
+
+            if line_count >= end {
+                break; // Stop reading early if we reached the end of the requested range
+            }
         }
 
-        Ok(lines.join("\n"))
+        Ok(result_lines.join("\n"))
     }
 }
 
@@ -89,6 +111,32 @@ pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[tokio::test]
+    async fn test_read_large_file_streaming() {
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("jit_streaming_test_large.txt");
+
+        let mut file = std::fs::File::create(&test_file).unwrap();
+        // Generate a large file to test memory constraint
+        for i in 1..=5000 {
+            writeln!(file, "Line {}", i).unwrap();
+        }
+
+        let executor = ReadExecutor { working_dir: None };
+
+        let args = json!({
+            "path": test_file.to_string_lossy().to_string(),
+            "start_line": 4900,
+            "end_line": 4903
+        });
+
+        let result = executor.execute(args).await.unwrap();
+        let expected = "Line 4900\nLine 4901\nLine 4902\nLine 4903";
+        assert_eq!(result, expected);
+
+        let _ = std::fs::remove_file(&test_file);
+    }
 
     #[tokio::test]
     async fn test_read_jit_retrieval_limit() {

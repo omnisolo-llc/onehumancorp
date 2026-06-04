@@ -5,35 +5,50 @@ use tokio::sync::broadcast;
 use dashmap::DashMap;
 
 pub use crate::proto::hub::TeammateMeshEvent as Message;
-
+/// MeshTransport is the core interface for the Teammate Mesh APIs.
+/// It provides real-time bidirectional communication, distributed locking, and presence tracking.
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
+    /// Adds a known peer to this transport instance (used primarily for overlay/hybrid setups).
+    fn add_peer(&self, _peer: Peer) {}
+
+    /// Publishes a TeammateMeshEvent to the specified topic/channel.
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
+
+    /// Subscribes to a topic/channel, returning a cancellation function.
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
+    /// Acquires a distributed lock on a resource for a specified duration.
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+
+    /// Releases a previously acquired distributed lock.
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
+    /// Registers the agent's presence status in the mesh.
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+
+    /// Returns a list of all active agents and their statuses.
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
 }
 
-pub struct MemoryTransport {
+pub struct InProcessTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
-    presence: DashMap<String, (String, std::time::Instant)>, // agent_id -> (status, expires_at)
+    presence: DashMap<String, (String, std::time::Instant)>,
+    locks: DashMap<String, (String, i64)>,
 }
 
-impl MemoryTransport {
+impl InProcessTransport {
     pub fn new() -> Self {
-        MemoryTransport {
+        InProcessTransport {
             subs: DashMap::new(),
             presence: DashMap::new(),
+            locks: DashMap::new(),
         }
     }
 }
 
 #[async_trait]
-impl MeshTransport for MemoryTransport {
+impl MeshTransport for InProcessTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         if let Some(tx) = self.subs.get(topic) {
             let _ = tx.send(message);
@@ -63,56 +78,28 @@ impl MeshTransport for MemoryTransport {
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
         let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
-        let payload = format!("{}:{}", owner, expires_at);
 
-        match std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-            Ok(mut f) => {
-                use std::io::Write;
-                let _ = f.write_all(payload.as_bytes());
+        use dashmap::mapref::entry::Entry;
+        match self.locks.entry(resource.to_string()) {
+            Entry::Vacant(v) => {
+                v.insert((owner.to_string(), expires_at));
                 Ok(true)
             }
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-                if let Ok(owner_bytes) = std::fs::read(&lock_path) {
-                    let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
-                    if let Some((stored_owner, stored_exp)) = current_data.split_once(':') {
-                        if let Ok(exp) = stored_exp.parse::<i64>() {
-                            if stored_owner == owner || exp <= chrono::Utc::now().timestamp_millis() {
-                                let _ = std::fs::remove_file(&lock_path);
-                                if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-                                    use std::io::Write;
-                                    let _ = f.write_all(payload.as_bytes());
-                                    return Ok(true);
-                                }
-                            }
-                        }
-                    } else {
-                        // Malformed, overwrite
-                        let _ = std::fs::remove_file(&lock_path);
-                        if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
-                            use std::io::Write;
-                            let _ = f.write_all(payload.as_bytes());
-                            return Ok(true);
-                        }
-                    }
+            Entry::Occupied(mut o) => {
+                let (stored_owner, stored_exp) = o.get();
+                if stored_owner == owner || *stored_exp <= chrono::Utc::now().timestamp_millis() {
+                    o.insert((owner.to_string(), expires_at));
+                    Ok(true)
+                } else {
+                    Ok(false)
                 }
-                Ok(false)
             }
-            Err(e) => Err(e.to_string()),
         }
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        let lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}", resource));
-        if let Ok(owner_bytes) = std::fs::read(&lock_path) {
-            let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
-            if let Some((stored_owner, _)) = current_data.split_once(':') {
-                if stored_owner == owner {
-                    let _ = std::fs::remove_file(lock_path);
-                }
-            }
-        }
+        self.locks.remove_if(&resource.to_string(), |_, (stored_owner, _)| stored_owner == owner);
         Ok(())
     }
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
@@ -321,16 +308,18 @@ impl MeshTransport for PgTransport {
 
         let result = sqlx::query(
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES ($1, $2, NOW() + CAST($3 AS INTERVAL))
-             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= NOW() OR mesh_locks.owner = EXCLUDED.owner"
+             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= NOW() OR mesh_locks.owner = EXCLUDED.owner
+             RETURNING resource"
         )
         .bind(resource)
         .bind(owner)
         .bind(format!("{} seconds", ttl_seconds))
-        .execute(&self.pool)
+        .fetch_optional(&self.pool)
         .await;
 
         match result {
-            Ok(res) => Ok(res.rows_affected() > 0),
+            Ok(Some(_)) => Ok(true),
+            Ok(None) => Ok(false),
             Err(e) => Err(e.to_string()),
         }
     }
@@ -545,16 +534,18 @@ impl MeshTransport for SqliteTransport {
 
         let result = sqlx::query(
             "INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime('now', ?))
-             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= datetime('now') OR mesh_locks.owner = EXCLUDED.owner"
+             ON CONFLICT(resource) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at WHERE mesh_locks.expires_at <= datetime('now') OR mesh_locks.owner = EXCLUDED.owner
+             RETURNING resource"
         )
         .bind(resource)
         .bind(owner)
         .bind(format!("+{} seconds", ttl_seconds))
-        .execute(&self.pool)
+        .fetch_optional(&self.pool)
         .await;
 
         match result {
-            Ok(res) => Ok(res.rows_affected() > 0),
+            Ok(Some(_)) => Ok(true),
+            Ok(None) => Ok(false),
             Err(e) => Err(e.to_string()),
         }
     }
@@ -601,18 +592,18 @@ impl MeshTransport for SqliteTransport {
     }
 }
 
-pub struct RedisTransport {
+pub struct RedisPubSubTransport {
 
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
 }
 
-impl RedisTransport {
+impl RedisPubSubTransport {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
         let publish_conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
 
-        Ok(RedisTransport {
+        Ok(RedisPubSubTransport {
             client,
             publish_conn: tokio::sync::Mutex::new(publish_conn),
         })
@@ -620,7 +611,7 @@ impl RedisTransport {
 }
 
 #[async_trait]
-impl MeshTransport for RedisTransport {
+impl MeshTransport for RedisPubSubTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
@@ -860,12 +851,268 @@ impl MeshTransport for NatsTransport {
 }
 
 
+
+
+#[derive(Clone)]
+pub struct Peer {
+    pub id: String,
+    pub udp_addr: Option<String>,
+    pub tcp_addr: Option<String>,
+    pub http_url: Option<String>,
+}
+
+pub struct MeshOverlayTransport {
+    inner: Arc<dyn MeshTransport>,
+    peers: Arc<DashMap<String, Peer>>,
+    client: reqwest::Client,
+    udp_socket: Arc<tokio::net::UdpSocket>,
+    ack_map: Arc<DashMap<String, tokio::sync::oneshot::Sender<()>>>,
+}
+
+impl MeshOverlayTransport {
+    pub async fn new(inner: Arc<dyn MeshTransport>, udp_port: u16, tcp_port: u16) -> Self {
+        let udp_socket = Arc::new(tokio::net::UdpSocket::bind(format!("0.0.0.0:{}", udp_port)).await.expect("Failed to bind UDP"));
+
+        let transport = MeshOverlayTransport {
+            inner,
+            peers: Arc::new(DashMap::new()),
+            client: reqwest::Client::new(),
+            udp_socket,
+            ack_map: Arc::new(DashMap::new()),
+        };
+
+        transport.start_listeners(tcp_port).await;
+        transport
+    }
+
+    pub fn add_peer(&self, peer: Peer) {
+        self.peers.insert(peer.id.clone(), peer);
+    }
+
+    async fn start_listeners(&self, tcp_port: u16) {
+        let udp_socket = self.udp_socket.clone();
+        let inner = self.inner.clone();
+        let ack_map = self.ack_map.clone();
+
+        // UDP Listener
+        tokio::spawn(async move {
+            let mut buf = [0; 65535];
+            loop {
+                if let Ok((len, addr)) = udp_socket.recv_from(&mut buf).await {
+                    use prost::Message as ProstMessage;
+
+                    // Check if it's an ACK (magic bytes 0xAA 0xBB 0xCC 0xDD)
+                    if len > 4 && buf[0] == 0xAA && buf[1] == 0xBB && buf[2] == 0xCC && buf[3] == 0xDD {
+                        if let Ok(msg_id) = String::from_utf8(buf[4..len].to_vec()) {
+                            if let Some((_, tx)) = ack_map.remove(&msg_id) {
+                                let _ = tx.send(());
+                            }
+                        }
+                        continue;
+                    }
+
+                    if let Ok(msg) = Message::decode(&buf[..len]) {
+                        // Send ACK
+                        let mut ack_buf = vec![0xAA, 0xBB, 0xCC, 0xDD];
+                        ack_buf.extend_from_slice(msg.msg_id.as_bytes());
+                        let _ = udp_socket.send_to(&ack_buf, addr).await;
+
+                        let action = msg.action.clone();
+                        let _ = inner.publish(&action, msg).await;
+                    }
+                }
+            }
+        });
+
+        // TCP Listener
+        let inner_tcp = self.inner.clone();
+        tokio::spawn(async move {
+            if let Ok(listener) = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", tcp_port)).await {
+                loop {
+                    if let Ok((mut stream, _)) = listener.accept().await {
+                        let inner_tcp_clone = inner_tcp.clone();
+                        tokio::spawn(async move {
+                            use tokio::io::AsyncReadExt;
+                            let mut len_buf = [0u8; 4];
+                            if stream.read_exact(&mut len_buf).await.is_ok() {
+                                let len = u32::from_be_bytes(len_buf) as usize;
+                                if len > 10 * 1024 * 1024 { // 10MB max limit
+                                    tracing::warn!("Rejecting oversized mesh message: {} bytes", len);
+                                    return;
+                                }
+                                let mut buf = vec![0u8; len];
+                                if stream.read_exact(&mut buf).await.is_ok() {
+                                    use prost::Message as ProstMessage;
+                                    if let Ok(msg) = Message::decode(&buf[..]) {
+                                        let action = msg.action.clone();
+                                        let _ = inner_tcp_clone.publish(&action, msg).await;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+}
+
+#[async_trait]
+impl MeshTransport for MeshOverlayTransport {
+    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        // First publish locally
+        let _ = self.inner.publish(topic, message.clone()).await;
+
+        use prost::Message as ProstMessage;
+        let mut buf = Vec::new();
+        message.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        use base64::Engine;
+
+        let mut join_set = tokio::task::JoinSet::new();
+        for peer_entry in self.peers.iter() {
+            let peer = peer_entry.value().clone();
+            let buf_clone = buf.clone();
+            let msg_id = message.msg_id.clone();
+            let udp_socket = self.udp_socket.clone();
+            let ack_map = self.ack_map.clone();
+            let client = self.client.clone();
+            let message_clone = message.clone();
+
+            join_set.spawn(async move {
+                let mut success = false;
+
+                // 1. Try UDP with ACK timeout
+                if let Some(udp_addr) = &peer.udp_addr {
+                    let (tx, rx) = tokio::sync::oneshot::channel();
+                    ack_map.insert(msg_id.clone(), tx);
+
+                    if udp_socket.send_to(&buf_clone, udp_addr).await.is_ok() {
+                        // Wait for ACK with timeout
+                        if tokio::time::timeout(std::time::Duration::from_millis(500), rx).await.is_ok() {
+                            success = true;
+                        }
+                    }
+
+                    if !success {
+                        ack_map.remove(&msg_id);
+                    }
+                }
+
+                // 2. Fallback to TCP with framing
+                if !success {
+                    if let Some(tcp_addr) = &peer.tcp_addr {
+                        if let Ok(Ok(mut stream)) = tokio::time::timeout(std::time::Duration::from_secs(2), tokio::net::TcpStream::connect(tcp_addr)).await {
+                            use tokio::io::AsyncWriteExt;
+                            let len_bytes = (buf_clone.len() as u32).to_be_bytes();
+                            if stream.write_all(&len_bytes).await.is_ok() && stream.write_all(&buf_clone).await.is_ok() {
+                                success = true;
+                            }
+                        }
+                    }
+                }
+
+                // 3. Fallback to HTTP
+                if !success {
+                    if let Some(http_url) = &peer.http_url {
+                        let url = format!("{}/api/mesh/v2/direct", http_url);
+                        let payload = serde_json::json!({
+                            "target_agent_id": peer.id,
+                            "message": {
+                                "agent_id": message_clone.agent_id,
+                                "action": message_clone.action,
+                                "status": message_clone.status,
+                                "payload": base64::engine::general_purpose::STANDARD.encode(&message_clone.payload),
+                                "msg_id": message_clone.msg_id
+                            }
+                        });
+
+                        if let Ok(resp) = client.post(&url).json(&payload).send().await {
+                            if resp.status().is_success() {
+                                success = true;
+                            }
+                        }
+                    }
+                }
+
+                if !success {
+                    tracing::warn!("Failed to deliver message to peer {} via all transports", peer.id);
+                }
+            });
+        }
+
+        while let Some(_) = join_set.join_next().await {}
+
+        Ok(())
+    }
+
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.inner.subscribe(topic, handler).await
+    }
+
+    fn add_peer(&self, peer: Peer) {
+        self.peers.insert(peer.id.clone(), peer.clone());
+        self.inner.add_peer(peer);
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.inner.acquire_lock(resource, owner, ttl_seconds).await
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.inner.release_lock(resource, owner).await
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.inner.get_active_agents().await
+    }
+}
+
+pub struct UniversalTransportBridge {
+    inner: Arc<dyn MeshTransport>,
+}
+
+impl UniversalTransportBridge {
+    pub fn new(inner: Arc<dyn MeshTransport>) -> Self {
+        UniversalTransportBridge { inner }
+    }
+}
+
+#[async_trait]
+impl MeshTransport for UniversalTransportBridge {
+    fn add_peer(&self, peer: Peer) {
+        self.inner.add_peer(peer);
+    }
+    async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        self.inner.publish(topic, message).await
+    }
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.inner.subscribe(topic, handler).await
+    }
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        self.inner.acquire_lock(resource, owner, ttl_seconds).await
+    }
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        self.inner.release_lock(resource, owner).await
+    }
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        self.inner.get_active_agents().await
+    }
+}
+
 pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
                 tracing::info!("Initialized NatsTransport");
-                return Ok(Arc::new(t));
+                return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
             },
             Err(e) => {
                 tracing::warn!("Failed to initialize NatsTransport: {}. Falling back to default transport.", e);
@@ -875,13 +1122,13 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
 
     if is_cloud {
         if let Some(url) = redis_url {
-            match RedisTransport::new(url).await {
+            match RedisPubSubTransport::new(url).await {
                 Ok(t) => {
-                    tracing::info!("Initialized RedisTransport");
-                    return Ok(Arc::new(t));
+                    tracing::info!("Initialized RedisPubSubTransport");
+                    return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
                 },
                 Err(e) => {
-                    return Err(format!("Failed to initialize RedisTransport in cloud mode: {}", e));
+                    return Err(format!("Failed to initialize RedisPubSubTransport in cloud mode: {}", e));
                 }
             }
         } else {
@@ -890,7 +1137,7 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     }
 
     // Standalone fallback
-    if let Ok(db_url) = std::env::var("DATABASE_URL") {
+    if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
         if db_url.starts_with("sqlite") {
             match sqlx::sqlite::SqlitePoolOptions::new().connect(&db_url).await {
                 Ok(pool) => {
@@ -898,39 +1145,187 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
                         Ok(t) => {
                             let t_clone = t.clone();
                             tokio::spawn(async move { t_clone.start_worker().await; });
-                            tracing::info!("Initialized SqliteTransport (Standalone)");
-                            return Ok(Arc::new(t));
+                            tracing::debug!("Initialized SqliteTransport (Standalone)");
+                            return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
                         },
                         Err(e) => {
-                            tracing::warn!("Failed to initialize SqliteTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                            tracing::debug!("Failed to initialize SqliteTransport (Standalone): {}. Falling back to InProcessTransport.", e);
                         }
                     }
                 },
                 Err(e) => {
-                    tracing::warn!("Failed to connect to SQLite DB for transport: {}", e);
+                    tracing::debug!("Failed to connect to SQLite DB for transport: {}", e);
                 }
             }
         }
     }
 
     if let Some(url) = redis_url {
-        match RedisTransport::new(url).await {
+        match RedisPubSubTransport::new(url).await {
             Ok(t) => {
-                tracing::info!("Initialized RedisTransport (Standalone)");
-                return Ok(Arc::new(t));
+                tracing::info!("Initialized RedisPubSubTransport (Standalone)");
+                return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
             },
             Err(e) => {
-                tracing::warn!("Failed to initialize RedisTransport (Standalone): {}. Falling back to MemoryTransport.", e);
+                tracing::warn!("Failed to initialize RedisPubSubTransport (Standalone): {}. Falling back to InProcessTransport.", e);
             }
         }
     }
 
-    tracing::info!("Initialized MemoryTransport");
-    Ok(Arc::new(MemoryTransport::new()))
+    tracing::info!("Initialized InProcessTransport");
+    Ok(Arc::new(UniversalTransportBridge::new(Arc::new(InProcessTransport::new()))))
 }
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_overlay_udp_success() {
+        let inner = Arc::new(InProcessTransport::new());
+        let overlay = MeshOverlayTransport::new(inner, 0, 0).await;
+
+        let socket = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let port = socket.local_addr().unwrap().port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        overlay.add_peer(Peer {
+            id: "peer1".to_string(),
+            udp_addr: Some(addr.clone()),
+            tcp_addr: None,
+            http_url: None,
+        });
+
+        let msg = Message {
+            agent_id: "agent1".to_string(),
+            action: "test_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            msg_id: "msg1".to_string(),
+        };
+
+        // Spawn listener
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+        tokio::spawn(async move {
+            let mut buf = [0; 1024];
+            if let Ok((len, src_addr)) = socket.recv_from(&mut buf).await {
+                use prost::Message as ProstMessage;
+                if Message::decode(&buf[..len]).is_ok() {
+                    // Send ACK back
+                    let mut ack_buf = vec![0xAA, 0xBB, 0xCC, 0xDD];
+                    ack_buf.extend_from_slice(b"msg1");
+                    let _ = socket.send_to(&ack_buf, src_addr).await;
+                    rx.store(true, Ordering::SeqCst);
+                }
+            }
+        });
+
+        overlay.publish("test_topic", msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_overlay_tcp_fallback() {
+        let inner = Arc::new(InProcessTransport::new());
+        let overlay = MeshOverlayTransport::new(inner, 0, 0).await;
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        overlay.add_peer(Peer {
+            id: "peer1".to_string(),
+            udp_addr: Some("127.0.0.1:1".to_string()), // Bad UDP port
+            tcp_addr: Some(addr.clone()),
+            http_url: None,
+        });
+
+        let msg = Message {
+            agent_id: "agent1".to_string(),
+            action: "test_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            msg_id: "msg1".to_string(),
+        };
+
+        // Spawn listener
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                use tokio::io::AsyncReadExt;
+                let mut len_buf = [0; 4];
+                if stream.read_exact(&mut len_buf).await.is_ok() {
+                    let len = u32::from_be_bytes(len_buf) as usize;
+                    let mut buf = vec![0; len];
+                    if stream.read_exact(&mut buf).await.is_ok() {
+                        use prost::Message as ProstMessage;
+                        if Message::decode(&buf[..len]).is_ok() {
+                            rx.store(true, Ordering::SeqCst);
+                        }
+                    }
+                }
+            }
+        });
+
+        overlay.publish("test_topic", msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_overlay_http_fallback() {
+        let inner = Arc::new(InProcessTransport::new());
+        let overlay = MeshOverlayTransport::new(inner, 0, 0).await;
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let url = format!("http://127.0.0.1:{}", port);
+
+        overlay.add_peer(Peer {
+            id: "peer1".to_string(),
+            udp_addr: Some("127.0.0.1:1".to_string()), // Bad UDP port
+            tcp_addr: Some("127.0.0.1:1".to_string()), // Bad TCP port
+            http_url: Some(url.clone()),
+        });
+
+        let msg = Message {
+            agent_id: "agent1".to_string(),
+            action: "test_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            msg_id: "msg1".to_string(),
+        };
+
+        // Spawn listener
+        let received = Arc::new(AtomicBool::new(false));
+        let rx = received.clone();
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                use tokio::io::AsyncReadExt;
+                use tokio::io::AsyncWriteExt;
+                let mut buf = [0; 4096];
+                if let Ok(_) = stream.read(&mut buf).await {
+                    let response = "HTTP/1.1 200 OK
+Content-Length: 0
+
+";
+                    let _ = stream.write_all(response.as_bytes()).await;
+                    rx.store(true, Ordering::SeqCst);
+                }
+            }
+        });
+
+        overlay.publish("test_topic", msg).await.unwrap();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        assert!(received.load(Ordering::SeqCst));
+    }
+
+
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -1022,7 +1417,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
 
@@ -1053,7 +1448,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_transport_standalone() {
         let _transport = create_transport(None, false).await.unwrap();
-        // Since MemoryTransport isn't easily castable back without Any, we just ensure it didn't err
+        // Since InProcessTransport isn't easily castable back without Any, we just ensure it didn't err
         assert!(true);
     }
 
@@ -1183,7 +1578,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport_locking() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
 
         // Test lock acquisition
         let acquired = transport.acquire_lock("my_resource", "agent_1", 10).await.unwrap();
@@ -1212,7 +1607,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport_lock_expiration() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
 
         // Acquire lock with short TTL (1 second)
         let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
@@ -1228,7 +1623,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_transport_presence() {
-        let transport = MemoryTransport::new();
+        let transport = InProcessTransport::new();
 
         // Register presence
         transport.register_presence("agent_1", "online", 10).await.unwrap();
@@ -1254,7 +1649,7 @@ mod tests {
     #[tokio::test]
     async fn test_redis_transport() {
         // Needs running Redis instance
-        let transport = RedisTransport::new("redis://localhost:6379").await;
+        let transport = RedisPubSubTransport::new("redis://localhost:6379").await;
         if transport.is_err() {
 
             return;

@@ -52,7 +52,7 @@ sequenceDiagram
 ## 3. Phase 2: Orchestration (Teammate Mesh)
 Realtime communication is established via the Teammate Mesh APIs.
 
-- **Cloud-Native Mode**: Uses Redis Pub/Sub (`rueidis`) for distributed event broadcasting.
+- **Cloud-Native Mode**: Uses Redis Pub/Sub (`redis`) for distributed event broadcasting.
 - **Standalone Mode**: Utilizes in-memory channels for local, low-latency IPC.
 
 Agents broadcast state transitions (e.g., `TaskTransition`) over channels like `orchestration.tasks`.

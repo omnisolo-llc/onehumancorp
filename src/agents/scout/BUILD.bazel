@@ -6,7 +6,6 @@ rust_library(
         "agent.rs",
         "db.rs",
         "lib.rs",
-        "tests.rs",
     ],
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -23,9 +22,18 @@ rust_library(
 )
 
 rust_test(
-    name = "scout_test",
-    crate = ":scout_lib",
+    name = "scout_unit_test",
+    srcs = ["tests.rs"],
     edition = "2024",
+    deps = [
+        ":scout_lib",
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+        "@crates//:serde_json",
+        "@crates//:chrono",
+        "@crates//:uuid",
+    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
