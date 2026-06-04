@@ -91,11 +91,13 @@ mod tests {
 
         unsafe {
             std::env::set_var("OHC_DATABASE_URL", "sqlite::memory:");
+            std::env::set_var("OHC_SQLITE_KEY", "testkey");
         }
-        let db_arc = Arc::new(crate::db::DB::new().await.unwrap_or_else(|_| crate::db::DB {
+
+        let db_arc = Arc::new(crate::db::DB {
             pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: crate::db::DbStore::Sqlite(sqlite_pool.clone())
-        }));
+        });
 
         let hub = Arc::new(Hub::new(tx, db_arc.pool.clone()));
 

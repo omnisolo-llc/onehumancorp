@@ -9,21 +9,23 @@ use std::sync::OnceLock;
 
 static DOMAINS_CACHE: OnceLock<HybridCache<Vec<DomainInfoProto>>> = OnceLock::new();
 static MARKETPLACE_ITEMS_CACHE: OnceLock<HybridCache<Vec<MarketplaceItemProto>>> = OnceLock::new();
-static ANALYTICS_CACHE: OnceLock<HybridCache<AnalyticsSummaryResponse>> = OnceLock::new();
 
 pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
     settings: RwLock<SettingsResponse>,
+    analytics_cache: ::server_utils::cache::HybridCache<AnalyticsSummaryResponse>,
 }
 
 impl MyOrgService {
     pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
+        let redis_client = hub.redis_client.clone();
         MyOrgService {
             hub,
             settings: RwLock::new(SettingsResponse {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
+            analytics_cache: ::server_utils::cache::HybridCache::new(redis_client),
         }
     }
 }
@@ -98,9 +100,7 @@ impl OrgService for MyOrgService {
         let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
-        let cache = ANALYTICS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-
-        if let Some(cached) = cache.get(&cache_key).await {
+        if let Some(cached) = self.analytics_cache.get(&cache_key).await {
             return Ok(Response::new(cached));
         }
 
@@ -172,13 +172,7 @@ impl OrgService for MyOrgService {
             is_allowed: status.is_allowed,
         };
 
-        let cache = ANALYTICS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-        let resp_clone = response.clone();
-
-        // Optimize cache set to run in background (Parallel Execution Optimization)
-        tokio::spawn(async move {
-            cache.set(&cache_key, resp_clone, std::time::Duration::from_secs(60)).await;
-        });
+        self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
     }
