@@ -6,6 +6,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
+import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -76,8 +77,18 @@ export default function Dashboard() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [userName, setUserName] = useState("Human");
 
   useEffect(() => {
+    try {
+      const storedName = localStorage.getItem("user_name");
+      if (storedName) {
+        setUserName(storedName);
+      }
+    } catch {
+      // ignore
+    }
+
     const updateOfflineStatus = () => {
       setIsOffline(!navigator.onLine);
       try {
@@ -175,6 +186,11 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
+      <div className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10">
+        <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
+        <p className="text-gray-600 dark:text-gray-400">Your AI assistants are working on your behalf.</p>
+      </div>
+
       <InteractiveWalkthrough
         steps={walkthroughSteps}
         isOpen={isWalkthroughOpen}
@@ -199,6 +215,8 @@ export default function Dashboard() {
       </div>
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+        <UnifiedAgentFeed />
+
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>

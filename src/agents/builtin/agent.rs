@@ -14,70 +14,7 @@ use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDe
 use crate::verification_loops::{ComputationalGuide, VisualVerifier};
 
 /// Default computational guide using bash commands
-struct BashComputationalGuide {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl ComputationalGuide for BashComputationalGuide {
-    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                        self.command, stdout, stderr
-                    ));
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute computational guide command '{}': {}", self.command, e)),
-        }
-    }
-}
-
 /// Default visual verifier using bash commands
-struct BashVisualVerifier {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl VisualVerifier for BashVisualVerifier {
-    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                        self.command, stdout, stderr
-                    ));
-                } else {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    if stdout.contains("REJECT") {
-                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
-                    }
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute visual verification command '{}': {}", self.command, e)),
-        }
-    }
-}
-
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
@@ -2504,10 +2441,10 @@ impl Agent {
 
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    verification_manager.add_computational(Arc::new(crate::verification_loops::BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    verification_manager.add_visual(Arc::new(crate::verification_loops::BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_llm_judge {
                     verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor {
@@ -2520,11 +2457,12 @@ impl Agent {
                     }));
                 }
 
-                if let Err(e) = verification_manager.run_computational_guides("", "").await {
+                let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                if let Err(e) = verification_manager.run_computational_guides(&last_assistant_content, &current_context).await {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_visual_verifiers("").await {
+                if let Err(e) = verification_manager.run_visual_verifiers(&last_assistant_content).await {
                     messages.push(Message::user(e));
                     continue;
                 }
