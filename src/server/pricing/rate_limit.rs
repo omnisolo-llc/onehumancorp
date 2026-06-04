@@ -4,6 +4,7 @@ use tokio::sync::OnceCell;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanTier {
     Free,
+    Entry,
     Starter,
     Pro,
     Business,
@@ -13,6 +14,7 @@ impl PlanTier {
     pub fn monthly_action_limit(&self) -> Option<u32> {
         let env_var = match self {
             PlanTier::Free => "OHC_FREE_TIER_ACTIONS",
+            PlanTier::Entry => "OHC_ENTRY_TIER_ACTIONS",
             PlanTier::Starter => "OHC_STARTER_TIER_ACTIONS",
             _ => "",
         };
@@ -24,6 +26,7 @@ impl PlanTier {
 
         match self {
             PlanTier::Free => Some(100),
+            PlanTier::Entry => Some(500),
             PlanTier::Starter => Some(1000),
             PlanTier::Pro | PlanTier::Business => None, // Unlimited
         }
@@ -32,6 +35,7 @@ impl PlanTier {
     pub fn agent_action_limit(&self) -> Option<u32> {
         match self {
             PlanTier::Free => Some(20),
+            PlanTier::Entry => Some(50),
             PlanTier::Starter => Some(200),
             PlanTier::Pro | PlanTier::Business => None,
         }
@@ -40,6 +44,7 @@ impl PlanTier {
     pub fn storage_limit_mb(&self) -> Option<u32> {
         let env_var = match self {
             PlanTier::Free => "OHC_FREE_TIER_STORAGE_MB",
+            PlanTier::Entry => "OHC_ENTRY_TIER_STORAGE_MB",
             PlanTier::Starter => "OHC_STARTER_TIER_STORAGE_MB",
             PlanTier::Pro => "OHC_PRO_TIER_STORAGE_MB",
             PlanTier::Business => "OHC_BUSINESS_TIER_STORAGE_MB",
@@ -52,6 +57,7 @@ impl PlanTier {
 
         match self {
             PlanTier::Free => Some(500),
+            PlanTier::Entry => Some(2000), // 2GB
             PlanTier::Starter => Some(5000), // 5GB
             PlanTier::Pro => Some(50000),    // 50GB
             PlanTier::Business => Some(512000),      // 500GB
@@ -61,6 +67,7 @@ impl PlanTier {
     pub fn max_agents(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(1),
+            PlanTier::Entry => Some(2),
             PlanTier::Starter => Some(3),
             PlanTier::Pro => Some(10),
             PlanTier::Business => None,
@@ -70,6 +77,7 @@ impl PlanTier {
     pub fn max_products(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(10),
+            PlanTier::Entry => Some(50),
             PlanTier::Starter => Some(100),
             PlanTier::Pro | PlanTier::Business => None,
         }
@@ -78,6 +86,7 @@ impl PlanTier {
     pub fn base_price(&self) -> f64 {
         match self {
             PlanTier::Free => 0.0,
+            PlanTier::Entry => 9.0,
             PlanTier::Starter => 29.0,
             PlanTier::Pro => 79.0,
             PlanTier::Business => 299.0,
@@ -87,6 +96,7 @@ impl PlanTier {
     pub fn get_prompt_cache_ttl(&self) -> std::time::Duration {
         match self {
             PlanTier::Free => std::time::Duration::from_secs(60 * 60), // 1 hour
+            PlanTier::Entry => std::time::Duration::from_secs(12 * 60 * 60), // 12 hours
             PlanTier::Starter => std::time::Duration::from_secs(24 * 60 * 60), // 24 hours
             PlanTier::Pro => std::time::Duration::from_secs(7 * 24 * 60 * 60), // 7 days
             PlanTier::Business => std::time::Duration::from_secs(30 * 24 * 60 * 60), // 30 days
@@ -155,6 +165,7 @@ impl RedisRateLimiter {
         let mut conn = self.get_connection().await?;
         let tier_str = match tier {
             PlanTier::Free => "Free",
+            PlanTier::Entry => "Entry",
             PlanTier::Starter => "Starter",
             PlanTier::Pro => "Pro",
             PlanTier::Business => "Business",
@@ -386,29 +397,35 @@ mod tests {
     #[test]
     fn test_plan_tier_limits() {
         assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
+        assert_eq!(PlanTier::Entry.monthly_action_limit(), Some(500));
         assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
         assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
         assert_eq!(PlanTier::Business.monthly_action_limit(), None);
 
         assert_eq!(PlanTier::Free.agent_action_limit(), Some(20));
+        assert_eq!(PlanTier::Entry.agent_action_limit(), Some(50));
         assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
 
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
+        assert_eq!(PlanTier::Entry.storage_limit_mb(), Some(2000));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
         assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 
         assert_eq!(PlanTier::Free.max_agents(), Some(1));
+        assert_eq!(PlanTier::Entry.max_agents(), Some(2));
         assert_eq!(PlanTier::Starter.max_agents(), Some(3));
         assert_eq!(PlanTier::Pro.max_agents(), Some(10));
         assert_eq!(PlanTier::Business.max_agents(), None);
 
         assert_eq!(PlanTier::Free.max_products(), Some(10));
+        assert_eq!(PlanTier::Entry.max_products(), Some(50));
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
 
         assert_eq!(PlanTier::Free.base_price(), 0.0);
+        assert_eq!(PlanTier::Entry.base_price(), 9.0);
         assert_eq!(PlanTier::Starter.base_price(), 29.0);
         assert_eq!(PlanTier::Pro.base_price(), 79.0);
         assert_eq!(PlanTier::Business.base_price(), 299.0);
@@ -418,7 +435,7 @@ mod tests {
     fn test_plan_tier_edge_cases() {
         // Create an "unknown" tier simulation if we were to parse from string
         // Though PlanTier is an enum, we just verify its methods hold true for all variants
-        let tiers = vec![PlanTier::Free, PlanTier::Starter, PlanTier::Pro, PlanTier::Business];
+        let tiers = vec![PlanTier::Free, PlanTier::Entry, PlanTier::Starter, PlanTier::Pro, PlanTier::Business];
         for tier in tiers {
             // Verify base_price is never negative
             assert!(tier.base_price() >= 0.0);

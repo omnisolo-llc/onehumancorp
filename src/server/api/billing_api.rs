@@ -67,6 +67,7 @@ pub async fn my_plan_handler(
 
     let plan_name = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => "Free",
+        ::server_pricing::rate_limit::PlanTier::Entry => "Entry",
         ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
         ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
         ::server_pricing::rate_limit::PlanTier::Business => "Business",
