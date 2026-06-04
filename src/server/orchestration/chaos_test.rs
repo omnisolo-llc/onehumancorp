@@ -645,12 +645,9 @@ mod chaos_tests {
                     break;
                 }
             }
-            tokio::time::sleep(Duration::from_millis(10)).await;
         }
 
         assert!(synced, "Eventual consistency should be reached even with SQL sync lag.");
         assert!(attempts > 1, "Reader should have attempted multiple times before sync resolved.");
-    }
-
     }
 }
