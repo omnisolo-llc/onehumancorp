@@ -99,6 +99,6 @@ Large
 46. OpenTelemetry Documentation (https://opentelemetry.io/docs/)
 47. Prometheus Documentation (https://prometheus.io/docs/introduction/overview/)
 48. Grafana Dashboards (https://grafana.com/docs/grafana/latest/dashboards/)
-49. Tauri Go Router (https://pub.dev/packages/go_router)
+49. Flutter Go Router (https://pub.dev/packages/go_router)
 50. Zustand State Management (https://github.com/pmndrs/zustand)
 51. Bazel Build System (https://bazel.build/)

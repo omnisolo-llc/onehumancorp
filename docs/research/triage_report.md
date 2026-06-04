@@ -15,7 +15,7 @@ The "Hybrid Agentic OS" backlog queue management mechanism (`SyncPendingMissions
 2. **Backlog Queuing Logic:** Updated the `SyncPendingMissions` query to implement a 5-minute cooldown for failed escalations: `AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))`.
 3. **Failing Gracefully:** Updated the error handling branch inside `syncToCloud` caller logic to accurately record `sync_error` context and update `last_synced_at` instead of endlessly discarding the context upon error.
 4. **Signal Hygiene:** Swept `src/server/orchestration/health.rs`, identifying highly frequent polling events disguised as debug logs (e.g., `"HEALTH MONITOR: Active probe (ping) failed"`). Downgraded these systematic noise vectors from `tracing::debug!` to `tracing::trace!` to un-obfuscate genuine reliability signals.
-5. **Validation:** Ensured complete unit test stability locally via `bazelisk test //...` and fully verified hybrid integrations via `bazelisk test //...` across the entire repository.
+5. **Validation:** Ensured complete unit test stability locally via `go test` and fully verified hybrid integrations via `bazelisk test //...` across the entire repository.
 
 <br />
 

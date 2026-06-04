@@ -3,7 +3,7 @@ use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer};
 use tonic::{Request, Response, Status, Streaming};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing::info;
+use tracing::{info, warn, error};
 use std::sync::Arc;
 use sqlx::PgPool;
 

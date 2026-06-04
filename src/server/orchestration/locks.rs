@@ -5,7 +5,6 @@ use std::collections::HashMap;
 #[async_trait::async_trait]
 pub trait DistributedLock: Send + Sync {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String>;
-    async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String>;
 }
 
 pub struct LockGuard {
@@ -24,7 +23,7 @@ impl Drop for LockGuard {
 }
 
 pub struct StandaloneLock {
-    pub locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
+    locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
 }
 
 impl StandaloneLock {
@@ -41,23 +40,6 @@ impl DistributedLock for StandaloneLock {
         let task_mutex = {
             let mut locks = self.locks.lock().await;
             locks.entry(task_id.to_string())
-                .or_insert_with(|| Arc::new(Mutex::new(())))
-                .clone()
-        };
-
-        let guard = task_mutex.lock_owned().await;
-        Ok(LockGuard {
-            _local_guard: Some(guard),
-            redis_client: None,
-            redis_key: None,
-        })
-    }
-
-    async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String> {
-        let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
-        let task_mutex = {
-            let mut locks = self.locks.lock().await;
-            locks.entry(key.clone())
                 .or_insert_with(|| Arc::new(Mutex::new(())))
                 .clone()
         };
@@ -89,34 +71,6 @@ impl DistributedLock for RedisLock {
             self.client.get_multiplexed_async_connection().await
         }).await.map_err(|e| e.to_string())?.clone();
         let key = format!("ohc:lock:task:{}", task_id);
-
-        let acquired: bool = redis::cmd("SET")
-            .arg(&key)
-            .arg("1")
-            .arg("NX")
-            .arg("EX")
-            .arg(5)
-            .query_async(&mut conn)
-            .await
-            .unwrap_or(false);
-
-        if !acquired {
-            return Err("failed to acquire redis lock".to_string());
-        }
-
-        Ok(LockGuard {
-            _local_guard: None,
-            redis_client: Some(self.client.clone()),
-            redis_key: Some(key),
-        })
-    }
-
-    async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String> {
-        let mut conn = self.multiplexed_conn.get_or_try_init(|| async {
-            self.client.get_multiplexed_async_connection().await
-        }).await.map_err(|e| e.to_string())?.clone();
-
-        let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
 
         let acquired: bool = redis::cmd("SET")
             .arg(&key)

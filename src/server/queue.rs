@@ -18,12 +18,12 @@ pub struct Job {
     pub id: String,
     pub tenant_id: String,
     pub parent_task_id: String,
-    pub job_type: String,
+    pub agent_role: String,
     pub payload: String,
     pub status: String,
-    pub retry_count: i32,
-    pub max_retries: i32,
-    pub next_retry_at: DateTime<Utc>,
+    pub attempts: i32,
+    pub max_attempts: i32,
+    pub run_after: DateTime<Utc>,
     pub locked_until: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -58,7 +58,7 @@ impl TaskQueue for MemoryTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         let mut role_map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
         for job in jobs {
-            let role = job.job_type.clone();
+            let role = job.agent_role.clone();
             let id = job.id.clone();
             self.jobs.insert(id.clone(), job);
             role_map.entry(role).or_default().push(id);
@@ -75,7 +75,7 @@ impl TaskQueue for MemoryTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let role = job.job_type.clone();
+        let role = job.agent_role.clone();
         let id = job.id.clone();
         self.jobs.insert(id.clone(), job);
 
@@ -93,7 +93,7 @@ impl TaskQueue for MemoryTaskQueue {
                 // Pop until we find a valid pending job, or queue is empty
                 while let Some(job_id) = q.pop_front() {
                     if let Some(mut job_ref) = self.jobs.get_mut(&job_id) {
-                        if job_ref.status == "QUEUED" {
+                        if job_ref.status == "PENDING" {
                             job_ref.status = "IN_PROGRESS".to_string();
                             job_ref.updated_at = Utc::now();
                             return Ok(Some(job_ref.clone()));
@@ -133,7 +133,7 @@ impl TaskQueue for MemoryTaskQueue {
     }
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
-        let role = job.job_type.clone();
+        let role = job.agent_role.clone();
         let id = job.id.clone();
         self.jobs.insert(id.clone(), job);
 
@@ -158,8 +158,8 @@ impl PostgresTaskQueue {
 impl TaskQueue for PostgresTaskQueue {
     async fn requeue(&self, job: Job) -> Result<(), String> {
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-        payload_map["attempts"] = serde_json::json!(job.retry_count);
-        payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -168,7 +168,7 @@ impl TaskQueue for PostgresTaskQueue {
             .bind(&job.id)
             .bind(&job.tenant_id)
             .bind(new_payload)
-            .bind(job.next_retry_at)
+            .bind(job.run_after)
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -195,7 +195,7 @@ impl TaskQueue for PostgresTaskQueue {
         }
 
         let org_ids_vec: Vec<String> = org_ids.into_iter().collect();
-        let counts: Vec<(String, i64)> = sqlx::query_as("SELECT tenant_id, COUNT(*) FROM sub_agent_queue WHERE tenant_id = ANY($1) AND status = 'QUEUED' GROUP BY tenant_id")
+        let counts: Vec<(String, i64)> = sqlx::query_as("SELECT tenant_id, COUNT(*) FROM sub_agent_queue WHERE tenant_id = ANY($1) AND status = 'PENDING' GROUP BY tenant_id")
             .bind(&org_ids_vec)
             .fetch_all(&mut *tx)
             .await
@@ -209,11 +209,11 @@ impl TaskQueue for PostgresTaskQueue {
 
         let mut prepared_jobs = Vec::new();
         for job in &jobs {
-            let mut run_after = job.next_retry_at;
+            let mut run_after = job.run_after;
             let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-            payload_map["agent_role"] = serde_json::Value::String(job.job_type.clone());
-            payload_map["attempts"] = serde_json::json!(job.retry_count);
-            payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+            payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
+            payload_map["attempts"] = serde_json::json!(job.attempts);
+            payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
             let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
             let org_id = if job.tenant_id.is_empty() {
                 payload_map["tenant_id"].as_str().unwrap_or("").to_string()
@@ -244,7 +244,7 @@ impl TaskQueue for PostgresTaskQueue {
              .push_bind(org_id)
              .push_bind(parent_task_id)
              .push_bind(new_payload)
-             .push_bind("QUEUED")
+             .push_bind("PENDING")
              .push_bind(run_after);
         });
 
@@ -255,12 +255,12 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let mut run_after = job.next_retry_at;
+        let mut run_after = job.run_after;
         
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-        payload_map["agent_role"] = serde_json::Value::String(job.job_type.clone());
-        payload_map["attempts"] = serde_json::json!(job.retry_count);
-        payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+        payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
         
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
         
@@ -273,7 +273,7 @@ impl TaskQueue for PostgresTaskQueue {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
 
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'QUEUED'")
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'PENDING'")
             .bind(&org_id)
             .fetch_one(&mut *tx)
             .await
@@ -291,7 +291,7 @@ impl TaskQueue for PostgresTaskQueue {
             .bind(org_id)
             .bind(job.parent_task_id)
             .bind(new_payload)
-            .bind("QUEUED")
+            .bind("PENDING")
             .bind(run_after)
             .execute(&mut *tx)
             .await
@@ -304,7 +304,7 @@ impl TaskQueue for PostgresTaskQueue {
         if roles.is_empty() { return Ok(None); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await
@@ -323,12 +323,12 @@ impl TaskQueue for PostgresTaskQueue {
                 id,
                 tenant_id: tenant_id,
                 parent_task_id,
-                job_type: String::new(),
+                agent_role: String::new(),
                 payload: payload.clone(),
                 status,
-                retry_count: 0,
-                max_retries: 3,
-                next_retry_at: scheduled_at,
+                attempts: 0,
+                max_attempts: 3,
+                run_after: scheduled_at,
                 locked_until: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -336,16 +336,16 @@ impl TaskQueue for PostgresTaskQueue {
             
             let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
             if let Some(role) = payload_map["agent_role"].as_str() {
-                j.job_type = role.to_string();
+                j.agent_role = role.to_string();
             }
             if let Some(attempts) = payload_map["attempts"].as_i64() {
-                j.retry_count = attempts as i32;
+                j.attempts = attempts as i32;
             }
             if let Some(max_attempts) = payload_map["max_attempts"].as_i64() {
-                j.max_retries = max_attempts as i32;
+                j.max_attempts = max_attempts as i32;
             }
             
-            j.retry_count += 1;
+            j.attempts += 1;
             
             Ok(Some(j))
         } else {
@@ -417,11 +417,11 @@ impl Worker {
                                 }
                                 Err(e) => {
                                     tracing::trace!("Worker failed to process job: {}, error: {}", job.id, e);
-                                    if job.retry_count < job.max_retries {
+                                    if job.attempts < job.max_attempts {
                                         let mut retry_job = job.clone();
-                                        retry_job.retry_count += 1;
-                                        retry_job.status = "QUEUED".to_string();
-                                        retry_job.next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(5);
+                                        retry_job.attempts += 1;
+                                        retry_job.status = "PENDING".to_string();
+                                        retry_job.run_after = chrono::Utc::now() + chrono::Duration::seconds(5);
                                         let _ = self.queue.requeue(retry_job).await;
                                     } else {
                                         let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
@@ -814,7 +814,7 @@ impl TaskQueueService {
             .bind(task.parent_id)
             .bind(task.epic_id)
             .bind(task.title)
-            .bind("QUEUED")
+            .bind("PENDING")
             .bind(task.assigned_agent)
             .bind(payload_str)
             .bind(task.tenant_id)
@@ -831,7 +831,7 @@ impl TaskQueueService {
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'QUEUED' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
             .bind(agent_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -944,7 +944,7 @@ impl SqliteTaskQueue {
                 task_id TEXT NOT NULL,
                 role TEXT NOT NULL,
                 payload BLOB,
-                status TEXT DEFAULT 'QUEUED'
+                status TEXT DEFAULT 'PENDING'
             );"
         ).execute(&self.pool).await?;
         Ok(())
@@ -960,7 +960,7 @@ impl TaskQueue for SqliteTaskQueue {
             b.push_bind(job.id)
              .push_bind(job.tenant_id)
              .push_bind(job.parent_task_id)
-             .push_bind(job.job_type)
+             .push_bind(job.agent_role)
              .push_bind(job.payload.into_bytes());
         });
         builder.build().execute(&self.pool).await.map_err(|e| e.to_string())?;
@@ -974,7 +974,7 @@ impl TaskQueue for SqliteTaskQueue {
             .bind(job.id)
             .bind(job.tenant_id)
             .bind(job.parent_task_id)
-            .bind(job.job_type)
+            .bind(job.agent_role)
             .bind(job.payload.as_bytes())
             .execute(&self.pool)
             .await
@@ -989,7 +989,7 @@ impl TaskQueue for SqliteTaskQueue {
         // To avoid SQLITE_BUSY lock-upgrade errors when claiming tasks in SQLite, execute an atomic UPDATE ... RETURNING query
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'QUEUED' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
+            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'PENDING' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
             role_placeholders
         );
 
@@ -1012,12 +1012,12 @@ impl TaskQueue for SqliteTaskQueue {
                 id,
                 tenant_id,
                 parent_task_id: task_id,
-                job_type: role,
+                agent_role: role,
                 payload: String::from_utf8(payload).unwrap_or_default(),
                 status: "RUNNING".to_string(),
-                retry_count: 1,
-                max_retries: 3,
-                next_retry_at: Utc::now(),
+                attempts: 1,
+                max_attempts: 3,
+                run_after: Utc::now(),
                 locked_until: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
@@ -1049,11 +1049,11 @@ impl TaskQueue for SqliteTaskQueue {
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
-        payload_map["attempts"] = serde_json::json!(job.retry_count);
-        payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+        payload_map["attempts"] = serde_json::json!(job.attempts);
+        payload_map["max_attempts"] = serde_json::json!(job.max_attempts);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
-        sqlx::query("UPDATE local_queue_jobs SET status = 'QUEUED', payload = ? WHERE id = ? AND tenant_id = ?")
+        sqlx::query("UPDATE local_queue_jobs SET status = 'PENDING', payload = ? WHERE id = ? AND tenant_id = ?")
             .bind(new_payload)
             .bind(&job.id)
             .bind(&job.tenant_id)
@@ -1099,12 +1099,12 @@ impl TaskQueue for RedisTaskQueue {
                 id: job.id,
                 tenant_id: job.tenant_id,
                 parent_task_id: job.parent_task_id,
-                agent_role: job.job_type,
+                agent_role: job.agent_role,
                 payload: job.payload,
                 status: job.status,
-                attempts: job.retry_count,
-                max_attempts: job.max_retries,
-                run_after_ms: job.next_retry_at.timestamp_millis(),
+                attempts: job.attempts,
+                max_attempts: job.max_attempts,
+                run_after_ms: job.run_after.timestamp_millis(),
                 locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
                 created_at_ms: job.created_at.timestamp_millis(),
                 updated_at_ms: job.updated_at.timestamp_millis(),
@@ -1122,12 +1122,12 @@ impl TaskQueue for RedisTaskQueue {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
-            agent_role: job.job_type,
+            agent_role: job.agent_role,
             payload: job.payload,
             status: job.status,
-            attempts: job.retry_count,
-            max_attempts: job.max_retries,
-            run_after_ms: job.next_retry_at.timestamp_millis(),
+            attempts: job.attempts,
+            max_attempts: job.max_attempts,
+            run_after_ms: job.run_after.timestamp_millis(),
             locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
             created_at_ms: job.created_at.timestamp_millis(),
             updated_at_ms: job.updated_at.timestamp_millis(),
@@ -1161,17 +1161,17 @@ impl TaskQueue for RedisTaskQueue {
                     id: queue_job.id.clone(),
                     tenant_id: queue_job.tenant_id,
                     parent_task_id: queue_job.parent_task_id,
-                    job_type: queue_job.agent_role.clone(),
+                    agent_role: queue_job.agent_role.clone(),
                     payload: queue_job.payload,
                     status: queue_job.status,
-                    retry_count: queue_job.attempts,
-                    max_retries: queue_job.max_attempts,
-                    next_retry_at: chrono::DateTime::from_timestamp_millis(queue_job.run_after_ms).unwrap_or_else(chrono::Utc::now),
+                    attempts: queue_job.attempts,
+                    max_attempts: queue_job.max_attempts,
+                    run_after: chrono::DateTime::from_timestamp_millis(queue_job.run_after_ms).unwrap_or_else(chrono::Utc::now),
                     locked_until: if queue_job.locked_until_ms > 0 { Some(chrono::DateTime::from_timestamp_millis(queue_job.locked_until_ms).unwrap_or_else(chrono::Utc::now)) } else { None },
                     created_at: chrono::DateTime::from_timestamp_millis(queue_job.created_at_ms).unwrap_or_else(chrono::Utc::now),
                     updated_at: chrono::DateTime::from_timestamp_millis(queue_job.updated_at_ms).unwrap_or_else(chrono::Utc::now),
                 };
-                if roles.contains(&job.job_type) {
+                if roles.contains(&job.agent_role) {
                     let _: () = redis::cmd("HSET").arg(format!("{}_processing", self.queue_name)).arg(&job.id).arg(&payload_bytes).query_async(&mut conn).await.map_err(|e| e.to_string())?;
                     return Ok(Some(job));
                 } else {
@@ -1220,12 +1220,12 @@ impl TaskQueue for RedisTaskQueue {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
-            agent_role: job.job_type,
+            agent_role: job.agent_role,
             payload: job.payload,
             status: job.status,
-            attempts: job.retry_count,
-            max_attempts: job.max_retries,
-            run_after_ms: job.next_retry_at.timestamp_millis(),
+            attempts: job.attempts,
+            max_attempts: job.max_attempts,
+            run_after_ms: job.run_after.timestamp_millis(),
             locked_until_ms: job.locked_until.map(|dt| dt.timestamp_millis()).unwrap_or(0),
             created_at_ms: job.created_at.timestamp_millis(),
             updated_at_ms: job.updated_at.timestamp_millis(),
@@ -1304,7 +1304,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Test Task".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({"action": "test"}),
                 dependencies: serde_json::json!([]),
@@ -1436,7 +1436,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Test Task to Fail".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({"action": "test_fail"}),
                 dependencies: serde_json::json!([]),
@@ -1491,7 +1491,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Parent Task".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({}),
                 dependencies: serde_json::json!([]),
@@ -1508,7 +1508,7 @@ mod tests {
                 parent_id: None,
                 epic_id: None,
                 title: "Child Task".to_string(),
-                status: "QUEUED".to_string(),
+                status: "PENDING".to_string(),
                 assigned_agent: None,
                 payload: serde_json::json!({}),
                 dependencies: serde_json::json!([task_id_parent]),

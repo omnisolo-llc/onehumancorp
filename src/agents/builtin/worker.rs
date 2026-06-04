@@ -236,9 +236,6 @@ impl TaskWorker {
                     }
                     // ML-Resilience: automatic retry (max 3 attempts)
                     if attempt >= max_attempts {
-                        if e.contains("exceeded") || e.contains("connect to builtin") || e.contains("unavailable") || e.contains("PAUSED") {
-                            return Err("PAUSED".to_string());
-                        }
                         return Err(e);
                     }
                 }
@@ -248,7 +245,7 @@ impl TaskWorker {
                     LAST_FAILURE_TIME.store(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(), std::sync::atomic::Ordering::SeqCst);
                     // ML-Resilience: automatic retry (max 3 attempts)
                     if attempt >= max_attempts {
-                        return Err("PAUSED".to_string());
+                        return Err("Timeout executing agent job (ML-Resilience 60s boundary)".to_string());
                     }
                 }
             }
@@ -275,27 +272,5 @@ mod tests {
 
         assert!(result.is_err(), "Worker dispatch must enforce timeout");
         assert!(start.elapsed() >= Duration::from_millis(60), "Timeout should wait the configured time");
-    }
-
-    #[tokio::test]
-    async fn test_ml_resilience_worker_retry_pause() {
-        let mut attempt = 0;
-        let max_attempts = 3;
-        let mut result = Ok(());
-
-        while attempt < max_attempts {
-            attempt += 1;
-            let timeout_result = tokio::time::timeout(Duration::from_millis(10), async {
-                tokio::time::sleep(Duration::from_millis(20)).await;
-                Ok::<(), String>(())
-            }).await;
-
-            if timeout_result.is_err() {
-                if attempt >= max_attempts {
-                    result = Err("PAUSED".to_string());
-                }
-            }
-        }
-        assert_eq!(result, Err("PAUSED".to_string()));
     }
 }

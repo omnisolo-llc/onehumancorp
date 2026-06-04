@@ -92,7 +92,7 @@ This report details the evaluation of 7 integration tools across requested categ
 - Twilio is the industry standard for SMS and WhatsApp messaging globally.
 - Reliable delivery, deep global coverage.
 - Supports WhatsApp, which is critical for markets outside the US.
-- Simple API, integrates well with Rust backend.
+- Simple API, integrates well with Go backend.
 - Costs per message, can be passed to the tenant or subsidized in premium tiers.
 **Design Doc**:
 - Users can enable "SMS Notifications" in the "Operations" settings.

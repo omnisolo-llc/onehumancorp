@@ -12,6 +12,8 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
+
+
     messages: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::ChatMessage>>>,
     instances: RwLock<std::collections::HashMap<String, ::server_ohc::orchestration::IntegrationInstance>>,
     pull_requests: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::PullRequest>>>,
@@ -33,8 +35,27 @@ pub struct IntegrationsRegistry {
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
-    doordash_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::doordash::provider::DoorDashProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+
+
+
+
+
+
+    #[allow(dead_code)]
+    buffer_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::buffer::provider::BufferProvider>>>,
+    #[allow(dead_code)]
+    convertkit_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::convertkit::provider::ConvertKitProvider>>>,
+    #[allow(dead_code)]
+    messagebird_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::messagebird::provider::MessageBirdProvider>>>,
+    #[allow(dead_code)]
+    nylas_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nylas::provider::NylasProvider>>>,
+    #[allow(dead_code)]
+    acuity_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::acuity::provider::AcuityProvider>>>,
+    #[allow(dead_code)]
+    shipengine_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shipengine::provider::ShipengineProvider>>>,
+    #[allow(dead_code)]
+    teams_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::teams::provider::TeamsProvider>>>,
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
 }
@@ -75,8 +96,20 @@ impl IntegrationsRegistry {
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            doordash_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+
+
+
+
+
+
+            buffer_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            convertkit_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            messagebird_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            nylas_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            acuity_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            shipengine_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            teams_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
@@ -267,10 +300,6 @@ impl IntegrationsRegistry {
             let mut clients = self.listmonk_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(creds.api_token.clone())));
         }
-        if integration_id == "doordash" {
-            let mut clients = self.doordash_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::doordash::provider::DoorDashProvider::new(creds.api_token.clone())));
-        }
         if integration_id == "easypost" {
             let mut clients = self.easypost_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
@@ -433,36 +462,6 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client_zoom {
             return c.generate_meeting_for_booking(booking_id, topic).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn get_delivery_quote(&self, integration_id: &str, pickup_address: &str, dropoff_address: &str) -> Result<crate::integrations::doordash::client::DeliveryQuote, String> {
-        let client = {
-            if integration_id == "doordash" {
-                let clients = self.doordash_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.get_delivery_quote(pickup_address, dropoff_address).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn dispatch_delivery(&self, integration_id: &str, pickup_address: &str, dropoff_address: &str, order_id: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "doordash" {
-                let clients = self.doordash_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.dispatch_delivery(pickup_address, dropoff_address, order_id).await;
         }
         Err("integration not found or not supported".to_string())
     }

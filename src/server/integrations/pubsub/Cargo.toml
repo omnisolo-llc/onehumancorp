@@ -1,7 +1,0 @@
-[package]
-name = "server_integrations_pubsub"
-version = "0.1.0"
-edition = "2024"
-
-[lib]
-path = "mod.rs"

@@ -1,7 +1,6 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
-exports_files(
-    [
+exports_files([
         "catalog.rs",
         "chat.rs",
         "chatwoot.rs",
@@ -13,14 +12,71 @@ exports_files(
         "mod.rs",
         "obsidian.rs",
         "registry.rs",
+        "buffer/client.rs",
+        "buffer/mod.rs",
+        "buffer/provider.rs",
+        "convertkit/client.rs",
+        "convertkit/mod.rs",
+        "convertkit/provider.rs",
+        "messagebird/client.rs",
+        "messagebird/mod.rs",
+        "messagebird/provider.rs",
+        "nylas/client.rs",
+        "nylas/mod.rs",
+        "nylas/provider.rs",
+        "acuity/client.rs",
+        "acuity/mod.rs",
+        "acuity/provider.rs",
+        "shipengine/client.rs",
+        "shipengine/mod.rs",
+        "shipengine/provider.rs",
+        "teams/client.rs",
+        "teams/mod.rs",
+        "teams/provider.rs",
     ],
     visibility = ["//visibility:public"],
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 rust_library(
     name = "server_integrations",
     srcs = [
         "bazel_lib.rs",
+        "buffer/client.rs",
+        "buffer/mod.rs",
+        "buffer/provider.rs",
+        "convertkit/client.rs",
+        "convertkit/mod.rs",
+        "convertkit/provider.rs",
+        "messagebird/client.rs",
+        "messagebird/mod.rs",
+        "messagebird/provider.rs",
+        "nylas/client.rs",
+        "nylas/mod.rs",
+        "nylas/provider.rs",
+        "acuity/client.rs",
+        "acuity/mod.rs",
+        "acuity/provider.rs",
+        "shipengine/client.rs",
+        "shipengine/mod.rs",
+        "shipengine/provider.rs",
+        "teams/client.rs",
+        "teams/mod.rs",
+        "teams/provider.rs",
+
         "catalog.rs",
         "chat.rs",
         "chatwoot.rs",
@@ -33,6 +89,7 @@ rust_library(
         "obsidian.rs",
         "registry.rs",
         "//src/server/integrations/alipay:client.rs",
+
         "//src/server/integrations/alipay:mod.rs",
         "//src/server/integrations/alipay:provider.rs",
         "//src/server/integrations/google_calendar:client.rs",
@@ -58,6 +115,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server:server_lib",
+
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",
@@ -81,7 +139,6 @@ rust_library(
         "//src/server/integrations/calendly:server_integrations_calendly",
         "//src/server/integrations/chromadb:server_integrations_chromadb",
         "//src/server/integrations/core:server_integrations_core",
-        "//src/server/integrations/doordash:server_integrations_doordash",
         "//src/server/integrations/easypost:server_integrations_easypost",
         "//src/server/integrations/jitsi:server_integrations_jitsi",
         "//src/server/integrations/listmonk:server_integrations_listmonk",

@@ -1,18 +1,19 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
     pub id: String,
     pub tenant_id: String,
     pub parent_task_id: String,
-    pub job_type: String,
+    pub agent_role: String,
     pub payload: String,
     pub status: String,
-    pub retry_count: i32,
-    pub max_retries: i32,
-    pub next_retry_at: DateTime<Utc>,
+    pub attempts: i32,
+    pub max_attempts: i32,
+    pub run_after: DateTime<Utc>,
     pub locked_until: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

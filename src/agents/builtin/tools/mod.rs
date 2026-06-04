@@ -42,7 +42,6 @@ pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
 pub mod workflow;
-pub mod checkout;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -97,7 +96,6 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
-    native_env: Option<Arc<RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     todos: SharedTodos,
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
@@ -108,7 +106,6 @@ pub fn all_tools(
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
     let mut tools = vec![
-        aider_repo_map::aider_repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
@@ -127,7 +124,6 @@ pub fn all_tools(
         sendmessage::sendmessage_tool(mailbox.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),
-        toolsearch::toolsearch_tool(),
         task::task_create_tool(task_store.clone()),
         task::task_get_tool(task_store.clone()),
         task::task_list_tool(task_store.clone()),
@@ -149,19 +145,14 @@ pub fn all_tools(
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
-        checkout::conversational_checkout_tool(),
     ];
-
-    if let Some(env) = native_env {
-        tools.push(native_state::native_memory_stash_tool(env));
-    }
 
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
         tools.push(anthropic_memory::transcript_search_tool(accessor));
     }
 
+    let tools_clone = tools.clone();
+    tools.push(toolsearch::toolsearch_tool(tools_clone));
     tools
 }
-pub mod aider_repo_map;
-pub mod native_state;

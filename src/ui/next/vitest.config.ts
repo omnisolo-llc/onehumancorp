@@ -4,29 +4,16 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
-    globals: true,
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-      '**/e2e/**',
-      '**/verification_tests/**',
-      '**/external/**',
-      '**/.next/**',
-      '**/coverage/**',
-      '**/api/**', // API routes require Next.js specific testing utilities or E2E tests
-    ],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-    },
-  },
   resolve: {
-    preserveSymlinks: true,
     alias: {
+      'next/server': path.resolve(__dirname, 'node_modules/next/dist/server/web/exports/index.js'),
       '@': path.resolve(__dirname, './src'),
     },
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
+    exclude: ['**/node_modules/**', '**/e2e/**', '**/*.spec.ts'],
+  }
 })

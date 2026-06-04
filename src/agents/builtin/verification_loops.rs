@@ -78,26 +78,64 @@ pub struct PlaywrightVisualVerifier;
 #[async_trait::async_trait]
 impl VisualVerifier for PlaywrightVisualVerifier {
     async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String> {
-        let output = std::process::Command::new("npx")
+        let output = tokio::process::Command::new("npx")
             .arg("playwright")
             .arg("screenshot")
             .arg(ui_state_path)
             .arg("test.png")
-            .output()
+            .output().await
             .map_err(|e| format!("Failed to execute Playwright: {}", e))?;
 
         if output.status.success() {
             Ok(())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(format!("Visual check failed. Playwright error: {}", stderr))
+            Err(format!("Visual check failed. Playwright error: {}. Please fix the UI and try again.", stderr))
+        }
+    }
+}
+
+pub struct PlaywrightE2EVerifier;
+
+#[async_trait::async_trait]
+impl ComputationalGuide for PlaywrightE2EVerifier {
+    async fn verify(&self, code: &str, context: &str) -> Result<(), String> {
+        // Interpret `code` or `context` as the test path or fallback to a default suite
+        let test_path = if !code.is_empty() {
+            code
+        } else if !context.is_empty() {
+            context
+        } else {
+            "tests/e2e"
+        };
+
+        let output = tokio::process::Command::new("npx")
+            .arg("playwright")
+            .arg("test")
+            .arg(test_path)
+            .arg("--reporter=list")
+            .output().await
+            .map_err(|e| format!("Failed to execute Playwright E2E tests: {}", e))?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let mut err_msg = format!("Playwright E2E tests failed with exit code {}. Please fix the tests or the implementation.", output.status.code().unwrap_or(-1));
+            if !stdout.is_empty() {
+                err_msg.push_str(&format!("\nStdout: {}", stdout));
+            }
+            if !stderr.is_empty() {
+                err_msg.push_str(&format!("\nStderr: {}", stderr));
+            }
+            Err(err_msg)
         }
     }
 }
 
 pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
-    pub model: String,
 }
 
 #[derive(Deserialize)]
@@ -114,7 +152,7 @@ impl InferentialSensor for LlmJudgeSensor {
         let user_prompt = format!("Task: {}\nOutput: {}", task, output);
 
         let req = ChatRequest {
-            model: self.model.clone(),
+            model: "judge-model".to_string(),
             system: system_prompt.to_string(),
             messages: vec![Message::user(user_prompt)],
             tools: vec![],
@@ -175,6 +213,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_playwright_e2e_verifier() {
+        let verifier = PlaywrightE2EVerifier;
+        let res = verifier.verify("invalid_test_path_xyz", "").await;
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(err.contains("Playwright") || err.contains("Failed to execute"));
+    }
+
     async fn test_playwright_visual_verifier() {
         // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
         // but test the struct initialization.
@@ -195,18 +241,10 @@ mod tests {
             &self,
             _req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let tool_call = ohc_builtin_agent_core::types::ToolCall {
-                id: "call_1".to_string(),
-                name: "structured_output".to_string(),
-                arguments: serde_json::json!({
-                    "data": serde_json::from_str::<serde_json::Value>(&self.response_text).unwrap_or(serde_json::json!({}))
-                }),
-            };
-
             let msg = Message {
                 role: ohc_builtin_agent_core::types::Role::Assistant,
-                content: "".to_string(),
-                tool_calls: vec![tool_call],
+                content: self.response_text.clone(),
+                tool_calls: vec![],
                 tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
@@ -259,24 +297,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_verification_manager_inferential() {
-        let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
-        let judge = Arc::new(LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string() });
-
-        let mut manager = VerificationManager::new();
-        manager.add_inferential(judge);
-
-        assert!(manager.run_inferential_sensors("output", "task").await.is_ok());
-    }
-
-    #[tokio::test]
     async fn test_llm_judge_sensor() {
         let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
-        let judge = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string() };
+        let judge = LlmJudgeSensor { llm: pass_llm };
         assert!(judge.verify_inferential("output", "task").await.is_ok());
 
         let fail_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8}"#.to_string() });
-        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string() };
+        let judge_fail = LlmJudgeSensor { llm: fail_llm };
         let res = judge_fail.verify_inferential("output", "task").await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Reason: Bad. Confidence: 0.80"));

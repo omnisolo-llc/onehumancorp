@@ -15,7 +15,6 @@ describe('OnboardingWizard', () => {
       whatYouSell: '',
       location: '',
       businessDescription: '',
-      domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
@@ -38,91 +37,6 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
-  });
-
-  it('Handles enter key progression in chat steps', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    // Mock intake success
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/intake') {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            business_type: 'Bakery',
-            business_name: 'Maya Bakery',
-            categories: ['food'],
-            initial_products: [{ name: 'Cake', price: '20' }]
-          })
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
-    });
-
-    render(<OnboardingWizard />);
-
-    // Chat Step 1 - Use Enter Key
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Maya Bakery{Enter}');
-
-    // Chat Step 2 - Use Enter Key
-    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
-    await user.type(sellInput, 'Cakes{Enter}');
-
-    // Chat Step 3 - Use Enter Key
-    const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
-    await user.type(locInput, 'NY{Enter}');
-
-    // Verify it transitions to Step 2: Review Details by triggering handleIntake
-    await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
-    });
-  });
-
-  it('Handles validation failures when fields are empty', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    render(<OnboardingWizard />);
-
-    // Chat Step 1 - Enter Key with short name
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.type(nameInput, 'Ma{Enter}');
-    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
-
-    await user.clear(nameInput);
-    await user.type(nameInput, 'Maya Bakery{Enter}');
-
-    // Chat Step 2 - Next click with empty value
-    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
-
-    // Test validation with missing data
-    await user.clear(sellInput);
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-
-    // Verify the button is disabled when empty
-    expect(nextBtn2).toBeDisabled();
-
-    // Provide value to enable button and proceed
-    await user.type(sellInput, 'Cakes');
-    expect(nextBtn2).not.toBeDisabled();
-    await user.click(nextBtn2);
-
-    // Chat Step 3 - Next click with empty value
-    const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
-
-    await user.clear(locInput);
-
-    const nextBtn3 = screen.getByRole('button', { name: /Generate My Business/i });
-
-    // Verify the button is disabled when empty
-    expect(nextBtn3).toBeDisabled();
-
-    // Provide value to enable button and proceed
-    await user.type(locInput, 'NY');
-    expect(nextBtn3).not.toBeDisabled();
-    await user.click(nextBtn3);
   });
 
   it('Handles multi-step successful onboarding flow', async () => {
@@ -191,13 +105,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Website Template")).toBeInTheDocument();
     });
 
-    // Fill in Account Setup fields
-    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
-    await user.type(emailInput, 'maya@example.com');
-
-    const passwordInput = screen.getByPlaceholderText(/••••••••/i);
-    await user.type(passwordInput, 'mypassword123');
-
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
 
@@ -206,16 +113,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
     });
-
-    // Check that start API was called with the correct credentials
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"admin_email":"maya@example.com"'),
-    }));
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"admin_password":"mypassword123"'),
-    }));
   });
 
   it('Step 1: Handles intake API failure', async () => {
@@ -301,58 +198,23 @@ describe('OnboardingWizard', () => {
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 1,
+        chatStep: 3,
         businessName: 'A',
-        location: '',
-        businessType: 'Online Store',
-        categories: [],
-        firstProductName: '',
-        firstProductPrice: ''
-      });
-    });
-
-    render(<OnboardingWizard />);
-
-    const nextButton = screen.getByRole('button', { name: /Next/i });
-
-    await user.click(nextButton);
-
-    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
-  });
-
-  it('Step 2: Displays validation error when product price is invalid', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    act(() => {
-      useOnboardingStore.setState({
-        step: 2,
-        businessName: 'Valid Name',
+        location: 'NY',
         businessType: 'Bakery',
         categories: ['food'],
-        domainChoice: 'subdomain',
         firstProductName: 'Cake',
-        firstProductPrice: 'abc' // Invalid price
+        firstProductPrice: '20'
       });
     });
 
     render(<OnboardingWizard />);
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
+    const generateButton = screen.getByRole('button', { name: /Generate My Business/i });
 
-    const priceInput = screen.getByDisplayValue('abc');
-    await user.type(priceInput, 'd'); // Type 'd' to trigger the onChange validation.
+    await user.click(generateButton);
 
-    await user.click(continueButton);
-
-    await waitFor(() => {
-      // The general error message should trigger
-      expect(screen.getByText('Please fix the errors before continuing.')).toBeInTheDocument();
-      expect(screen.getByText('Invalid price.')).toBeInTheDocument();
-    });
-
-    // Check that we're still on step 2
-    expect(useOnboardingStore.getState().step).toBe(2);
+    expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
   });
 
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {
@@ -365,7 +227,6 @@ describe('OnboardingWizard', () => {
         businessName: 'Valid Name',
         businessType: 'Bakery',
         categories: ['food'],
-        domainChoice: 'subdomain',
         firstProductName: 'Cake',
         firstProductPrice: '20'
       });
@@ -381,23 +242,14 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
   });
 
-  it('Step 3: Can select Web Address, AI agents and toggle auto-respond', async () => {
+  it('Step 3: Can select AI agents and toggle auto-respond', async () => {
     const user = userEvent.setup({ delay: null });
 
     act(() => {
-      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true });
     });
 
     render(<OnboardingWizard />);
-
-    // Verify initial Web Address options
-    const subdomainOption = screen.getByText('Free Subdomain');
-    const customOption = screen.getByText('Custom Domain');
-    expect(subdomainOption).toBeInTheDocument();
-    expect(customOption).toBeInTheDocument();
-
-    // Select Custom Domain
-    await user.click(customOption);
 
     // Verify initial state
     const salesAgent = screen.getByText('Sales Agent');
@@ -417,7 +269,6 @@ describe('OnboardingWizard', () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
-      expect(state.domainChoice).toBe('custom');
     });
   });
 

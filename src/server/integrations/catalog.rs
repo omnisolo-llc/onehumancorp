@@ -75,17 +75,37 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
     catalog.push(listmonk_provider.to_integration_provider());
 
-    let doordash_provider = crate::integrations::doordash::provider::DoorDashProvider::new("dummy_token".to_string());
-    catalog.push(doordash_provider.to_integration_provider());
-
     let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
     catalog.push(easypost_provider.to_integration_provider());
 
     let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
     catalog.push(jitsi_provider.to_integration_provider());
 
+
+
     let restic_provider = crate::integrations::restic::provider::ResticProvider::new();
     catalog.push(restic_provider.to_integration_provider());
+
+    let buffer_provider = crate::integrations::buffer::provider::BufferProvider::new("dummy_token".to_string());
+    catalog.push(buffer_provider.to_integration_provider());
+
+    let convertkit_provider = crate::integrations::convertkit::provider::ConvertKitProvider::new("dummy_token".to_string());
+    catalog.push(convertkit_provider.to_integration_provider());
+
+    let messagebird_provider = crate::integrations::messagebird::provider::MessageBirdProvider::new("dummy_token".to_string());
+    catalog.push(messagebird_provider.to_integration_provider());
+
+    let nylas_provider = crate::integrations::nylas::provider::NylasProvider::new("dummy_token".to_string());
+    catalog.push(nylas_provider.to_integration_provider());
+
+    let acuity_provider = crate::integrations::acuity::provider::AcuityProvider::new("dummy_user".to_string(), "dummy_token".to_string());
+    catalog.push(acuity_provider.to_integration_provider());
+
+    let shipengine_provider = crate::integrations::shipengine::provider::ShipengineProvider::new("dummy_token".to_string());
+    catalog.push(shipengine_provider.to_integration_provider());
+
+    let teams_provider = crate::integrations::teams::provider::TeamsProvider::new("dummy_token".to_string());
+    catalog.push(teams_provider.to_integration_provider());
 
     catalog
 }

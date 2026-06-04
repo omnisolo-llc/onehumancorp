@@ -33,7 +33,7 @@ impl TaskQueue for RedisTaskQueue {
         let mut pipe = redis::pipe();
         for job in jobs {
             let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
-            pipe.cmd("ZADD").arg(&self.queue_name).arg(job.next_retry_at.timestamp_millis()).arg(payload_json);
+            pipe.cmd("ZADD").arg(&self.queue_name).arg(job.run_after.timestamp_millis()).arg(payload_json);
         }
         let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
         Ok(())
@@ -45,7 +45,7 @@ impl TaskQueue for RedisTaskQueue {
 
         let _: () = redis::cmd("ZADD")
             .arg(&self.queue_name)
-            .arg(job.next_retry_at.timestamp_millis())
+            .arg(job.run_after.timestamp_millis())
             .arg(payload_json)
             .query_async(&mut conn)
             .await
@@ -81,7 +81,7 @@ impl TaskQueue for RedisTaskQueue {
             }
 
             if let Ok(job) = serde_json::from_str::<Job>(payload_json) {
-                if roles.contains(&job.job_type) {
+                if roles.contains(&job.agent_role) {
                     // Would do quota check here before returning
                     return Ok(Some(job));
                 } else {

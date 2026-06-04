@@ -10,60 +10,6 @@ use tokio::sync::mpsc;
 use serde::Deserialize;
 use prost::Message as ProstMessage;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use axum::{
-    extract::Request,
-    middleware::Next,
-    body::Body,
-};
-
-pub async fn validation_middleware(
-    req: Request,
-    next: Next,
-) -> Result<axum::response::Response, axum::response::Response> {
-    let (parts, body) = req.into_parts();
-    // Use a sensible limit of 5MB for the payload to prevent memory exhaustion DoS
-    let bytes = match axum::body::to_bytes(body, 5 * 1024 * 1024).await {
-        Ok(b) => b,
-        Err(_) => {
-            let error_res = serde_json::json!({ "error": "failed to read body or body too large" });
-            return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-        }
-    };
-
-    if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&bytes) {
-        if let Some(obj) = json.as_object() {
-            let required_keys = ["agent_id", "channel", "event_type", "data"];
-            let mut missing_keys = Vec::new();
-
-            // Check for presence of required keys
-            for key in required_keys.iter() {
-                if !obj.contains_key(*key) {
-                    missing_keys.push(*key);
-                }
-            }
-
-            if !missing_keys.is_empty() {
-                let error_res = serde_json::json!({ "error": format!("missing required keys: {:?}", missing_keys) });
-                return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-            }
-
-            // Check for EXACTLY four keys to prevent any additional payload fields, including deprecated ones
-            if obj.len() != 4 {
-                let error_res = serde_json::json!({ "error": "payload must contain exactly four root-level keys: agent_id, channel, event_type, data" });
-                return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-            }
-        } else {
-            let error_res = serde_json::json!({ "error": "json payload must be an object" });
-            return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-        }
-    } else {
-        let error_res = serde_json::json!({ "error": "invalid json payload" });
-        return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
-    }
-
-    let req = Request::from_parts(parts, Body::from(bytes));
-    Ok(next.run(req).await)
-}
 
 #[derive(Deserialize)]
 pub struct ConnectQuery {
@@ -114,19 +60,6 @@ fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Resp
     Ok(spiffe_id.to_string())
 }
 
-
-/// Helper method to format responses
-fn publish_response(result: Result<(), String>) -> axum::response::Response {
-    match result {
-        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
-        Err(e) => {
-            let error_res = serde_json::json!({ "error": e.to_string() });
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
-        }
-    }
-}
-
-/// Handler to broadcast messages via HTTP
 pub async fn orchestration_broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -136,10 +69,15 @@ pub async fn orchestration_broadcast_handler(
         return err_response;
     }
 
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+    match transport.publish(&payload.topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Handler for WebSockets to stream orchestration tasks
 pub async fn orchestration_tasks_stream_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -148,7 +86,6 @@ pub async fn orchestration_tasks_stream_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
 }
 
-/// Broadcast handler for general mesh communication
 pub async fn broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -158,10 +95,15 @@ pub async fn broadcast_handler(
         return err_response;
     }
 
-    publish_response(transport.publish(&payload.topic, payload.message.into()).await)
+    match transport.publish(&payload.topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Handler for direct agent-to-agent communication over HTTP
 pub async fn direct_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -172,10 +114,15 @@ pub async fn direct_handler(
     }
 
     let topic = format!("mesh:direct:{}", payload.target_agent_id);
-    publish_response(transport.publish(&topic, payload.message.into()).await)
+    match transport.publish(&topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Mailbox handler for delayed message delivery
 pub async fn mailbox_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
@@ -186,10 +133,15 @@ pub async fn mailbox_handler(
     }
 
     let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
-    publish_response(transport.publish(&topic, payload.message.into()).await)
+    match transport.publish(&topic, payload.message.into()).await {
+        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Err(e) => {
+            let error_res = serde_json::json!({ "error": e.to_string() });
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
+        }
+    }
 }
 
-/// Handles the WebSocket connection for mesh communication
 async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, channel: String) {
     let (mut sender, mut receiver) = socket.split();
     let (tx, mut rx) = mpsc::channel::<MeshMessage>(100);
