@@ -15,7 +15,7 @@ describe('HelpArticlePage', () => {
   });
 
   it('renders loading state initially', () => {
-    vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started-1' });
+    vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started' });
     global.fetch = vi.fn(() => new Promise(() => {})); // Never resolves
 
     render(<HelpArticlePage />);
@@ -23,7 +23,7 @@ describe('HelpArticlePage', () => {
   });
 
   it('renders article content on successful fetch', async () => {
-    vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started-1' });
+    vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started' });
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({

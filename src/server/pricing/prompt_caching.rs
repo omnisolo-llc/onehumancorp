@@ -41,7 +41,6 @@ impl PromptCache {
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
             // very rough estimate of saved cents for cache hit
-            // Miser cost optimization: Estimate cost saved by cache hit based on token ratio.
             static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
             let ratio = RATIO.get_or_init(|| {
                 std::env::var("MISER_TOKEN_RATIO")

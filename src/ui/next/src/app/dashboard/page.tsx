@@ -147,7 +147,6 @@ export default function Dashboard() {
     { label: "API", value: error ? "Degraded" : "Online", tone: error ? "bad" as const : "good" as const },
     { label: "Orders", value: String(metrics.pending_orders || 0), tone: metrics.pending_orders > 0 ? "warn" as const : "good" as const },
     { label: "Stock", value: String(lowStockCount), tone: lowStockCount > 0 ? "warn" as const : "good" as const },
-    { label: "Growth", value: "Active", tone: "good" as const },
   ];
 
   const walkthroughSteps = [
@@ -349,34 +348,6 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="mt-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="app-panel-title">Growth & Virality</h2>
-              <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link href="/referrals" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Referrals</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
-            </Link>
-
-            <Link href="/milestones" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
-                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Milestones</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
-            </Link>
           </div>
         </section>
       </main>
