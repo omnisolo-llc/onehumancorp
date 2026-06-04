@@ -2510,7 +2510,14 @@ impl Agent {
                     verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_llm_judge {
-                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone(), model: final_cfg.model.clone() }));
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor {
+                        llm: self.llm.clone(),
+                        model: final_cfg.model.clone(),
+                        criteria: Some(format!(
+                            "correctness, completeness, and strict adherence to these instructions: {}",
+                            final_cfg.developer_instructions
+                        )),
+                    }));
                 }
 
                 if let Err(e) = verification_manager.run_computational_guides("", "").await {
@@ -2521,8 +2528,11 @@ impl Agent {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, "").await {
-                    messages.push(Message::user(format!("LLM-as-judge subagent rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", e)));
+                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
+                    messages.push(Message::user(format!(
+                        "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
+                        e
+                    )));
                     continue;
                 }
                 // OpenAI Mechanic: Output Guardrails
@@ -5565,7 +5575,7 @@ mod tests {
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_1".to_string(),
                             name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
+                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9, "missing_elements": ["data"], "suggested_fixes": ["add data"]}}),
                         }],
                         tool_results: vec![],
                         response_id: Some("mock-id".to_string()),
@@ -5588,7 +5598,7 @@ mod tests {
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_2".to_string(),
                             name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}}),
+                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0, "missing_elements": [], "suggested_fixes": []}}),
                         }],
                         tool_results: vec![],
                         response_id: Some("mock-id".to_string()),
