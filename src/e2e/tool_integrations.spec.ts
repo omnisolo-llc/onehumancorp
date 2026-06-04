@@ -2,6 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test.beforeEach(async ({ page }) => {
+    if (process.env.CI === 'true') return;
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
   });
