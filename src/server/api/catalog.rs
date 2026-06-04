@@ -147,7 +147,7 @@ async fn handle_create_product(
 
     if let Ok(redis_url) = std::env::var("REDIS_URL") {
         if let Ok(client) = redis::Client::open(redis_url) {
-            if let Ok(mut conn) = client.get_async_connection().await {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                 use redis::AsyncCommands;
                 let _: redis::RedisResult<()> = conn.publish("cache_invalidation_events", serde_json::to_string(&event_payload_inv).unwrap_or_default()).await;
             }

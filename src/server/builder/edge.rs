@@ -83,12 +83,13 @@ pub async fn handle_edge_request_impl(
 
     if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
         // Log telemetry metric for cache hit latency
+        let value = cache_key.clone();
         if ::server_config::get().telemetry_enabled {
             tokio::spawn(async move {
                 let pool = crate::db::get_pool();
                 let labels = serde_json::json!({
                     "tenant_id": tenant_id.to_string(),
-                    "cache_key": cache_key.clone(),
+                    "cache_key": value.clone(),
                 });
                 let _ = crate::telemetry::buffer_metric(&pool, "edge_cache_hit_latency_ms", "histogram", 10.0, labels).await;
             });
