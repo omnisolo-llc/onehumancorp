@@ -857,6 +857,49 @@ impl DB {
                         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
+
+                    CREATE TABLE IF NOT EXISTS questionnaire_templates (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'draft',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS questionnaire_questions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        template_id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        text TEXT NOT NULL,
+                        is_required BOOLEAN DEFAULT false,
+                        options TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS intake_submissions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        product_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'submitted',
+                        parsed_entities TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS intake_submission_answers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        submission_id TEXT NOT NULL,
+                        question_id TEXT NOT NULL,
+                        answer_text TEXT,
+                        answer_photo_url TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
