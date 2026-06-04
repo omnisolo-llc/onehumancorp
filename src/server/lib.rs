@@ -36,7 +36,11 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
@@ -873,12 +877,26 @@ pub async fn advisory_insights_handler(
 
     let active_orders = orders_data.unwrap_or(0);
 
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(format!("{}:{}:{}", business_name, industry, active_orders).as_bytes());
+    let stats_hash = format!("{:x}", hasher.finalize());
+    let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
+
+    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(insight) = insight_cache.get(&insight_cache_key).await {
+        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
+    }
+
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            insight_cache.set(&insight_cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        }
         Err(e) => {
             ::server_telemetry::record_error_signal("MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
@@ -2626,6 +2644,12 @@ async fn list_ui_orders_handler(
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
 
+    let cache_key = format!("ui_orders:{}", tenant_id);
+    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
     let orders = match &db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query(
@@ -2668,7 +2692,10 @@ async fn list_ui_orders_handler(
     };
 
     match orders {
-        Ok(orders) => (axum::http::StatusCode::OK, axum::Json(orders)).into_response(),
+        Ok(orders) => {
+            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
+        },
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
@@ -2684,6 +2711,12 @@ async fn list_ui_inbox_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_inbox:{}", tenant_id);
+    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2721,7 +2754,10 @@ async fn list_ui_inbox_handler(
     };
 
     match messages {
-        Ok(messages) => (axum::http::StatusCode::OK, axum::Json(messages)).into_response(),
+        Ok(messages) => {
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        },
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to fetch UI inbox messages");
             tracing::error!("Failed to fetch UI inbox messages: {}", e);
@@ -2736,6 +2772,12 @@ async fn ui_dashboard_metrics_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
+    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let metrics = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2766,12 +2808,14 @@ async fn ui_dashboard_metrics_handler(
 
     match metrics {
         Ok((active_customers, pending_orders, total_sales)) => {
-            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+            let res = serde_json::json!({
                 "active_customers": active_customers,
                 "pending_orders": pending_orders,
                 "total_sales": total_sales,
                 "total_campaigns_sent": 0
-            }))).into_response()
+            });
+            cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
+            (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to fetch UI dashboard metrics");
@@ -7868,9 +7912,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
-                                fetchMilestones();
-                                fetchApprovals();
-                                fetchActivityFeed();
+                                Promise.all([
+                                    fetchMilestones(),
+                                    fetchApprovals(),
+                                    fetchActivityFeed()
+                                ]).catch(err => console.error('Error loading dashboard components:', err));
                             }
 
                             if (id === 'my-plan-screen') {
@@ -7895,10 +7941,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetch('/api/billing/cost-dashboard')
                                     .then(res => res.json())
                                     .then(data => {
-                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total_costs / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-revenue').textContent = '$' + (data.total_revenue / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
 
