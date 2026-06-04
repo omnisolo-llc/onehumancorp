@@ -10,6 +10,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
+use crate::orchestration::router::{SemanticRouter, SemanticRoutingRequest};
 use ::server_common::Claims;
 
 #[derive(Deserialize)]
@@ -23,46 +24,27 @@ pub struct ChatResponse {
     pub department_assigned: Option<String>,
 }
 
-pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
+#[derive(Clone)]
+pub struct ChatState {
+    pub orchestrator: Arc<DepartmentOrchestrator>,
+    pub semantic_router: Arc<SemanticRouter>,
+}
+
+pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>, semantic_router: Arc<SemanticRouter>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
+    let state = ChatState {
+        orchestrator,
+        semantic_router,
+    };
     Router::new()
         .route("/", post(handle_chat))
-        .with_state(orchestrator)
-}
-
-pub fn determine_routing(msg: &str) -> (DepartmentType, String, serde_json::Value) {
-    let lower_msg = msg.to_lowercase();
-    if lower_msg.contains("refund") {
-        (
-            DepartmentType::Operations,
-            "Process refund request from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "refund" })
-        )
-    } else if lower_msg.contains("post") || lower_msg.contains("newsletter") || lower_msg.contains("campaign") || lower_msg.contains("promote") {
-        (
-            DepartmentType::Marketing,
-            "Draft marketing content from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "create_content" })
-        )
-    } else if lower_msg.contains("quote") || lower_msg.contains("lead") || lower_msg.contains("discount") || lower_msg.contains("pricing") {
-        (
-            DepartmentType::Sales,
-            "Draft sales response/quote from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "draft_quote" })
-        )
-    } else {
-        (
-            DepartmentType::Operations, // Fallback
-            "General task assignment from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "general_task" })
-        )
-    }
+        .with_state(state)
 }
 
 async fn handle_chat(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    State(state): State<ChatState>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ChatRequest>,
 ) -> impl IntoResponse {
@@ -71,9 +53,21 @@ async fn handle_chat(
         None => return (StatusCode::UNAUTHORIZED, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
     };
 
-    let (dept, description, payload_json) = determine_routing(&payload.message);
+    let req = SemanticRoutingRequest {
+        tenant_id: tenant_id.clone(),
+        prompt: payload.message.clone(),
+        embedding: None,
+    };
 
-    match orchestrator.execute_action(
+    let dept = match state.semantic_router.route(&req) {
+        Ok(res) => res.target_department,
+        Err(_) => DepartmentType::Operations, // Fallback
+    };
+
+    let description = format!("Task routed via semantic gateway to {:?}", dept);
+    let payload_json = serde_json::json!({ "original_request": payload.message, "action": "semantic_routed_task" });
+
+    match state.orchestrator.execute_action(
         dept.clone(),
         description,
         tenant_id,
@@ -85,31 +79,3 @@ async fn handle_chat(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_chat_routing_refund() {
-        let (dept, _, _) = determine_routing("Please refund order 123");
-        assert_eq!(dept, DepartmentType::Operations);
-    }
-
-    #[test]
-    fn test_chat_routing_marketing() {
-        let (dept, _, _) = determine_routing("Draft a new newsletter for mothers day");
-        assert_eq!(dept, DepartmentType::Marketing);
-    }
-
-    #[test]
-    fn test_chat_routing_sales() {
-        let (dept, _, _) = determine_routing("Give me a quote for roofing");
-        assert_eq!(dept, DepartmentType::Sales);
-    }
-
-    #[test]
-    fn test_chat_routing_fallback() {
-        let (dept, _, _) = determine_routing("I need help with general stuff");
-        assert_eq!(dept, DepartmentType::Operations);
-    }
-}
