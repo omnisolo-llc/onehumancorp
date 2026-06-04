@@ -9,13 +9,13 @@ pub struct RoleDefinition {
     #[serde(default)]
     pub id: String,
     #[serde(default)]
-    pub title: String,
+    pub title: Option<String>,
     #[serde(default)]
-    pub context: String,
+    pub context: Option<String>,
     #[serde(default)]
     pub tools: Vec<String>,
     #[serde(default)]
-    pub reports_to: String,
+    pub reports_to: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,7 +53,7 @@ impl SkillBlueprint {
             if role.id.trim().is_empty() {
                 return Err("role id is required".to_string());
             }
-            if role.context.trim().is_empty() {
+            if role.context.as_deref().unwrap_or("").trim().is_empty() {
                 return Err(format!("context is required for role: {}", role.id));
             }
             if roles_map.contains_key(&role.id) {
@@ -64,9 +64,11 @@ impl SkillBlueprint {
 
         // Validate reports_to targets exist
         for role in &self.roles {
-            if !role.reports_to.is_empty() {
-                if !roles_map.contains_key(&role.reports_to) {
-                    return Err(format!("role {} reports to unknown role: {}", role.id, role.reports_to));
+            if let Some(reports_to) = &role.reports_to {
+                if !reports_to.trim().is_empty() {
+                    if !roles_map.contains_key(reports_to) {
+                        return Err(format!("role {} reports to unknown role: {}", role.id, reports_to));
+                    }
                 }
             }
         }
@@ -85,12 +87,13 @@ impl SkillBlueprint {
             rec_stack.insert(node_id.to_string());
 
             if let Some(role) = roles_map.get(node_id) {
-                let reports_to = &role.reports_to;
-                if !reports_to.is_empty() {
-                    if !visited.contains(reports_to) {
-                        check_cycle(reports_to, roles_map, visited, rec_stack)?;
-                    } else if rec_stack.contains(reports_to) {
-                        return Err(format!("circular reporting loop detected involving role: {}", node_id));
+                if let Some(reports_to) = &role.reports_to {
+                    if !reports_to.trim().is_empty() {
+                        if !visited.contains(reports_to) {
+                            check_cycle(reports_to, roles_map, visited, rec_stack)?;
+                        } else if rec_stack.contains(reports_to) {
+                            return Err(format!("circular reporting loop detected involving role: {}", node_id));
+                        }
                     }
                 }
             }
@@ -112,8 +115,10 @@ impl SkillBlueprint {
         let prefix = format!("{}/", namespace);
         for role in &mut self.roles {
             role.id = format!("{}{}", prefix, role.id);
-            if !role.reports_to.is_empty() {
-                role.reports_to = format!("{}{}", prefix, role.reports_to);
+            if let Some(reports_to) = &role.reports_to {
+                if !reports_to.trim().is_empty() {
+                    role.reports_to = Some(format!("{}{}", prefix, reports_to));
+                }
             }
         }
     }
@@ -142,7 +147,7 @@ roles:
         assert_eq!(bp.domain, "Legal Consulting");
         assert_eq!(bp.roles.len(), 2);
         assert_eq!(bp.roles[1].id, "associate");
-        assert_eq!(bp.roles[1].reports_to, "senior_partner");
+        assert_eq!(bp.roles[1].reports_to.as_ref().unwrap(), "senior_partner");
     }
 
     #[test]
@@ -266,8 +271,8 @@ roles:
         let mut bp = SkillBlueprint {
             domain: "Test".to_string(),
             roles: vec![
-                RoleDefinition { id: "a".to_string(), title: "".to_string(), context: "context".to_string(), tools: vec![], reports_to: "".to_string() },
-                RoleDefinition { id: "b".to_string(), title: "".to_string(), context: "context".to_string(), tools: vec![], reports_to: "a".to_string() },
+                RoleDefinition { id: "a".to_string(), title: None, context: Some("context".to_string()), tools: vec![], reports_to: None },
+                RoleDefinition { id: "b".to_string(), title: None, context: Some("context".to_string()), tools: vec![], reports_to: Some("a".to_string()) },
             ],
         };
 
@@ -275,6 +280,6 @@ roles:
 
         assert_eq!(bp.roles[0].id, "test_v1/a");
         assert_eq!(bp.roles[1].id, "test_v1/b");
-        assert_eq!(bp.roles[1].reports_to, "test_v1/a");
+        assert_eq!(bp.roles[1].reports_to.as_ref().unwrap(), "test_v1/a");
     }
 }
