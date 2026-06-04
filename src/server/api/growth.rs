@@ -129,7 +129,8 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
-        .layer(Extension(GrowthState { pool, hub }))
+        .route("/waitlist", post(handle_waitlist))
+        .layer(Extension(GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service: Arc::new(crate::services::growth::service::MyGrowthService::new(pool, hub)) }))
 }
 
 
@@ -221,6 +222,7 @@ pub struct TeamInvitesResponse {
 
 #[derive(Clone)]
 struct GrowthState {
+    growth_service: Arc<crate::services::growth::service::MyGrowthService>,
     pool: PgPool,
     hub: Arc<Hub>,
 }
@@ -869,7 +871,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub, growth_service };
 
         let req = CreateTeamInviteRequest {
             team_id: "team-test-direct".to_string(),
@@ -938,7 +941,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service };
 
         // Insert dummy referral
         let ref_id = "ref-code-123";
@@ -988,7 +992,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service };
 
         // Insert dummy referral
         let ref_id = "test-ref-123";
@@ -1029,7 +1034,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://ohc.app/test".to_string(),
@@ -1054,7 +1060,8 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service };
 
         let req = GenerateCustomerReferralRequest { store_name: Some("Maya Cakes".to_string()) };
         let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
@@ -1071,7 +1078,8 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service };
 
         let req = GenerateCartRequest { customer_name: Some("Bob".to_string()), cart_value: Some("$100.00".to_string()) };
         let res = handle_generate_cart(Extension(state.clone()), Json(req)).await;
@@ -1093,7 +1101,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service };
 
         // Insert dummy invite
         let invite_id = "test-invite-123";
@@ -1128,7 +1137,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let growth_service = Arc::new(crate::services::growth::service::MyGrowthService::new(pool.clone(), hub.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), growth_service };
 
         sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")
             .bind("funnel-1").bind("user1").bind("step1")
@@ -1164,5 +1174,47 @@ async fn handle_aggregated_team_invites_metrics(
             }
         })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WaitlistRequest {
+    pub email: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WaitlistResponse {
+    pub id: String,
+    pub email: String,
+    pub created_at_unix: i64,
+}
+
+async fn handle_waitlist(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<WaitlistRequest>,
+) -> Result<Json<WaitlistResponse>, StatusCode> {
+    if req.email.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let grpc_req = tonic::Request::new(crate::ohc::orchestration::CreateWaitlistRequest {
+        email: req.email,
+    });
+
+    use crate::ohc::orchestration::growth_service_server::GrowthService;
+
+    match state.growth_service.create_waitlist_entry(grpc_req).await {
+        Ok(response) => {
+            let entry = response.into_inner();
+            Ok(Json(WaitlistResponse {
+                id: entry.id,
+                email: entry.email,
+                created_at_unix: entry.created_at_unix,
+            }))
+        },
+        Err(e) => {
+            tracing::error!("Failed to create waitlist entry: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
