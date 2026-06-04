@@ -28,7 +28,7 @@ pub async fn meta_webhook_get_handler(
         Ok(t) if !t.is_empty() => t,
         _ => {
             ::server_telemetry::record_error_signal("META_VERIFY_TOKEN not configured");
-            tracing::error!("META_VERIFY_TOKEN not configured");
+            tracing::warn!("META_VERIFY_TOKEN not configured");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -52,7 +52,7 @@ pub async fn meta_webhook_post_handler(
         Ok(s) if !s.is_empty() => s,
         _ => {
             ::server_telemetry::record_error_signal("META_APP_SECRET not configured, refusing to process webhook");
-            tracing::error!("META_APP_SECRET not configured, refusing to process webhook");
+            tracing::warn!("META_APP_SECRET not configured, refusing to process webhook");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };

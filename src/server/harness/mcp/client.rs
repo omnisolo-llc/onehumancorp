@@ -106,7 +106,7 @@ impl McpClientManager {
             let mut stdin = stdin;
             while let Some(msg) = rx.recv().await {
                 if let Err(e) = stdin.write_all(format!("{}\n", msg).as_bytes()).await {
-                    tracing::error!("Failed to write to MCP stdin: {}", e);
+                    tracing::warn!("Failed to write to MCP stdin: {}", e);
                     break;
                 }
                 let _ = stdin.flush().await;
