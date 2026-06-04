@@ -10,10 +10,10 @@ test.describe('Unified Agent Feed', () => {
       localStorage.setItem('user_id', 'e2e-admin-user');
     });
 
-    // Go to dashboard
-    await page.goto('/dashboard');
+    // Go to feed
+    await page.goto('/feed');
 
-    // Verify we are on dashboard and the Unified Agent Feed is present
+    // Verify we are on the feed and the Unified Agent Feed is present
     await expect(page.getByRole('heading', { name: 'Agent Proposals' })).toBeVisible();
 
     // We expect seeded approvals to show up because of our seed data updates

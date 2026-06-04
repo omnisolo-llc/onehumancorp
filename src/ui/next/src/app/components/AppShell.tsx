@@ -23,6 +23,7 @@ type IconName =
   | "cost"
   | "dashboard"
   | "diagnostics"
+  | "feed"
   | "inbox"
   | "integrations"
   | "inventory"
@@ -40,6 +41,7 @@ type NavItem = {
 
 const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Feed", href: "/feed", icon: "feed" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
   { label: "Orders", href: "/orders", icon: "orders" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
@@ -64,6 +66,7 @@ function ShellIcon({ name }: { name: IconName }) {
     calendar: ["M7 3v4", "M17 3v4", "M4 9h16", "M5 5h14v16H5z"],
     cost: ["M12 3v18", "M17 7.5c-.8-1.1-2.2-1.8-4-1.8-2.3 0-4 1.1-4 2.8 0 4.2 8 1.8 8 6 0 1.7-1.8 2.8-4 2.8-1.9 0-3.5-.7-4.4-1.9"],
     dashboard: ["M4 5h7v7H4z", "M13 5h7v4h-7z", "M13 11h7v8h-7z", "M4 14h7v5H4z"],
+    feed: ["M4 6h16M4 12h16M4 18h16"],
     diagnostics: ["M12 9v4", "M12 17h.01", "M10.3 4.7 3.9 16.2A2 2 0 0 0 5.6 19h12.8a2 2 0 0 0 1.7-2.8L13.7 4.7a2 2 0 0 0-3.4 0z"],
     inbox: ["M4 5h16v14H4z", "M4 13h5l2 3h2l2-3h5"],
     integrations: ["M8 7h8", "M8 17h8", "M7 7a3 3 0 1 1-3-3 3 3 0 0 1 3 3z", "M20 17a3 3 0 1 1-3-3 3 3 0 0 1 3 3z"],

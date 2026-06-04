@@ -96,7 +96,7 @@ export function UnifiedAgentFeed() {
 
   if (loading) {
     return (
-      <div className="w-full mb-6 p-4 mac-glass-container rounded-[16px] text-center text-gray-500">
+      <div className="w-full max-w-md mx-auto mb-6 p-4 mac-glass-container rounded-[16px] text-center text-gray-500 backdrop-blur-[20px] saturate-200 font-inter">
         Loading Agent Proposals...
       </div>
     );
@@ -104,7 +104,7 @@ export function UnifiedAgentFeed() {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 mac-glass-container rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
+      <div className="w-full max-w-md mx-auto mb-6 p-4 mac-glass-container rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center backdrop-blur-[20px] saturate-200 font-inter">
         {error}
       </div>
     );
@@ -112,7 +112,7 @@ export function UnifiedAgentFeed() {
 
   if (approvals.length === 0) {
     return (
-      <div className="w-full mb-6 p-6 mac-glass-container rounded-[16px] text-center">
+      <div className="w-full max-w-md mx-auto mb-6 p-6 mac-glass-container rounded-[16px] text-center backdrop-blur-[20px] saturate-200 font-inter">
         <div className="text-3xl mb-2">✨</div>
         <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -123,7 +123,7 @@ export function UnifiedAgentFeed() {
   }
 
   return (
-    <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full max-w-md mx-auto font-inter" aria-label="Unified Agent Feed">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="app-panel-title text-xl font-bold font-outfit">Agent Proposals</h2>
         <span className="app-badge">{approvals.length} Urgent</span>
