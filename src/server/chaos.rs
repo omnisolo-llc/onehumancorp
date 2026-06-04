@@ -329,7 +329,7 @@ mod tests {
         assert!(!synced);
 
         // Eventually it should sync, allowing the system to proceed
-        tokio::time::sleep(Duration::from_millis(120000)).await; // test-only fast mock instead of 120s real block
+        tokio::time::sleep(Duration::from_millis(300)).await;
         let synced_late: bool = sqlx::query_scalar("SELECT synced FROM sync_queue WHERE id = ?")
             .bind(item_id)
             .fetch_one(&pool)
@@ -793,12 +793,12 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
-        let timeout_duration = Duration::from_secs(60);
+        let timeout_duration = Duration::from_millis(150);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a stalled chaos operation (e.g., dropped packets on agent connection)
-            tokio::time::sleep(Duration::from_millis(120000)).await; // test-only fast mock instead of 120s real block
+            tokio::time::sleep(Duration::from_millis(300)).await;
             Ok::<(), String>(())
         }).await;
 

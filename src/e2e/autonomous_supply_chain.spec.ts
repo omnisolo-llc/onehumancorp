@@ -38,7 +38,7 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
     await page.locator('#new-rm-thresh').fill('20');
     await page.getByRole('button', { name: 'Add Material' }).click();
 
-    await expect(page.locator('#raw-material-list')).toContainText('Premium Cocoa: 50 (Thresh: 20)', { timeout: 30000 });
+    await expect(page.locator('#raw-material-list')).toContainText('Premium Cocoa: 50 (Thresh: 20)');
   });
 
   test('Allows user to link a BOM Item', async ({ page }) => {
@@ -51,7 +51,7 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
     await page.locator('#new-bom-qty').fill('2');
     await page.getByRole('button', { name: 'Link BOM' }).click();
 
-    await expect(page.locator('#bom-list')).toContainText('dummy-pr... needs 2x RM dummy-rm...', { timeout: 30000 });
+    await expect(page.locator('#bom-list')).toContainText('dummy-pr... needs 2x RM dummy-rm...');
   });
 
   test('Displays PO approval in inbox and allows single-tap approval', async ({ page }) => {
