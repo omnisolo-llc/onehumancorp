@@ -54,7 +54,18 @@ pub async fn bench_db_query_time() {
     }
 
     // Standalone Mode (SQLite)
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("PRAGMA journal_mode = WAL").await?;
+                    conn.execute("PRAGMA synchronous = NORMAL").await?;
+                    conn.execute("PRAGMA temp_store = MEMORY").await?;
+                    conn.execute("PRAGMA mmap_size = 3000000000").await?;
+                    Ok(())
+                })
+            })
+            .connect("sqlite::memory:").await.unwrap();
     let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
@@ -95,7 +106,18 @@ pub async fn bench_api_response_time() {
     }
 
     // Standalone setup
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("PRAGMA journal_mode = WAL").await?;
+                    conn.execute("PRAGMA synchronous = NORMAL").await?;
+                    conn.execute("PRAGMA temp_store = MEMORY").await?;
+                    conn.execute("PRAGMA mmap_size = 3000000000").await?;
+                    Ok(())
+                })
+            })
+            .connect("sqlite::memory:").await.unwrap();
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
