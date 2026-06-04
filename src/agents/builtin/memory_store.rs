@@ -595,12 +595,18 @@ impl VectorRepository {
                         all_records.push(record);
                     }
 
+                    use std::collections::HashMap;
+                    let mut grouped_records: HashMap<String, Vec<EmbeddingRecord>> = HashMap::new();
+                    for record in all_records {
+                        grouped_records.entry(record.tenant_id.clone()).or_insert_with(Vec::new).push(record);
+                    }
+
                     let mut match_count = 0;
-                    for i in 0..all_records.len() {
-                        for j in (i + 1)..all_records.len() {
-                            let a = &all_records[i];
-                            let b = &all_records[j];
-                            if a.tenant_id == b.tenant_id {
+                    'outer: for (_, records) in grouped_records {
+                        for i in 0..records.len() {
+                            for j in (i + 1)..records.len() {
+                                let a = &records[i];
+                                let b = &records[j];
                                 // Ensure a consistent ordering to avoid duplicate pairs in different orders
                                 let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
                                 let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
@@ -608,13 +614,10 @@ impl VectorRepository {
                                     conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
                                     if match_count >= 10 {
-                                        break;
+                                        break 'outer;
                                     }
                                 }
                             }
-                        }
-                        if match_count >= 10 {
-                            break;
                         }
                     }
                 }
@@ -1089,7 +1092,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1163,7 +1166,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1240,7 +1243,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1390,7 +1393,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1504,7 +1507,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1581,7 +1584,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1648,6 +1651,93 @@ mod get_conflicts_tests {
     }
 
     #[tokio::test]
+    async fn test_get_conflicting_pairs_multi_tenant() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        ).execute(&pool).await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        let record1 = EmbeddingRecord {
+            id: "t1_rec1".to_string(),
+            tenant_id: "tenant_1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "similar data".to_string(),
+            embedding: vec![1.0, 0.0, 0.0],
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record2 = EmbeddingRecord {
+            id: "t2_rec1".to_string(),
+            tenant_id: "tenant_2".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "similar data 2".to_string(),
+            embedding: vec![1.0, 0.0, 0.0], // Identical embedding but different tenant
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let record3 = EmbeddingRecord {
+            id: "t1_rec2".to_string(),
+            tenant_id: "tenant_1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "similar data 3".to_string(),
+            embedding: vec![1.0, 0.0, 0.0], // Identical embedding and same tenant as record1
+            source_type: "SUMMARY".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record1).await.unwrap();
+        repo.upsert(&record2).await.unwrap();
+        repo.upsert(&record3).await.unwrap();
+
+        let conflicts = repo.get_conflicting_pairs().await.unwrap();
+
+        // Should only find the conflict between t1_rec1 and t1_rec2.
+        assert_eq!(conflicts.len(), 1, "Should only have one conflict pair");
+
+        let (a, b) = &conflicts[0];
+        assert_eq!(a.tenant_id, "tenant_1");
+        assert_eq!(b.tenant_id, "tenant_1");
+    }
+
+    #[tokio::test]
     async fn test_delete() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1661,7 +1751,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1788,7 +1878,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1881,7 +1971,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1952,7 +2042,7 @@ mod get_conflicts_tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding VECTOR(1536),
+                embedding TEXT,
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
