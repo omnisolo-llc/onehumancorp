@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -26,5 +26,15 @@ rust_library(
         "@crates//:chrono",
         "@crates//:sqlx",
         "@crates//:tokio",
+    ],
+)
+
+rust_test(
+    name = "server_orchestration_departments_memory_unit_test",
+    crate = ":server_orchestration_departments_memory",
+    edition = "2024",
+    deps = [
+        "@crates//:tokio",
+        "@crates//:sqlx",
     ],
 )
