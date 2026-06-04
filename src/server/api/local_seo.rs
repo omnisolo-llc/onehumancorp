@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::Path,
     response::Json,
     routing::{get, post},
     Router,
@@ -27,19 +27,20 @@ pub struct ConnectionStatusResponse {
     pub connected: bool,
 }
 
-pub async fn connect_google_business(claims: Claims) -> Json<serde_json::Value> {
+pub async fn connect_google_business(axum::extract::Extension(claims): axum::extract::Extension<Claims>) -> Json<serde_json::Value> {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default_tenant".to_string());
     Json(serde_json::json!({
         "status": "success",
-        "redirect_url": format!("https://accounts.google.com/o/oauth2/auth?client_id=MOCK_CLIENT_ID&redirect_uri=MOCK_URI&scope=https://www.googleapis.com/auth/business.manage&response_type=code&state={}", claims.tenant_id)
+        "redirect_url": format!("https://accounts.google.com/o/oauth2/auth?client_id=MOCK_CLIENT_ID&redirect_uri=MOCK_URI&scope=https://www.googleapis.com/auth/business.manage&response_type=code&state={}", tenant_id)
     }))
 }
 
-pub async fn get_connection_status(_claims: Claims) -> Json<ConnectionStatusResponse> {
+pub async fn get_connection_status(axum::extract::Extension(_claims): axum::extract::Extension<Claims>) -> Json<ConnectionStatusResponse> {
     // In a real implementation we would check the DB for `ohc_google_business_profiles`
     Json(ConnectionStatusResponse { connected: true })
 }
 
-pub async fn get_pending_reviews(_claims: Claims) -> Json<Vec<LocalReview>> {
+pub async fn get_pending_reviews(axum::extract::Extension(_claims): axum::extract::Extension<Claims>) -> Json<Vec<LocalReview>> {
     // Return mock reviews per requirements for the feed
     let mock_reviews = vec![
         LocalReview {
@@ -63,7 +64,7 @@ pub async fn get_pending_reviews(_claims: Claims) -> Json<Vec<LocalReview>> {
 }
 
 pub async fn approve_and_reply(
-    _claims: Claims,
+    axum::extract::Extension(_claims): axum::extract::Extension<Claims>,
     Path(review_id): Path<String>,
     Json(_payload): Json<ApproveReplyRequest>,
 ) -> Json<serde_json::Value> {
@@ -77,7 +78,7 @@ pub async fn webhook_ingest(Json(_payload): Json<serde_json::Value>) -> Json<ser
     Json(serde_json::json!({ "status": "received" }))
 }
 
-pub fn router() -> Router {
+pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/connect", post(connect_google_business))
         .route("/status", get(get_connection_status))
@@ -95,17 +96,21 @@ mod tests {
     fn mock_claims() -> Claims {
         Claims {
             sub: "user123".to_string(),
-            tenant_id: "tenant123".to_string(),
+            organization_id: Some("tenant123".to_string()),
             exp: 9999999999,
-            role: "owner".to_string(),
-            permissions: vec![],
+            iat: 0,
+            username: "owner".to_string(),
+            email: "owner@example.com".to_string(),
+            roles: vec![],
+            session_id: None,
+            jti: "jti123".to_string(),
         }
     }
 
     #[tokio::test]
     async fn test_connect_google_business() {
         let claims = mock_claims();
-        let Json(response) = connect_google_business(claims).await;
+        let Json(response) = connect_google_business(axum::extract::Extension(claims)).await;
         assert_eq!(response["status"], "success");
         assert!(response["redirect_url"].as_str().unwrap().contains("tenant123"));
     }
@@ -113,14 +118,14 @@ mod tests {
     #[tokio::test]
     async fn test_get_connection_status() {
         let claims = mock_claims();
-        let Json(response) = get_connection_status(claims).await;
+        let Json(response) = get_connection_status(axum::extract::Extension(claims)).await;
         assert!(response.connected);
     }
 
     #[tokio::test]
     async fn test_get_pending_reviews() {
         let claims = mock_claims();
-        let Json(response) = get_pending_reviews(claims).await;
+        let Json(response) = get_pending_reviews(axum::extract::Extension(claims)).await;
         assert_eq!(response.len(), 2);
         assert_eq!(response[0].review_id, "rev1");
         assert_eq!(response[0].reply_status, "PENDING");
@@ -133,7 +138,7 @@ mod tests {
         let payload = Json(ApproveReplyRequest {
             reply_content: "Thanks!".to_string(),
         });
-        let Json(response) = approve_and_reply(claims, review_id, payload).await;
+        let Json(response) = approve_and_reply(axum::extract::Extension(claims), review_id, payload).await;
         assert_eq!(response["status"], "success");
         assert_eq!(response["review_id"], "rev1");
     }
