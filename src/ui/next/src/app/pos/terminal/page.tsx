@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
+import { useOfflineSyncStore } from '../../../lib/offlineSyncStore';
+import { SyncManager } from '../../../lib/SyncManager';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -25,33 +27,15 @@ export default function TerminalPage() {
   const [activeStaff, setActiveStaff] = useState<any | null>(null);
   const [clockedIn, setClockedIn] = useState(false);
   const [error, setError] = useState('');
-  const [syncing, setSyncing] = useState(false);
+  const syncing = useOfflineSyncStore((state) => state.isSyncing);
   const [offlineConversion, setOfflineConversion] = useState(false);
 
-  // Background sync
+  // Manage SyncManager lifecycle
   useEffect(() => {
-    const syncInterval = setInterval(async () => {
-      const events = OfflineStore.getEvents();
-      if (events.length > 0 && navigator.onLine) {
-        setSyncing(true);
-        try {
-          const res = await fetch('/api/staff/timecard', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(events)
-          });
-          if (res.ok) {
-            OfflineStore.clearEvents();
-          }
-        } catch (e) {
-          console.error("Sync failed", e);
-        } finally {
-          setSyncing(false);
-        }
-      }
-    }, 10000); // Try syncing every 10 seconds
-
-    return () => clearInterval(syncInterval);
+    SyncManager.start();
+    return () => {
+      SyncManager.stop();
+    };
   }, []);
 
   const handlePinEntry = (digit: string) => {
@@ -105,6 +89,17 @@ export default function TerminalPage() {
   const handleNewOrder = () => {
     const basePrice = 5000; // $50.00
     const converted = convert(basePrice, 'USD', currency);
+
+    // Enqueue the order offline
+    const orderPayload = {
+        customer_name: 'Walk-in',
+        items: ['1x Item'],
+        total: converted.amount,
+        currency,
+        status: 'Received',
+    };
+    useOfflineSyncStore.getState().enqueueMutation('/api/pos/orders', 'POST', 'NEW_ORDER', orderPayload);
+
     if (converted.isOffline) {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);

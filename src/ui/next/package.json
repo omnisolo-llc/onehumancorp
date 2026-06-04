@@ -39,8 +39,8 @@
   },
   "postcss": {
     "plugins": {
-      "tailwindcss": {},
-      "autoprefixer": {}
+      "autoprefixer": {},
+      "@tailwindcss/postcss": {}
     }
   },
   "pnpm": {
