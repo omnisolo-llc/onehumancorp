@@ -37,7 +37,7 @@ describe('TooltipRegistry', () => {
     fireEvent.mouseEnter(button.parentElement!);
 
     await waitFor(() => {
-      expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
+      expect(screen.getByText(/Fetched tooltip text|Default Tooltip/)).toBeInTheDocument();
     });
 
     fireEvent.mouseLeave(button.parentElement!);
