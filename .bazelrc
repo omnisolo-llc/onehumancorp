@@ -67,14 +67,14 @@ test --test_output=errors
 test --build_tests_only
 # Keep the default wildcard suite complete: `bazel test //...` should validate
 # the Docker-backed Playwright E2E targets along with unit and integration tests.
-test --test_timeout=600,1200,1800,3600
+test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 test --local_test_jobs=HOST_CPUS
 
 test --sandbox_add_mount_pair=/var/run/docker.sock
 test --test_output=errors
 test --test_summary=terse
-test --test_timeout=600,1200,1800,3600
+test --test_timeout=300,600,900,1800
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
@@ -180,4 +180,3 @@ build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
-startup --host_jvm_args=-Xmx6g
