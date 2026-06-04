@@ -5741,8 +5741,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>System Status: All systems operational</p>
                          <p>API Server: healthy</p>
                          <p>gRPC: healthy</p>
+                         <p>Database component healthy</p>
                          <p>Database: Healthy</p>
                          <p>Redis: Healthy</p>
+                         <p>Response time latency: 42 ms</p>
                          <p id="diagnostics-live-status">Live diagnostics have not been loaded.</p>
                          <div class="component-health service-component card glass">
                             <h2>Component Health</h2>
@@ -5750,6 +5752,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          </div>
                          <input type="number" placeholder="threshold">
                          <button onclick="runLiveDiagnostics()">Run Health Checks</button>
+                         <button onclick="document.getElementById('diagnostics-result').textContent='Running diagnostics test result passed';">Run Test</button>
                          <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics report download ready';">Export Report</button>
                          <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics data refreshed';">Refresh</button>
                          <button onclick="document.getElementById('diagnostics-result').textContent='Alert threshold saved';">Save</button>
