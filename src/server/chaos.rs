@@ -15,6 +15,7 @@ mod tests {
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -69,6 +70,7 @@ mod tests {
     // Testing graceful degradation during network latency
     #[tokio::test]
     async fn test_chaos_network_spike_degradation() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use std::collections::HashMap;
         use std::sync::Arc;
         use tokio::sync::Mutex;

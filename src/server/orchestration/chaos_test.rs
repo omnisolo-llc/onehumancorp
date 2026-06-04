@@ -399,6 +399,7 @@ mod chaos_tests {
 
     #[tokio::test]
     async fn test_agent_lock_race_conditions() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let mesh = Arc::new(RacingLockMesh::new());
 
         let mut join_handles = vec![];
