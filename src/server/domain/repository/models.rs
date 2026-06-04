@@ -212,3 +212,14 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct BrandVoiceProfile {
+    pub id: sqlx::types::Uuid,
+    pub tenant_id: String,
+    pub tone_descriptors: serde_json::Value,
+    pub vocabulary_preferences: serde_json::Value,
+    pub specific_knowledge_facts: serde_json::Value,
+    pub emoji_usage_level: String,
+    pub created_at: Option<sqlx::types::chrono::DateTime<sqlx::types::chrono::Utc>>,
+    pub updated_at: Option<sqlx::types::chrono::DateTime<sqlx::types::chrono::Utc>>,
+}

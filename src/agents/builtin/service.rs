@@ -82,6 +82,7 @@ pub struct AgentServiceImpl {
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
+    pub pool: Option<sqlx::PgPool>,
 }
 
 
@@ -165,6 +166,7 @@ impl AgentServiceImpl {
             llm_override: None,
             anthropic_memory: None,
             worker_handle: None,
+            pool: None,
         }
     }
 
@@ -194,6 +196,7 @@ impl AgentServiceImpl {
             } else {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
+                        self.pool = Some(pool.clone());
                         let repo = Arc::new(VectorRepository::new(pool));
                         self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
                         self.memory = Some(repo);
@@ -463,6 +466,23 @@ impl AgentServiceImpl {
             vec![]
         };
 
+        let brand_voice_guidelines = if let Some(pool) = &self.pool {
+            match sqlx::query!("SELECT tone_descriptors, vocabulary_preferences, specific_knowledge_facts FROM brand_voice_profiles WHERE tenant_id = $1", org_id).fetch_optional(pool).await {
+                Ok(Some(record)) => {
+                    let mut guidelines = String::from("Tone: ");
+                    guidelines.push_str(&record.tone_descriptors.to_string());
+                    guidelines.push_str("\nVocabulary: ");
+                    guidelines.push_str(&record.vocabulary_preferences.to_string());
+                    guidelines.push_str("\nKnowledge: ");
+                    guidelines.push_str(&record.specific_knowledge_facts.to_string());
+                    Some(guidelines)
+                }
+                _ => None,
+            }
+        } else {
+            std::env::var("OHC_BRAND_VOICE_GUIDELINES").ok()
+        };
+
         let server_system_message = if req.system_prompt.is_empty() {
             let base_prompt = if !department.is_empty() {
                 if let Ok(dep) = Department::from_str(department) {
@@ -473,9 +493,9 @@ impl AgentServiceImpl {
             } else {
                 &self.cfg.system_prompt
             };
-            inject_memories_into_prompt(&memories, base_prompt)
+            inject_memories_into_prompt(&memories, base_prompt, brand_voice_guidelines.as_deref())
         } else {
-            inject_memories_into_prompt(&memories, &req.system_prompt)
+            inject_memories_into_prompt(&memories, &req.system_prompt, brand_voice_guidelines.as_deref())
         };
 
 
