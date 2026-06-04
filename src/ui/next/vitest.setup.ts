@@ -132,11 +132,23 @@ class IntersectionObserver {
   unobserve() {}
 }
 
+class ResizeObserver {
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+}
+
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'IntersectionObserver', {
     writable: true,
     configurable: true,
     value: IntersectionObserver,
+  })
+
+  Object.defineProperty(window, 'ResizeObserver', {
+    writable: true,
+    configurable: true,
+    value: ResizeObserver,
   })
 }
 

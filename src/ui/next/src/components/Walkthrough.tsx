@@ -30,18 +30,19 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       // Scroll into view gently if needed
       targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-      // We need a slight delay to let scrolling settle before measuring
-      const timeoutId = setTimeout(() => {
-        setTargetRect(targetElement.getBoundingClientRect());
-      }, 300);
+      setTargetRect(targetElement.getBoundingClientRect());
 
-      // Also attach resize/scroll listeners for recalculation (simplified for this example)
+      const resizeObserver = new ResizeObserver(() => {
+        setTargetRect(targetElement.getBoundingClientRect());
+      });
+      resizeObserver.observe(targetElement);
+
       const handleScroll = () => setTargetRect(targetElement.getBoundingClientRect());
       window.addEventListener('scroll', handleScroll, true);
       window.addEventListener('resize', handleScroll);
 
       return () => {
-        clearTimeout(timeoutId);
+        resizeObserver.disconnect();
         window.removeEventListener('scroll', handleScroll, true);
         window.removeEventListener('resize', handleScroll);
       };

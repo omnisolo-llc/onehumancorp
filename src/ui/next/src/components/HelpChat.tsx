@@ -153,7 +153,7 @@ export function HelpChat() {
             ))}
             {isLoading && (
               <div className="flex flex-col items-start animate-pulse">
-                <div className="px-4 py-3 rounded-2xl max-w-[85%] bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
+                <div className="px-4 py-3 rounded-2xl max-w-[85%] bg-white/80 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>

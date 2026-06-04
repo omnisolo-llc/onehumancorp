@@ -59,6 +59,9 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           100% { opacity: 1; transform: translate(-50%, -100%); }
         }
         .animate-fade-in-up { animation: fade-in-up 0.2s ease-out forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-fade-in-up { animation: none; opacity: 1; transform: translate(-50%, -100%); }
+        }
       `}} />
     </TooltipContext.Provider>
   );
@@ -107,8 +110,9 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      setActiveTooltip(null);
     };
-  }, []);
+  }, [setActiveTooltip]);
 
   return (
     <div
