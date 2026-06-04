@@ -2,7 +2,12 @@ use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::auto_dream_service_server::AutoDreamService;
 use std::sync::Arc;
+<<<<<<< HEAD
+#[allow(ambiguous_glob_imports)]
+use crate::autodream::AutoDreamWorker;
+=======
 use crate::services::autodream::AutoDreamWorker;
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
 
 pub struct MyAutoDreamService {
     worker: Arc<AutoDreamWorker>,
@@ -42,6 +47,7 @@ impl AutoDreamService for MyAutoDreamService {
         let embedding = match client.generate_embedding(&req.query_text).await {
             Ok(emb) => serde_json::to_string(&emb).unwrap_or_else(|_| format!("[{}]", vec!["0.0"; 1536].join(", "))),
             Err(e) => {
+                ::server_telemetry::record_error_signal("AutoDream service: failed to generate embedding");
                 tracing::error!("AutoDream service: failed to generate embedding: {}", e);
                 format!("[{}]", vec!["0.0"; 1536].join(", "))
             }

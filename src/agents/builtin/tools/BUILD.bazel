@@ -26,7 +26,7 @@ rust_library(
         "pydantic.rs",
         "native_state.rs",
         "repo_map.rs",
-        "aider_repo_map.rs",
+
         "ollama.rs",
         "read.rs",
         "recall.rs",

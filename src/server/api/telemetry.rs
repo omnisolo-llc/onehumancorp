@@ -43,7 +43,11 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .and_then(|v| v.as_f64().map(|f| f as i64).or(v.as_i64()))
                     .unwrap_or(item.value as i64);
 
+<<<<<<< HEAD
+                ::server_telemetry::record_token_usage(agent_id, role, model, t_type, count);
+=======
                 crate::api::telemetry::record_token_usage(agent_id, role, model, t_type, count);
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
 
                 // Track cost dynamically
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
@@ -69,13 +73,22 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .to_string();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
+<<<<<<< HEAD
+                        let _ = ::server_telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
+                        let cost_cents = (cost_usd * 100.0).round() as i64;
+=======
                         let _ = crate::api::telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
                         let cost_cents = (cost_usd as f64 * 100.0).round() as i64;
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                         let labels_cents = serde_json::json!({
                             "tenant_id": tenant_id.clone(),
                             "model": model_string.clone()
                         });
+<<<<<<< HEAD
+                        let _ = ::server_telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+=======
                         let _ = crate::api::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     });
                 }
             }
@@ -91,7 +104,11 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .and_then(Value::as_str)
                     .unwrap_or("");
                 let api = item.labels.get("api").and_then(Value::as_str).unwrap_or("");
+<<<<<<< HEAD
+                ::server_telemetry::record_agent_api_call(agent_id, role, api);
+=======
                 crate::api::telemetry::record_agent_api_call(agent_id, role, api);
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
 
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
@@ -106,13 +123,22 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .to_string();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
+<<<<<<< HEAD
+                        let _ = ::server_telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
+                        let cost_cents = (cost_usd * 100.0).round() as i64;
+=======
                         let _ = crate::api::telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
                         let cost_cents = (cost_usd as f64 * 100.0).round() as i64;
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                         let labels_cents = serde_json::json!({
                             "tenant_id": tenant_id.clone(),
                             "api": api_string.clone()
                         });
+<<<<<<< HEAD
+                        let _ = ::server_telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+=======
                         let _ = crate::api::telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                     });
                 }
             }
@@ -128,7 +154,11 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .and_then(Value::as_str)
                     .unwrap_or("");
                 let api = item.labels.get("api").and_then(Value::as_str).unwrap_or("");
+<<<<<<< HEAD
+                ::server_telemetry::record_agent_api_error(agent_id, role, api);
+=======
                 crate::api::telemetry::record_agent_api_error(agent_id, role, api);
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             }
             "human_interaction" => {
                 let i_type = item
@@ -136,7 +166,11 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .get("type")
                     .and_then(Value::as_str)
                     .unwrap_or("");
+<<<<<<< HEAD
+                ::server_telemetry::record_human_interaction(i_type);
+=======
                 crate::api::telemetry::record_human_interaction(i_type);
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             }
             "meeting_event" => {
                 let e_type = item
@@ -145,7 +179,11 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .or_else(|| item.labels.get("type"))
                     .and_then(Value::as_str)
                     .unwrap_or("");
+<<<<<<< HEAD
+                ::server_telemetry::record_meeting_event(e_type);
+=======
                 crate::api::telemetry::record_meeting_event(e_type);
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             }
             "swarm_task_completed" => {
                 let mission_id = item
@@ -153,13 +191,21 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .get("mission_id")
                     .and_then(Value::as_str)
                     .unwrap_or("");
+<<<<<<< HEAD
+                ::server_telemetry::record_swarm_task_completed(mission_id);
+=======
                 crate::api::telemetry::record_swarm_task_completed(mission_id);
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
             }
             _ => {
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
                     let pool = crate::db::get_pool();
+<<<<<<< HEAD
+                    let _ = ::server_telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+=======
                     let _ = crate::api::telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+>>>>>>> 35763a59 (feat: [architecture] Unified Multimodal Autonomous Customer Support Engine Research Report (#23362))
                 }
                 // Ignore other metrics in cloud
                 tracing::trace!(
