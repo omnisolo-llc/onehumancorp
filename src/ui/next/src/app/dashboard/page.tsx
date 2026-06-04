@@ -69,6 +69,7 @@ function statusTone(status?: string) {
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
+  const [teamInvitesMetrics, setTeamInvitesMetrics] = useState<{ total_invites: number } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
@@ -104,25 +105,30 @@ export default function Dashboard() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, teamInvitesRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
+          fetch(`/api/v1/growth/team-invites-metrics`).catch(() => null),
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, teamInvitesData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
+          teamInvitesRes && teamInvitesRes.ok ? teamInvitesRes.json().catch(() => null) : null,
         ]);
 
         setMetrics({ ...emptyMetrics, ...metricsData });
+        if (teamInvitesData) {
+            setTeamInvitesMetrics(teamInvitesData);
+        }
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
         setSupply({
@@ -376,6 +382,49 @@ export default function Dashboard() {
         </section>
 
         <section className="mt-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Referral Program</h2>
+            </div>
+            <button onClick={() => {
+                const modal = document.getElementById('invite-business-modal-next');
+                if (modal) modal.style.display = 'block';
+            }} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm">
+                <span>🎁 Invite a Business</span>
+            </button>
+          </div>
+          <div id="invite-business-modal-next" className="app-card" style={{ display: 'none', marginBottom: '16px' }}>
+              <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold font-outfit">Help a Business Grow!</h2>
+                  <button onClick={() => {
+                      const modal = document.getElementById('invite-business-modal-next');
+                      if (modal) modal.style.display = 'none';
+                  }} className="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <p className="text-sm text-gray-600 mb-2">Your Unique Link</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm font-mono break-all">
+                  https://ohc.app/invite/{tenantId()}
+              </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between bg-white rounded-xl border border-gray-100">
+              <div className="text-sm font-medium mb-1 text-indigo-800">Team Invites Sent</div>
+              <div className="text-3xl font-bold font-outfit text-indigo-900">{teamInvitesMetrics?.total_invites || 0}</div>
+            </div>
+            <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between bg-white rounded-xl border border-gray-100">
+              <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
+              <div className="text-3xl font-bold font-outfit text-indigo-900">0</div>
+            </div>
+            <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between bg-white rounded-xl border border-gray-100">
+              <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
+              <div className="text-3xl font-bold font-outfit text-indigo-900">$0.00</div>
+            </div>
+            <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between bg-white rounded-xl border border-gray-100">
+              <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
+              <div className="text-3xl font-bold font-outfit text-indigo-900">$0.00</div>
+            </div>
+          </div>
+
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>

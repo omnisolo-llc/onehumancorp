@@ -27,7 +27,7 @@ test.describe('Growth Loop: Team Invites Metrics Component', () => {
     await expect(page.getByText('Pending Rewards')).toBeVisible();
   });
 
-  test('TC4: Should be able to open referral modal from dashboard', async ({ page }) => {
+  test('TC4_skipped: Should be able to open referral modal from dashboard', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // We are already on the dashboard
     await page.getByRole('button', { name: 'Invite a Business' }).click();
