@@ -3968,4 +3968,63 @@ mod tests_added_for_coverage {
         let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
         assert_eq!(winner.id, "a");
     }
+
+    #[tokio::test]
+    async fn test_conflict_scenario_edge_cases_1() {
+        let now = Utc::now();
+        let rec_a = EmbeddingRecord {
+            id: "a".to_string(),
+            tenant_id: "tenant".to_string(),
+            agent_id: "agent".to_string(),
+            content: "content a".to_string(),
+            embedding: vec![0.5; 10],
+            source_type: "NOTE".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true, // a has override
+            metadata: None,
+        };
+        let mut rec_b = rec_a.clone();
+        rec_b.id = "b".to_string();
+        rec_b.content = "content b".to_string();
+        rec_b.owner_override = false; // b has no override
+        rec_b.reliability_score = 100; // b has better score
+        rec_b.created_at = now + chrono::Duration::days(1); // b is newer
+
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        assert_eq!(winner.id, "a");
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        assert_eq!(winner.id, "a");
+    }
+
+    #[tokio::test]
+    async fn test_conflict_scenario_edge_cases_2() {
+        let now = Utc::now();
+        let rec_a = EmbeddingRecord {
+            id: "a".to_string(),
+            tenant_id: "tenant".to_string(),
+            agent_id: "agent".to_string(),
+            content: "content a".to_string(),
+            embedding: vec![0.5; 10],
+            source_type: "NOTE".to_string(),
+            created_at: now - chrono::Duration::days(100), // a is very old
+            last_referenced_at: now,
+            reference_count: 1,
+            reliability_score: 90, // a has better score
+            owner_override: false,
+            metadata: None,
+        };
+        let mut rec_b = rec_a.clone();
+        rec_b.id = "b".to_string();
+        rec_b.content = "content b".to_string();
+        rec_b.reliability_score = 80;
+        rec_b.created_at = now; // b is very new
+
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_a, &rec_b);
+        assert_eq!(winner.id, "a");
+        let (winner, _loser) = VectorRepository::determine_conflict_winner(&rec_b, &rec_a);
+        assert_eq!(winner.id, "a");
+    }
 }
