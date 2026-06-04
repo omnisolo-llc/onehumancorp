@@ -22,7 +22,7 @@ pub struct InventoryStatusResponse {
 }
 
 async fn handle_inventory_status(
-    Extension(hub): Extension<Arc<crate::hub::Hub>>,
+    Extension(_hub): Extension<Arc<crate::hub::Hub>>,
     State(mesh): State<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>>,
     Json(payload): Json<InventoryStatusRequest>,
 ) -> impl IntoResponse {
