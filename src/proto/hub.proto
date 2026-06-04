@@ -828,6 +828,9 @@ service GrowthService {
   rpc GetReferralScoreMetrics(EmptyRequest) returns (ReferralScoreMetricsResponse);
   
   rpc GetOnboardingFunnel(EmptyRequest) returns (OnboardingFunnelsResponse);
+
+  rpc SubmitReview(SubmitReviewRequest) returns (SubmitReviewResponse);
+  rpc GetReputation(GetReputationRequest) returns (ReputationResponse);
   rpc CreateOnboardingFunnel(CreateOnboardingRequest) returns (OnboardingFunnel);
   rpc GetOnboardingMetrics(EmptyRequest) returns (OnboardingMetricsResponse);
   
@@ -1726,4 +1729,24 @@ message GenerateMeetingForBookingRequest {
 
 message GenerateMeetingForBookingResponse {
   string link = 1;
+}
+
+message SubmitReviewRequest {
+  string user_id = 1;
+  string reviewer_name = 2;
+  int32 rating = 3;
+  string comment = 4;
+}
+
+message SubmitReviewResponse {
+  string referral_link = 1;
+}
+
+message GetReputationRequest {
+  string user_id = 1;
+}
+
+message ReputationResponse {
+  float overall_rating = 1;
+  int32 review_count = 2;
 }

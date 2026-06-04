@@ -54,6 +54,123 @@ impl MyGrowthService {
 
 #[tonic::async_trait]
 impl GrowthService for MyGrowthService {
+    async fn submit_review(
+        &self,
+        request: Request<SubmitReviewRequest>,
+    ) -> Result<Response<SubmitReviewResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let review_id = format!("review-{}", uuid::Uuid::new_v4());
+        sqlx::query(
+            "INSERT INTO reviews (id, tenant_id, reviewer_name, user_id, rating, comment) VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(&review_id)
+        .bind(&org_id)
+        .bind(&req.reviewer_name)
+        .bind(&req.user_id)
+        .bind(req.rating)
+        .bind(&req.comment)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Recalculate average
+        let row = sqlx::query(
+            "SELECT COALESCE(AVG(rating), 0.0) as avg_rating, COUNT(id) as cnt FROM reviews WHERE tenant_id = $1"
+        )
+        .bind(&org_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let avg_rating: f64 = row.get("avg_rating");
+        let cnt: i64 = row.get("cnt");
+
+        let rep_profile_id = format!("rep-{}", org_id);
+        sqlx::query(
+            r#"
+            INSERT INTO reputation_profiles (id, tenant_id, overall_rating, review_count)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE SET overall_rating = EXCLUDED.overall_rating, review_count = EXCLUDED.review_count, updated_at = CURRENT_TIMESTAMP
+            "#
+        )
+        .bind(&rep_profile_id)
+        .bind(&org_id)
+        .bind(avg_rating)
+        .bind(cnt as i32)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut referral_link = String::new();
+        if req.rating >= 4 {
+            if let Ok(link) = referral_api::generate_referral_link(&req.user_id) {
+                referral_link = link.clone();
+                let event_id = format!("evt-{}", uuid::Uuid::new_v4());
+                let state_change = serde_json::json!({
+                    "review_id": review_id,
+                    "reviewer_name": req.reviewer_name,
+                    "rating": req.rating,
+                    "referral_link": link,
+                });
+
+                // Track referral conversion in universal ledger
+                sqlx::query(
+                    "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, $3, $4, $5)"
+                )
+                .bind(event_id)
+                .bind(&org_id)
+                .bind("Growth")
+                .bind("ReferralConversion")
+                .bind(state_change)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+            }
+        }
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(SubmitReviewResponse {
+            referral_link,
+        }))
+    }
+
+    async fn get_reputation(
+        &self,
+        request: Request<GetReputationRequest>,
+    ) -> Result<Response<ReputationResponse>, Status> {
+        let org_id = self.get_org_id(request.metadata()).await?;
+        let _req = request.into_inner(); // user_id not actively used right now based on schema
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let row = sqlx::query("SELECT overall_rating, review_count FROM reputation_profiles WHERE tenant_id = $1")
+            .bind(&org_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if let Some(r) = row {
+            let overall_rating: f64 = r.get("overall_rating");
+            let review_count: i32 = r.get("review_count");
+            Ok(Response::new(ReputationResponse {
+                overall_rating: overall_rating as f32,
+                review_count,
+            }))
+        } else {
+            Ok(Response::new(ReputationResponse {
+                overall_rating: 0.0,
+                review_count: 0,
+            }))
+        }
+    }
+
     async fn get_landing_page_experiments(
         &self,
         _request: Request<EmptyRequest>,
