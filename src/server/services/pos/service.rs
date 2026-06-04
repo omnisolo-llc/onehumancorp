@@ -5,12 +5,12 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 pub struct MyPosService {
-    db: Arc<crate::db::DB>,
+    _db: Arc<crate::db::DB>,
 }
 
 impl MyPosService {
     pub fn new(db: Arc<crate::db::DB>) -> Self {
-        Self { db }
+        Self { _db: db }
     }
 }
 
