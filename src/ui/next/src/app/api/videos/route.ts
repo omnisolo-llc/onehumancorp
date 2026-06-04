@@ -1,10 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { fetchApi } from '../../../lib/fetchApi';
 
 export async function GET(request: NextRequest) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-
   try {
-    const res = await fetch(`${backendUrl}/api/videos`);
+    const res = await fetchApi('/api/videos');
 
     if (res.ok) {
       const data = await res.json();

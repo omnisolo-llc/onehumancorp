@@ -45,6 +45,7 @@ describe('POST /api/v1/growth/referrals/generate', () => {
     });
 
     it('should return error response if backend fails', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         (global.fetch as any).mockResolvedValue({
             ok: false,
             status: 400
@@ -58,9 +59,11 @@ describe('POST /api/v1/growth/referrals/generate', () => {
         expect(res.status).toBe(400);
         const json = await res.json();
         expect(json.error).toBe('Failed to generate referral link');
+        consoleErrorSpy.mockRestore();
     });
 
     it('should handle internal server errors', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         (global.fetch as any).mockRejectedValue(new Error('Network error'));
 
         const req = new Request('http://localhost/api/v1/growth/referrals/generate', {
@@ -71,5 +74,6 @@ describe('POST /api/v1/growth/referrals/generate', () => {
         expect(res.status).toBe(500);
         const json = await res.json();
         expect(json.error).toBe('Internal Server Error');
+        consoleErrorSpy.mockRestore();
     });
 });

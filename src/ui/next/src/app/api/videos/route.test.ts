@@ -24,7 +24,7 @@ describe('/api/videos GET', () => {
     expect(response.status).toBe(200);
     const data = await response.json();
 
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8080/api/videos');
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8080/api/videos', undefined);
     expect(data).toEqual(mockVideos);
   });
 
@@ -43,6 +43,7 @@ describe('/api/videos GET', () => {
   });
 
   it('handles fetch exceptions gracefully', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     const request = new NextRequest('http://localhost:3000/api/videos');

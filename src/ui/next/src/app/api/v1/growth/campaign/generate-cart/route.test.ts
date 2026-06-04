@@ -25,6 +25,7 @@ describe('POST /api/v1/growth/campaign/generate-cart', () => {
     });
 
     it('returns fallback message on backend failure', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         (global.fetch as any).mockResolvedValueOnce({
             ok: false,
         });
@@ -40,6 +41,7 @@ describe('POST /api/v1/growth/campaign/generate-cart', () => {
         expect(res.status).toBe(200);
         expect(data.message).toContain('Hi Bob');
         expect(data.message).toContain('totaling $100.00');
+        consoleErrorSpy.mockRestore();
     });
 
     it('returns fallback message on fetch error', async () => {
