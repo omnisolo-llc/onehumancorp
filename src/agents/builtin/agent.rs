@@ -92,6 +92,7 @@ pub enum AgentEvent {
     Handoff { target_agent: String },
     RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
     GuardrailTripped { reason: String },
+    CostUpdate { total_cost_usd: f64 },
 }
 
 /// Configuration for a single agent run.
@@ -719,6 +720,7 @@ impl Agent {
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let mut turn_count = 0;
         let mut total_tokens = 0;
+        let mut total_session_cost = 0.0;
         let mut budget_tracker = crate::budget::BudgetTracker::default();
 
         let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
@@ -748,6 +750,17 @@ impl Agent {
             let usage = resp.usage;
 
             total_tokens += usage.input_tokens + usage.output_tokens;
+            let turn_cost = ::server_pricing::calculator::calculate_cost(
+                cfg.model.to_lowercase().as_str(),
+                usage.input_tokens as i64,
+                usage.output_tokens as i64,
+                0,
+            );
+            if turn_cost > 0.0 {
+                total_session_cost += turn_cost;
+                on_event(AgentEvent::CostUpdate { total_cost_usd: total_session_cost });
+            }
+
             messages.push(msg.clone());
 
             // 3. Termination Condition: Safety refusal
@@ -2135,6 +2148,7 @@ impl Agent {
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
+        let mut total_session_cost = 0.0;
 
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut malformed_retries = 0;
@@ -2412,7 +2426,9 @@ impl Agent {
             );
 
             if turn_cost > 0.0 {
+                total_session_cost += turn_cost;
                 cost_counter.add(turn_cost, &[model_label, agent_label, tool_label]);
+                on_event(AgentEvent::CostUpdate { total_cost_usd: total_session_cost });
             }
 
             llm_span.record("input_tokens", &turn_input_tokens);
@@ -2723,16 +2739,17 @@ impl Agent {
                         }
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: msg.clone(),
+                            result: self_correct_msg.clone(),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: self_correct_msg,
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -2915,13 +2932,14 @@ impl Agent {
                             }
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: msg.clone(),
+                                result: self_correct_msg.clone(),
                                 iteration,
                             });
-                            error = msg;
+                            error = self_correct_msg;
                             content = String::new();
                             break;
                         }
@@ -3539,6 +3557,39 @@ mod tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Termination: Max turn limit exceeded"));
+    }
+
+    #[tokio::test]
+    async fn test_tao_cost_tracking() {
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Calculating cost"),
+                    usage: crate::types::Usage { input_tokens: 1000, output_tokens: 200, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        // Using gpt-4o for pricing map match
+        cfg.model = "gpt-4o".to_string();
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
+        assert!(res.is_ok());
+
+        let mut cost_emitted = false;
+        for e in events {
+            if let AgentEvent::CostUpdate { total_cost_usd } = e {
+                assert!(total_cost_usd > 0.0);
+                cost_emitted = true;
+            }
+        }
+        assert!(cost_emitted, "CostUpdate event should be emitted when model has pricing");
     }
 
     #[tokio::test]
@@ -5118,7 +5169,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result == "missing parameter X"
+                name == "llm_recoverable_tool" && result.contains("missing parameter X")
             } else {
                 false
             }
@@ -5132,7 +5183,7 @@ mod tests {
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
-        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
+        assert!(tool_msg.tool_results[0].error.contains("missing parameter X"));
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
