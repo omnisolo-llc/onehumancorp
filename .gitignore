@@ -94,9 +94,6 @@ doc/api/
 *.js.deps
 *.js.map
 
-.flutter-plugins
-.flutter-plugins-dependencies
-
 node_modules/
 *.log
 .vscode/
@@ -122,14 +119,6 @@ Chart.lock
 /src/ui/tauri/gen/
 site/
 
-# Android/Flutter local properties (auto-generated, machine-specific)
-/src/app/android/local.properties
-/src/app/android/.gradle/
-/src/app/ios/Flutter/Flutter.podspec
-/src/app/ios/Flutter/Generated.xcconfig
-/src/app/macos/Flutter/Flutter.podspec
-/src/app/macos/Flutter/GeneratedPluginRegistrant.swift
-/src/app/**/ephemeral/
 playwright-report/
 debian-binary
 /*.diff
