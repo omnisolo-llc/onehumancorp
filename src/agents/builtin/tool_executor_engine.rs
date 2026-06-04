@@ -65,7 +65,13 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    return Err(ToolError::LlmRecoverable(msg));
+                    // Error Handling (Compounding Error Prevention): LLM-recoverable ToolMessages fallback mechanic
+                    let enhanced_msg = format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again. Error: {}", msg);
+                    return Ok(serde_json::to_string(&serde_json::json!({
+                        "type": "ToolMessage",
+                        "id": tc.id.clone(),
+                        "result": enhanced_msg
+                    })).unwrap());
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.

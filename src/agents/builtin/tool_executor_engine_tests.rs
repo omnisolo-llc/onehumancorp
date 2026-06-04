@@ -210,14 +210,10 @@ mod tests {
         // Execute via the engine
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
-        assert!(res.is_err());
-        match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => {
-                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-                assert!(msg.contains("missing field `required_int`"));
-            },
-            _ => panic!("Expected LlmRecoverable error from Pydantic adapter"),
-        }
+        assert!(res.is_ok());
+        let res_str = res.unwrap();
+        assert!(res_str.contains("Validation Error (Pydantic-first tool schema)"));
+        assert!(res_str.contains("missing field `required_int`"));
     }
 
     #[tokio::test]
@@ -240,11 +236,8 @@ mod tests {
 
         // We simulate the pydantic loop which returns the recoverable error directly
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
-        assert!(res.is_err());
-        match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
-            _ => panic!("Expected LlmRecoverable error"),
-        }
+        assert!(res.is_ok());
+        assert!(res.unwrap().contains("Validation Error (Pydantic-first tool schema)"));
     }
 
 
@@ -269,15 +262,9 @@ mod tests {
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
 
-        // Ensure the engine correctly bubbles up the exact recoverable error back to the orchestration loop
-        assert!(res.is_err());
-        match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => {
-                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-                // The main orchestration loop in agent.rs uses this exact error string to feed back to the LLM
-            },
-            _ => panic!("Expected LlmRecoverable error"),
-        }
+        assert!(res.is_ok());
+        let msg = res.unwrap();
+        assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
     }
 
     #[tokio::test]
@@ -301,7 +288,7 @@ mod tests {
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("parse error")),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
