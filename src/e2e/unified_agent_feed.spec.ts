@@ -1,40 +1,57 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Unified Agent Feed', () => {
-  test('should display agent feed and allow interaction', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-
-    // Ensure we are using the seeded e2e tenant explicitly to fetch the seed data
-    await page.addInitScript(() => {
-      localStorage.setItem('tenant_id', 'e2e-tenant');
-      localStorage.setItem('user_id', 'e2e-admin-user');
-    });
-
-    // Go to dashboard
+  test('navigates to unified agent feed from dashboard', async ({ page }) => {
     await page.goto('/dashboard');
 
-    // Verify we are on dashboard and the Unified Agent Feed is present
-    await expect(page.getByRole('heading', { name: 'Agent Proposals' })).toBeVisible();
+    // Check that the link is present on the dashboard
+    const feedLink = page.locator('a[href="/unified-agent-feed"]');
+    await expect(feedLink).toBeVisible();
 
-    // We expect seeded approvals to show up because of our seed data updates
-    await expect(page.getByText('Draft email for review')).toBeVisible();
-    await expect(page.getByText('Abandoned cart recovery: 10% discount for Sarah')).toBeVisible();
+    // Click and navigate
+    await feedLink.click();
 
-    // Check context data display
-    await expect(page.getByText('Abandoned Carts:')).toBeVisible();
-    await expect(page.getByText('3', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('Potential Revenue:')).toBeVisible();
-    await expect(page.getByText('$120.00')).toBeVisible();
+    // Verify we are on the right page
+    await expect(page).toHaveURL(/\/unified-agent-feed/);
+    await expect(page.getByRole('heading', { name: 'Unified Agent Feed' })).toBeVisible();
+  });
 
-    // Verify Edit button exists
-    const editBtn = page.locator('button[aria-label="Edit proposal"]').first();
-    await expect(editBtn).toBeVisible();
+  test('displays proposals fetched from the API', async ({ page }) => {
+    await page.goto('/unified-agent-feed');
 
-    // Click to decline the abandoned cart proposal
-    const declineBtn = page.locator('button[aria-label="Reject proposal"]').last();
-    await declineBtn.click();
+    // Wait for the loading state to disappear
+    await expect(page.getByTestId('loading-state')).not.toBeVisible({ timeout: 10000 });
 
-    // Verify it was optimistically removed from the UI
-    await expect(page.getByText('Abandoned cart recovery: 10% discount for Sarah')).not.toBeVisible();
+    // Check for proposal titles
+    await expect(page.getByText('Launch Summer Promo Campaign')).toBeVisible();
+    await expect(page.getByText('Low Stock: Premium Fertilizer')).toBeVisible();
+
+    // Check for agent types
+    await expect(page.getByText('Marketing Agent')).toBeVisible();
+    await expect(page.getByText('Operations Agent')).toBeVisible();
+  });
+
+  test('allows reviewing drafts', async ({ page }) => {
+    await page.goto('/unified-agent-feed');
+
+    await expect(page.getByTestId('loading-state')).not.toBeVisible({ timeout: 10000 });
+    const reviewButton = page.getByRole('button', { name: 'Review Drafts' });
+    await expect(reviewButton).toBeVisible();
+  });
+
+  test('allows approving orders', async ({ page }) => {
+    await page.goto('/unified-agent-feed');
+
+    await expect(page.getByTestId('loading-state')).not.toBeVisible({ timeout: 10000 });
+    const approveOrderButton = page.getByRole('button', { name: 'Approve Order ($450)' });
+    await expect(approveOrderButton).toBeVisible();
+  });
+
+  test('allows ignoring alerts', async ({ page }) => {
+    await page.goto('/unified-agent-feed');
+
+    await expect(page.getByTestId('loading-state')).not.toBeVisible({ timeout: 10000 });
+    const ignoreButton = page.getByRole('button', { name: 'Ignore for now' });
+    await expect(ignoreButton).toBeVisible();
   });
 });
