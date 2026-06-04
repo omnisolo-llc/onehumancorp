@@ -14,70 +14,7 @@ use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDe
 use crate::verification_loops::{ComputationalGuide, VisualVerifier};
 
 /// Default computational guide using bash commands
-struct BashComputationalGuide {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl ComputationalGuide for BashComputationalGuide {
-    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                        self.command, stdout, stderr
-                    ));
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute computational guide command '{}': {}", self.command, e)),
-        }
-    }
-}
-
 /// Default visual verifier using bash commands
-struct BashVisualVerifier {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl VisualVerifier for BashVisualVerifier {
-    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                        self.command, stdout, stderr
-                    ));
-                } else {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    if stdout.contains("REJECT") {
-                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
-                    }
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute visual verification command '{}': {}", self.command, e)),
-        }
-    }
-}
-
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
@@ -2504,25 +2441,36 @@ impl Agent {
 
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    verification_manager.add_computational(Arc::new(crate::verification_loops::BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    verification_manager.add_visual(Arc::new(crate::verification_loops::BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_llm_judge {
-                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone(), model: final_cfg.model.clone() }));
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor {
+                        llm: self.llm.clone(),
+                        model: final_cfg.model.clone(),
+                        criteria: Some(format!(
+                            "correctness, completeness, and strict adherence to these instructions: {}",
+                            final_cfg.developer_instructions
+                        )),
+                    }));
                 }
 
-                if let Err(e) = verification_manager.run_computational_guides("", "").await {
+                let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                if let Err(e) = verification_manager.run_computational_guides(&last_assistant_content, &current_context).await {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_visual_verifiers("").await {
+                if let Err(e) = verification_manager.run_visual_verifiers(&last_assistant_content).await {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, "").await {
-                    messages.push(Message::user(format!("LLM-as-judge subagent rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", e)));
+                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
+                    messages.push(Message::user(format!(
+                        "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
+                        e
+                    )));
                     continue;
                 }
                 // OpenAI Mechanic: Output Guardrails
@@ -2739,16 +2687,17 @@ impl Agent {
                         }
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: msg.clone(),
+                            result: self_correct_msg.clone(),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: self_correct_msg,
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -2931,13 +2880,14 @@ impl Agent {
                             }
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: msg.clone(),
+                                result: self_correct_msg.clone(),
                                 iteration,
                             });
-                            error = msg;
+                            error = self_correct_msg;
                             content = String::new();
                             break;
                         }
@@ -3025,13 +2975,13 @@ impl Agent {
                     created_at: chrono::Utc::now(),
                 };
                 if let Err(e) = checkpointer.put_checkpoint(cp).await {
-                    tracing::warn!("Failed to save checkpoint to database: {}", e);
+                    tracing::warn!("Failed to save checkpoint: {}", e);
                 } else {
                     last_checkpoint_id = Some(checkpoint_id.clone());
                     checkpoint_history.push(checkpoint_id.clone());
                     on_event(AgentEvent::CheckpointSaved {
                         iteration,
-                        path: format!("db:{}", checkpoint_id),
+                        path: format!("{}:{}", checkpointer.storage_prefix(), checkpoint_id),
                     });
                 }
             }
@@ -5167,7 +5117,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result == "missing parameter X"
+                name == "llm_recoverable_tool" && result.contains("missing parameter X")
             } else {
                 false
             }
@@ -5181,7 +5131,7 @@ mod tests {
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
-        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
+        assert!(tool_msg.tool_results[0].error.contains("missing parameter X"));
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
@@ -5565,7 +5515,7 @@ mod tests {
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_1".to_string(),
                             name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
+                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9, "missing_elements": ["data"], "suggested_fixes": ["add data"]}}),
                         }],
                         tool_results: vec![],
                         response_id: Some("mock-id".to_string()),
@@ -5588,7 +5538,7 @@ mod tests {
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_2".to_string(),
                             name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}}),
+                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0, "missing_elements": [], "suggested_fixes": []}}),
                         }],
                         tool_results: vec![],
                         response_id: Some("mock-id".to_string()),
@@ -5964,6 +5914,7 @@ mod tests {
         agent.checkpointer = Some(Arc::new(cp));
 
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_state_checkpointing = true;
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
         cfg.thread_id = Some("test-thread".to_string());
 
@@ -5977,7 +5928,7 @@ mod tests {
         let mut found_checkpoint_event = false;
         for e in events {
             if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path.starts_with("db:") {
+                if path.starts_with("git:") {
                     found_checkpoint_event = true;
                 }
             }
@@ -6277,6 +6228,7 @@ mod tests {
         let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
 
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_state_checkpointing = true;
         cfg.thread_id = Some("git-thread-123".to_string());
 
         let mut events = vec![];

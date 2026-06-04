@@ -397,31 +397,13 @@ impl VectorRepository {
 
     /// Determines the winner of a memory conflict between two embedding records.
     pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
-        if a.owner_override != b.owner_override {
-            if a.owner_override {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.reliability_score != b.reliability_score {
-            if a.reliability_score > b.reliability_score {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.created_at != b.created_at {
-            if a.created_at > b.created_at {
-                (a, b)
-            } else {
-                (b, a)
-            }
+        let cmp = (a.owner_override, a.reliability_score, a.created_at, std::cmp::Reverse(&a.id))
+            .cmp(&(b.owner_override, b.reliability_score, b.created_at, std::cmp::Reverse(&b.id)));
+
+        if cmp == std::cmp::Ordering::Greater {
+            (a, b)
         } else {
-            // Fallback, make it deterministic by ID
-            if a.id < b.id {
-                (a, b)
-            } else {
-                (b, a)
-            }
+            (b, a)
         }
     }
 
@@ -2388,6 +2370,34 @@ mod determine_conflict_winner_tests {
 
         let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
         assert_eq!(winner.id, "a"); // fallback to a, because a.id < b.id
+        assert_eq!(loser.id, "b");
+    }
+
+    #[test]
+    fn test_winner_owner_override_trumps_all() {
+        let a = create_test_record("a", true, 10, 100); // Override but terrible score, very old
+        let b = create_test_record("b", false, 100, 0); // No override but perfect score, very new
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+    }
+
+    #[test]
+    fn test_winner_reliability_score_trumps_recency() {
+        let a = create_test_record("a", false, 90, 100); // Great score, very old
+        let b = create_test_record("b", false, 80, 0); // Good score, very new
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner.id, "a");
         assert_eq!(loser.id, "b");
     }
 }

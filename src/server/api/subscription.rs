@@ -66,6 +66,7 @@ async fn get_plans(
             (StatusCode::OK, Json(plans)).into_response()
         },
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch subscription plans");
             tracing::error!("Failed to fetch subscription plans: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
         }
@@ -101,6 +102,7 @@ async fn get_subscribers(
             (StatusCode::OK, Json(subscribers)).into_response()
         },
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch subscribers");
             tracing::error!("Failed to fetch subscribers: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
         }
@@ -139,6 +141,7 @@ async fn get_fulfillment_batches(
             (StatusCode::OK, Json(batches)).into_response()
         },
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch fulfillment batches");
             tracing::error!("Failed to fetch fulfillment batches: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
         }
@@ -189,6 +192,7 @@ async fn handle_magic_link(
     match update {
         Ok(_) => (StatusCode::OK, Json(MagicLinkResponse { success: true })).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to update subscription via magic link");
             tracing::error!("Failed to update subscription via magic link: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
         }
