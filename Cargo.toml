@@ -13,8 +13,6 @@ name = "server_lib"
 path = "src/server/lib.rs"
 
 [dependencies]
-
-
 tracing = "0.1"
 aes-gcm = "0.10"
 jsonwebtoken = "9"
