@@ -24,7 +24,7 @@ test.describe('Help Center', () => {
         await expect(page.locator('p', { hasText: 'Welcome to OneHumanCorp!' })).toBeVisible();
 
         // Click back button
-        const backButton = page.locator('button', { hasText: 'Back to Help Center' });
+        const backButton = page.locator('a', { hasText: 'Back to Help Center' });
         await backButton.click();
 
         // Verify back navigation
