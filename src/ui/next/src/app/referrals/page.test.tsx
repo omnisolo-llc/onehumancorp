@@ -31,6 +31,14 @@ describe('ReferralsPage', () => {
     expect(copyButton.hasAttribute('disabled')).toBe(true);
   });
 
+  it('renders how it works section', () => {
+    render(<ReferralsPage />);
+    expect(screen.getByText('How it works')).toBeDefined();
+    expect(screen.getByText('Share Link')).toBeDefined();
+    expect(screen.getByText('They Sign Up')).toBeDefined();
+    expect(screen.getByText('You Get $50')).toBeDefined();
+  });
+
   it('fetches and displays dynamic referral link', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
