@@ -65,8 +65,9 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Follows up with interested prospects who haven't booked\n\
                 - Manages lead pipeline and customer inquiry responses\n\
                 - Suggests upsell and cross-sell opportunities\n\
-                - Manages referral program and tracks referrals",
-            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage"],
+                - Manages referral program and tracks referrals\n\
+                - Autonomously generates Conversational Checkout Links for DMs",
+            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage", "conversational_checkout"],
             confidence_threshold: 0.80,
         },
         Department::CustomerSuccess => DepartmentConfig {
@@ -162,6 +163,7 @@ mod tests {
         let config = get_department_config(Department::Sales);
         assert!(config.system_prompt.contains("Sales & Acquisition"));
         assert!(config.allowed_tools.contains(&"sendmessage"));
+        assert!(config.allowed_tools.contains(&"conversational_checkout"));
         assert_eq!(config.confidence_threshold, 0.80);
     }
 

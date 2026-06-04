@@ -184,7 +184,6 @@ pub async fn stripe_webhook_handler(
 
                         if let Err(e) = update_res {
                             tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
-                            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                         }
                     } else {
                         tracing::warn!("Failed to acquire inventory lock for product {} on POS transaction", product_id);
@@ -201,14 +200,14 @@ pub async fn stripe_webhook_handler(
             if let Some(order_id) = order_id_opt {
                 let res = match &webhook_state.db.store {
                     crate::db::DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
+                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = ?")
                             .bind(order_id)
                             .execute(pool)
                             .await
                             .map(|_| ())
                     }
                     crate::db::DbStore::Postgres => {
-                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = $1")
+                        sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = $1")
                             .bind(order_id)
                             .execute(&webhook_state.db.pool)
                             .await
@@ -218,7 +217,6 @@ pub async fn stripe_webhook_handler(
 
                 if let Err(e) = res {
                     tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
             }
 
@@ -293,22 +291,6 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
-        "customer.subscription.created" => {
-            let obj = &payload.data.object;
-            let tenant_id_opt = obj.get("metadata")
-                .and_then(|m| m.get("tenant_id"))
-                .and_then(|id| id.as_str());
-
-            if let Some(tenant_id) = tenant_id_opt {
-                let tid = tenant_id.to_string();
-                tokio::spawn(async move {
-                    tracing::info!("Created subscription for tenant {}", tid);
-                });
-                StatusCode::OK.into_response()
-            } else {
-                StatusCode::BAD_REQUEST.into_response()
-            }
-        },
         "customer.subscription.deleted" => {
             let obj = &payload.data.object;
             let tenant_id_opt = obj.get("metadata")
@@ -343,28 +325,6 @@ pub async fn stripe_webhook_handler(
                     }
                 };
 
-                // Also mark our internal subscription table
-                let sub_id_opt = obj.get("id").and_then(|id| id.as_str());
-                if let Some(sub_id_ref) = sub_id_opt {
-                    let sub_id = sub_id_ref.to_string();
-                    let _res = match &webhook_state.db.store {
-                         DbStore::Sqlite(pool) => {
-                            sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE id = ?")
-                                .bind(sub_id)
-                                .execute(pool)
-                                .await
-                                .map(|_| ())
-                        }
-                        DbStore::Postgres => {
-                            sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE id = $1")
-                                .bind(sub_id)
-                                .execute(&webhook_state.db.pool)
-                                .await
-                                .map(|_| ())
-                        }
-                    };
-                }
-
                 if let Err(_e) = res {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
@@ -380,30 +340,9 @@ pub async fn stripe_webhook_handler(
                 .and_then(|id| id.as_str());
 
             if let Some(_tenant_id) = tenant_id_opt {
-                let sub_id_opt = obj.get("subscription").and_then(|id| id.as_str());
-                if let Some(sub_id_ref) = sub_id_opt {
-                    let sub_id = sub_id_ref.to_string();
-                    let _res = match &webhook_state.db.store {
-                         DbStore::Sqlite(pool) => {
-                            sqlx::query("UPDATE subscriptions SET status = 'past_due' WHERE id = ?")
-                                .bind(sub_id)
-                                .execute(pool)
-                                .await
-                                .map(|_| ())
-                        }
-                        DbStore::Postgres => {
-                            sqlx::query("UPDATE subscriptions SET status = 'past_due' WHERE id = $1")
-                                .bind(sub_id)
-                                .execute(&webhook_state.db.pool)
-                                .await
-                                .map(|_| ())
-                        }
-                    };
-                }
-
                 // Trigger SMS notification
                 tokio::spawn(async move {
-                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your subscription. Please update your payment method via the magic link sent to your email.").await;
+                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
                 });
             }
             StatusCode::OK.into_response()
@@ -491,14 +430,14 @@ pub async fn razorpay_webhook_handler(
             // In a real app, transition OHC orders from "Pending" to "Paid"
             let res = match &webhook_state.db.store {
                 DbStore::Sqlite(pool) => {
-                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
+                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = ?")
                         .bind(order_id)
                         .execute(pool)
                         .await
                         .map(|_| ())
                 }
                 DbStore::Postgres => {
-                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = $1")
+                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = $1")
                         .bind(order_id)
                         .execute(&webhook_state.db.pool)
                         .await

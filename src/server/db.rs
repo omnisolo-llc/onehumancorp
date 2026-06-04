@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
-    GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
+    GLOBAL_POOL.get_or_init(|| {
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
@@ -33,7 +33,7 @@ pub fn get_pool() -> PgPool {
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
-    })
+    }).clone()
 }
 
 #[derive(Clone)]

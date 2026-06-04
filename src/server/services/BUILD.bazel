@@ -103,7 +103,6 @@ rust_library(
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
-        "//src/server/domain:server_domain",
         "//src/server:server_lib",
         "//src/server/auth:server_auth",
         "//src/server/common:server_common",
