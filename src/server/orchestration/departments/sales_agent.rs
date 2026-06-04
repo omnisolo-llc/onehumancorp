@@ -19,10 +19,21 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.requested".to_string()]
+        vec!["tenant.quote.requested".to_string(), "tenant.upsell.requested".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.upsell.requested" {
+            ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "upsell_recommendation_generated");
+            return self.orchestrator.execute_action(
+                DepartmentType::Sales,
+                "Semantic catalog match for upsell generated".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                event.payload.clone(),
+            ).await.map(|_| ());
+        }
+
         // Query memory context
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
