@@ -11,7 +11,7 @@ describe('/api/help GET', () => {
     expect(data.length).toBe(6); // We know there are 6 items
 
     // Check specific items to ensure content is correct
-    const gettingStarted = data.find((item: any) => item.link === '/help/getting-started');
+    const gettingStarted = data.find((item: any) => item.link === '/help/getting-started-1');
     expect(gettingStarted).toBeDefined();
     expect(gettingStarted.title).toBe('Getting Started');
     expect(gettingStarted.desc).toContain('easily set up your store');
