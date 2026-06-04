@@ -162,6 +162,8 @@ export function UnifiedAgentFeed() {
               <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                 {approval.description}
               </h3>
+            </div>
+
               {approval.payload?.context && (
                 <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   {approval.payload.context.abandoned_carts_count !== undefined && (
