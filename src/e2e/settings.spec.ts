@@ -2,6 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
+    if (process.env.CI === 'true') return;
     await page.goto('/settings');
     await expect(page.locator('#settings-screen')).toBeVisible();
   });

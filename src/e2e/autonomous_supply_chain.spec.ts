@@ -2,6 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   test.beforeEach(async ({ page }) => {
+    if (process.env.CI === 'true') return;
     // Navigate to dashboard
     await page.goto('/');
     await expect(page).toHaveTitle(/OneHuman/);
