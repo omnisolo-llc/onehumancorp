@@ -1,4 +1,5 @@
 pub mod openai_hooks;
+pub mod anthropic_hooks;
 
 use ohc_builtin_agent_core::types::ToolCall;
 use std::sync::Arc;
