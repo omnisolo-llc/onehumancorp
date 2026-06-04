@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test('navigation to kairos works', async ({ page }) => {
+test.describe("Wrapped Auto", () => {
+  test('navigation to kairos works', async ({ page }) => {
+});
   await page.goto('/dashboard');
 
   // Click on the KAIROS link

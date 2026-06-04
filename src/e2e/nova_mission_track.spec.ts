@@ -1,3 +1,4 @@
+import { test } from '@playwright/test';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('nova_mission_track');
+test.describe("Smoke", () => { currentAppSmoke('nova_mission_track'); });

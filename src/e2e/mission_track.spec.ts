@@ -1,3 +1,4 @@
+import { test } from '@playwright/test';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('mission_track');
+test.describe("Smoke", () => { currentAppSmoke('mission_track'); });
