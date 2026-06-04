@@ -43,6 +43,7 @@ pub struct Hub {
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
     referral_tracker: Arc<crate::services::growth::referrals::ReferralTracker>,
+    pub semantic_router: Option<Arc<crate::orchestration::router::SemanticRouter>>,
 }
 
 impl Hub {
@@ -93,6 +94,16 @@ impl Hub {
             }
         });
 
+        let semantic_router = if !minimax_api_key.is_empty() {
+            let generator = Arc::new(crate::minimax::MinimaxClient::new(minimax_api_key.clone()));
+            Some(Arc::new(crate::orchestration::router::SemanticRouter::new(
+                generator,
+                crate::orchestration::router::get_default_department_centroids(),
+            )))
+        } else {
+            None
+        };
+
         Hub {
             telemetry_tx: telemetry_tx.clone(),
             agents: RwLock::new(HashMap::new()),
@@ -119,6 +130,20 @@ impl Hub {
             event_log_tx,
             redis_client,
             referral_tracker: Arc::new(crate::services::growth::referrals::ReferralTracker::new()),
+            semantic_router,
+        }
+    }
+
+    pub async fn route_prompt(&self, prompt: &str, tenant_id: &str) -> Result<String, String> {
+        if let Some(router) = &self.semantic_router {
+            let req = crate::orchestration::router::SemanticRoutingRequest {
+                prompt: prompt.to_string(),
+                tenant_id: tenant_id.to_string(),
+            };
+            let res = router.route(&req).await?;
+            Ok(res.assigned_department)
+        } else {
+            Ok("Operations".to_string())
         }
     }
 

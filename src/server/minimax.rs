@@ -463,3 +463,11 @@ impl LocalLLMClient {
     }
 }
 
+
+impl crate::orchestration::router::EmbeddingGenerator for MinimaxClient {
+    fn generate_embedding<'a>(&'a self, text: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<f32>, String>> + Send + 'a>> {
+        Box::pin(async move {
+            self.generate_embedding(text).await
+        })
+    }
+}
