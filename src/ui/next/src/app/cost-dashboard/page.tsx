@@ -3,6 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface DailyCost {
+  date: string;
+  total_cost: number;
+  llm_cost: number;
+  storage_cost: number;
+  network_cost: number;
+  compute_cost: number;
+}
+
 interface CostDashboardData {
   total_revenue: number;
   total_costs: number;
@@ -13,6 +22,7 @@ interface CostDashboardData {
   bandwidth_savings: number;
   period_start: string;
   period_end: string;
+  trend: DailyCost[];
 }
 
 export default function CostDashboardPage() {
@@ -140,6 +150,22 @@ export default function CostDashboardPage() {
                 </div>
             </div>
         </section>
+
+
+        {/* Trend Section */}
+        {data?.trend && data.trend.length > 0 && (
+        <section className="p-6 shadow-sm mt-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">7-Day Trend</h2>
+            <ul id="cost-dashboard-trend" className="space-y-2">
+                {data.trend.map((day, idx) => (
+                    <li key={idx} className="flex justify-between items-center p-3 rounded-lg border border-gray-100 bg-white shadow-sm">
+                        <span className="font-medium text-gray-700">{day.date}</span>
+                        <span className="font-semibold text-gray-900">{formatCurrency(day.total_cost || 0)}</span>
+                    </li>
+                ))}
+            </ul>
+        </section>
+        )}
 
       </main>
 

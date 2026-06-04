@@ -43,7 +43,11 @@ describe('CostDashboardPage', () => {
       network_cost: 16000,
       bandwidth_savings: 5000,
       period_start: "2023-10-01",
-      period_end: "2023-10-31"
+      period_end: "2023-10-31",
+      trend: [
+        { date: '2023-10-01', total_cost: 1000, llm_cost: 500, storage_cost: 200, network_cost: 100, compute_cost: 200 },
+        { date: '2023-10-02', total_cost: 1200, llm_cost: 600, storage_cost: 200, network_cost: 200, compute_cost: 200 }
+      ]
     };
 
     global.fetch = vi.fn().mockResolvedValue({
@@ -66,12 +70,20 @@ describe('CostDashboardPage', () => {
     // total cost
     expect(screen.getByText('$510.00')).toBeDefined();
 
+
     // Specific cost breakdowns
     expect(screen.getByText('$200.00')).toBeDefined(); // llm
     expect(screen.getByText('$100.00')).toBeDefined(); // storage
     expect(screen.getByText('$50.00')).toBeDefined(); // payment fees
     expect(screen.getByText('$160.00')).toBeDefined(); // network
     expect(screen.getByText('-$50.00')).toBeDefined(); // bandwidth savings
+
+    // Trend section
+    expect(screen.getByText('7-Day Trend')).toBeDefined();
+    expect(screen.getByText('2023-10-01')).toBeDefined();
+    expect(screen.getByText('$10.00')).toBeDefined();
+    expect(screen.getByText('2023-10-02')).toBeDefined();
+    expect(screen.getByText('$12.00')).toBeDefined();
   });
 
   test('handles fetch error gracefully', async () => {
