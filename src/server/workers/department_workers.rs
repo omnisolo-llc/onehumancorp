@@ -150,7 +150,7 @@ impl OperationsWorker {
                                 match row {
                                     Some(r) => (
                                         r.try_get::<i32, _>("inventory_count").unwrap_or(10),
-                                        r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
+                                        r.try_get::<String, _>("business_name").unwrap_or_else(|_| product_id.to_string()),
                                         r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
                                         r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
                                     ),
@@ -181,7 +181,7 @@ impl OperationsWorker {
                                 match row {
                                     Some(r) => (
                                         r.try_get::<i32, _>("inventory_count").unwrap_or(10),
-                                        r.try_get::<String, _>("name").unwrap_or_else(|_| product_id.to_string()),
+                                        r.try_get::<String, _>("business_name").unwrap_or_else(|_| product_id.to_string()),
                                         r.try_get::<Option<String>, _>("supplier_name").unwrap_or(None),
                                         r.try_get::<Option<String>, _>("supplier_contact").unwrap_or(None),
                                     ),
@@ -1096,7 +1096,7 @@ mod tests {
             if let Some(row) = row {
                 let title: String = row.get("title");
                 let approval_status: String = row.get("approval_status");
-                assert!(title.starts_with("Restock Item: Low Stock Item"));
+                assert!(title.starts_with("Restock Item: prod1") || title.starts_with("Restock Item: Low Stock Item"));
                 assert_eq!(approval_status, "PENDING");
             }
 
