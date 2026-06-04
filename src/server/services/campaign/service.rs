@@ -29,12 +29,26 @@ impl CampaignService for MyCampaignService {
         &self,
         request: Request<CreateDraftRequest>,
     ) -> Result<Response<CreateDraftResponse>, Status> {
-        let req = request.into_inner();
-        let tenant_id = req.tenant_id;
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
+
         let goal = req.goal;
 
-        if tenant_id.is_empty() || goal.is_empty() {
-            return Err(Status::invalid_argument("tenant_id and goal are required"));
+        if goal.is_empty() {
+            return Err(Status::invalid_argument("goal is required"));
         }
 
         let now = Utc::now();
@@ -72,9 +86,23 @@ impl CampaignService for MyCampaignService {
         &self,
         request: Request<AddAssetRequest>,
     ) -> Result<Response<AddAssetResponse>, Status> {
-        let req = request.into_inner();
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
 
-        if req.tenant_id.is_empty() || req.campaign_id.is_empty() || req.r#type.is_empty() || req.content_url.is_empty() {
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
+
+        if req.campaign_id.is_empty() || req.r#type.is_empty() || req.content_url.is_empty() {
             return Err(Status::invalid_argument("Missing required fields for asset"));
         }
 
@@ -109,7 +137,21 @@ impl CampaignService for MyCampaignService {
         &self,
         request: Request<LaunchCampaignRequest>,
     ) -> Result<Response<LaunchCampaignResponse>, Status> {
-        let req = request.into_inner();
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
 
         let campaign = self.repo
             .get_campaign(&req.tenant_id, &req.campaign_id)
@@ -189,9 +231,14 @@ mod tests {
         let repo = Arc::new(CampaignRepository::new(pool));
         let service = MyCampaignService::new(repo);
 
-        let req = Request::new(CreateDraftRequest {
+        let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Flash Sale".to_string(),
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
         });
 
         let res = service.create_draft(req).await.unwrap().into_inner();
@@ -209,19 +256,29 @@ mod tests {
         let repo = Arc::new(CampaignRepository::new(pool));
         let service = MyCampaignService::new(repo);
 
-        let req = Request::new(CreateDraftRequest {
+        let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Summer Promo".to_string(),
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
         });
 
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
 
-        let asset_req = Request::new(AddAssetRequest {
+        let mut asset_req = Request::new(AddAssetRequest {
             tenant_id: tenant_id.clone(),
             campaign_id: campaign_id.clone(),
             r#type: "Image".to_string(),
             content_url: "https://example.com/asset.jpg".to_string(),
+        });
+        asset_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
         });
 
         let asset_res = service.add_asset(asset_req).await.unwrap().into_inner();
@@ -238,17 +295,27 @@ mod tests {
         let repo = Arc::new(CampaignRepository::new(pool));
         let service = MyCampaignService::new(repo);
 
-        let req = Request::new(CreateDraftRequest {
+        let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Empty Campaign".to_string(),
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
         });
 
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
 
-        let launch_req = Request::new(LaunchCampaignRequest {
+        let mut launch_req = Request::new(LaunchCampaignRequest {
             tenant_id: tenant_id.clone(),
             campaign_id: campaign_id.clone(),
+        });
+        launch_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
         });
 
         let err = service.launch_campaign(launch_req).await.unwrap_err();
@@ -263,26 +330,41 @@ mod tests {
         let service = MyCampaignService::new(repo);
 
         // 1. Create Draft
-        let req = Request::new(CreateDraftRequest {
+        let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Complete Flow".to_string(),
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
         });
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
 
         // 2. Add Asset
-        let asset_req = Request::new(AddAssetRequest {
+        let mut asset_req = Request::new(AddAssetRequest {
             tenant_id: tenant_id.clone(),
             campaign_id: campaign_id.clone(),
             r#type: "Copy".to_string(),
             content_url: "Test Copy Content".to_string(),
         });
+        asset_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
+        });
         service.add_asset(asset_req).await.unwrap();
 
         // 3. Launch
-        let launch_req = Request::new(LaunchCampaignRequest {
+        let mut launch_req = Request::new(LaunchCampaignRequest {
             tenant_id: tenant_id.clone(),
             campaign_id: campaign_id.clone(),
+        });
+        launch_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_id.clone(),
+            agent_id: "test".to_string(),
         });
 
         let launch_res = service.launch_campaign(launch_req).await.unwrap().into_inner();
@@ -299,9 +381,14 @@ mod tests {
         let repo = Arc::new(CampaignRepository::new(pool1.clone()));
         let service = MyCampaignService::new(repo);
 
-        let req = Request::new(CreateDraftRequest {
+        let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_1.clone(),
             goal: "Tenant 1 Promo".to_string(),
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_1.clone(),
+            agent_id: "test".to_string(),
         });
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
@@ -312,9 +399,14 @@ mod tests {
             .await
             .unwrap();
 
-        let launch_req = Request::new(LaunchCampaignRequest {
+        let mut launch_req = Request::new(LaunchCampaignRequest {
             tenant_id: tenant_2.clone(), // tenant 2 trying to launch tenant 1's campaign
             campaign_id: campaign_id.clone(),
+        });
+        launch_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: tenant_2.clone(),
+            agent_id: "test".to_string(),
         });
 
         // The query should not find the campaign due to RLS

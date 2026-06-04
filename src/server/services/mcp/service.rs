@@ -77,14 +77,19 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
-        let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let spiffe_id_str = match auth_info {
+            Some(info) => info.spiffe_id,
+            None => request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("").to_string(),
+        };
 
         let mut req = request.into_inner();
         // OVERRIDE the request body's spiffe_id with the one from the authenticated session
         // to prevent multi-tenant safety issue where tenant_id is read from request body
         if !spiffe_id_str.is_empty() {
-            req.spiffe_id = spiffe_id_str.to_string();
+            req.spiffe_id = spiffe_id_str.clone();
+        } else {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
         
         if req.tool_id.is_empty() {
@@ -230,10 +235,14 @@ impl McpService for MyMcpService {
         &self,
         request: Request<SyncMissionsRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-        let tenant_id = parsed.0;
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -282,10 +291,14 @@ impl McpService for MyMcpService {
         &self,
         request: Request<SyncContextRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
-        let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
-        let tenant_id = parsed.0;
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));
@@ -389,6 +402,11 @@ mod tests {
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "org-1".to_string(),
+            agent_id: "agent-1".to_string(),
+        });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
 
         let resp = service.sync_missions(req).await;
@@ -413,6 +431,11 @@ mod tests {
             context: "test".to_string(),
             vector_embedding: "".to_string(),
             source_plugin: "test".to_string()
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "org-1".to_string(),
+            agent_id: "agent-1".to_string(),
         });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
 
