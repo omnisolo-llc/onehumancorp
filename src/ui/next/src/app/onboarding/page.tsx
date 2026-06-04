@@ -2,6 +2,34 @@
 
 import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
+import { AppShell } from '../components/AppShell';
+
+type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
+
+function SetupIcon({ name }: { name: SetupIconName }) {
+  const paths: Record<SetupIconName, string[]> = {
+    dashboard: ['M4 5h7v7H4z', 'M13 5h7v4h-7z', 'M13 11h7v8h-7z', 'M4 14h7v5H4z'],
+    eye: ['M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
+    launch: ['M13 10V3L4 14h7v7l9-11h-7z'],
+    next: ['M5 12h14', 'M13 6l6 6-6 6'],
+    save: ['M5 4h12l2 2v16H5z', 'M8 4v7h8V4', 'M8 18h8'],
+  };
+
+  return (
+    <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+      {paths[name].map((d) => <path key={d} d={d} />)}
+    </svg>
+  );
+}
+
+function IconLabel({ icon, children }: { icon: SetupIconName; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-2">
+      <SetupIcon name={icon} />
+      <span>{children}</span>
+    </span>
+  );
+}
 
 export default function OnboardingWizard() {
   const {
@@ -17,6 +45,7 @@ export default function OnboardingWizard() {
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    adminName, setAdminName,
     adminEmail, setAdminEmail,
     adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
@@ -52,6 +81,7 @@ export default function OnboardingWizard() {
         domainChoice,
         firstProductName,
         firstProductPrice,
+        adminName,
         adminEmail,
         adminPassword,
         aiAgents,
@@ -105,6 +135,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
         if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
         if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
@@ -138,6 +169,7 @@ export default function OnboardingWizard() {
       domainChoice,
       firstProductName,
       firstProductPrice,
+      adminName,
       adminEmail,
       adminPassword,
       aiAgents,
@@ -156,7 +188,7 @@ export default function OnboardingWizard() {
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
     businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
-    adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
+    adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
   const handleIntake = async () => {
@@ -224,7 +256,7 @@ export default function OnboardingWizard() {
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: adminEmail || 'admin@ohc.app',
-          admin_name: businessName + ' Admin',
+          admin_name: adminName || businessName + ' Admin',
           admin_password: adminPassword || 'password123',
           website_template: websiteTemplate,
           first_product_name: firstProductName,
@@ -266,14 +298,19 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-      {/* Background Glows for Premium Aesthetic */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-      <div id="setup-screen" className="w-full sm:max-w-[414px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[700px] relative border border-white/40 dark:border-white/10 transition-all duration-500">
+    <AppShell
+      title="Setup"
+      subtitle="Guided business setup in the same operations-console layout."
+      statusItems={[
+        { label: "Step", value: `${step}/5`, tone: "neutral" },
+        { label: "Progress", value: `${Math.round(getProgress())}%`, tone: step === 5 ? "good" : "warn" },
+      ]}
+      actions={[{ label: "Dashboard", href: "/dashboard" }]}
+    >
+      <div className="app-grid two">
+        <div id="setup-screen" className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] mac-glass-container">
         {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 overflow-hidden">
+        <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
             className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
@@ -310,7 +347,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-                      Save Draft
+                      <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
@@ -335,7 +372,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -354,7 +391,7 @@ export default function OnboardingWizard() {
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      <IconLabel icon="next">Next</IconLabel>
                     </button>
                   </div>
                 </div>
@@ -374,7 +411,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-                      Save Draft
+                      <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
@@ -398,7 +435,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -417,7 +454,7 @@ export default function OnboardingWizard() {
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      <IconLabel icon="next">Next</IconLabel>
                     </button>
                   </div>
                 </div>
@@ -437,7 +474,7 @@ export default function OnboardingWizard() {
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                     >
-                      Save Draft
+                      <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
                   </div>
 
@@ -464,7 +501,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -491,7 +528,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : 'Generate My Business'}
+                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
                     </button>
                   </div>
                 </div>
@@ -513,8 +550,8 @@ export default function OnboardingWizard() {
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
-                  Save Draft
-                </button>
+                      <IconLabel icon="save">Save Draft</IconLabel>
+                    </button>
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
@@ -561,7 +598,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -571,7 +608,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                    <div>
@@ -615,7 +652,7 @@ export default function OnboardingWizard() {
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Continue
+                  <IconLabel icon="next">Continue</IconLabel>
                 </button>
               </div>
             </div>
@@ -635,8 +672,8 @@ export default function OnboardingWizard() {
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
                 >
-                  Save Draft
-                </button>
+                      <IconLabel icon="save">Save Draft</IconLabel>
+                    </button>
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
@@ -681,13 +718,23 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
                   <div className="space-y-3 mb-4">
                     <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
+                      <input
+                        type="text"
+                        value={adminName}
+                        onChange={(e) => setAdminName(e.target.value)}
+                        placeholder="e.g. Maya Smith"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                    </div>
+                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                     </div>
                     <div>
@@ -697,7 +744,7 @@ export default function OnboardingWizard() {
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                     </div>
                   </div>
@@ -731,7 +778,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] border border-white/50 dark:border-white/10 mac-glass-container text-[#1D1D1F] dark:text-white">
+                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] mac-glass-container text-[#1D1D1F] dark:text-white">
                     <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
                     <input
                       type="checkbox"
@@ -760,7 +807,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Launching...
                     </span>
-                  ) : 'Launch Store'}
+                  ) : <IconLabel icon="launch">Launch Store</IconLabel>}
                 </button>
               </div>
             </div>
@@ -795,7 +842,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 mac-glass-container rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
+                <div className="p-3 mac-glass-container rounded-[8px] flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
                       <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
@@ -804,21 +851,46 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  Go to Dashboard
+                  <IconLabel icon="dashboard">Go to Dashboard</IconLabel>
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm  active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-sm active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  Preview Storefront
+                  <IconLabel icon="eye">Preview Storefront</IconLabel>
                 </a>
               </div>
             </div>
           )}
         </div>
       </div>
-    </div>
+        <aside className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Setup Progress</div>
+              <div className="app-list-subtitle">This panel now lives in the same side-menu application frame.</div>
+            </div>
+          </div>
+          <div className="app-list">
+            {[
+              ['Business intake', step > 1],
+              ['Review details', step > 2],
+              ['Style and team', step > 3],
+              ['Launch', step > 4],
+            ].map(([label, complete]) => (
+              <div key={String(label)} className="app-list-item">
+                <div>
+                  <div className="app-list-title">{label}</div>
+                  <div className="app-list-subtitle">{complete ? 'Complete' : 'Pending'}</div>
+                </div>
+                <span className={`app-badge ${complete ? 'good' : ''}`}>{complete ? 'Done' : 'Open'}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </AppShell>
   );
 }

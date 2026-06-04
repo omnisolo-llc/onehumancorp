@@ -685,13 +685,25 @@ export default function BuilderPage() {
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
           <div className="flex gap-3 mb-2">
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px]">Change Vibe</button>
+            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px] inline-flex items-center justify-center gap-2">
+              <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+                <path d="M4 7h16" />
+                <path d="M7 12h10" />
+                <path d="M10 17h4" />
+              </svg>
+              <span>Change Vibe</span>
+            </button>
             {!isPremium && (
               <button
-                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px]"
+                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px] inline-flex items-center justify-center gap-2"
                 onClick={() => setShowUpgradeModal(true)}
               >
-                Remove Branding ✨
+                <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+                  <path d="M12 3v18" />
+                  <path d="M5 12h14" />
+                  <path d="M7 5l12 12" />
+                </svg>
+                <span>Remove Branding</span>
               </button>
             )}
           </div>
@@ -768,9 +780,9 @@ export default function BuilderPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
       `}} />
     </div>

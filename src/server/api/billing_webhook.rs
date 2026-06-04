@@ -106,6 +106,7 @@ pub async fn webhook_security_middleware(
                 return Ok(StatusCode::OK.into_response());
             }
         } else {
+            ::server_telemetry::record_error_signal("Failed to get redis connection for webhook idempotency check");
             tracing::error!("Failed to get redis connection for webhook idempotency check");
         }
     }
@@ -183,6 +184,7 @@ pub async fn stripe_webhook_handler(
                         let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
 
                         if let Err(e) = update_res {
+                            ::server_telemetry::record_error_signal("Failed to update inventory count for product : {:?}");
                             tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
                         }
                     } else {
@@ -216,6 +218,7 @@ pub async fn stripe_webhook_handler(
                 };
 
                 if let Err(e) = res {
+                    ::server_telemetry::record_error_signal("Failed to update order status for order : {:?}");
                     tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
                 }
             }
@@ -446,6 +449,7 @@ pub async fn razorpay_webhook_handler(
             };
 
             if let Err(e) = res {
+                ::server_telemetry::record_error_signal("Failed to update order status: {:?}");
                 tracing::error!("Failed to update order status: {:?}", e);
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
