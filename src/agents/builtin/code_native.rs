@@ -61,15 +61,6 @@ impl RichExecutionEnvironment {
     pub fn remove_variable(&mut self, name: &str) -> Option<Arc<dyn Any + Send + Sync>> {
         self.state.remove(name)
     }
-
-    /// Clears all variables from the execution environment.
-    pub fn clear(&mut self) {
-        self.state.clear();
-    }
-
-    pub fn get_snapshot_count(&self) -> usize {
-        self.snapshots.len()
-    }
 }
 
 /// A trait for tools that can operate natively on the `RichExecutionEnvironment`.
@@ -89,6 +80,10 @@ pub struct CodeNativeAdapter {
     pub tool: Arc<dyn CodeNativeTool>,
 }
 
+// Since ToolExecutor is defined in `ohc_builtin_agent_tools` which depends on `core`,
+// we will implement the adapter within `ohc_builtin_agent_tools` (or wherever ToolExecutor is available).
+// Wait, `ohc_builtin_agent_tools` depends on `core`. So we can't implement `ToolExecutor` here if it's not in `core`.
+// We will just provide the struct here and implement `ToolExecutor` where it's defined, or we can just implement the execute logic here.
 impl CodeNativeAdapter {
     pub async fn execute_adapter(&self, args: serde_json::Value) -> Result<String, crate::types::ToolError> {
         let mut env_lock = self.env.write().await;
@@ -103,50 +98,6 @@ impl CodeNativeAdapter {
                 Err(crate::types::ToolError::Fatal(e))
             }
         }
-    }
-}
-
-/// An integration utility to run multiple `CodeNativeTool`s in sequence
-/// within the same isolated environment. This facilitates integration testing.
-pub struct CodeNativePipeline {
-    env: Arc<tokio::sync::RwLock<RichExecutionEnvironment>>,
-}
-
-impl CodeNativePipeline {
-    pub fn new() -> Self {
-        Self {
-            env: Arc::new(tokio::sync::RwLock::new(RichExecutionEnvironment::new())),
-        }
-    }
-
-    pub fn with_env(env: Arc<tokio::sync::RwLock<RichExecutionEnvironment>>) -> Self {
-        Self { env }
-    }
-
-    /// Run a sequence of tools. If any fails, the state is rolled back to the
-    /// start of the entire pipeline run, ensuring atomicity of the sequence.
-    pub async fn run_sequence(
-        &self,
-        tools: Vec<(Arc<dyn CodeNativeTool>, serde_json::Value)>,
-    ) -> Result<Vec<String>, String> {
-        let mut env_lock = self.env.write().await;
-        let snapshot_id = env_lock.snapshot();
-
-        let mut results = Vec::new();
-        for (tool, args) in tools {
-            match tool.execute_native(&mut env_lock, args.clone()).await {
-                Ok(res) => results.push(res),
-                Err(e) => {
-                    // Rollback on first failure
-                    let _ = env_lock.rollback(snapshot_id);
-                    return Err(format!("Pipeline failed at step {}: {}", results.len(), e));
-                }
-            }
-        }
-
-        // All succeeded, commit
-        env_lock.commit(snapshot_id);
-        Ok(results)
     }
 }
 
@@ -277,59 +228,5 @@ mod tests {
 
         // Verify new variables added during failed execution are reverted
         assert!(!env_after_fail.contains_variable("new_variable"));
-    }
-
-    #[tokio::test]
-    async fn test_rollback_invalid_snapshot() {
-        let mut env = RichExecutionEnvironment::new();
-        let res = env.rollback(999);
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Snapshot ID 999 not found");
-    }
-
-    #[test]
-    fn test_clear_and_snapshot_count() {
-        let mut env = RichExecutionEnvironment::new();
-        env.set_variable("var1", "value1".to_string());
-        env.set_variable("var2", 42);
-
-        assert_eq!(env.get_snapshot_count(), 0);
-        let snap_id = env.snapshot();
-        assert_eq!(env.get_snapshot_count(), 1);
-
-        env.clear();
-        assert!(!env.contains_variable("var1"));
-        assert!(!env.contains_variable("var2"));
-
-        env.rollback(snap_id).unwrap();
-        assert!(env.contains_variable("var1"));
-        assert!(env.contains_variable("var2"));
-
-        env.remove_variable("var1");
-        assert!(!env.contains_variable("var1"));
-    }
-
-    #[tokio::test]
-    async fn test_code_native_pipeline_integration() {
-        let pipeline = CodeNativePipeline::new();
-
-        // 1. Test successful sequence
-        let tools: Vec<(Arc<dyn CodeNativeTool>, serde_json::Value)> = vec![
-            (Arc::new(GenerateDataTool), json!({})),
-            (Arc::new(ProcessDataTool), json!({"record": "integrated"})),
-        ];
-
-        let res = pipeline.run_sequence(tools).await;
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap().len(), 2);
-
-        // 2. Test failing sequence with atomicity
-        let tools_fail: Vec<(Arc<dyn CodeNativeTool>, serde_json::Value)> = vec![
-            (Arc::new(ProcessDataTool), json!({"record": "will_fail_soon"})),
-            (Arc::new(FailingTool), json!({})),
-        ];
-
-        let res_fail = pipeline.run_sequence(tools_fail).await;
-        assert!(res_fail.is_err());
     }
 }

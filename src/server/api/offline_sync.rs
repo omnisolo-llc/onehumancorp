@@ -2,15 +2,11 @@ use axum::{Json, response::IntoResponse, http::StatusCode, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Deserialize, Debug, Clone, Serialize)]
+#[derive(Deserialize, Debug)]
 pub struct OfflineMutation {
     pub transaction_id: String,
     pub product_id: String,
     pub quantity_deducted: i32,
-    pub amount: Option<i64>, // amount in cents
-    pub payment_method: Option<String>,
-    pub payment_intent_id: Option<String>,
-    pub currency: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -137,10 +133,6 @@ mod tests {
                     transaction_id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
-                    amount: Some(1000),
-                    payment_method: None,
-                    payment_intent_id: None,
-                    currency: Some("USD".to_string()),
                 },
             ],
         };
@@ -151,22 +143,17 @@ mod tests {
         let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
-        // The handler enqueues a job now, it doesn't process it synchronously.
-        // We can verify the job was enqueued.
-        let job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
+        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
             .fetch_one(&pool).await.unwrap();
-        assert_eq!(job_count.0, 1);
+        assert_eq!(count.0, 2); // 5 - 3 = 2
 
+        // Test negative guard
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
                     transaction_id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
-                    amount: Some(1000),
-                    payment_method: None,
-                    payment_intent_id: None,
-                    currency: Some("USD".to_string()),
                 },
             ],
         };
@@ -174,8 +161,8 @@ mod tests {
         let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
 
-        let job_count2: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
+        let count2: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
             .fetch_one(&pool).await.unwrap();
-        assert_eq!(job_count2.0, 2);
+        assert_eq!(count2.0, 0); // GREATEST(0, 2 - 10) = 0
     }
 }
