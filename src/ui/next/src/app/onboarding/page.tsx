@@ -337,7 +337,7 @@ export default function OnboardingWizard() {
       actions={[{ label: "Dashboard", href: "/dashboard" }]}
     >
       <div className="app-grid two">
-        <div id="setup-screen" className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] mac-glass-container">
+        <div id="setup-screen" className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px]">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
