@@ -20,14 +20,33 @@ export default function AutoCatalogPage() {
     if (e.target.files && e.target.files.length > 0) {
       setLoading(true);
       try {
-        const response = await fetch('/api/auto-catalog', {
-          method: 'POST',
-        });
-        const data = await response.json();
-        setProductData(data);
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+          const base64String = reader.result as string;
+          const res = await fetch('/api/v1/catalog/digitize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_data: base64String }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setProductData({
+              title: data.title || '',
+              description: data.description || '',
+              price: data.price || '',
+              category: data.category || '',
+            });
+          }
+          setLoading(false);
+        };
+        reader.onerror = (error) => {
+          console.error('Error reading file:', error);
+          setLoading(false);
+        };
       } catch (error) {
-        console.error('Error auto-cataloging:', error);
-      } finally {
+        console.error('Error generating product:', error);
         setLoading(false);
       }
     }
