@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useWebsiteBuilderStore } from "./store";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function WebsiteBuilderPage() {
+  const router = useRouter();
 
   const {
     wizardStep, setWizardStep,
@@ -656,6 +658,7 @@ export default function WebsiteBuilderPage() {
           <button
             className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
             style={{ borderRadius: '8px' }}
+            onClick={() => router.push('/dashboard')}
           >
             View Welcome Checklist
           </button>
