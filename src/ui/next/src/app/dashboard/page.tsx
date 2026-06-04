@@ -186,9 +186,14 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
-        <p className="text-gray-600 dark:text-gray-400">Your AI assistants are working on your behalf.</p>
+      <div className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10 flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
+          <p className="text-gray-600 dark:text-gray-400">Your AI assistants are working on your behalf.</p>
+        </div>
+        <Link href="/onboarding" className="app-button primary">
+          Start Onboarding
+        </Link>
       </div>
 
       <InteractiveWalkthrough

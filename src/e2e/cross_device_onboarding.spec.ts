@@ -6,6 +6,15 @@ import { test, expect } from '@playwright/test';
 test.describe('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, context }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+    // Mock the draft API call
+    await page.route('/api/onboarding/draft', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({})
+      });
+    });
+
     // 1. Owner starts from the home page
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
@@ -16,6 +25,9 @@ test.describe('Cross Device Onboarding CUJ', () => {
     await page.getByRole('link', { name: /Start Onboarding/i }).click();
 
     // Verify it landed on the Onboarding page
+    await expect(page.getByRole('heading', { name: /^Welcome$/i })).toBeVisible();
+    await page.getByRole('link', { name: /Start Onboarding/i }).click();
+
     await expect(page.getByText('Tell us about your business')).toBeVisible();
 
     // 2. Owner enters business name
