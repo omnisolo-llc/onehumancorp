@@ -11,7 +11,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.removeItem('ohc_wizard_state');
       localStorage.removeItem('onboarding-storage-v3');
     }, id);
-    await page.goto('/website-builder');
+    await page.goto('/onboarding');
     await page.waitForLoadState('networkidle');
 
     await page.waitForLoadState('networkidle');

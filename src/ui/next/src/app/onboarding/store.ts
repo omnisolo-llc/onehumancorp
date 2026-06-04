@@ -14,14 +14,31 @@ interface OnboardingState {
   domainChoice: string;
   firstProductName: string;
   firstProductPrice: string;
+  userName: string;
   adminEmail: string;
   adminPassword: string;
   aiAgents: string[];
   aiAutoRespond: boolean;
+  hasPhysicalProducts: boolean;
+  hasDigitalProducts: boolean;
+  paymentMethod: string;
+  template: string;
+  blocks: any[];
+  drafts: any[][];
+  status: "idle" | "generating" | "draft" | "live";
+  liveUrl: string;
   isLoading: boolean;
   error: string;
   startResult: any;
   setStep: (step: number) => void;
+  setHasPhysicalProducts: (has: boolean) => void;
+  setHasDigitalProducts: (has: boolean) => void;
+  setPaymentMethod: (method: string) => void;
+  setTemplate: (template: string) => void;
+  setBlocks: (blocks: any[]) => void;
+  setDrafts: (drafts: any[][]) => void;
+  setStatus: (status: "idle" | "generating" | "draft" | "live") => void;
+  setLiveUrl: (url: string) => void;
   setChatStep: (step: number) => void;
   setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
@@ -33,6 +50,7 @@ interface OnboardingState {
   setDomainChoice: (domain: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
+  setUserName: (name: string) => void;
   setAdminEmail: (email: string) => void;
   setAdminPassword: (password: string) => void;
   setAiAgents: (agents: string[]) => void;
@@ -45,7 +63,7 @@ interface OnboardingState {
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
-      step: 1,
+      step: 0,
       chatStep: 1,
       businessDescription: '',
       businessName: '',
@@ -57,14 +75,31 @@ export const useOnboardingStore = create<OnboardingState>()(
   domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
+      userName: '',
       adminEmail: '',
       adminPassword: '',
       aiAgents: [],
       aiAutoRespond: true,
+      hasPhysicalProducts: false,
+      hasDigitalProducts: false,
+      paymentMethod: '',
+      template: 'Modern',
+      blocks: [],
+      drafts: [],
+      status: 'idle',
+      liveUrl: '',
       isLoading: false,
       error: '',
       startResult: null,
       setStep: (step) => set({ step }),
+      setHasPhysicalProducts: (hasPhysicalProducts) => set({ hasPhysicalProducts }),
+      setHasDigitalProducts: (hasDigitalProducts) => set({ hasDigitalProducts }),
+      setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
+      setTemplate: (template) => set({ template }),
+      setBlocks: (blocks) => set({ blocks }),
+      setDrafts: (drafts) => set({ drafts }),
+      setStatus: (status) => set({ status }),
+      setLiveUrl: (liveUrl) => set({ liveUrl }),
       setChatStep: (chatStep) => set({ chatStep }),
       setBusinessDescription: (businessDescription) => set({ businessDescription }),
       setBusinessName: (businessName) => set({ businessName }),
@@ -76,6 +111,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setUserName: (userName) => set({ userName }),
       setAdminEmail: (adminEmail) => set({ adminEmail }),
       setAdminPassword: (adminPassword) => set({ adminPassword }),
       setAiAgents: (aiAgents) => set({ aiAgents }),

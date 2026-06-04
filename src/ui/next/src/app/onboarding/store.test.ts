@@ -5,7 +5,7 @@ describe('useOnboardingStore', () => {
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
-      step: 1,
+      step: 0,
       businessDescription: '',
       isLoading: false,
       error: '',
@@ -15,7 +15,7 @@ describe('useOnboardingStore', () => {
 
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
-    expect(state.step).toBe(1);
+    expect(state.step).toBe(0);
     expect(state.businessDescription).toBe('');
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
@@ -55,6 +55,9 @@ describe('useOnboardingStore', () => {
     useOnboardingStore.getState().setFirstProductName('Coffee');
     useOnboardingStore.getState().setFirstProductPrice('5.00');
     useOnboardingStore.getState().setDomainChoice('custom');
+    useOnboardingStore.getState().setHasPhysicalProducts(true);
+    useOnboardingStore.getState().setPaymentMethod('Online');
+    useOnboardingStore.getState().setStatus('live');
 
     const state = useOnboardingStore.getState();
     expect(state.businessName).toBe('Test Business');
@@ -64,6 +67,9 @@ describe('useOnboardingStore', () => {
     expect(state.firstProductName).toBe('Coffee');
     expect(state.firstProductPrice).toBe('5.00');
     expect(state.domainChoice).toBe('custom');
+    expect(state.hasPhysicalProducts).toBe(true);
+    expect(state.paymentMethod).toBe('Online');
+    expect(state.status).toBe('live');
   });
 
   it('should persist state to localStorage', () => {

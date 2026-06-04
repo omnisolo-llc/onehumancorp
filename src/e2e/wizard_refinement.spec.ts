@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Wizard Refinement E2E', () => {
   test('keeps the setup flow plain-language and reversible', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await page.goto('/website-builder');
+    await page.goto('/onboarding');
     await expect(page.getByText(/Zero tech skills needed\. We do the heavy lifting/)).toBeVisible();
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
