@@ -808,6 +808,9 @@ message WaitlistResponse {
 }
 
 service GrowthService {
+  rpc SubmitReview(SubmitReviewRequest) returns (SubmitReviewResponse);
+  rpc GetReputation(GetReputationRequest) returns (GetReputationResponse);
+
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   
@@ -1726,4 +1729,23 @@ message GenerateMeetingForBookingRequest {
 
 message GenerateMeetingForBookingResponse {
   string link = 1;
+}
+
+message SubmitReviewRequest {
+  string customer_id = 1;
+  string order_id = 2;
+  int32 rating = 3;
+  string comment = 4;
+}
+
+message SubmitReviewResponse {
+  string review_id = 1;
+  string generated_referral_link = 2;
+}
+
+message GetReputationRequest {}
+
+message GetReputationResponse {
+  double average_rating = 1;
+  int32 total_reviews = 2;
 }
