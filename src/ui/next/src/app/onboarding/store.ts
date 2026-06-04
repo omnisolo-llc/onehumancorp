@@ -40,6 +40,7 @@ interface OnboardingState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
+  loadState: (state: Partial<OnboardingState>) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -83,6 +84,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
+      loadState: (state) => set(state),
     }),
     {
       name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure

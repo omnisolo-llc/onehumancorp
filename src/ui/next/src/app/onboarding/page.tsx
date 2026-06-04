@@ -51,7 +51,8 @@ export default function OnboardingWizard() {
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
     error, setError,
-    startResult, setStartResult
+    startResult, setStartResult,
+    loadState
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
@@ -121,23 +122,8 @@ export default function OnboardingWizard() {
     })
     .then(res => res.json())
     .then(data => {
-      if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
-        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.categories) setCategories(data.wizardState.categories);
-        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
-        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
-        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
-        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+      if (data && Object.keys(data).length > 0 && data.wizardState) {
+        loadState(data.wizardState);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
@@ -313,7 +299,7 @@ export default function OnboardingWizard() {
           ></div>
         </div>
 
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+        <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 rounded-[8px] text-sm animate-shake">
               {error}
@@ -327,14 +313,14 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
                 Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
               </p>
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Our AI will instantly generate your storefront, products, and back-office agents.
@@ -385,7 +371,7 @@ export default function OnboardingWizard() {
                         setChatStep(2);
                       }}
                       disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[44px] sm:min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <IconLabel icon="next">Next</IconLabel>
                     </button>
@@ -398,7 +384,7 @@ export default function OnboardingWizard() {
                   <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Tell us a bit about your products or services.
@@ -448,7 +434,7 @@ export default function OnboardingWizard() {
                         setChatStep(3);
                       }}
                       disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[44px] sm:min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <IconLabel icon="next">Next</IconLabel>
                     </button>
@@ -461,7 +447,7 @@ export default function OnboardingWizard() {
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       This helps us set up your shipping and tax settings.
@@ -514,7 +500,7 @@ export default function OnboardingWizard() {
                         handleIntake();
                       }}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white min-h-[44px] sm:min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
@@ -537,7 +523,7 @@ export default function OnboardingWizard() {
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
               <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Here's what our AI figured out. Feel free to tweak these.
@@ -646,7 +632,7 @@ export default function OnboardingWizard() {
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[44px] sm:min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <IconLabel icon="next">Continue</IconLabel>
                 </button>
@@ -659,7 +645,7 @@ export default function OnboardingWizard() {
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
               <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
@@ -783,7 +769,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white min-h-[44px] sm:min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">

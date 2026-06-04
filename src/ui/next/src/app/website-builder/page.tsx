@@ -334,7 +334,7 @@ export default function WebsiteBuilderPage() {
 
         <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden mac-glass-container">
 
-          <div className="px-8 pb-8 pt-8 flex flex-col flex-1 justify-start overflow-y-auto relative">
+          <div className="px-4 sm:px-8 pb-8 pt-8 flex flex-col flex-1 justify-start overflow-y-auto relative">
             {wizardStep !== 0 && (
               <button
                 onClick={handleBack}
@@ -371,7 +371,7 @@ export default function WebsiteBuilderPage() {
 
                   <div className="flex flex-col gap-4">
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep(1)}
                     >
                       Start My Business
@@ -392,13 +392,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
                     >
                       Online Store
                     </button>
                     <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
                     >
                       Restaurant
@@ -428,8 +428,8 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setBio(e.target.value)}
                     />
                     <button
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={businessName.trim().length < 3}
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(3)}
                     >
                       Next
@@ -461,7 +461,7 @@ export default function WebsiteBuilderPage() {
                       <span className="font-semibold text-gray-800">Digital Products</span>
                     </label>
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(4)}
                     >
                       Next
@@ -492,7 +492,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <button
                       disabled={!productName.trim() || !productPrice.trim()}
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(5)}
                     >
                       Next
@@ -506,13 +506,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col gap-4">
                     <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setPaymentMethod('Online'); setWizardStep(6); }}
                     >
                       Online
                     </button>
                     <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setPaymentMethod('In Person'); setWizardStep(6); }}
                     >
                       In Person
@@ -550,8 +550,8 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setUserPassword(e.target.value)}
                     />
                     <button
-                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!userName.trim() || !userEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail) || userPassword.length < 6}
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(7)}
                     >
                       Next
@@ -565,13 +565,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
                   <div id="step-8" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
                     >
                       Modern
                     </button>
                     <button
-                      className="w-full bg-white text-gray-800 border border-gray-200 p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
+                      className="w-full bg-white text-gray-800 border border-gray-200 min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-sm hover:bg-gray-50 transition-all text-left"
                       onClick={() => { setTemplate('Bold'); setWizardStep('7.5'); }}
                     >
                       Bold
@@ -584,7 +584,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <div id="step-8" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(8)}
                     >
                       Next
@@ -598,7 +598,7 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
                   <div id="step-9" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep('8.5')}
                     >
                       Free OHC Domain
@@ -617,7 +617,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <div id="step-9" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(9)}
                     >
                       Next
@@ -631,7 +631,7 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => {
                         setStatus('generating');
                         setTimeout(() => {
@@ -656,7 +656,7 @@ export default function WebsiteBuilderPage() {
                       rows={4}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full bg-[#0071E3] text-white min-h-[44px] sm:min-h-[54px] p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => {
                         setStatus('generating');
                         setTimeout(() => {
