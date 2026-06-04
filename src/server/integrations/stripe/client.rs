@@ -59,6 +59,9 @@ impl StripeClient {
                 } else {
                     Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
                 }
+            },
+            crate::integrations::stripe::routing::PaymentMethod::StripeTerminalTap => {
+                Ok("terminal_tap_intent_mock".to_string())
             }
         }
     }

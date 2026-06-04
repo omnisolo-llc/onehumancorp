@@ -4,6 +4,7 @@ pub enum PaymentMethod {
     Ach,
     Razorpay,
     MercadoPago,
+    StripeTerminalTap,
 }
 
 pub struct PaymentRouter;

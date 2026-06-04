@@ -27,6 +27,7 @@ message Order {
   int64 amount_cents = 4;
   string status = 5;
   int64 created_at_unix = 6;
+  string payment_source = 7;
 }
 
 message DashboardSnapshot {
