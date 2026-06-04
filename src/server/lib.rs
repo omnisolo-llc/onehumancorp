@@ -1440,18 +1440,41 @@ impl HubService for MyHubService {
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
+        use sqlx::Row;
+        // First fetch existing state
+        let row = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+            .bind(&tenant_id)
+            .bind(&user_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let merged_state = if let Some(record) = row {
+            let mut existing: serde_json::Value = record.get("state_json");
+            if let (Some(existing_obj), Some(new_obj)) = (existing.as_object_mut(), state_json.as_object()) {
+                for (k, v) in new_obj {
+                    existing_obj.insert(k.clone(), v.clone());
+                }
+                existing
+            } else {
+                state_json.clone()
+            }
+        } else {
+            state_json.clone()
+        };
+
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
+             SET state_json = EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
         .bind(&user_id)
         .bind(current_step)
-        .bind(&state_json)
+        .bind(&merged_state)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
