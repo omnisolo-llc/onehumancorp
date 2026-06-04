@@ -49,6 +49,14 @@ pub async fn get_terminal_connection_token_handler(
     };
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    let _ = ::server_telemetry::record_api_call_cost(
+        &crate::db::get_pool(),
+        &tenant_id,
+        "get_terminal_connection_token",
+        0.05
+    ).await;
+
     match client.create_terminal_connection_token(&tenant_id).await {
         Ok(token) => Json(Ok(TerminalTokenResponse { token })),
         Err(e) => Json(Err(e)),
@@ -80,6 +88,14 @@ pub async fn create_payment_intent_handler(
     };
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    let _ = ::server_telemetry::record_api_call_cost(
+        &crate::db::get_pool(),
+        &tenant_id,
+        "create_terminal_payment_intent",
+        0.05
+    ).await;
+
     match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
         Ok(intent_id) => Json(Ok(PaymentIntentResponse { intent_id })),
         Err(e) => Json(Err(e)),

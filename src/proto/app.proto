@@ -20,6 +20,12 @@ message StatusCount {
 }
 
 
+enum PaymentSource {
+  PAYMENT_SOURCE_UNKNOWN = 0;
+  PAYMENT_SOURCE_ONLINE = 1;
+  PAYMENT_SOURCE_STRIPE_TERMINAL_TAP = 2;
+}
+
 message Order {
   string id = 1;
   string organization_id = 2;
@@ -27,6 +33,7 @@ message Order {
   int64 amount_cents = 4;
   string status = 5;
   int64 created_at_unix = 6;
+  PaymentSource payment_source = 7;
 }
 
 message DashboardSnapshot {
