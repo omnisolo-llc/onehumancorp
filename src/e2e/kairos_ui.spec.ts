@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('navigation to kairos works', async ({ page }) => {
   test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');

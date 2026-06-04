@@ -1,7 +1,7 @@
 // NOTE: E2E test runs for this flow are skipped locally/in sandbox due to a Docker/PGVector permission issue.
 // They will be run manually in CI or when the sandbox issue is resolved.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, context }) => {

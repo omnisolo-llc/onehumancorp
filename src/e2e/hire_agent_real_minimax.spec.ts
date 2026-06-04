@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect } from './fixtures';
+import type { APIRequestContext } from '@playwright/test';
 
 const execFileAsync = promisify(execFile);
 
