@@ -1492,3 +1492,64 @@ pub fn record_rag_sync_error(reason: &str, deployment_mode: &str) {
         ],
     );
 }
+
+
+pub static CHAOS_INJECTED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASK_RECOVERY_TIME_MS: OnceLock<opentelemetry::metrics::Histogram<f64>> = OnceLock::new();
+
+pub fn get_chaos_injected_total() -> &'static Counter<u64> {
+    CHAOS_INJECTED_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.chaos");
+        meter
+            .u64_counter("ohc_chaos_injected_total")
+            .with_description("Total number of injected chaos events")
+            .build()
+    })
+}
+
+pub fn get_task_recovery_time_ms() -> &'static opentelemetry::metrics::Histogram<f64> {
+    TASK_RECOVERY_TIME_MS.get_or_init(|| {
+        let meter = global::meter("ohc.chaos");
+        meter
+            .f64_histogram("ohc_task_recovery_time_ms_bucket")
+            .with_description("Time taken to recover from chaos injected failures")
+            .build()
+    })
+}
+
+pub fn record_chaos_injected(env_mode: &str) {
+    let counter = get_chaos_injected_total();
+    counter.add(
+        1,
+        &[opentelemetry::KeyValue::new("EnvMode", env_mode.to_string())],
+    );
+}
+
+pub fn record_task_recovery_time(env_mode: &str, duration_ms: f64) {
+    let histogram = get_task_recovery_time_ms();
+    histogram.record(
+        duration_ms,
+        &[opentelemetry::KeyValue::new("EnvMode", env_mode.to_string())],
+    );
+}
+
+pub struct ChaosRecoveryTracker {
+    env_mode: String,
+    start: std::time::Instant,
+}
+
+impl ChaosRecoveryTracker {
+    pub fn new(env_mode: &str) -> Self {
+        record_chaos_injected(env_mode);
+        Self {
+            env_mode: env_mode.to_string(),
+            start: std::time::Instant::now(),
+        }
+    }
+}
+
+impl Drop for ChaosRecoveryTracker {
+    fn drop(&mut self) {
+        record_task_recovery_time(&self.env_mode, self.start.elapsed().as_millis() as f64);
+    }
+}
