@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { WalkthroughTarget } from '../components/Walkthrough';
 import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
+import { LocalizationProvider } from '../components/LocalizationProvider';
 
 import { HelpChat } from "../components/HelpChat";
 
@@ -23,13 +24,15 @@ export default function RootLayout({
         <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
       </head>
       <body>
-        <TooltipProvider>
-                  <WalkthroughProvider>
-            {children}
-            <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
-            <HelpChat />
-          </WalkthroughProvider>
-                </TooltipProvider>
+        <LocalizationProvider>
+          <TooltipProvider>
+                    <WalkthroughProvider>
+              {children}
+              <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
+              <HelpChat />
+            </WalkthroughProvider>
+                  </TooltipProvider>
+        </LocalizationProvider>
       </body>
     </html>
   );

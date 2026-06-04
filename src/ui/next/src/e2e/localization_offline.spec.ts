@@ -77,4 +77,15 @@ test('Global Offline-First Localization & Currency Toggle', async ({ page }) => 
     expect(dialog.message()).toContain('46 EUR');
     await dialog.accept();
   });
+
+  // Verify that the offline mutation event was queued correctly with the cached_rate
+  const queuedEvents = await page.evaluate(() => {
+    return JSON.parse(localStorage.getItem('ohc_offline_events') || '[]');
+  });
+
+  const orderEvent = queuedEvents.find((e: any) => e.event_type === 'ORDER');
+  expect(orderEvent).toBeDefined();
+  expect(orderEvent.currency).toBe('EUR');
+  expect(orderEvent.cached_rate).toBe(0.92);
+  expect(orderEvent.amount).toBe(4600); // 46 EUR in cents
 });

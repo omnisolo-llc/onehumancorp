@@ -35,14 +35,37 @@ export default function TerminalPage() {
       if (events.length > 0 && navigator.onLine) {
         setSyncing(true);
         try {
-          const res = await fetch('/api/staff/timecard', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(events)
-          });
-          if (res.ok) {
-            OfflineStore.clearEvents();
+          // Sync timecard events
+          const timecardEvents = events.filter((e: any) => e.event_type !== 'ORDER');
+          if (timecardEvents.length > 0) {
+            await fetch('/api/staff/timecard', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(timecardEvents)
+            });
           }
+
+          // Sync order events
+          const orderEvents = events.filter((e: any) => e.event_type === 'ORDER');
+          if (orderEvents.length > 0) {
+            const mutations = orderEvents.map((e: any) => ({
+              transaction_id: e.transaction_id,
+              product_id: e.product_id,
+              quantity_deducted: e.quantity_deducted,
+              amount: e.amount,
+              payment_method: e.payment_method,
+              payment_intent_id: e.payment_intent_id,
+              currency: e.currency,
+              cached_rate: e.cached_rate,
+            }));
+            await fetch('/api/v1/sync/offline', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ mutations })
+            });
+          }
+
+          OfflineStore.clearEvents();
         } catch (e) {
           console.error("Sync failed", e);
         } finally {
@@ -109,6 +132,27 @@ export default function TerminalPage() {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);
     }
+
+    // Create an offline order mutation
+    const orderMutation = {
+      transaction_id: `tx-offline-${Date.now()}`,
+      product_id: 'prod-generic', // Mock product ID
+      quantity_deducted: 1,
+      amount: converted.amount,
+      payment_method: 'Cash',
+      payment_intent_id: null,
+      currency: currency,
+      cached_rate: converted.rate
+    };
+    OfflineStore.addEvent({
+      ...orderMutation,
+      staff_id: activeStaff.id,
+      tenant_id: 'default_tenant',
+      event_type: 'ORDER',
+      timestamp: new Date().toISOString(),
+      sync_status: 'PENDING'
+    });
+
     alert(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
   };
 

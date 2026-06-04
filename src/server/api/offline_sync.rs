@@ -11,6 +11,7 @@ pub struct OfflineMutation {
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
+    pub cached_rate: Option<f64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -59,6 +60,14 @@ pub async fn offline_sync_handler(
             .bind(&tenant_id)
             .fetch_optional(&db)
             .await;
+
+        // Record offline currency transaction if present
+        if let Some(amount) = mutation.amount {
+            if let Some(ref currency) = mutation.currency {
+                let ledger = crate::services::capital::multi_currency_ledger::MultiCurrencyLedger::new(Arc::new(db.clone()));
+                let _ = ledger.record_transaction(&tenant_id, amount, currency, "USD", mutation.cached_rate).await;
+            }
+        }
 
         match result {
             Ok(Some(_)) => {
@@ -142,6 +151,7 @@ mod tests {
                     payment_method: None,
                     payment_intent_id: None,
                     currency: Some("USD".to_string()),
+                    cached_rate: None,
                 },
             ],
         };
@@ -168,6 +178,7 @@ mod tests {
                     payment_method: None,
                     payment_intent_id: None,
                     currency: Some("USD".to_string()),
+                    cached_rate: None,
                 },
             ],
         };
