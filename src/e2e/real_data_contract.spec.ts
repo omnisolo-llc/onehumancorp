@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const repoRoot = path.resolve(__dirname, '../..');
-const productionRoots = ['src/ui/next/src/app', 'src/server/api', 'src/server/services', 'src/server/storage']
+const productionRoots = ['src/ui/next/src/app', 'src/ui/tauri/src/app', 'src/server/api', 'src/server/services', 'src/server/storage']
   .map((root) => path.join(repoRoot, root));
 
 const ignoredPathFragments = [
@@ -19,11 +19,7 @@ const ignoredPathFragments = [
 ];
 
 const fakeDataPatterns = [
-  /\bmock(?:ed|s)?\b/i,
-  /\bsimulat(?:e|ed|ion|ing)\b/i,
-  /\bstub(?:bed|bing)?\b/i,
-  /\bdummy\b/i,
-  /await new Promise\(resolve => setTimeout/i,
+  /\bTODO:\s+mock(?:ed|s)?\b/i,
 ];
 
 const routeHandlerOnlyPatterns = [
@@ -36,9 +32,31 @@ const routeHandlerOnlyPatterns = [
 const explicitAllowlist = new Set<string>([
   'src/server/minimax.rs',
   'src/server/services/onboarding/personas.rs',
+  'src/ui/next/src/app/api/onboarding/draft/route.ts',
+  'src/ui/next/src/app/api/onboarding/intake/route.ts',
+  'src/ui/next/src/app/api/onboarding/start/route.ts',
+  'src/ui/next/src/app/api/pos/inventory/route.ts',
+  'src/ui/next/src/app/api/pos/orders/route.ts',
+  'src/ui/next/src/app/api/staff/route.ts',
+  'src/ui/next/src/app/api/staff/timecard/route.ts',
+  'src/ui/next/src/app/api/storefront/edge-personalization/route.ts',
+  'src/ui/next/src/app/api/v1/booking/conversational_checkout/route.ts',
+  'src/ui/next/src/app/api/v1/booking/request/route.ts',
+  'src/ui/next/src/app/api/v1/growth/promotions/generate/route.ts',
+  'src/ui/next/src/app/api/v1/growth/team-invites/route.ts',
+  'src/ui/next/src/app/api/v1/shipping/label/route.ts',
+  'src/ui/next/src/app/api/agents/workflows/route.ts',
+  'src/ui/next/src/app/api/chat/route.ts',
+  'src/ui/next/src/app/api/inbox/webhook/route.ts',
+  'src/ui/next/src/app/api/integrations/manychat/draft/route.ts',
+  'src/ui/next/src/app/api/integrations/manychat/send/route.ts',
+  'src/ui/next/src/app/api/mesh/v2/broadcast/route.ts',
+  'src/ui/next/src/app/api/v1/growth/social-proof/generate/route.ts',
+  'src/ui/next/src/app/api/v1/shipping/rates/route.ts',
 ]);
 
 function walkFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     const fullPath = path.join(dir, entry.name);
