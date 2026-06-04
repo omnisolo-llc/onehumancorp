@@ -6,6 +6,7 @@ test.describe('Omni-Inbox Auto-Reply Agent', () => {
 
     // Click Simulate Incoming Message
     // Click Simulate Incoming Message (Button removed or moved in app refactor)
+
     // await page.getByRole('button', { name: '🤖 Simulate Incoming Message' }).click();
 
     // Verify user message is added
