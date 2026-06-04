@@ -39,6 +39,15 @@ test.describe('Cost Dashboard', () => {
     await expect(page.locator('#cost-dashboard-payment-fees')).toContainText('$');
   });
 
+  test('should display Network and Bandwidth Savings breakdown', async ({ page }) => {
+    await page.goto('/cost-dashboard');
+    await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-network')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-network')).toContainText('$');
+    await expect(page.locator('#cost-dashboard-bandwidth-savings')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-bandwidth-savings')).toContainText('$');
+  });
+
   test('should return correct JSON payload from backend API', async ({ request }) => {
     const response = await request.get('/api/billing/cost-dashboard');
     expect(response.ok()).toBeTruthy();
