@@ -111,3 +111,11 @@ rust_library(
         "@crates//:walkdir",
     ],
 )
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_services_agent_unit_test",
+    crate = ":server_services_agent",
+    edition = "2024",
+)
