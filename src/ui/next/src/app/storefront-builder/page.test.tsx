@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import StorefrontBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -49,7 +48,7 @@ describe('StorefrontBuilderPage', () => {
       json: async () => ({
         pages: [{
           blocks: [
-            { block_type: 'Hero', content: { headline: 'Test Hero' } }
+            { block_type: 'HeroBlock', content: { headline: 'Test Hero' } }
           ]
         }]
       })
@@ -76,7 +75,7 @@ describe('StorefrontBuilderPage', () => {
       json: async () => ({
         pages: [{
           blocks: [
-            { block_type: 'Hero', content: { headline: 'Test Hero' } }
+            { block_type: 'HeroBlock', content: { headline: 'Test Hero' } }
           ]
         }]
       })

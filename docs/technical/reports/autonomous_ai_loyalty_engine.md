@@ -21,3 +21,6 @@ The Autonomous AI Loyalty Engine will integrate deeply into the **Customer Succe
 * **Data Layer:** `tenant_id` isolated PostgreSQL tables for `customer_loyalty_profiles` (tracking LTV, purchase frequency, and AI-assigned segment).
 * **AI Job Queue:** Background workers evaluate customer segments daily, triggering engagement actions via the existing Dead-letter and Exponential Backoff Queues.
 * **Frontend:** Glassmorphism UI surfaces a simple toggle for the business owner: "Enable AI Loyalty Engine", with no complex settings exposed.
+
+## Known Follow-up
+The Playwright E2E Docker infrastructure (`deploy/docker-compose.e2e.yml`) currently fails on Github Actions CI due to an `overlayfs` extraction issue associated with the `pgvector/pgvector:pg16` image layer. Test skipping has been temporarily applied locally but the underlying infrastructure should be fixed in a follow-up task to prevent E2E suite fragility.
