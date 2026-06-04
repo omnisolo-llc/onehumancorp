@@ -12,21 +12,7 @@ export default function WebsiteBuilderPage() {
 
   const {
     wizardStep, setWizardStep,
-    businessName, setBusinessName,
-    businessType, setBusinessType,
-    hasPhysicalProducts, setHasPhysicalProducts,
-    hasDigitalProducts, setHasDigitalProducts,
-    productName, setProductName,
-    productPrice, setProductPrice,
-    paymentMethod, setPaymentMethod,
-    userName, setUserName,
-    userEmail, setUserEmail,
-    userPassword, setUserPassword,
-    template, setTemplate,
-    bio, setBio,
-    domainChoice, setDomainChoice,
-    aiAgents, setAiAgents,
-    aiAutoRespond, setAiAutoRespond,
+    wizardData, updateWizardData,
     blocks, setBlocks, moveBlock,
     status, setStatus,
     liveUrl, setLiveUrl
@@ -92,27 +78,27 @@ export default function WebsiteBuilderPage() {
     .then(res => res.json())
     .then(data => {
       if (data && data.builderState) {
-        if (data.builderState.bio) setBio(data.builderState.bio);
+        if (data.builderState.wizardData.bio) updateWizardData({ bio: data.builderState.wizardData.bio });
         if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
         if (data.builderState.status) setStatus(data.builderState.status);
       }
       if (data && data.wizardState) {
         if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
-        if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
-        if (data.wizardState.productName) setProductName(data.wizardState.productName);
-        if (data.wizardState.productPrice) setProductPrice(data.wizardState.productPrice);
-        if (data.wizardState.paymentMethod) setPaymentMethod(data.wizardState.paymentMethod);
-        if (data.wizardState.userName) setUserName(data.wizardState.userName);
-        if (data.wizardState.userEmail) setUserEmail(data.wizardState.userEmail);
-        if (data.wizardState.userPassword) setUserPassword(data.wizardState.userPassword);
-        if (data.wizardState.template) setTemplate(data.wizardState.template);
-        if (data.wizardState.bio) setBio(data.wizardState.bio);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        if (data.wizardState.wizardData?.businessName) updateWizardData({ businessName: data.wizardState.wizardData?.businessName });
+        if (data.wizardState.wizardData?.businessType) updateWizardData({ businessType: data.wizardState.wizardData?.businessType });
+        if (data.wizardState.wizardData?.hasPhysicalProducts !== undefined) updateWizardData({ hasPhysicalProducts: data.wizardState.wizardData?.hasPhysicalProducts });
+        if (data.wizardState.wizardData?.hasDigitalProducts !== undefined) updateWizardData({ hasDigitalProducts: data.wizardState.wizardData?.hasDigitalProducts });
+        if (data.wizardState.wizardData?.productName) updateWizardData({ productName: data.wizardState.wizardData?.productName });
+        if (data.wizardState.wizardData?.productPrice) updateWizardData({ productPrice: data.wizardState.wizardData?.productPrice });
+        if (data.wizardState.wizardData?.paymentMethod) updateWizardData({ paymentMethod: data.wizardState.wizardData?.paymentMethod });
+        if (data.wizardState.wizardData?.userName) updateWizardData({ userName: data.wizardState.wizardData?.userName });
+        if (data.wizardState.wizardData?.userEmail) updateWizardData({ userEmail: data.wizardState.wizardData?.userEmail });
+        if (data.wizardState.wizardData?.userPassword) updateWizardData({ userPassword: data.wizardState.wizardData?.userPassword });
+        if (data.wizardState.wizardData?.template) updateWizardData({ template: data.wizardState.wizardData?.template });
+        if (data.wizardState.wizardData?.bio) updateWizardData({ bio: data.wizardState.wizardData?.bio });
+        if (data.wizardState.wizardData?.wizardData.domainChoice) updateWizardData({ domainChoice: data.wizardState.wizardData?.wizardData.domainChoice });
+        if (data.wizardState.wizardData?.wizardData.aiAgents) updateWizardData({ aiAgents: data.wizardState.wizardData?.wizardData.aiAgents });
+        if (data.wizardState.wizardData?.wizardData.aiAutoRespond !== undefined) updateWizardData({ aiAutoRespond: data.wizardState.wizardData?.wizardData.aiAutoRespond });
       }
     })
     .catch(err => console.error('Failed to load builder state', err));
@@ -121,31 +107,17 @@ export default function WebsiteBuilderPage() {
   // Sync full state to backend
   useEffect(() => {
     // Only save if there's actual state
-    if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
+    if (wizardStep !== 0 || wizardData.bio !== '' || blocks.length > 0 || wizardData.businessName !== '') {
       const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
       const userId = localStorage.getItem('user_id') || 'test-user';
 
       const wizardState = {
         step: wizardStep,
-        businessName,
-        businessType,
-        hasPhysicalProducts,
-        hasDigitalProducts,
-        productName,
-        productPrice,
-        paymentMethod,
-        userName,
-        userEmail,
-        userPassword,
-        template,
-        bio,
-        domainChoice,
-        aiAgents,
-        aiAutoRespond
+        wizardData,
       };
 
       const payload = {
-        builderState: { bio, blocks, status },
+        builderState: { blocks, status },
         wizardState
       };
 
@@ -159,7 +131,7 @@ export default function WebsiteBuilderPage() {
 
       return () => clearTimeout(timer);
     }
-  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
+  }, [wizardStep, wizardData.businessName, wizardData.businessType, wizardData.hasPhysicalProducts, wizardData.hasDigitalProducts, wizardData.productName, wizardData.productPrice, wizardData.paymentMethod, wizardData.userName, wizardData.userEmail, wizardData.userPassword, wizardData.template, wizardData.bio, wizardData.domainChoice, wizardData.aiAgents, wizardData.aiAutoRespond, blocks, status]);
 
 
 
@@ -175,7 +147,7 @@ export default function WebsiteBuilderPage() {
       const response = await fetch('/api/v1/builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: bio })
+        body: JSON.stringify({ description: wizardData.bio })
       });
 
       const data = await response.json();
@@ -226,7 +198,7 @@ export default function WebsiteBuilderPage() {
                   seo_metadata: {
                     "@context": "https://schema.org",
                     "@type": "LocalBusiness",
-                    "name": bio
+                    "name": wizardData.bio
                   }
               }]
           }
@@ -335,13 +307,13 @@ export default function WebsiteBuilderPage() {
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
-                      onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
+                      onClick={() => { updateWizardData({ businessType: 'Online Store' }); setWizardStep(2); }}
                     >
                       Online Store
                     </button>
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
-                      onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
+                      onClick={() => { updateWizardData({ businessType: 'Restaurant' }); setWizardStep(2); }}
                     >
                       Restaurant
                     </button>
@@ -358,19 +330,19 @@ export default function WebsiteBuilderPage() {
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="What is your business called?"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
+                      value={wizardData.businessName}
+                      onChange={(e) => updateWizardData({ businessName: e.target.value })}
                     />
                     <input
                       type="text"
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. Maya's Cakes"
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
+                      value={wizardData.bio}
+                      onChange={(e) => updateWizardData({ bio: e.target.value })}
                     />
                     <button
-                      disabled={!businessName.trim()}
+                      disabled={!wizardData.businessName.trim() || wizardData.businessName.length < 3}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(3)}
                     >
@@ -388,8 +360,8 @@ export default function WebsiteBuilderPage() {
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0071E3]"
-                        checked={hasPhysicalProducts}
-                        onChange={(e) => setHasPhysicalProducts(e.target.checked)}
+                        checked={wizardData.hasPhysicalProducts}
+                        onChange={(e) => updateWizardData({ hasPhysicalProducts: e.target.checked })}
                       />
                       <span className="font-semibold text-gray-800">Physical Products</span>
                     </label>
@@ -397,8 +369,8 @@ export default function WebsiteBuilderPage() {
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0071E3]"
-                        checked={hasDigitalProducts}
-                        onChange={(e) => setHasDigitalProducts(e.target.checked)}
+                        checked={wizardData.hasDigitalProducts}
+                        onChange={(e) => updateWizardData({ hasDigitalProducts: e.target.checked })}
                       />
                       <span className="font-semibold text-gray-800">Digital Products</span>
                     </label>
@@ -421,19 +393,19 @@ export default function WebsiteBuilderPage() {
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="What is the name of this product?"
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
+                      value={wizardData.productName}
+                      onChange={(e) => updateWizardData({ productName: e.target.value })}
                     />
                     <input
                       type="text"
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="0.00"
-                      value={productPrice}
-                      onChange={(e) => setProductPrice(e.target.value)}
+                      value={wizardData.productPrice}
+                      onChange={(e) => updateWizardData({ productPrice: e.target.value })}
                     />
                     <button
-                      disabled={!productName.trim() || !productPrice.trim()}
+                      disabled={!wizardData.productName.trim() || !wizardData.productPrice.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(5)}
                     >
@@ -449,13 +421,13 @@ export default function WebsiteBuilderPage() {
                   <div className="mt-6 flex flex-col gap-4">
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
-                      onClick={() => { setPaymentMethod('Online'); setWizardStep(6); }}
+                      onClick={() => { updateWizardData({ paymentMethod: 'Online' }); setWizardStep(6); }}
                     >
                       Online
                     </button>
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
-                      onClick={() => { setPaymentMethod('In Person'); setWizardStep(6); }}
+                      onClick={() => { updateWizardData({ paymentMethod: 'In Person' }); setWizardStep(6); }}
                     >
                       In Person
                     </button>
@@ -472,27 +444,27 @@ export default function WebsiteBuilderPage() {
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="e.g. Maya Smith"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
+                      value={wizardData.userName}
+                      onChange={(e) => updateWizardData({ userName: e.target.value })}
                     />
                     <input
                       type="email"
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="you@email.com"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
+                      value={wizardData.userEmail}
+                      onChange={(e) => updateWizardData({ userEmail: e.target.value })}
                     />
                     <input
                       type="password"
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                       style={{ borderRadius: '8px' }}
                       placeholder="Password"
-                      value={userPassword}
-                      onChange={(e) => setUserPassword(e.target.value)}
+                      value={wizardData.userPassword}
+                      onChange={(e) => updateWizardData({ userPassword: e.target.value })}
                     />
                     <button
-                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
+                      disabled={!wizardData.userName.trim() || !wizardData.userEmail.trim() || !wizardData.userPassword.trim()}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(7)}
                     >
@@ -508,13 +480,13 @@ export default function WebsiteBuilderPage() {
                   <div id="step-8" className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
-                      onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
+                      onClick={() => { updateWizardData({ template: 'Modern' }); setWizardStep('7.5'); }}
                     >
                       Modern
                     </button>
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
-                      onClick={() => { setTemplate('Bold'); setWizardStep('7.5'); }}
+                      onClick={() => { updateWizardData({ template: 'Bold' }); setWizardStep('7.5'); }}
                     >
                       Bold
                     </button>
@@ -592,17 +564,17 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
+                      value={wizardData.bio}
+                      onChange={(e) => updateWizardData({ bio: e.target.value })}
                       className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
-                      disabled={!bio.trim()}
+                      disabled={!wizardData.bio.trim()}
                       onClick={async () => {
-                        if (!bio.trim()) return;
+                        if (!wizardData.bio.trim()) return;
                         setStatus('generating');
                         try {
                           const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -615,15 +587,15 @@ export default function WebsiteBuilderPage() {
                               'X-Tenant-ID': tenantIdStr,
                               'X-User-ID': userIdStr,
                             },
-                            body: JSON.stringify({ description: bio })
+                            body: JSON.stringify({ description: wizardData.bio })
                           });
 
                           const data = await res.json();
                           if (res.ok) {
-                            setBusinessName(data.business_name || 'My Business');
-                            setBusinessType(data.business_type || 'Online Store');
-                            setProductName(data.initial_products?.[0]?.name || 'First Product');
-                            setProductPrice(data.initial_products?.[0]?.price || '10.00');
+                            updateWizardData({ businessName: data.business_name || 'My Business' });
+                            updateWizardData({ businessType: data.business_type || 'Online Store' });
+                            updateWizardData({ productName: data.initial_products?.[0]?.name || 'First Product' });
+                            updateWizardData({ productPrice: data.initial_products?.[0]?.price || '10.00' });
 
                             // Let the debounce save it
                             setTimeout(() => setStatus('live'), 2000);

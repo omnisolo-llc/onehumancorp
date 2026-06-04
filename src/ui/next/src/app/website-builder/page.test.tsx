@@ -190,7 +190,7 @@ describe('WebsiteBuilderPage', () => {
       { type: 'Catalog', props: { title: '2' } },
       { type: 'Booking', props: { title: '3' } }
     ];
-    useWebsiteBuilderStore.setState({ blocks: initialBlocks, status: 'draft' });
+    useWebsiteBuilderStore.setState({ blocks: initialBlocks, status: 'draft', wizardStep: 10 });
 
     render(<WebsiteBuilderPage />);
 
@@ -252,6 +252,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles load from server state', async () => {
+    useWebsiteBuilderStore.setState({ wizardStep: 10, status: 'idle' });
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('onboarding/state') && url.includes('/api/')) {
         return Promise.resolve({
@@ -261,7 +262,8 @@ describe('WebsiteBuilderPage', () => {
               bio: 'Test bio',
               blocks: [{ type: 'Testimonials', props: {} }],
               status: 'draft'
-            }
+            },
+            wizardState: { step: 10, wizardData: { businessName: 'Test' } }
           })
         });
       }
@@ -276,6 +278,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles sync back to server state on change', async () => {
+    useWebsiteBuilderStore.setState({ wizardStep: 0, status: 'idle' });
     render(<WebsiteBuilderPage />);
 
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
