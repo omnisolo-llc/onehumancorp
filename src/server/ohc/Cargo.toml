@@ -2,6 +2,15 @@
 name = "server_ohc"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [lib]
 path = "mod.rs"
+
+[dependencies]
+prost = { workspace = true }
+serde = { workspace = true }
+tonic = { workspace = true }
+
+[build-dependencies]
+tonic-build = "0.12"

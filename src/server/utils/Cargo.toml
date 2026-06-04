@@ -3,5 +3,23 @@ name = "server_utils"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies]
+axum = { version = "0.8.1", features = ["ws"] }
+flate2 = "1"
+rand = "0.8"
+redis = { version = "0.27.6", features = ["tokio-comp"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+server_auth = { path = "../auth" }
+server_common = { path = "../common" }
+server_config = { path = "../config" }
+server_pricing = { path = "../pricing" }
+tokio = { workspace = true }
+tracing = "0.1"
+
+[dev-dependencies]
+chrono = { workspace = true }
+reqwest = { workspace = true }
+
 [lib]
 path = "mod.rs"

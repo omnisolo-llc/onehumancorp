@@ -10,6 +10,13 @@ struct WorkflowShard {
     scope: &'static str,
 }
 
+#[derive(Clone)]
+struct BusinessShard {
+    label: &'static str,
+    title: &'static str,
+    focus: &'static str,
+}
+
 pub struct WorkflowExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
 }
@@ -28,8 +35,9 @@ impl ToolExecutor for WorkflowExecutor {
 
         match workflow {
             "ohc_review_branch" | "review_branch" => self.run_review_branch(task).await,
+            "ohc_business_swarm" | "business_swarm" => self.run_business_swarm(task).await,
             other => Err(ToolError::LlmRecoverable(format!(
-                "Unknown workflow '{}'. Supported workflows: ohc_review_branch",
+                "Unknown workflow '{}'. Supported workflows: ohc_review_branch, ohc_business_swarm",
                 other
             ))),
         }
@@ -72,7 +80,7 @@ impl WorkflowExecutor {
             let prompt = review_prompt(task, &shard);
             let label = shard.label.to_string();
             set.spawn(async move {
-                let result = run_builtin_agent(runner, &prompt).await;
+                let result = run_builtin_agent(runner, &prompt, false).await;
                 (label, result)
             });
         }
@@ -96,7 +104,7 @@ impl WorkflowExecutor {
              Keep only actionable findings. Return a concise verified finding list plus rejected-findings notes.\n\n{}",
             task, shard_bundle
         );
-        let verification = run_builtin_agent(self.runner.clone(), &verification_prompt).await?;
+        let verification = run_builtin_agent(self.runner.clone(), &verification_prompt, false).await?;
 
         let synthesis_prompt = format!(
             "You are the synthesizer for an OHC built-in agent workflow.\n\
@@ -111,13 +119,99 @@ impl WorkflowExecutor {
              Verified findings:\n{}",
             task, shard_bundle, verification
         );
-        let final_report = run_builtin_agent(self.runner.clone(), &synthesis_prompt).await?;
+        let final_report = run_builtin_agent(self.runner.clone(), &synthesis_prompt, false).await?;
 
         Ok(format!(
             "[Workflow: ohc_review_branch]\n\
              Phase 1 - shard review: completed with {} shard reports\n\
              Phase 2 - adversarial verification: completed\n\
              Phase 3 - synthesis: completed\n\n{}",
+            shard_reports.len(),
+            final_report
+        ))
+    }
+
+    async fn run_business_swarm(&self, task: &str) -> Result<String, ToolError> {
+        let shards = vec![
+            BusinessShard {
+                label: "revenue-strategist",
+                title: "Revenue strategist",
+                focus: "pricing, conversion, channel mix, promotions, and upsell opportunities",
+            },
+            BusinessShard {
+                label: "operations-analyst",
+                title: "Operations analyst",
+                focus: "fulfillment, staffing, bottlenecks, support load, and process automation",
+            },
+            BusinessShard {
+                label: "finance-controller",
+                title: "Finance controller",
+                focus: "cash flow, margin, unit economics, spend control, and risk-adjusted ROI",
+            },
+            BusinessShard {
+                label: "customer-success-lead",
+                title: "Customer success lead",
+                focus: "retention, reviews, response quality, churn signals, and loyalty loops",
+            },
+            BusinessShard {
+                label: "risk-compliance-reviewer",
+                title: "Risk and compliance reviewer",
+                focus: "operational, legal, privacy, payment, and brand safety risks",
+            },
+        ];
+
+        let mut set = tokio::task::JoinSet::new();
+        for shard in shards {
+            let runner = self.runner.clone();
+            let prompt = business_prompt(task, &shard);
+            let label = shard.label.to_string();
+            set.spawn(async move {
+                let result = run_builtin_agent(runner, &prompt, true).await;
+                (label, result)
+            });
+        }
+
+        let mut shard_reports = Vec::new();
+        while let Some(joined) = set.join_next().await {
+            let (label, result) = joined.map_err(|e| {
+                ToolError::LlmRecoverable(format!("Business swarm shard task join failed: {}", e))
+            })?;
+            match result {
+                Ok(report) => shard_reports.push(format!("## {}\n{}", label, report)),
+                Err(err) => shard_reports.push(format!("## {}\nERROR: {}", label, err)),
+            }
+        }
+
+        let shard_bundle = shard_reports.join("\n\n");
+        let verification_prompt = format!(
+            "You are the verifier for an OHC business swarm.\n\
+             Business objective: {}\n\n\
+             Cross-check these specialist reports. Remove unsupported claims, duplicated recommendations, and actions that are not specific enough to execute. \
+             Keep recommendations that are concrete, measurable, and useful to a small business operator. Return verified findings, rejected notes, and missing data.\n\n{}",
+            task, shard_bundle
+        );
+        let verification = run_builtin_agent(self.runner.clone(), &verification_prompt, true).await?;
+
+        let synthesis_prompt = format!(
+            "You are the operating chief of staff for a small business using OHC agents.\n\
+             Produce a concise operating plan from the verified specialist findings.\n\n\
+             Rules:\n\
+             - Start with the highest leverage actions.\n\
+             - Assign each action to an agent role.\n\
+             - Include expected business impact, required inputs, and first next step.\n\
+             - Do not invent facts beyond the specialist reports and verified findings.\n\n\
+             Original business objective:\n{}\n\n\
+             Specialist reports:\n{}\n\n\
+             Verified findings:\n{}",
+            task, shard_bundle, verification
+        );
+        let final_report = run_builtin_agent(self.runner.clone(), &synthesis_prompt, true).await?;
+
+        Ok(format!(
+            "[Workflow: ohc_business_swarm]\n\
+             Phase 1 - specialist agents: completed with {} shard reports\n\
+             Phase 2 - adversarial verification: completed\n\
+             Phase 3 - operating-plan synthesis: completed\n\n{}",
             shard_reports.len(),
             final_report
         ))
@@ -138,9 +232,23 @@ fn review_prompt(task: &str, shard: &WorkflowShard) -> String {
     )
 }
 
+fn business_prompt(task: &str, shard: &BusinessShard) -> String {
+    format!(
+        "You are running as an OHC business specialist agent.\n\n\
+         Business objective: {}\n\
+         Specialist: {}\n\
+         Focus: {}\n\n\
+         Analyze the business from your specialty. Use available context and tools when they are useful, but do not fabricate missing facts. \
+         Return a concise report with: observations, recommended actions, expected impact, data needed, and risks. \
+         Keep recommendations specific enough that another agent can execute the first step.",
+        task, shard.title, shard.focus
+    )
+}
+
 async fn run_builtin_agent(
     runner: Arc<dyn crate::runner::CommandRunner>,
     task: &str,
+    disable_tools: bool,
 ) -> Result<String, ToolError> {
     let program = std::env::var("OHC_BUILTIN_AGENT_BINARY")
         .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
@@ -167,6 +275,12 @@ async fn run_builtin_agent(
         if let Ok(value) = std::env::var(key) {
             envs.push((key.to_string(), value));
         }
+    }
+    if disable_tools {
+        envs.push(("OHC_AGENT_DISABLE_TOOLS".to_string(), "true".to_string()));
+        envs.push(("OHC_AGENT_TASK_TIMEOUT_SECS".to_string(), "240".to_string()));
+        envs.push(("OHC_LLM_TIMEOUT_SECS".to_string(), "180".to_string()));
+        envs.push(("OHC_MAX_TOKENS".to_string(), "1200".to_string()));
     }
 
     let output = runner
@@ -210,7 +324,7 @@ pub fn workflow_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
             "properties": {
                 "workflow": {
                     "type": "string",
-                    "enum": ["ohc_review_branch", "review_branch"],
+                    "enum": ["ohc_review_branch", "review_branch", "ohc_business_swarm", "business_swarm"],
                     "description": "The built-in workflow to run."
                 },
                 "task": {

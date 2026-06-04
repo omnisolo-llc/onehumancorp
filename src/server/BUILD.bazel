@@ -277,6 +277,7 @@ rust_library(
     srcs = SERVER_RS_SRCS,
     data = ["//src/server/migrations"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -380,6 +381,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -508,6 +510,7 @@ SERVER_LIB_SPLIT_TESTS = [
         crate = ":server_lib",
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
         edition = "2024",
+        rustc_flags = ["--cfg=ohc_bazel"],
         env = {
             "RUST_TEST_THREADS": "1",
         },
@@ -540,6 +543,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -593,6 +597,7 @@ test_suite(
         crate = ":server_lib",
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
         edition = "2024",
+        rustc_flags = ["--cfg=ohc_bazel"],
         env = {
             "RUST_TEST_THREADS": "1",
         },
@@ -681,6 +686,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -735,6 +741,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -761,6 +768,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -788,6 +796,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -818,6 +827,7 @@ rust_test(
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },

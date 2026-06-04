@@ -1931,3 +1931,64 @@ impl SipMessage {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn sip_messages_round_trip_with_tagged_json() {
+        let message = SipMessage::MissionCreate {
+            mission_id: "mission-1".to_string(),
+            objective: "ship real tests".to_string(),
+            priority: 9,
+        };
+
+        let encoded = serde_json::to_string(&message).unwrap();
+        assert!(encoded.contains("MissionCreate"));
+
+        let decoded: SipMessage = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, message);
+        assert!(decoded.is_system_level());
+        assert_eq!(decoded.get_routing_key(), "mission.mission-1");
+    }
+
+    #[test]
+    fn sip_routing_keys_cover_agent_task_global_and_extension_messages() {
+        let agent = SipMessage::AgentHeartbeat {
+            agent_id: "agent-1".to_string(),
+            current_load: 0.25,
+            status: "ready".to_string(),
+        };
+        assert!(agent.is_system_level());
+        assert_eq!(agent.get_routing_key(), "agent.agent-1");
+
+        let task = SipMessage::TaskProgress {
+            task_id: "task-1".to_string(),
+            percent_complete: 42,
+            status_message: "working".to_string(),
+        };
+        assert_eq!(task.get_routing_key(), "task.task-1");
+
+        let metric = SipMessage::MetricRecord {
+            metric_name: "latency_ms".to_string(),
+            value: 12.5,
+            labels: HashMap::from([("route".to_string(), "/api".to_string())]),
+        };
+        assert!(metric.is_system_level());
+        assert_eq!(metric.get_routing_key(), "global");
+
+        let extension = SipMessage::ExtensionMessage149 {
+            ext_id: "custom-149".to_string(),
+            ext_field_a: "a".to_string(),
+            ext_field_b: 2,
+            ext_flags: 3,
+            is_active: true,
+            description: "custom".to_string(),
+            tags: vec!["x".to_string()],
+        };
+        assert!(!extension.is_system_level());
+        assert_eq!(extension.get_routing_key(), "ext.custom-149");
+    }
+}
