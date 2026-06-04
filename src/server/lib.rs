@@ -992,6 +992,27 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+
+    async fn route_semantic(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::SemanticRoutingRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::SemanticRoutingResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let internal_req = crate::orchestration::router::SemanticRoutingRequest {
+            tenant_id: req.tenant_id,
+            prompt: req.prompt,
+            embedding: if req.embedding.is_empty() { None } else { Some(req.embedding) },
+        };
+
+        match self.hub.semantic_router.route(&internal_req) {
+            Ok(res) => Ok(tonic::Response::new(::server_ohc::orchestration::SemanticRoutingResponse {
+                tenant_id: res.tenant_id,
+                target_department: res.target_department.to_string(),
+                confidence_score: res.confidence_score,
+            })),
+            Err(e) => Err(tonic::Status::internal(e)),
+        }
+    }
     type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
     async fn stream_messages(
@@ -2345,6 +2366,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
@@ -3525,7 +3547,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
-        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
+        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))

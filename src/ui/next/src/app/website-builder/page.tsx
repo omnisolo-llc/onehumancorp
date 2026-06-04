@@ -27,7 +27,7 @@ export default function WebsiteBuilderPage() {
     domainChoice, setDomainChoice,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
-    blocks, setBlocks,
+    blocks, setBlocks, moveBlock,
     status, setStatus,
     liveUrl, setLiveUrl
   } = useWebsiteBuilderStore();
@@ -195,17 +195,8 @@ export default function WebsiteBuilderPage() {
     }
   };
 
-  const moveBlock = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
-
-    setBlocks(prev => {
-      const newBlocks = [...prev];
-      const [moved] = newBlocks.splice(fromIndex, 1);
-      newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
-      return newBlocks;
-    });
-
+  const handleMoveBlock = (fromIndex: number, toIndex: number) => {
+    moveBlock(fromIndex, toIndex);
     if (selectedBlockIndex === fromIndex) {
       setSelectedBlockIndex(toIndex);
     } else if (selectedBlockIndex === toIndex) {
@@ -603,8 +594,7 @@ export default function WebsiteBuilderPage() {
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                      style={{ borderRadius: '8px' }}
+                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
@@ -690,8 +680,7 @@ export default function WebsiteBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
-            style={{ borderRadius: '8px' }}
+            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5] rounded-[8px]"
             onClick={() => router.push('/dashboard')}
           >
             View Welcome Checklist
@@ -730,13 +719,13 @@ export default function WebsiteBuilderPage() {
               }}
               onDragEnter={() => {
                 if (draggedIndex !== null && draggedIndex !== i) {
-                  moveBlock(draggedIndex, i);
+                  handleMoveBlock(draggedIndex, i);
                   setDraggedIndex(i);
                 }
               }}
               onDragEnd={() => setDraggedIndex(null)}
-              onMoveUp={i > 0 ? () => moveBlock(i, i - 1) : undefined}
-              onMoveDown={i < blocks.length - 1 ? () => moveBlock(i, i + 1) : undefined}
+              onMoveUp={i > 0 ? () => handleMoveBlock(i, i - 1) : undefined}
+              onMoveDown={i < blocks.length - 1 ? () => handleMoveBlock(i, i + 1) : undefined}
             >
               <SmartBlock {...b} />
             </DraggableBlock>
@@ -745,12 +734,11 @@ export default function WebsiteBuilderPage() {
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
+        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
-              style={{ borderRadius: '8px' }}
+              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[8px]"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
