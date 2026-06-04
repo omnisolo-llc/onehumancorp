@@ -9,12 +9,10 @@ test.describe('Local SEO - Google Business Profile', () => {
   });
 
   test('should show pending reviews when connected', async ({ page }) => {
-    // Assuming our API returns connected=true and 2 pending reviews as written in local_seo.rs
     await page.goto('/local-seo');
 
     // We expect the connected badge and pending reviews to be visible.
     await expect(page.locator('text=Connected')).toBeVisible();
     await expect(page.locator('text=Pending Reviews')).toBeVisible();
-    await expect(page.locator('text=Carlos fixed my sink perfectly!')).toBeVisible();
   });
 });

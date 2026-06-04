@@ -41,26 +41,7 @@ pub async fn get_connection_status(axum::extract::Extension(_claims): axum::extr
 }
 
 pub async fn get_pending_reviews(axum::extract::Extension(_claims): axum::extract::Extension<Claims>) -> Json<Vec<LocalReview>> {
-    // Return mock reviews per requirements for the feed
-    let mock_reviews = vec![
-        LocalReview {
-            review_id: "rev1".to_string(),
-            reviewer_name: "Sarah".to_string(),
-            star_rating: 5,
-            comment: Some("Carlos fixed my sink perfectly!".to_string()),
-            ai_draft_reply: Some("Hi Sarah! Thank you so much for the 5 stars. It was a pleasure fixing the sink for you. Let me know if you need anything else! - Carlos".to_string()),
-            reply_status: "PENDING".to_string(),
-        },
-        LocalReview {
-            review_id: "rev2".to_string(),
-            reviewer_name: "John".to_string(),
-            star_rating: 4,
-            comment: Some("Quick service, but left a small mess.".to_string()),
-            ai_draft_reply: Some("Hi John, thanks for the review. I apologize for the small mess and will make sure to clean up better next time. - Carlos".to_string()),
-            reply_status: "PENDING".to_string(),
-        }
-    ];
-    Json(mock_reviews)
+    Json(vec![])
 }
 
 pub async fn approve_and_reply(
@@ -83,7 +64,7 @@ pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
         .route("/connect", post(connect_google_business))
         .route("/status", get(get_connection_status))
         .route("/reviews/pending", get(get_pending_reviews))
-        .route("/reviews/:review_id/approve", post(approve_and_reply))
+        .route("/reviews/{review_id}/approve", post(approve_and_reply))
         .route("/webhook", post(webhook_ingest))
 }
 
@@ -126,9 +107,7 @@ mod tests {
     async fn test_get_pending_reviews() {
         let claims = mock_claims();
         let Json(response) = get_pending_reviews(axum::extract::Extension(claims)).await;
-        assert_eq!(response.len(), 2);
-        assert_eq!(response[0].review_id, "rev1");
-        assert_eq!(response[0].reply_status, "PENDING");
+        assert_eq!(response.len(), 0);
     }
 
     #[tokio::test]
