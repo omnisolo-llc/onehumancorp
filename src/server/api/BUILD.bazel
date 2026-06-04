@@ -20,7 +20,10 @@ exports_files(
         "telemetry.rs",
         "catalog.rs",
         "local_seo.rs",
+<<<<<<< HEAD
+=======
         "payments.rs",
+>>>>>>> 02a088e1 (feat: Add Stripe Terminal POS Architecture for In-Person Payments)
     ],
     visibility = ["//visibility:public"],
 )
@@ -47,7 +50,10 @@ rust_library(
         "telemetry.rs",
         "catalog.rs",
         "local_seo.rs",
+<<<<<<< HEAD
+=======
         "payments.rs",
+>>>>>>> 02a088e1 (feat: Add Stripe Terminal POS Architecture for In-Person Payments)
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",

@@ -6,7 +6,10 @@ exports_files(
         "mod.rs",
         "payout_batcher.rs",
         "routing.rs",
+<<<<<<< HEAD
+=======
         "terminal.rs",
+>>>>>>> 02a088e1 (feat: Add Stripe Terminal POS Architecture for In-Person Payments)
     ],
     visibility = ["//visibility:public"],
 )
@@ -19,7 +22,10 @@ rust_library(
         "mod.rs",
         "payout_batcher.rs",
         "routing.rs",
+<<<<<<< HEAD
+=======
         "terminal.rs",
+>>>>>>> 02a088e1 (feat: Add Stripe Terminal POS Architecture for In-Person Payments)
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
