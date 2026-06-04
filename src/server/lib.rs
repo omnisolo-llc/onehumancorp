@@ -2495,11 +2495,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
-    let meta_webhook_router = axum::Router::new()
-        .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
-        .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
-        .with_state(hub.clone());
-
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -3467,7 +3462,6 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
-        .merge(meta_webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
@@ -4153,22 +4147,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             /* Scribe: Documentation Feature Styles */
             .tooltip-box { position: fixed; background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; line-height: 1.4; pointer-events: none; z-index: 9999; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; transform: translateY(4px); max-width: 250px; box-shadow: var(--shadow-md); }
             .tooltip-box.show { opacity: 1; transform: translateY(0); }
-            #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: rgba(0, 102, 255, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.2s ease; }
+            #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
             #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
-            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: rgba(29, 29, 31, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: 1px solid rgba(255, 255, 255, 0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
+            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
             #global-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
-            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid rgba(255, 255, 255, 0.5); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
-            #ai-chat-header { background: rgba(0, 102, 255, 0.9); backdrop-filter: blur(10px); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+            #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
             #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
-            .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-            .chat-msg.user { background: rgba(238, 241, 245, 0.8); align-self: flex-end; color: var(--text); border-bottom-right-radius: 4px; }
-            .chat-msg.ai { background: rgba(232, 242, 255, 0.8); align-self: flex-start; color: var(--text); border-bottom-left-radius: 4px; }
+            .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; }
+            .chat-msg.user { background: var(--bg); align-self: flex-end; color: var(--text); border-bottom-right-radius: 4px; }
+            .chat-msg.ai { background: var(--primary-soft); align-self: flex-start; color: var(--text); border-bottom-left-radius: 4px; }
             .chat-msg a { color: var(--primary); font-weight: 600; text-decoration: none; }
-            #ai-chat-input-container { display: flex; padding: 12px; border-top: 1px solid rgba(16, 24, 40, 0.05); gap: 8px; background: rgba(255, 255, 255, 0.5); }
-            #ai-chat-input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; outline: none; background: rgba(255, 255, 255, 0.9); }
+            #ai-chat-input-container { display: flex; padding: 12px; border-top: 1px solid var(--border); gap: 8px; }
+            #ai-chat-input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; outline: none; }
             #ai-chat-input:focus { border-color: var(--primary); }
             #walkthrough-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9500; box-shadow: inset 0 0 0 9999px rgba(0,0,0,0.5); display: none; transition: all 0.3s ease; }
-            #walkthrough-bubble { position: fixed; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: var(--text); padding: 16px; border-radius: var(--radius-md); box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 9501; display: none; max-width: 300px; border: 1px solid rgba(255, 255, 255, 0.6); border-left: 4px solid var(--primary); }
+            #walkthrough-bubble { position: fixed; background: white; color: var(--text); padding: 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); z-index: 9501; display: none; max-width: 300px; border-left: 4px solid var(--primary); }
             #walkthrough-bubble h4 { margin: 0 0 8px 0; font-size: 16px; }
             #walkthrough-bubble p { margin: 0 0 12px 0; font-size: 14px; color: var(--text-secondary); }
             #walkthrough-bubble button { padding: 6px 12px; font-size: 13px; margin-top: 8px; }
@@ -4194,16 +4188,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         document.addEventListener("DOMContentLoaded", () => {
                             const tooltipEl = document.createElement("div");
                             tooltipEl.id = "global-tooltip-bubble";
-                            tooltipEl.className = "tooltip-box";
+                            tooltipEl.style.cssText = "position: fixed; background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; z-index: 10000; display: none; pointer-events: none; max-width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
                             document.body.appendChild(tooltipEl);
 
                             let tooltipTimeout = null;
 
                             function showTooltip(el, text) {
                                 tooltipEl.textContent = text;
-                                tooltipEl.classList.add("show");
-                                // We use display block/none or visibility in css but since we use opacity:
-                                // To make sure it doesn't block clicks when hidden, we can toggle display or use pointer-events: none
                                 tooltipEl.style.display = "block";
                                 const rect = el.getBoundingClientRect();
                                 const tooltipRect = tooltipEl.getBoundingClientRect();
@@ -4219,31 +4210,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             function hideTooltip() {
-                                tooltipEl.classList.remove("show");
-                                setTimeout(() => { if (!tooltipEl.classList.contains("show")) tooltipEl.style.display = "none"; }, 200);
+                                tooltipEl.style.display = "none";
                             }
 
-                            async function initTooltips() {
-                                try {
-                                    const res = await fetch('/api/tooltips');
-                                    if (res.ok) {
-                                        const serverTooltips = await res.json();
-                                        window.OHC_TOOLTIPS = { ...window.OHC_TOOLTIPS, ...serverTooltips };
-                                    }
-                                } catch (e) {
-                                    console.error("Failed to fetch tooltips from API:", e);
+
+                            document.querySelectorAll("[placeholder], [id]").forEach(el => {
+                                const placeholderKey = el.getAttribute("placeholder");
+                                const idKey = el.getAttribute("id") + "-tooltip";
+
+                                let key = null;
+                                if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
+                                    key = placeholderKey;
+                                } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
+                                    key = idKey;
                                 }
-
-                                document.querySelectorAll("[placeholder], [id]").forEach(el => {
-                                    const placeholderKey = el.getAttribute("placeholder");
-                                    const idKey = el.getAttribute("id") + "-tooltip";
-
-                                    let key = null;
-                                    if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
-                                        key = placeholderKey;
-                                    } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
-                                        key = idKey;
-                                    }
 
                                 if (key) {
                                     const text = window.OHC_TOOLTIPS[key];
@@ -4268,8 +4248,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }, {passive: true});
                                 }
                             });
-                            }
-                            initTooltips();
                         });
                     </script>
                 </head>
