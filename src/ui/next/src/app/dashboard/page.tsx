@@ -6,6 +6,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
+import { MilestoneCelebration } from "../components/MilestoneCelebration";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 
 type DashboardMetrics = {
@@ -210,7 +211,8 @@ export default function Dashboard() {
         {error && <div className="app-badge bad">{error}</div>}
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col gap-4">
+        <MilestoneCelebration tenantId={tenantId()} />
         <OneTapReferral tenantId={tenantId()} source="dashboard" />
       </div>
 

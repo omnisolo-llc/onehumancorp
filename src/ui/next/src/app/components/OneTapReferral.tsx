@@ -1,8 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export function OneTapReferral({ tenantId, source }: { tenantId: string, source: string }) {
   const [copied, setCopied] = useState(false);
-  const referralLink = `https://ohc.store/join?ref=${tenantId}&source=${source}`;
+  const [referralLink, setReferralLink] = useState(`https://ohc.store/join?ref=${tenantId}&source=${source}`);
+
+  useEffect(() => {
+    const fetchReferralLink = async () => {
+      try {
+        const response = await fetch("/api/v1/growth/referrals/generate", {
+          method: "POST",
+        });
+        const data = await response.json();
+        if (data && data.referral_link) {
+          setReferralLink(data.referral_link);
+        }
+      } catch (e) {
+        console.error("Failed to generate dynamic referral link for OneTapReferral", e);
+      }
+    };
+
+    fetchReferralLink();
+  }, [tenantId, source]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);

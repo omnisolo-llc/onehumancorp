@@ -67,6 +67,11 @@ ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('e2e-milestone-1', 'e2e-tenant', 'first_sale', CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, milestone_type) DO UPDATE
+SET reached_at = EXCLUDED.reached_at;
+
 INSERT INTO agents (id, tenant_id, name, role, status, provider_type, region)
 VALUES
   ('e2e-agent-marketing', 'e2e-tenant', 'Marketing Pro', 'Marketing assistant', 'Active', 'minimax', 'us'),

@@ -4,7 +4,7 @@
 use std::sync::OnceLock;
 use crate::utils::cache::HybridCache;
 
-pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
+pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<(String, Option<String>)>>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
 use crate::hub::Hub;
+use chrono::Utc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
@@ -84,6 +85,7 @@ pub struct Milestone {
     pub title: String,
     pub description: String,
     pub reached: bool,
+    pub reached_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -521,17 +523,27 @@ async fn handle_check_milestones(
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
     let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
-    let reached_types = if let Some(cached_types) = cache.get(&cache_key).await {
-        cached_types
+    let reached_data = if let Some(cached_data) = cache.get(&cache_key).await {
+        cached_data
     } else {
-        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+        let rows = sqlx::query("SELECT milestone_type, reached_at FROM business_milestones WHERE tenant_id = $1")
             .bind(tenant_id)
             .fetch_all(&state.pool)
             .await
             .unwrap_or_default();
-        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
-        cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
-        types
+        let data: Vec<(String, Option<String>)> = rows.into_iter().map(|r| {
+            let m_type: String = r.get("milestone_type");
+            let r_at: Option<chrono::NaiveDateTime> = r.get("reached_at");
+            (m_type, r_at.map(|d| d.format("%Y-%m-%dT%H:%M:%S").to_string()))
+        }).collect();
+        cache.set(&cache_key, data.clone(), std::time::Duration::from_secs(60)).await;
+        data
+    };
+
+    let get_reached_at = |m_id: &str| {
+        reached_data.iter()
+            .find(|(t, _)| t == m_id)
+            .and_then(|(_, d)| d.clone())
     };
 
     let milestones = vec![
@@ -539,19 +551,22 @@ async fn handle_check_milestones(
             id: "first_sale".to_string(),
             title: "🎉 Milestone: First Sale!".to_string(),
             description: "Congratulations on your first sale!".to_string(),
-            reached: reached_types.contains(&"first_sale".to_string()),
+            reached: get_reached_at("first_sale").is_some(),
+            reached_at: get_reached_at("first_sale"),
         },
         Milestone {
             id: "10th_order".to_string(),
             title: "🎉 Milestone: 10th Order!".to_string(),
             description: "You've successfully processed your 10th order on OHC.".to_string(),
-            reached: reached_types.contains(&"10th_order".to_string()),
+            reached: get_reached_at("10th_order").is_some(),
+            reached_at: get_reached_at("10th_order"),
         },
         Milestone {
             id: "100_visitors".to_string(),
             title: "🚀 100 Visitors Today!".to_string(),
             description: "Your storefront reached 100 visitors today!".to_string(),
-            reached: reached_types.contains(&"100_visitors".to_string()),
+            reached: get_reached_at("100_visitors").is_some(),
+            reached_at: get_reached_at("100_visitors"),
         },
     ];
     Json(MilestonesResponse { milestones })
@@ -671,9 +686,9 @@ pub struct DiscountShareResponse {
 
 async fn handle_generate_discount_share(
     Extension(_state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
-    // In a real application we would use the authenticated user's tenant ID
-    let tenant_id = "acme-corp";
+    let tenant_id = &auth_info.org_id;
     let uuid = uuid::Uuid::new_v4().to_string();
     let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
 
