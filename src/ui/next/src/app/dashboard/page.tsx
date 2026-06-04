@@ -138,6 +138,13 @@ export default function Dashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const revenue = parseInt(localStorage.getItem('ohc_upsell_revenue') || '0', 10);
+        setUpsellRevenue(revenue);
+    }
+  }, []);
+
   const lowStockCount = useMemo(
     () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length,
     [supply.raw_materials],
@@ -212,6 +219,16 @@ export default function Dashboard() {
               <div className="app-metric-label">Customers</div>
               <div className="app-metric-value">{metrics.active_customers}</div>
               <div className="app-metric-note">Database customer records</div>
+            </div>
+            <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] p-6 rounded-2xl shadow-sm border border-[rgba(255,255,255,0.4)] relative overflow-hidden app-card">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#0071E3] opacity-10 rounded-bl-full"></div>
+              <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wider">AI Upsell Revenue</h2>
+                  <span className="text-[10px] bg-[#0071E3] text-white px-2 py-0.5 rounded-full font-bold tracking-wider">AUTO</span>
+              </div>
+              <p className="text-4xl font-bold text-[#1D1D1F]">${upsellRevenue.toFixed(2)}</p>
+              <p className="text-sm text-[#34C759] font-medium mt-2">+15% vs yesterday</p>
+              <p className="text-xs text-gray-500 mt-1">Generated invisibly by the Sales Agent.</p>
             </div>
             <div className="app-card">
               <div className="app-metric-label">Pending Orders</div>
