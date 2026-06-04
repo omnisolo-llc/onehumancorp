@@ -212,3 +212,31 @@ message ConversationalCheckoutSession {
   string status = 7;
   int64 expires_at_unix = 8;
 }
+
+// POS Engine messages
+message PosOfflineTransaction {
+  string id = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string payload = 6; // JSON detailing the items bought
+  string status = 7; // PENDING, SYNCED, FAILED
+  int64 created_at_unix = 8;
+}
+
+message SyncOfflineTransactionsRequest {
+  string tenant_id = 1;
+  string client_id = 2;
+  repeated PosOfflineTransaction transactions = 3;
+}
+
+message SyncOfflineTransactionsResponse {
+  bool success = 1;
+  int32 synced_count = 2;
+  repeated string failed_transaction_ids = 3;
+}
+
+service PosService {
+  rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+}
