@@ -166,4 +166,28 @@ ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 
+
+ALTER TABLE IF EXISTS subscription_plans DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS subscribers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS fulfillment_batches DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO subscription_plans (id, tenant_id, name, description, price_cents, currency, frequency)
+VALUES
+  ('e2e-sub-plan-1', 'e2e-tenant', 'Monthly Cake Box', 'Delicious cake box every month.', 3999, 'USD', 'monthly')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, stripe_subscription_id)
+VALUES
+  ('e2e-subscriber-1', 'e2e-tenant', 'e2e-customer-ava', 'e2e-sub-plan-1', 'ACTIVE', 'sub_123')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO fulfillment_batches (id, tenant_id, subscription_plan_id, fulfillment_date, subscriber_count, status)
+VALUES
+  ('e2e-batch-1', 'e2e-tenant', 'e2e-sub-plan-1', CURRENT_DATE + interval '7 days', 1, 'PENDING')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS subscription_plans FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS subscribers FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS fulfillment_batches FORCE ROW LEVEL SECURITY;
+
 COMMIT;

@@ -195,11 +195,37 @@ async fn handle_magic_link(
     }
 }
 
+
+#[derive(Deserialize)]
+pub struct SubscriptionIntentRequest {
+    pub plan_id: String,
+    pub payment_method: String,
+}
+
+#[derive(Serialize)]
+pub struct SubscriptionIntentResponse {
+    pub intent_id: String,
+    pub status: String,
+}
+
+async fn create_intent(
+    Extension(_hub): Extension<Arc<Hub>>,
+    Json(_payload): Json<SubscriptionIntentRequest>,
+) -> impl IntoResponse {
+    let intent_id = uuid::Uuid::new_v4().to_string();
+    let resp = SubscriptionIntentResponse {
+        intent_id,
+        status: "requires_payment_method".to_string(),
+    };
+    (StatusCode::OK, Json(resp)).into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/plans", get(get_plans))
         .route("/subscribers", get(get_subscribers))
         .route("/fulfillment-batches", get(get_fulfillment_batches))
         .route("/magic-link", post(handle_magic_link))
+        .route("/intent", post(create_intent))
         .layer(Extension(hub))
 }
