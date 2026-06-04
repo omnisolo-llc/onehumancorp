@@ -126,6 +126,9 @@ impl MinimaxClient {
                     "initial_products": [{"name": "Painting", "price": "100.00"}],
                     "suggested_features": ["online_store"]
                 }"#.to_string());
+
+            } else if lower_prompt.contains("extract product details") {
+                return Ok(r#"{"title": "Artisan Vanilla Bean Cupcake", "description": "A delightful, handcrafted vanilla bean cupcake with a rich, buttery crumb and a swirl of velvety buttercream frosting. Perfect for celebrations or a sweet afternoon treat.", "price": "4.99", "category": "Baked Goods"}"#.to_string());
             } else if lower_prompt.contains("carlos") {
                 return Ok(r#"{
                     "business_name": "Carlos Plumbing",

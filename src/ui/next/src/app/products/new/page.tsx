@@ -18,18 +18,33 @@ export default function AutoCatalogPage() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
       setLoading(true);
-      try {
-        const response = await fetch('/api/auto-catalog', {
-          method: 'POST',
-        });
-        const data = await response.json();
-        setProductData(data);
-      } catch (error) {
-        console.error('Error auto-cataloging:', error);
-      } finally {
-        setLoading(false);
-      }
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        try {
+          const response = await fetch('/api/v1/products/digitize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: base64String })
+          });
+          const data = await response.json();
+          setProductData({
+            title: data.title || '',
+            description: data.description || '',
+            price: data.price || '',
+            category: data.category || '',
+            isSubscription: false
+          });
+        } catch (error) {
+          console.error('Error auto-cataloging:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
