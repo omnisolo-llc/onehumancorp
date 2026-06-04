@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Offline-First Tap-to-Pay Omnichannel Inventory Sync Mesh', () => {
   // We use the existing auth and structure seen in other e2e tests
   test('Priya uses Tap-to-Pay offline and syncs inventory when back online', async ({ request, baseURL }) => {
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // 1. Setup Priya's tenant and inventory via API (or assume seeded from test)
     // We will bypass full UI setup for brevity in this specific headless API interaction
     // Since the system uses Spiffe, we assume a mock header works if configured for testing,
