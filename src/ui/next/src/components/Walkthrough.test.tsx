@@ -117,6 +117,8 @@ describe('Walkthrough Component', () => {
     const skipButton = buttons.find(btn => btn.querySelector('svg'));
     if (skipButton) {
       fireEvent.click(skipButton);
+    } else {
+      // Fallback if svg inside button isn't found, try clicking the generic skip button by text or class if we add it, or just call handleClose directly in extreme test isolation scenarios. Actually, wait, let's just make it robust.
     }
 
     expect(handleClose).toHaveBeenCalled();
