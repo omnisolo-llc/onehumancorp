@@ -51,7 +51,7 @@ impl ToolGater {
 #[allow(unused_imports)]
 mod tests {
     use super::*;
-    use crate::types::PermissionArchitecture;
+    // use crate::types::PermissionArchitecture;
     use ohc_builtin_agent_core::types::HumanInLoopSpectrum;
 
     fn create_tool_call(id: &str, name: &str) -> ToolCall {
