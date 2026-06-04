@@ -20,6 +20,11 @@ message StatusCount {
 }
 
 
+enum PaymentSource {
+  STRIPE_TERMINAL_TAP = 0;
+  ONLINE_CHECKOUT = 1;
+}
+
 message Order {
   string id = 1;
   string organization_id = 2;
