@@ -419,7 +419,8 @@ describe('OnboardingWizard', () => {
     await user.click(salesAgent);
 
     // Toggle auto respond
-    await user.click(toggle);
+    const toggleLabel = screen.getByText('Allow AI to Auto-Respond');
+    await user.click(toggleLabel);
 
     await waitFor(() => {
       const state = useOnboardingStore.getState();
