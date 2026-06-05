@@ -379,7 +379,11 @@ mod tests {
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
+<<<<<<< HEAD
             assert!(msg.contains("Failed to parse arguments") || msg.contains("Output parsing failed after"), "msg was: {}", msg);
+=======
+            assert!(msg.contains("Failed to parse tool call arguments"));
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }

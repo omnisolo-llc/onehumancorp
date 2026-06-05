@@ -3,7 +3,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ApiDocsPage from './page';
+<<<<<<< HEAD
 import { TooltipProvider } from '../../components/TooltipRegistry';
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 // Mock SwaggerUI to avoid running an actual parser in tests
 vi.mock('swagger-ui-react', () => {
@@ -14,11 +17,15 @@ vi.mock('swagger-ui-react', () => {
 
 describe('ApiDocsPage', () => {
   it('renders the advanced warning and swagger ui mock', () => {
+<<<<<<< HEAD
     render(
       <TooltipProvider>
         <ApiDocsPage />
       </TooltipProvider>
     );
+=======
+    render(<ApiDocsPage />);
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     expect(screen.getByText('Advanced:')).toBeInTheDocument();
     expect(screen.getByText('This section is for developers directly integrating with our APIs. Not required for normal use.')).toBeInTheDocument();

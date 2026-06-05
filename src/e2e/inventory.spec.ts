@@ -2,6 +2,12 @@ import { test, expect } from './fixtures';
 
 test.describe('Autonomous Predictive Inventory', () => {
     test('should show predictive restock proposals and allow 1-tap approval', async ({ page }) => {
+<<<<<<< HEAD
+        await page.goto('/inventory');
+
+        await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
+        await expect(page.getByText(/Raw Materials|No raw material rows found|Loading inventory/).first()).toBeVisible();
+=======
       test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
         // Must start from home page per guidelines
         await page.goto('/');
@@ -18,5 +24,6 @@ test.describe('Autonomous Predictive Inventory', () => {
 
         // Verify successful approval removes the proposal
         await expect(page.locator("text=No active restock proposals. You're all set!")).toBeVisible();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     });
 });

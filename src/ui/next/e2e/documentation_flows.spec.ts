@@ -3,7 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Documentation Flows', () => {
   test('Help Widget interactions and Videos', async ({ page }) => {
     // Wait for the help page to load
+<<<<<<< HEAD
+    await page.goto('/help');
+=======
     await page.goto('http://localhost:3000/help');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Make sure the title renders
     await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();

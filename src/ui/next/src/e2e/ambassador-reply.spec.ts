@@ -4,13 +4,21 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
   test('Owner connects Meta Graph API and approves Ambassador drafted reply', async ({ page, request }) => {
     // 1. Connect Instagram via Integrations
     // Start from login to satisfy the rules
+<<<<<<< HEAD
+    await page.goto('/login');
+=======
     await page.goto('http://localhost:3000/login');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.getByPlaceholder('Email or Username').fill('maya@ohc.test');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Login' }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
+<<<<<<< HEAD
+    await page.goto('/integrations');
+=======
     await page.goto('http://localhost:3000/integrations');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Mock window alert for OAuth connect
     page.on('dialog', dialog => dialog.accept());
@@ -38,7 +46,11 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     expect(response.ok()).toBeTruthy();
 
     // 3. Navigate to Team Page
+<<<<<<< HEAD
+    await page.goto('/team');
+=======
     await page.goto('http://localhost:3000/team');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.getByRole('heading', { name: 'Your Team', exact: true })).toBeVisible();
 
     // Navigate to The Ambassador

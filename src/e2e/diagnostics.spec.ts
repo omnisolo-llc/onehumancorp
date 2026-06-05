@@ -2,7 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Diagnostics Page', () => {
   test('shows health metrics and diagnostic actions', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/diagnostics');
     const screen = page.locator('#diagnostics-screen');
 
@@ -16,7 +19,10 @@ test.describe('Diagnostics Page', () => {
 
 test.describe('Service Manager', () => {
   test('shows service state and controls', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/services');
     const screen = page.locator('#services-screen');
 
@@ -31,7 +37,10 @@ test.describe('Service Manager', () => {
 
 test.describe('Scaling Configuration', () => {
   test('shows scaling settings and recommendations', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/scaling');
     const screen = page.locator('#scaling-screen');
 

@@ -8,7 +8,10 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
   });
 
   test('should display the win-back campaign page and handle soft paywall', async ({ page, context }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Customer Win-back Campaign 💌' })).toBeVisible();
 

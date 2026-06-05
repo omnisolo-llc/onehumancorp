@@ -18,16 +18,30 @@ export default function SeasonalPromoPage() {
     }
   }, []);
 
+<<<<<<< HEAD
+  const generatePromo = () => {
+    setIsGenerating(true);
+    const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
+    setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
+    setIsGenerating(false);
+  };
+
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   const handleGenerate = () => {
     if (!hasPro) {
       setShowSoftPaywall(true);
       return;
     }
 
+<<<<<<< HEAD
+    generatePromo();
+=======
     setIsGenerating(true);
     const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
     setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
     setIsGenerating(false);
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   };
 
   const claimTrialExtension = () => {
@@ -38,7 +52,11 @@ export default function SeasonalPromoPage() {
     }
     setHasPro(true);
     setShowSoftPaywall(false);
+<<<<<<< HEAD
+    generatePromo();
+=======
     handleGenerate();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   };
 
   return (

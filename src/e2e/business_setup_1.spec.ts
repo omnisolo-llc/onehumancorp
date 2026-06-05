@@ -15,14 +15,20 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('shows the current setup welcome step', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Start My Business/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Instant Build/ })).toBeVisible();
   });
 
   test('moves through business type and name steps', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
 
@@ -36,7 +42,10 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('completes the publish path to the checklist', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     const email = `maya+${Date.now()}@example.com`;
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();

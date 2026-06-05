@@ -3,13 +3,21 @@ import { test, expect } from './fixtures';
 test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/');
+<<<<<<< HEAD
+    await page.goto('/dashboard');
     await expect(page).toHaveTitle(/OHC Builder/);
+=======
+    await page.goto('/');
+    await expect(page).toHaveTitle(/OneHuman/);
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   test('UI displays the Supply tab navigation', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // Click the new supply chain nav item
     const supplyBtn = page.getByRole('button', { name: 'Supply' });
     await expect(supplyBtn).toBeVisible();
@@ -19,7 +27,10 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   });
 
   test('Allows user to create a new Vendor', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.getByRole('button', { name: 'Supply' }).click();
 
     // Fill in vendor info
@@ -32,7 +43,10 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   });
 
   test('Allows user to create a new Raw Material', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.getByRole('button', { name: 'Supply' }).click();
 
     // Fill in RM info
@@ -45,7 +59,10 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   });
 
   test('Allows user to link a BOM Item', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.getByRole('button', { name: 'Supply' }).click();
 
     // We use dummy IDs because we aren't querying the real database in this simple check,
@@ -59,10 +76,16 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   });
 
   test('Displays PO approval in inbox and allows single-tap approval', async ({ page }) => {
+<<<<<<< HEAD
+    // In a fully dynamic e2e test we would trigger an order here and wait for the worker.
+    // Given the constraints and seed environment, we rely on the component test.
+    await page.goto('/dashboard');
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // In a fully dynamic e2e test we would trigger an order here and wait for the worker.
     // Given the constraints and seed environment, we rely on the component test.
     await page.goto('/');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Ensure the pending actions hub is generally functional or visible
     await expect(page.getByRole('heading', { name: 'Pending Actions Hub' }).first()).toBeVisible();

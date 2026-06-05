@@ -23,7 +23,11 @@ export async function GET() {
     "total-sales-tooltip": "Total revenue generated from your sales today.",
     "visitors-tooltip": "Number of unique visitors who viewed your store today.",
     "agents-tab-tooltip": "Hire and manage your AI assistants here.",
+<<<<<<< HEAD
     "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC.",
     "api-docs-tooltip": "Direct API access is only for custom integrations."
+=======
+    "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC."
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   });
 }

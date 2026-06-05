@@ -3,13 +3,21 @@ import { test, expect } from '@playwright/test';
 test.describe('Link-in-Bio Generator Growth Loop', () => {
     test('generator page renders correctly, saves data, and public page works with footer', async ({ page }) => {
         // 1. Set some initial local storage state to act as a logged-in user
+<<<<<<< HEAD
+        await page.goto('/dashboard');
+=======
         await page.goto('http://localhost:3000');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         await page.evaluate(() => {
             localStorage.setItem('tenant', 'e2e-bakery');
         });
 
         // 2. Go to the Link-in-Bio Generator page
+<<<<<<< HEAD
+        await page.goto('/link-in-bio-generator');
+=======
         await page.goto('http://localhost:3000/link-in-bio-generator');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
         // Check the page header
         await expect(page.locator('h1', { hasText: 'Link-in-Bio Generator' })).toBeVisible();
@@ -23,7 +31,11 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         await bioTextarea.fill('The best automated cakes in town.');
 
         // 4. Verify preview updates in real-time
+<<<<<<< HEAD
+        await expect(page.locator('h1', { hasText: 'Awesome E2E Bakery' })).toBeVisible();
+=======
         await expect(page.locator('h1', { hasText: 'Awesome E2E Bakery' }).nth(1)).toBeVisible();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         await expect(page.locator('p', { hasText: 'The best automated cakes in town.' })).toBeVisible();
 
         // Check the "Powered by OHC" footer in the live preview
@@ -35,7 +47,11 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         await page.waitForTimeout(500);
 
         // 5. Navigate to the generated public page
+<<<<<<< HEAD
+        await page.goto('/bio/e2e-bakery');
+=======
         await page.goto('http://localhost:3000/bio/e2e-bakery');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
         // Verify the public page loaded the saved data
         await expect(page.locator('h1', { hasText: 'Awesome E2E Bakery' })).toBeVisible();
@@ -48,7 +64,11 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
     });
 
     test('Dashboard contains link to Link-in-Bio generator', async ({ page }) => {
+<<<<<<< HEAD
+        await page.goto('/dashboard');
+=======
         await page.goto('http://localhost:3000/dashboard');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
         // Find the link to create a link in bio page
         const linkInBioButton = page.locator('a[href="/link-in-bio-generator"]');

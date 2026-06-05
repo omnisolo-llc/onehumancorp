@@ -178,7 +178,11 @@ use super::jobs;
 fn default_builder_tenant_id() -> Uuid {
     let raw = std::env::var("OHC_DEFAULT_TENANT_ID")
         .unwrap_or_else(|_| "e2e-tenant".to_string());
+<<<<<<< HEAD
     Uuid::parse_str(&raw).unwrap_or_else(|_| Uuid::new_v4())
+=======
+    Uuid::parse_str(&raw).unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, raw.as_bytes()))
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 }
 
 async fn ensure_builder_claims(

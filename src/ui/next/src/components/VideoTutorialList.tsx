@@ -28,7 +28,11 @@ export function VideoTutorialList() {
 
   if (loading) {
     return (
+<<<<<<< HEAD
       <div className="flex justify-center items-center py-12 backdrop-filter backdrop-blur-xl bg-white/30">
+=======
+      <div className="flex justify-center items-center py-12">
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );

@@ -85,7 +85,10 @@ SERVER_LOADER="${REPO_ROOT}/deploy/server_load.sh"
 export OHC_DOCKER_SERVER_PORT="${OHC_DOCKER_SERVER_PORT:-127.0.0.1:0}"
 export OHC_DOCKER_POSTGRES_PORT="${OHC_DOCKER_POSTGRES_PORT:-127.0.0.1:0}"
 export OHC_DOCKER_VALKEY_PORT="${OHC_DOCKER_VALKEY_PORT:-127.0.0.1:0}"
+<<<<<<< HEAD
 export MINIMAX_API_KEY="${MINIMAX_API_KEY:-docker-compose-e2e-placeholder-key}"
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
   SERVER_LOADER="$(find "${TEST_SRCDIR:-${REPO_ROOT}}" -name "server_load.sh" -type f -executable | head -1)"
@@ -105,7 +108,10 @@ docker version
 docker info
 
 log "Starting Docker Compose stack ..."
+<<<<<<< HEAD
 export MINIMAX_API_KEY="${MINIMAX_API_KEY:-dummy_key_for_test}"
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 compose up -d postgres valkey server
 
 SERVER_BINDING="$(compose port server 8080)"

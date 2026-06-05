@@ -59,6 +59,7 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
         execute: Arc::new(LazyLoadToolsExecutor { active_tools }),
     }
 }
+<<<<<<< HEAD
 
 #[cfg(test)]
 mod tests {
@@ -109,3 +110,5 @@ mod tests {
         }
     }
 }
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))

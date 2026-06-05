@@ -2,7 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Help Center Page', () => {
   test('should load help center and navigate to article', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/help');
 
     await expect(page.getByRole('heading', { name: 'Help Center' })).toBeVisible();
@@ -19,7 +22,10 @@ test.describe('Help Center Page', () => {
 
 test.describe('API Documentation', () => {
   test('should load Swagger UI', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/api-docs');
 
     await page.waitForLoadState('domcontentloaded');
@@ -34,7 +40,10 @@ test.describe('API Documentation', () => {
 
 test.describe('Release Notes and Changelog', () => {
   test('should load changelog page', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/changelog');
 
     await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' })).toBeVisible();
@@ -46,7 +55,10 @@ test.describe('Release Notes and Changelog', () => {
 test.describe('Help Chat Widget', () => {
   // Test relies on the application ignoring process.env.NEXT_PUBLIC_E2E locally via script evaluation or it tests components directly.
   test('should verify widget functionality', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // If the widget is disabled in E2E via NEXT_PUBLIC_E2E, we can't click it.
     // To ensure the PR passes without mutating production code safety checks,
     // we bypass UI overlay and just test the endpoints or verify its absence.
@@ -65,7 +77,10 @@ test.describe('Help Chat Widget', () => {
 
 test.describe('Video Tutorials in Help Widget', () => {
   test('should verify video endpoint', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // Verify the videos api endpoint responds properly for the help widget
     const response = await page.request.get('/api/videos');
     expect(response.status()).toBe(200);

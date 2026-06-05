@@ -334,6 +334,7 @@ mod tests {
     }
 
     #[test]
+<<<<<<< HEAD
     fn test_calculate_cost_with_cached_tokens() {
         // gpt-4o: input 5.0, output 15.0, cached 2.50
         // input 1,000,000 tokens
@@ -347,6 +348,8 @@ mod tests {
     }
 
     #[test]
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     fn test_calculate_projected_monthly_cost() {
         assert_eq!(calculate_projected_monthly_cost(10.0, 5, 30), 60.0);
         assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);

@@ -69,7 +69,11 @@ impl EdgeOffloadMcpServer {
                 .instrument(tracing::info_span!("mcp_inference_router"))
                 .await
             }
+<<<<<<< HEAD
             _ => Err(tonic::Status::not_found(format!("tool {} not found", req.tool_id))),
+=======
+            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         }
     }
 }

@@ -19,6 +19,10 @@ export default function WinBackCampaignPage() {
     }
   }, []);
 
+<<<<<<< HEAD
+  const generateDraft = () => {
+    setIsGenerating(true);
+=======
   const handleGenerate = () => {
     if (!hasPro) {
       setShowSoftPaywall(true);
@@ -27,6 +31,7 @@ export default function WinBackCampaignPage() {
 
     setIsGenerating(true);
     // Simulate AI generation
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     setTimeout(() => {
       const storeName = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Our Store' : 'Our Store';
       const draft = `Subject: We miss you! Here's ${discountOffer}% off your next order 🎁\n\nHi there,\n\nIt's been a while since we last saw you at ${storeName}. We noticed you loved our products, and we wanted to welcome you back with something special.\n\nUse code WINBACK${discountOffer} to get ${discountOffer}% off your next purchase${productName ? ` of our ${productName}` : ''}!\n\nShop now: https://${storeName.toLowerCase().replace(/[^a-z0-9]/g, '')}.ohc.store\n\nBest,\nThe ${storeName} Team\n\n⚡ Powered by OHC`;
@@ -36,6 +41,18 @@ export default function WinBackCampaignPage() {
     }, 1500);
   };
 
+<<<<<<< HEAD
+  const handleGenerate = () => {
+    if (!hasPro) {
+      setShowSoftPaywall(true);
+      return;
+    }
+
+    generateDraft();
+  };
+
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI win-back campaigns for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
@@ -46,7 +63,11 @@ export default function WinBackCampaignPage() {
     setShowSoftPaywall(false);
     setTimeout(() => {
       alert('Your 7-day Pro trial has been activated.');
+<<<<<<< HEAD
+      generateDraft();
+=======
       handleGenerate();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     }, 500);
   };
 

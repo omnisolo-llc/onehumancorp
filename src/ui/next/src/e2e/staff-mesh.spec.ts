@@ -3,7 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Universal Autonomous Staff & Shift Management Mesh', () => {
   test('CUJ: Manager creates staff, staff logs in offline via PIN', async ({ page }) => {
     // Navigate to local API directly to set up origin to allow localstorage modification
+<<<<<<< HEAD
+    await page.goto('/api/staff');
+=======
     await page.goto('http://localhost:3000/api/staff');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.evaluate(() => {
       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
         id: 'staff_1',
@@ -15,7 +19,11 @@ test.describe('Universal Autonomous Staff & Shift Management Mesh', () => {
     });
 
     // Go to the terminal
+<<<<<<< HEAD
+    await page.goto('/pos/terminal');
+=======
     await page.goto('http://localhost:3000/pos/terminal');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Wait for staff to sync (since we just created it and terminal fetches on load)
     await page.waitForTimeout(2000);

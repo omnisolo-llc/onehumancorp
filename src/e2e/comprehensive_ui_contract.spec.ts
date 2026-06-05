@@ -34,6 +34,7 @@ function routeFromPageFile(file: string): string | null {
   return `/${routeSegments.join('/')}`.replace(/\/$/, '') || '/';
 }
 
+<<<<<<< HEAD
 function discoverAppRoutes() {
   return Array.from(new Set(
     walkFiles(appRoot)
@@ -42,6 +43,14 @@ function discoverAppRoutes() {
       .filter((route): route is string => Boolean(route)),
   )).sort();
 }
+=======
+const appRoutes = Array.from(new Set(
+  walkFiles(appRoot)
+    .filter((file) => file.endsWith(`${path.sep}page.tsx`))
+    .map(routeFromPageFile)
+    .filter((route): route is string => Boolean(route)),
+)).sort();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 const clickableCssSelector = [
   'button:not([disabled])',
@@ -113,15 +122,16 @@ async function describeTarget(page: Page, selector: string, index: number) {
 }
 
 test.describe('comprehensive UI contract', () => {
-  test.skip(
-    process.env.OHC_API_ONLY_E2E === 'true' || !fs.existsSync(appRoot),
-    'Bazel Playwright runs against the Rust API service; Next UI source/routes are not part of this harness.',
-  );
-
   test('every app page loads without visible crash output', async ({ page }) => {
+<<<<<<< HEAD
+    expect(fs.existsSync(appRoot), 'Next UI source/routes are not available in this Playwright runfiles tree.').toBeTruthy();
     test.setTimeout(180000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
+=======
+    test.setTimeout(180000);
+    const failures: string[] = [];
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     page.on('pageerror', (error) => {
       failures.push(`uncaught page error: ${error.message}`);
@@ -148,7 +158,10 @@ test.describe('comprehensive UI contract', () => {
     test.setTimeout(180000);
     const failures: string[] = [];
     const checked = new Set<string>();
+<<<<<<< HEAD
     const appRoutes = discoverAppRoutes();
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     for (const route of appRoutes) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
@@ -185,7 +198,10 @@ test.describe('comprehensive UI contract', () => {
   test('visible enabled click targets have an observable effect', async ({ page }) => {
     test.setTimeout(240000);
     const failures: string[] = [];
+<<<<<<< HEAD
     const appRoutes = discoverAppRoutes();
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     for (const route of appRoutes) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
@@ -239,7 +255,10 @@ test.describe('comprehensive UI contract', () => {
   test('all visible interactive elements are usable and named', async ({ page }) => {
     test.setTimeout(180000);
     const failures: string[] = [];
+<<<<<<< HEAD
     const appRoutes = discoverAppRoutes();
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     for (const route of appRoutes) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
@@ -282,7 +301,10 @@ test.describe('comprehensive UI contract', () => {
   test('layouts do not overflow or overlap click targets on desktop and mobile', async ({ page }) => {
     test.setTimeout(240000);
     const failures: string[] = [];
+<<<<<<< HEAD
     const appRoutes = discoverAppRoutes();
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });

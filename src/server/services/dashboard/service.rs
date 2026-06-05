@@ -64,8 +64,13 @@ impl MyDashboardService {
         Ok(meetings)
     }
 
+<<<<<<< HEAD
     async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
+=======
+    async fn fetch_cost_summary(&self, org_id: &str) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+        let cache_key = format!("hub:cost:{}", org_id);
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
         if let Some(cost_data) = cache.get(&cache_key).await {
@@ -75,6 +80,7 @@ impl MyDashboardService {
         let hub_clone = self.hub.clone();
         let cost_data = tokio::task::spawn_blocking(move || {
             let cost_auditor = hub_clone.get_cost_auditor();
+<<<<<<< HEAD
             let mut snapshot = cost_auditor.get_agent_costs_snapshot();
             if mobile_optimized {
                 // Clear any agent name strings from the tuple if it's mobile optimized to save payload space
@@ -86,6 +92,12 @@ impl MyDashboardService {
                 cost_auditor.get_total_cost(),
                 cost_auditor.get_total_tokens(),
                 snapshot,
+=======
+            (
+                cost_auditor.get_total_cost(),
+                cost_auditor.get_total_tokens(),
+                cost_auditor.get_agent_costs_snapshot(),
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             )
         }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
 
@@ -114,7 +126,11 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
+<<<<<<< HEAD
                             organization_id: if mobile_optimized { String::new() } else { r.try_get("organization_id").unwrap_or_default() },
+=======
+                            organization_id: r.try_get("organization_id").unwrap_or_default(),
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
@@ -136,7 +152,11 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
+<<<<<<< HEAD
                             organization_id: if mobile_optimized { String::new() } else { r.try_get("organization_id").unwrap_or_default() },
+=======
+                            organization_id: r.try_get("organization_id").unwrap_or_default(),
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
@@ -309,7 +329,11 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
+<<<<<<< HEAD
                 tokio::spawn(async move { s.fetch_cost_summary(&o, mobile_optimized).await })
+=======
+                tokio::spawn(async move { s.fetch_cost_summary(&o).await })
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             },
             {
                 let s = self.clone();
@@ -394,7 +418,11 @@ impl DashboardService for MyDashboardService {
                     name,
                     role: role_val,
                     status: status_val,
+<<<<<<< HEAD
                     organization_id: if req.mobile_optimized { String::new() } else { a.organization_id.clone() },
+=======
+                    organization_id: a.organization_id.clone(),
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 }
             })
             .collect::<Vec<_>>();

@@ -3,7 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Offline-Capable POS Engine', () => {
   test('Persona: Business Owner can sync offline transactions when back online', async ({ request, page }) => {
     // Navigate to ensure basic UI is alive
+<<<<<<< HEAD
+    await page.goto('/dashboard');
+=======
     await page.goto('/');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Simulate mobile app syncing 2 offline transactions using the REST/gRPC backend endpoint.
     // In our tests, the api is usually available under standard path. We use Playwright's `request`.

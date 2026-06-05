@@ -11,7 +11,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
   updatePolicy:
+<<<<<<< HEAD
     updateMode: {{ if .Values.backend.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+=======
+    updateMode: {{ if .Values.backend.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   resourcePolicy:
     containerPolicies:
       - containerName: backend
@@ -37,7 +41,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
   updatePolicy:
+<<<<<<< HEAD
     updateMode: {{ if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+=======
+    updateMode: {{ if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
@@ -63,7 +71,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-chatwoot
   updatePolicy:
+<<<<<<< HEAD
     updateMode: {{ if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+=======
+    updateMode: {{ if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   resourcePolicy:
     containerPolicies:
       - containerName: chatwoot
@@ -89,7 +101,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-powersync
   updatePolicy:
+<<<<<<< HEAD
     updateMode: {{ if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}"Off"{{ else }}"Auto"{{ end }}
+=======
+    updateMode: {{ if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}"Initial"{{ else }}"Auto"{{ end }}
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   resourcePolicy:
     containerPolicies:
       - containerName: powersync

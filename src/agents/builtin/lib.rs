@@ -35,7 +35,10 @@ pub mod service;
 pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
+<<<<<<< HEAD
 pub mod prompt_construction;
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 pub mod json_store;
 pub mod memory_exhaustive_tests;
 pub mod autogen;

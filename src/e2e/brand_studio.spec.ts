@@ -2,7 +2,10 @@ import { expect, test } from './fixtures';
 
 test.describe('Brand Studio workflow', () => {
   test('creates a brand toolbox and publishes a website from it', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     const confusingCompetitorName = new RegExp(['po', 'melli'].join(''), 'i');
 
     await page.goto('/brand-studio');

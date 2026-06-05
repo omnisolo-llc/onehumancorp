@@ -11,7 +11,11 @@ test.describe('Conversational Checkout Flow', () => {
 
   test('successfully displays and interacts with Conversational Checkout Session after login', async ({ page }) => {
     // Login to application first
+<<<<<<< HEAD
+    await page.goto('/login');
+=======
     await page.goto('http://localhost:3000/login');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.getByPlaceholder('Email or Username').fill('maya@ohc.test');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Login' }).click();

@@ -2,7 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('In-Person Payment (POS) Flow', () => {
   test('should complete a tap-to-pay transaction', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // Navigate to dashboard
     await page.goto('/dashboard');
 

@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('User can purchase and print shipping labels for an order', async ({ page }) => {
+<<<<<<< HEAD
+  // Navigate to the orders page
+  await page.goto('/orders/e2e-shippo-order');
+=======
   test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
   // Navigate to the orders page
   await page.goto('/orders');
@@ -13,6 +17,7 @@ test('User can purchase and print shipping labels for an order', async ({ page }
 
   // Click view on the first unfulfilled order
   await page.getByRole('button', { name: 'View' }).first().click();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
   // Wait for the order details page to load
   await expect(page.getByRole('heading', { name: /Order/ })).toBeVisible({ timeout: 30000 });

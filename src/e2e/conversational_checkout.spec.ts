@@ -2,7 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Conversational Checkout & Instant Deposit Engine', () => {
   test('Sales AI generates conversational checkout link from inbox intent', async ({ page }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // 1. Navigate to Unified Inbox
     await page.goto('/inbox');
 

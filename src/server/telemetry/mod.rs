@@ -1003,6 +1003,7 @@ pub async fn buffer_metric_i64(
     value: i64,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
+<<<<<<< HEAD
     let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
 
     if !is_telemetry_enabled {
@@ -1025,6 +1026,9 @@ pub async fn buffer_metric_i64(
     .await?;
 
     Ok(())
+=======
+    buffer_metric(pool, metric_name, metric_type, value as f32, labels).await
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 }
 
 pub async fn buffer_metric(

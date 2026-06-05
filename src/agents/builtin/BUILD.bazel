@@ -76,7 +76,10 @@ rust_library(
         "human_in_loop.rs",
         "plane.rs",
         "plugins.rs",
+<<<<<<< HEAD
         "prompt_construction.rs",
+=======
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         "progressive_skills.rs",
         "proto.rs",
         "provider.rs",

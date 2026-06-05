@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Documentation User Journey', () => {
   test('Maya navigates the Help Center and views the Changelog', async ({ page }) => {
+<<<<<<< HEAD
+    await page.goto('/changelog');
+=======
     // Navigate starting from home page exactly as requested by instructions
     await page.goto('/');
 
@@ -18,6 +21,7 @@ test.describe('Documentation User Journey', () => {
     const changelogLink = page.locator('a', { hasText: 'Changelog ✨' });
     await expect(changelogLink).toBeVisible();
     await changelogLink.click();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Verify Changelog is loaded
     await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
@@ -30,7 +34,11 @@ test.describe('Documentation User Journey', () => {
     await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
 
     // Maya searches for "products" to learn how to add products
+<<<<<<< HEAD
+    await page.fill('input[placeholder="Search for help articles and videos..."]', 'products');
+=======
     await page.fill('input[placeholder="Search for help articles..."]', 'products');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // "My Store" should be visible because it contains instructions on products
     const myStoreLink = page.locator('h2', { hasText: 'My Store' });

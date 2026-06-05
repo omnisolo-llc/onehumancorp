@@ -2,7 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
   test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // Navigate to the dashboard
     await page.goto('/dashboard');
 
@@ -19,7 +22,11 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     // The network status indicator should show offline
+<<<<<<< HEAD
+    await expect(page.locator('#network-status-indicator').first()).toBeVisible();
+=======
     await expect(page.locator('#network-status-indicator').first()).toHaveClass(/block/);
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Evaluate to update the UI button since React event bubbling and playwright don't always behave perfectly offline
     await page.evaluate(() => {
@@ -68,7 +75,11 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     await expect(page.locator('#sold-out-toggle-falafel')).toContainText('Sold Out');
+<<<<<<< HEAD
+    await expect(page.locator('#queue-dashboard')).toBeVisible();
+=======
     await expect(page.locator('#queue-dashboard')).toHaveClass(/block/);
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Set network to online
     await context.setOffline(false);
@@ -115,4 +126,8 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
 
     await expect(page.locator('#push-notification-banner')).toBeVisible();
   });
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))

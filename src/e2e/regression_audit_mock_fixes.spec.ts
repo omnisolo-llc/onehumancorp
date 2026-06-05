@@ -3,7 +3,11 @@ import { test, expect } from './fixtures';
 test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () => {
 
   test('verify seasonal promo generation without setTimeout', async ({ page }) => {
+<<<<<<< HEAD
+    await page.addInitScript(() => window.localStorage.removeItem('has_pro'));
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/seasonal-promo');
 
     // Fill out form
@@ -18,7 +22,11 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
     await generateBtn.click();
 
     // Expect to see soft paywall if we are not Pro
+<<<<<<< HEAD
+    await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
+=======
     await expect(page.locator('#seasonal-paywall').getByText('Upgrade to Pro').first()).toBeVisible();
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Bypass window.open mock
     await page.evaluate(() => {
@@ -38,11 +46,18 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
   test('verify saving a new service navigates away', async ({ page }) => {
+<<<<<<< HEAD
+    await page.goto('/services/new');
+
+    // Fill out title
+    const titleInput = page.getByPlaceholder('e.g. Weekly Music Tutoring');
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/services/new');
 
     // Fill out title
     const titleInput = page.getByLabel('Service Title');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     if (await titleInput.isVisible()) {
         await titleInput.fill('Test Service');
     }
@@ -58,6 +73,14 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
   test('verify Kairos walkthrough has no delay', async ({ page }) => {
+<<<<<<< HEAD
+    await page.goto('/kairos?test_walkthrough=true');
+    // Ensure the walkthrough elements exist immediately
+    await expect(page.getByText('Quick Guide').first()).toBeVisible({ timeout: 3000 });
+  });
+
+  test('verify dashboard VIP customer referral campaign modal', async ({ page }) => {
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/kairos?walkthrough=true');
     // Ensure the walkthrough elements exist immediately
@@ -66,6 +89,7 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
 
   test('verify dashboard VIP customer referral campaign modal', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/dashboard');
 
     const sendButton = page.getByRole('button', { name: /Send Campaign to 12 Customers/ });
@@ -76,7 +100,10 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
   test('verify onboarding intake hits backend successfully', async ({ request }) => {
+<<<<<<< HEAD
+=======
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+>>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
      const res = await request.post('/api/onboarding/intake', {
         data: { description: 'Maya' }
      });
