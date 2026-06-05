@@ -1,7 +1,7 @@
 use sqlx::{PgPool, Row};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct DailyCost {
     pub date: String,
     pub total_cost: i64,

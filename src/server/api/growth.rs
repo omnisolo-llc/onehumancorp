@@ -5,6 +5,9 @@ use std::sync::OnceLock;
 use crate::utils::cache::HybridCache;
 
 pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
+pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
+pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
+pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -105,13 +108,13 @@ pub struct MilestonesResponse {
     pub milestones: Vec<Milestone>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OnboardingMetric {
     pub step: String,
     pub count: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
@@ -199,7 +202,7 @@ pub struct ReferralGenerateResponse {
 }
 
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct GrowthMetrics {
     pub team_invites_sent: i64,
     pub active_referrals: i64,
@@ -207,7 +210,7 @@ pub struct GrowthMetrics {
     pub pending_rewards: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TeamInvitesMetricsResponse {
     pub total_invites: i64,
     #[serde(default)]
@@ -228,7 +231,7 @@ pub struct GetTeamInvitesQuery {
     pub team_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TeamInvitesResponse {
     pub next_cursor: Option<String>,
     pub invites: Vec<crate::services::growth::invites::TeamInvite>,
@@ -686,6 +689,12 @@ async fn handle_get_team_invites(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesResponse>, StatusCode> {
+    let cache_key = format!("team_invites:{}:{:?}", query.team_id, query.cursor);
+    let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_resp) = cache.get(&cache_key).await {
+        return Ok(Json(cached_resp));
+    }
+
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
@@ -697,7 +706,9 @@ async fn handle_get_team_invites(
             } else {
                 None
             };
-            Ok(Json(TeamInvitesResponse { invites, next_cursor }))
+            let resp = TeamInvitesResponse { invites, next_cursor };
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(30)).await;
+            Ok(Json(resp))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -727,6 +738,12 @@ async fn handle_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
+    let cache_key = format!("metrics:{}", query.team_id);
+    let cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_resp) = cache.get(&cache_key).await {
+        return Ok(Json(cached_resp));
+    }
+
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
@@ -737,15 +754,19 @@ async fn handle_team_invites_metrics(
         .unwrap_or(0);
 
     match tracker.get_team_invites_count(&query.team_id).await {
-        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse {
-            total_invites,
-            metrics: GrowthMetrics {
-                team_invites_sent: total_invites,
-                active_referrals,
-                revenue: 0.0,
-                pending_rewards: 0.0,
-            }
-        })),
+        Ok(total_invites) => {
+            let resp = TeamInvitesMetricsResponse {
+                total_invites,
+                metrics: GrowthMetrics {
+                    team_invites_sent: total_invites,
+                    active_referrals,
+                    revenue: 0.0,
+                    pending_rewards: 0.0,
+                }
+            };
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
+            Ok(Json(resp))
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -753,13 +774,21 @@ async fn handle_team_invites_metrics(
 async fn handle_onboarding_metrics(
     Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
+    let cache_key = "onboarding_metrics";
+    let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_resp) = cache.get(cache_key).await {
+        return Ok(Json(cached_resp));
+    }
+
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
         .fetch_all(&_state.pool).await
     {
         Ok(rows) => {
             use sqlx::Row;
             let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
-            Ok(Json(OnboardingMetricsResponse { metrics }))
+            let resp = OnboardingMetricsResponse { metrics };
+            cache.set(cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
+            Ok(Json(resp))
         }
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to fetch onboarding metrics: {:?}");
@@ -850,10 +879,23 @@ async fn handle_team_invite_accept(
     Json(req): Json<InviteIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
-    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo.clone());
+
+    // Before accepting, fetch the invite to get the team_id to invalidate cache
+    let team_id_opt = match repo.get_invite(&req.id).await {
+        Ok(Some(invite)) => Some(invite.team_id),
+        _ => None,
+    };
 
     match tracker.accept_invite(&req.id).await {
         Ok(_) => {
+            if let Some(team_id) = team_id_opt {
+                let cache_key_prefix = format!("team_invites:{}:", team_id);
+                // Note: We invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
+                let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
+                cache.invalidate(&format!("{}None", cache_key_prefix)).await;
+            }
+
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
@@ -872,6 +914,10 @@ async fn handle_create_team_invite(
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(_) => {
+            let cache_key_prefix = format!("team_invites:{}:", req.team_id);
+            let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
+            cache.invalidate(&format!("{}None", cache_key_prefix)).await;
+
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
@@ -1186,6 +1232,12 @@ mod tests {
 async fn handle_aggregated_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
+    let cache_key = "aggregated_metrics";
+    let cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_resp) = cache.get(cache_key).await {
+        return Ok(Json(cached_resp));
+    }
+
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
@@ -1195,15 +1247,19 @@ async fn handle_aggregated_team_invites_metrics(
         .unwrap_or(0);
 
     match tracker.get_total_invites_count().await {
-        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse {
-            total_invites,
-            metrics: GrowthMetrics {
-                team_invites_sent: total_invites,
-                active_referrals,
-                revenue: 0.0,
-                pending_rewards: 0.0,
-            }
-        })),
+        Ok(total_invites) => {
+            let resp = TeamInvitesMetricsResponse {
+                total_invites,
+                metrics: GrowthMetrics {
+                    team_invites_sent: total_invites,
+                    active_referrals,
+                    revenue: 0.0,
+                    pending_rewards: 0.0,
+                }
+            };
+            cache.set(cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
+            Ok(Json(resp))
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
