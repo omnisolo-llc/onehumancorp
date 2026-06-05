@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 
 type Message = {
   id: string;
@@ -141,9 +142,9 @@ export function HelpChat() {
                   msg.sender === 'user'
                     ? 'bg-blue-600/95 backdrop-blur-[20px] saturate-200 text-white rounded-br-sm border border-blue-500/50'
                     : 'bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm'
-                }`}>
-                  {msg.text}
-                </div>
+                }`}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }}
+                />
                 {msg.link && (
                   <a href={msg.link.url} className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-bold hover:underline bg-blue-50/90 backdrop-blur-[20px] px-3.5 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm transition-all hover:bg-blue-100/90">
                     {msg.link.title}
