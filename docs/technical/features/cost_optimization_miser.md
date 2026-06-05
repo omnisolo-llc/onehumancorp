@@ -9,4 +9,4 @@
 
 ## Pending/Blocked by Infrastructure
 1. The Playwright end-to-end tests for the cost dashboard are currently blocked universally in the CI sandbox environment by a Docker daemon/containerd issue (`failed to convert whiteout file "etc/alternatives/.wh.pager.1.gz": operation not permitted`) when attempting to run `pgvector/pgvector:pg16` or `postgres:16-alpine`.
-   - **Resolution**: `src/ui/next/src/e2e/cost-dashboard.spec.ts` and `src/e2e/current_app_smoke.ts` have been updated to use `test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');` (and the separate broken cuj tests have been removed) to prevent them from failing the build in CI until the infrastructure issue is resolved.
+   - **Resolution**: full UI tests now run in CI and locally through the Bazel Playwright aggregate. CI-only Playwright skips are not an acceptable workaround; failing infrastructure must be fixed in the harness or covered by stable route/API contracts.

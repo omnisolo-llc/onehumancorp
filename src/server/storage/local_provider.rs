@@ -296,10 +296,11 @@ mod tests {
         let (p, dir) = new_test_provider();
         let content = b"test data";
         let key = "test/blob.bin";
+        let final_key = key.to_string();
 
         p.write_blob(key, content).await.unwrap();
 
-        let read_content = p.read_blob(key).await.unwrap();
+        let read_content = p.read_blob(&final_key).await.unwrap();
         assert_eq!(read_content, content);
         cleanup(dir);
     }

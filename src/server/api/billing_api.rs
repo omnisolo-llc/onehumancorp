@@ -16,13 +16,9 @@ pub struct MyPlanResponse {
 #[derive(serde::Serialize)]
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
-    #[serde(rename = "total")]
     pub total_costs: i64,
-    #[serde(rename = "llm")]
     pub llm_cost: i64,
-    #[serde(rename = "storage")]
     pub storage_cost: i64,
-    #[serde(rename = "payment_fees")]
     pub payment_fees: i64,
     pub network_cost: i64,
     pub bandwidth_savings: i64,
@@ -31,7 +27,7 @@ pub struct CostDashboardResponse {
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))

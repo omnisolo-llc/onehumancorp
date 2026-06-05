@@ -2,18 +2,17 @@ import { test, expect } from './fixtures';
 
 test.describe('Viral Share Cards Growth Loop', () => {
   test('verify social share cards flow and viral branding', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     test.setTimeout(90000);
 
     try {
         await page.goto('/dashboard', { timeout: 30000 }).catch(() => {});
 
         // 2. Verify Social Share Cards Growth Loop section
-        const shareCardsHeading = page.locator('h2', { hasText: 'Social Share Cards' });
+        const shareCardsHeading = page.locator('h3', { hasText: 'Social Share Cards' });
         await expect(shareCardsHeading).toBeVisible({ timeout: 15000 }).catch(() => {});
 
         // 3. Click the Generate Share Cards button
-        const generateBtn = page.locator('a:has-text("Generate Share Cards")');
+        const generateBtn = page.locator('a[href="/share-cards"]');
         await expect(generateBtn).toBeVisible({ timeout: 15000 }).catch(() => {});
         if (await generateBtn.isVisible()) {
             await generateBtn.click();
