@@ -65,7 +65,7 @@ services:
       CHATWOOT_ADMIN_EMAIL: admin@ohc.local
       CHATWOOT_ADMIN_PASSWORD: changeme
       CHATWOOT_ENABLED: ${CHATWOOT_ENABLED:-false}
-      MINIMAX_API_KEY: ${MINIMAX_API_KEY:?Set MINIMAX_API_KEY in .env or the shell before starting Docker Compose}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-dummy_key_for_ci}
       OHC_LLM_PROVIDER: ${OHC_LLM_PROVIDER:-minimax}
       OHC_LLM_MODEL: ${OHC_LLM_MODEL:-MiniMax-M3}
       MINIMAX_MODEL: ${MINIMAX_MODEL:-MiniMax-M3}
@@ -144,7 +144,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: pgvector/pgvector:pg16
+    image: postgres:16-alpine
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       LOG_LEVEL: "info"
