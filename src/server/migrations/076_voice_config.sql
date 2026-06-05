@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS voice_config (
     id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
     greeting TEXT NOT NULL,
     transfer_number TEXT,
     voice_type TEXT DEFAULT 'friendly',
