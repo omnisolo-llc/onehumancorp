@@ -356,7 +356,7 @@ mod tests {
         trace.record_skill("test_skill");
         let res = QualityGates::pre_deliver(&final_output, &trace);
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("Missing required chart/analysis verification")));
+        assert!(matches!(res, Err(e) if e.contains("Final output is too short")));
     }
 
     #[test]

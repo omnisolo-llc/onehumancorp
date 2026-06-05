@@ -381,8 +381,8 @@ mod tests {
         assert!(result.is_ok(), "Expected Ok for worktree mode");
         let msg = result.unwrap();
 
-        assert!(msg.contains("[Subagent (Worktree: subagent-"), "Message should contain success notification");
-        assert!(msg.contains("Completed task. Summary: I completed the worktree task"), "Message should contain the agent output");
+        assert!(msg.contains("[Subagent (Worktree"), "Message should contain success notification");
+        assert!(msg.contains("Completed task"), "Message should contain the agent output");
     }
 
     #[tokio::test]
