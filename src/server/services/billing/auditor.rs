@@ -160,6 +160,11 @@ impl CostAuditor {
         *agent_costs.get(agent_id).unwrap_or(&0.0)
     }
 
+    pub fn get_agent_cost_cents(&self, agent_id: &str) -> i64 {
+        let agent_costs = self.agent_costs.lock().unwrap();
+        (*agent_costs.get(agent_id).unwrap_or(&0.0) * 100.0).round() as i64
+    }
+
     pub fn get_total_savings(&self) -> f64 {
         let caching_savings = self.caching_savings.lock().unwrap();
         *caching_savings
@@ -212,6 +217,11 @@ impl CostAuditor {
         *total_cost
     }
 
+    pub fn get_total_cost_cents(&self) -> i64 {
+        let total_cost = self.total_cost.lock().unwrap();
+        (*total_cost * 100.0).round() as i64
+    }
+
     pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
@@ -249,6 +259,11 @@ impl CostAuditor {
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_cost_cents(&self, tenant_id: &str) -> i64 {
+        let tenant_costs = self.tenant_costs.lock().unwrap();
+        (*tenant_costs.get(tenant_id).unwrap_or(&0.0) * 100.0).round() as i64
     }
 
     pub fn get_total_revenue(&self) -> f64 {
@@ -446,6 +461,9 @@ mod tests {
         auditor.record_revenue("agent1", "tenant1", 5.0);
 
         assert_eq!(auditor.get_agent_cost("agent1"), 2.0);
+        assert_eq!(auditor.get_agent_cost_cents("agent1"), 200);
+        assert_eq!(auditor.get_tenant_cost_cents("tenant1"), 200);
+        assert_eq!(auditor.get_total_cost_cents(), 200);
         assert_eq!(auditor.get_tenant_revenue("tenant1"), 5.0);
         assert_eq!(auditor.get_tenant_payment_fees("tenant1"), 5.0 * 0.029 + 0.30);
         
