@@ -8,6 +8,7 @@ pub mod ohc {
     }
     pub mod orchestration {
         tonic::include_proto!("ohc.orchestration");
+        tonic::include_proto!("ohc.orchestration"); // if they share namespace
     }
     pub mod billing {
         tonic::include_proto!("ohc.billing");
@@ -44,6 +45,7 @@ pub mod ohc {
     }
     pub mod orchestration {
         pub use hub_proto::ohc::orchestration::*;
+        pub use questionnaire_proto::ohc::orchestration::*;
     }
     pub mod billing {
         pub use billing_proto::ohc::billing::*;
