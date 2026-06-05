@@ -107,7 +107,7 @@ describe('OnboardingWizard', () => {
     // Provide value to enable button and proceed
     await user.type(sellInput, 'Cakes');
     expect(nextBtn2).not.toBeDisabled();
-    await user.click(nextBtn2);
+    await user.type(sellInput, '{Enter}');
 
     // Chat Step 3 - Next click with empty value
     const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
@@ -160,14 +160,14 @@ describe('OnboardingWizard', () => {
     await user.click(nextBtn1);
 
     // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i, {}, { timeout: 3000 });
     await user.type(sellInput, 'Cakes');
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
+    await user.type(sellInput, '{Enter}');
 
     // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    const locInput = await screen.findByPlaceholderText(/Portland, OR/i, {}, { timeout: 3000 });
     await user.type(locInput, 'NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
@@ -192,6 +192,9 @@ describe('OnboardingWizard', () => {
     });
 
     // Fill in Account Setup fields
+    const nameInput2 = screen.getByPlaceholderText(/e.g. Maya Smith/i);
+    await user.type(nameInput2, 'Maya Smith');
+
     const emailInput = screen.getByPlaceholderText(/you@example.com/i);
     await user.type(emailInput, 'maya@example.com');
 
@@ -208,6 +211,10 @@ describe('OnboardingWizard', () => {
     });
 
     // Check that start API was called with the correct credentials
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"admin_name":"Maya Smith"'),
+    }));
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
       method: 'POST',
       body: expect.stringContaining('"admin_email":"maya@example.com"'),
@@ -240,14 +247,14 @@ describe('OnboardingWizard', () => {
     await user.click(nextBtn1);
 
     // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i, {}, { timeout: 3000 });
     await user.type(sellInput, 'Cakes');
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
+    await user.type(sellInput, '{Enter}');
 
     // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    const locInput = await screen.findByPlaceholderText(/Portland, OR/i, {}, { timeout: 3000 });
     await user.type(locInput, 'NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
@@ -404,7 +411,8 @@ describe('OnboardingWizard', () => {
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
-    const toggle = screen.getByRole('checkbox');
+    // Checkbox might be hidden by sr-only or similar, use label text instead or get by id
+    const toggle = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(toggle).toBeChecked();
 
     // Select Sales Agent

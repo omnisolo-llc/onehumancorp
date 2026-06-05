@@ -44,7 +44,7 @@ use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
 };
-use ohc_builtin_agent_tools::{
+use crate::tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos, Tool,
 };
@@ -627,7 +627,7 @@ impl AgentServiceImpl {
 
         let mut out = String::from("[Loaded Skills]\nSkills are exposed as callable tools named Skill_<name>. Invoke the matching skill tool when a task fits its description.\n");
         for skill in skills {
-            let loaded = ohc_builtin_agent_tools::skill::LoadedSkill {
+            let loaded = crate::tools::skill::LoadedSkill {
                 name: skill.name.clone(),
                 description: skill.description.clone(),
                 instruction: skill.instruction.clone(),
@@ -649,14 +649,21 @@ impl AgentServiceImpl {
         toolset: Option<&ToolsetConfig>,
         department: &str,
         working_dir: Option<PathBuf>,
-        memory_accessor: Option<Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>>,
+        memory_accessor: Option<Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>>,
         observation_store: Arc<dashmap::DashMap<String, String>>,
     ) -> Vec<Tool> {
+        if std::env::var("OHC_AGENT_DISABLE_TOOLS")
+            .map(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false)
+        {
+            return Vec::new();
+        }
+
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
-        let mut tools = ohc_builtin_agent_tools::all_tools(
+        let mut tools = crate::tools::all_tools(
             None,
             todos,
             task_store,
@@ -688,8 +695,8 @@ impl AgentServiceImpl {
             }
 
             for skill in &toolset.skills {
-                tools.push(ohc_builtin_agent_tools::skill::skill_tool(
-                    ohc_builtin_agent_tools::skill::LoadedSkill {
+                tools.push(crate::tools::skill::skill_tool(
+                    crate::tools::skill::LoadedSkill {
                         name: skill.name.clone(),
                         description: skill.description.clone(),
                         instruction: skill.instruction.clone(),
@@ -700,7 +707,7 @@ impl AgentServiceImpl {
             }
 
             let mut mcp_tools =
-                ohc_builtin_agent_tools::mcp_dynamic::load_mcp_server_tools(&toolset.mcp_servers)
+                crate::tools::mcp_dynamic::load_mcp_server_tools(&toolset.mcp_servers)
                     .await;
             tools.append(&mut mcp_tools);
         }
@@ -847,6 +854,11 @@ impl AgentService for AgentServiceImpl {
                         content,
                         ..Default::default()
                     },
+                    AgentEvent::CostUpdate { total_cost_usd } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[Cost Updated] Session Cost: ${:.6}\n", total_cost_usd),
+                        ..Default::default()
+                    },
                     AgentEvent::ToolCall {
                         name,
                         args_json,
@@ -901,7 +913,7 @@ impl AgentService for AgentServiceImpl {
             while attempt < max_attempts {
                 attempt += 1;
                 let res = tokio::time::timeout(
-                    std::time::Duration::from_secs(60),
+                    crate::agent::agent_task_timeout(),
                     agent_clone.run(&run_cfg, &task, &mut on_event)
                 ).await;
 

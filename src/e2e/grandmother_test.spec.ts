@@ -9,19 +9,19 @@ test.describe('Grandmother Test - Plain Language Check', () => {
   });
 
   test('should display dashboard with nav', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
   });
 
   test('should show welcome message on dashboard', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should display business setup', async ({ page }) => {

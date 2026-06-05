@@ -23,7 +23,7 @@ async fn test_pg_fail_backoff() {
 
     let job = Job {
         id: "job-fail-pg-1".to_string(),
-        tenant_id: "system".to_string(),
+        tenant_id: "test_org".to_string(),
         parent_task_id: "parent-1".to_string(),
         job_type: "test-role".to_string(),
         payload: "{}".to_string(),
