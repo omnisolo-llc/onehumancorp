@@ -1523,16 +1523,7 @@ mod security_tests_final {
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-                        #[cfg(unix)]
-                        {
-                            #[allow(unused_imports)]
-                            use std::os::unix::fs::OpenOptionsExt;
-                            let _ = std::fs::File::create(&db_path);
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            let _ = std::fs::File::create(&db_path);
-                        }
+                        let _ = std::fs::File::create(&db_path);
 
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
