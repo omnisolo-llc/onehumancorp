@@ -4,22 +4,6 @@ pub use ::server_oidc as oidc;
 
 pub mod orchestration;
 pub mod postgres_store;
-
-#[macro_export]
-macro_rules! validate_org_id {
-    ($org_id:expr) => {
-        if $org_id.trim() == "system" {
-            if ::server_config::get().multitenant {
-                return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-            }
-        } else if $org_id.trim().is_empty() {
-            if ::server_config::get().multitenant {
-                return Err("empty tenant_id is not allowed in multi-tenant mode".to_string());
-            }
-        }
-    };
-}
-
 pub mod sqlite_store;
 
 use std::collections::HashMap;
@@ -849,4 +833,15 @@ impl AuthService for AuthServiceServerImpl {
     async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
         Ok(Response::new(RoleProto::default()))
     }
+}
+
+#[macro_export]
+macro_rules! validate_org_id {
+    ($tenant_id:expr) => {
+        if crate::server::auth::is_multi_tenant_mode() && ($tenant_id == "system" || $tenant_id.is_empty()) {
+            return Err(AuthError::InvalidTenant(
+                "Cannot explicitly use system or empty tenant_id in multi-tenant context".into()
+            ));
+        }
+    };
 }
