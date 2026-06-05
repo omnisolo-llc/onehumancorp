@@ -31,7 +31,7 @@ export default defineConfig({
   timeout: Number.isFinite(timeout) ? timeout : 60000,
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    actionTimeout: Number.isFinite(actionTimeout) ? actionTimeout : 0,
+    actionTimeout: Number.isFinite(actionTimeout) ? actionTimeout : 20000,
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'on',
