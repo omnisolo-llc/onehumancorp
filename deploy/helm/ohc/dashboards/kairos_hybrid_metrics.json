@@ -323,8 +323,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(sync_daemon_error_total[5m])) by (mode)",
-          "legendFormat": "{{mode}} Errors/sec",
+          "expr": "rate(sync_daemon_error_total[5m])",
+          "legendFormat": "{{mode}} - {{error}}",
           "refId": "A"
         }
       ],
