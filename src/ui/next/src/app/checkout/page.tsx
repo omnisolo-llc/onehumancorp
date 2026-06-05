@@ -48,6 +48,21 @@ export default function CheckoutPage() {
     setIsProcessing(true);
     setIsSubscription(isSub);
 
+    if (isSub) {
+      try {
+        await fetch("/api/v1/subscription/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            plan_id: "plan_simulated",
+            customer_id: "cust_simulated"
+          })
+        });
+      } catch (e) {
+        console.error("Failed to subscribe", e);
+      }
+    }
+
     // Fetch dynamic referral link
     try {
       const response = await fetch("/api/v1/growth/referrals/generate", {

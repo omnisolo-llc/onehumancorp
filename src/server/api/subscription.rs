@@ -202,8 +202,59 @@ async fn handle_magic_link(
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/plans", get(get_plans))
+        .route("/subscribe", post(handle_subscribe))
         .route("/subscribers", get(get_subscribers))
         .route("/fulfillment-batches", get(get_fulfillment_batches))
         .route("/magic-link", post(handle_magic_link))
         .layer(Extension(hub))
+}
+
+#[derive(Deserialize)]
+pub struct SubscribeRequest {
+    pub plan_id: String,
+    pub customer_id: String,
+}
+
+#[derive(Serialize)]
+pub struct SubscribeResponse {
+    pub success: bool,
+    pub subscriber_id: Option<String>,
+}
+
+async fn handle_subscribe(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<SubscribeRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "system".to_string());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+    };
+
+    let subscriber_id = uuid::Uuid::new_v4().to_string();
+    let current_time = chrono::Utc::now().timestamp();
+    let period_end = current_time + 30 * 24 * 60 * 60; // 30 days roughly
+
+    let insert = sqlx::query(
+        "INSERT INTO subscribers (id, tenant_id, plan_id, customer_id, status, stripe_subscription_id, current_period_end, created_at) VALUES ($1, $2, $3, $4, 'Active', 'simulated_sub_id', $5, $6)"
+    )
+    .bind(&subscriber_id)
+    .bind(&tenant_id)
+    .bind(&payload.plan_id)
+    .bind(&payload.customer_id)
+    .bind(period_end)
+    .bind(current_time)
+    .execute(&mut *conn)
+    .await;
+
+    match insert {
+        Ok(_) => (StatusCode::OK, Json(SubscribeResponse { success: true, subscriber_id: Some(subscriber_id) })).into_response(),
+        Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to create subscription");
+            tracing::error!("Failed to create subscription: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
+        }
+    }
 }
