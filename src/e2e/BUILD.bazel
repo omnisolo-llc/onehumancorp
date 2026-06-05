@@ -1,61 +1,6 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
-_NEXT_UI_E2E_SPECS = [
-    "//src/ui/next:src/e2e/agentic-booking.spec.ts",
-    "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
-    "//src/ui/next:src/e2e/api-docs.spec.ts",
-    "//src/ui/next:src/e2e/branding-loop.spec.ts",
-    "//src/ui/next:src/e2e/business-analytics.spec.ts",
-    "//src/ui/next:src/e2e/changelog.spec.ts",
-    "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
-    "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
-    "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
-    "//src/ui/next:src/e2e/help.spec.ts",
-    "//src/ui/next:src/e2e/integrations.spec.ts",
-    "//src/ui/next:src/e2e/kds.spec.ts",
-    "//src/ui/next:src/e2e/link-in-bio.spec.ts",
-    "//src/ui/next:src/e2e/milestone-loop.spec.ts",
-    "//src/ui/next:src/e2e/milestones.spec.ts",
-    "//src/ui/next:src/e2e/onboarding.spec.ts",
-    "//src/ui/next:src/e2e/review-campaign.spec.ts",
-    "//src/ui/next:src/e2e/smart-pricing.spec.ts",
-    "//src/ui/next:src/e2e/staff-mesh.spec.ts",
-    "//src/ui/next:src/e2e/store-wrapped.spec.ts",
-    "//src/ui/next:src/e2e/subscription_box.spec.ts",
-    "//src/ui/next:src/e2e/supply_chain.spec.ts",
-    "//src/ui/next:src/e2e/verify-ui.spec.ts",
-    "//src/ui/next:src/e2e/videos.spec.ts",
-    "//src/ui/next:src/e2e/viral_share_cards_intent.spec.ts",
-    "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
-    "//src/ui/next:e2e/agents.spec.ts",
-    "//src/ui/next:e2e/builder_ui.spec.ts",
-    "//src/ui/next:e2e/checkout.spec.ts",
-    "//src/ui/next:e2e/conversational_checkout.spec.ts",
-    "//src/ui/next:e2e/dashboard-feed.spec.ts",
-    "//src/ui/next:e2e/documentation_cuj.spec.ts",
-    "//src/ui/next:e2e/documentation_flows.spec.ts",
-    "//src/ui/next:e2e/help_components.spec.ts",
-    "//src/ui/next:e2e/localization_offline.spec.ts",
-    "//src/ui/next:e2e/referrals.spec.ts",
-    "//src/ui/next:e2e/social-proof-nudge.spec.ts",
-    "//src/ui/next:e2e/storefront_v2.spec.ts",
-    "//src/ui/next:e2e/test-help.spec.ts",
-]
-
-_ROOT_UI_E2E_SPECS = [
-    "//:e2e/agent-marketplace.spec.ts",
-    "//:e2e/autonomous-migration.spec.ts",
-    "//:e2e/dashboard.spec.ts",
-    "//:e2e/expert-team.spec.ts",
-    "//:e2e/help-center.spec.ts",
-    "//:e2e/offline_pos.spec.ts",
-    "//:e2e/onboarding.spec.ts",
-    "//:e2e/pos-offline.spec.ts",
-    "//:e2e/reputation-engine.spec.ts",
-    "//:e2e/subscription-box.spec.ts",
-]
-
 # Shell script wrapper for running ALL playwright tests via docker compose
 # (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
 sh_binary(
@@ -82,9 +27,6 @@ sh_binary(
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
     ci_shard_count = 16,
-    data = [
-        "//src/ui/next:next_app_e2e_data",
-    ],
     server = "//src/server:server",
-    specs = glob(["*.spec.ts"]) + _NEXT_UI_E2E_SPECS + _ROOT_UI_E2E_SPECS,
+    specs = glob(["*.spec.ts"]),
 )
