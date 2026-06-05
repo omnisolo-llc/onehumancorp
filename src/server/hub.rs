@@ -87,10 +87,10 @@ impl Hub {
                 let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
                 // Blueprint: track cost in cents
-                let cost_cents = (cost * 100.0).round() as i64;
+                let cost_cents = (cost * 100.0) as f32;
                 let mut labels_cents = labels.clone();
                 labels_cents["cost_cents"] = serde_json::json!(cost_cents);
-                let _ = ::server_telemetry::buffer_metric_i64(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
