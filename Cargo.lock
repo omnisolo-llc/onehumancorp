@@ -5593,6 +5593,7 @@ dependencies = [
  "server_integrations_doordash",
  "server_integrations_easypost",
  "server_integrations_google_calendar",
+ "server_integrations_hybrid_cache",
  "server_integrations_jitsi",
  "server_integrations_listmonk",
  "server_integrations_mailchimp",
@@ -8600,6 +8601,20 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "server_integrations_hybrid_cache"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "redis",
+ "serde",
+ "serde_json",
+ "temp-env",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

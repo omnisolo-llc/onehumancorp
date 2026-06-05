@@ -1,0 +1,20 @@
+[package]
+name = "server_integrations_hybrid_cache"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = "1.0"
+async-trait = "0.1"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = "0.1"
+redis = { version = "0.27.6", features = ["tokio-comp"] }
+
+[lib]
+path = "mod.rs"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
+temp-env = "0.3.6"
