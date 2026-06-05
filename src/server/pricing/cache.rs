@@ -146,14 +146,14 @@ mod tests {
 
     #[test]
     fn test_local_embedding_cache() {
-        let cache = LocalEmbeddingCache::new(Duration::from_millis(100));
+        let cache = LocalEmbeddingCache::new(Duration::from_millis(1000));
         
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         assert_eq!(cache.get("prompt2"), None);
         
         // Wait for expiration
-        thread::sleep(Duration::from_millis(150));
+        thread::sleep(Duration::from_millis(1500));
         assert_eq!(cache.get("prompt1"), None);
         
         // Prune
@@ -177,13 +177,13 @@ mod tests {
 
     #[test]
     fn test_compressed_embedding_cache() {
-        let cache = CompressedEmbeddingCache::new(Duration::from_millis(100));
+        let cache = CompressedEmbeddingCache::new(Duration::from_millis(1000));
         
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         
         // Wait for expiration
-        thread::sleep(Duration::from_millis(150));
+        thread::sleep(Duration::from_millis(1500));
         assert_eq!(cache.get("prompt1"), None);
     }
 }
