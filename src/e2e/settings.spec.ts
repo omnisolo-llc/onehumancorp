@@ -2,7 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
+<<<<<<< HEAD
+=======
     if (process.env.CI === 'true') return;
+>>>>>>> 52f3265e (🛡️ Sentry: Fix SQLite queue lock upgrade concurrency bug)
     await page.goto('/settings');
     await expect(page.locator('#settings-screen')).toBeVisible();
   });

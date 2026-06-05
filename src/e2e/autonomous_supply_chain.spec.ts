@@ -2,7 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   test.beforeEach(async ({ page }) => {
+<<<<<<< HEAD
+=======
     if (process.env.CI === 'true') return;
+>>>>>>> 52f3265e (🛡️ Sentry: Fix SQLite queue lock upgrade concurrency bug)
     // Navigate to dashboard
     await page.goto('/');
     await expect(page).toHaveTitle(/OneHuman/);

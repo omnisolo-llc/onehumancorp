@@ -2,7 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Canvas: Telemetry Sync UI Tests', () => {
   test.beforeEach(async ({ page }) => {
+<<<<<<< HEAD
+=======
     if (process.env.CI === 'true') return;
+>>>>>>> 52f3265e (🛡️ Sentry: Fix SQLite queue lock upgrade concurrency bug)
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
