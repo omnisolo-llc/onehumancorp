@@ -198,6 +198,9 @@ export default function Dashboard() {
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
+        <Link href="/settings" className="app-button">Settings</Link>
+        <Link href="/agents" className="app-button">Manage AI Assistants</Link>
+        <Link href="/website-builder" className="app-button">Website Builder</Link>
         <button type="button" onClick={() => setIsWalkthroughOpen(true)} className="app-button">
           Start Tour
         </button>
