@@ -5,7 +5,6 @@ currentAppSmoke('viral_invite_loop');
 
 test.describe('Viral Invite Loop on Team Page', () => {
   test('should display Cloud Bridge invite modal and generate a link', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/team');
 
     // Wait for the UI to be ready
