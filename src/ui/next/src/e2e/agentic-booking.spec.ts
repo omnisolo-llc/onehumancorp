@@ -4,7 +4,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
   test('Customer requests a service and Owner approves AI quote draft', async ({ page }) => {
     // 1. Customer Flow
     // Navigate to booking form
-    await page.goto('/booking');
+    await page.goto('http://localhost:3000/booking');
 
     // Check elements
     await expect(page.getByRole('heading', { name: 'Request a Service' })).toBeVisible();
@@ -22,7 +22,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
 
     // 2. Owner Flow
     // Login to application
-    await page.goto('/login');
+    await page.goto('http://localhost:3000/login');
     await page.getByPlaceholder('Email or Username').fill('carlos@ohc.test');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Login' }).click();
@@ -53,7 +53,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     });
 
     // Navigate to Team
-    await page.goto('/team');
+    await page.goto('http://localhost:3000/team');
     await expect(page.getByRole('heading', { name: 'Your Team', exact: true })).toBeVisible();
 
     // Wait for the modal or card to fully render

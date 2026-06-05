@@ -2596,6 +2596,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .route("/api/v1/voice/config", axum::routing::get(api::voice::get_voice_config).post(api::voice::provision_voice_receptionist).with_state(db.clone()))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
@@ -3251,6 +3252,7 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/v1/voice/twilio-stream", axum::routing::get(crate::voice::gateway::twilio_ws_handler).with_state(crate::voice::gateway::VoiceGatewayState { engine: std::sync::Arc::new(crate::voice::engine::VoiceAIEdgeEngine::new()), router: std::sync::Arc::new(crate::voice::router::VoiceContextRouter::new(std::sync::Arc::new(crate::voice::engine::VoiceAIEdgeEngine::new()), std::sync::Arc::new(::server_integrations_twilio::provider::TwilioProvider::new("dummy".to_string(), "dummy".to_string())))) }))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
