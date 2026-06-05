@@ -17,15 +17,15 @@ export async function POST(req: Request) {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     if (geminiApiKey) {
       try {
-        const prompt = \`Evaluate the following customer message and determine if it is a "booking request" (e.g. asking for an appointment, time slot, service booking).
+        const prompt = `Evaluate the following customer message and determine if it is a "booking request" (e.g. asking for an appointment, time slot, service booking).
 Respond with a JSON object with two fields:
 - "isBookingRequest": true or false
 - "draftedResponse": if it is a booking request, write a warm drafted response to the customer offering them 3 available time slots (e.g., Friday morning at 9am, 10am, and 11am). Otherwise, write a generic polite response.
 
-Customer message: "\${description}"\`;
+Customer message: "${description}"`;
 
         const response = await fetch(
-          \`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\${geminiApiKey}\`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -40,7 +40,7 @@ Customer message: "\${description}"\`;
           const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
           try {
-             const jsonMatch = text.match(/\\{.*\\}/s);
+             const jsonMatch = text.match(/\{[\s\S]*\}/);
              if (jsonMatch) {
                const parsed = JSON.parse(jsonMatch[0]);
                isBookingRequest = !!parsed.isBookingRequest;
@@ -84,7 +84,7 @@ Customer message: "\${description}"\`;
           id,
           tenantId,
           department,
-          \`Booking inquiry received: \${description.substring(0, 50)}...\`,
+          `Booking inquiry received: ${description.substring(0, 50)}...`,
           dbStatus,
           actionRisk,
           JSON.stringify(payload)
