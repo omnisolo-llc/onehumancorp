@@ -6,7 +6,6 @@ import { AgentFeed } from '../../components/AgentFeed/AgentFeed';
 export default function AgentFeedPage() {
   const statusItems = [
     { label: 'Status', value: 'Live', tone: 'good' as const },
-    { label: 'Active Agents', value: '7', tone: 'good' as const },
   ];
 
   return (
