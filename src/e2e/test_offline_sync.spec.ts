@@ -18,7 +18,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     // The network status indicator should show offline
-    await expect(page.locator('#network-status-indicator').first()).toHaveClass(/block/);
+    await expect(page.locator('#network-status-indicator').first()).toBeVisible();
 
     // Evaluate to update the UI button since React event bubbling and playwright don't always behave perfectly offline
     await page.evaluate(() => {
@@ -67,7 +67,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     await expect(page.locator('#sold-out-toggle-falafel')).toContainText('Sold Out');
-    await expect(page.locator('#queue-dashboard')).toHaveClass(/block/);
+    await expect(page.locator('#queue-dashboard')).toBeVisible();
 
     // Set network to online
     await context.setOffline(false);
