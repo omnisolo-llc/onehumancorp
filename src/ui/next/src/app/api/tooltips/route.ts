@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
-export async function GET() {
-  return NextResponse.json({
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+
+  const fallbackTooltips = {
     "bio-input-tooltip": "Tell us what you sell and who your customers are. Keep it simple!",
     "generate-btn-tooltip": "Click here to have our AI build your ready-to-launch store.",
     "launch-btn-tooltip": "Make your store live on the internet so customers can visit.",
@@ -24,5 +28,41 @@ export async function GET() {
     "visitors-tooltip": "Number of unique visitors who viewed your store today.",
     "agents-tab-tooltip": "Hire and manage your AI assistants here.",
     "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC."
-  });
+  };
+
+  try {
+    const res = await fetch(`${backendUrl}/api/tooltips`);
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
+    }
+    // Fallback if backend is missing/down
+    return NextResponse.json(fallbackTooltips);
+  } catch (e) {
+    console.error("Failed to fetch tooltips from backend:", e);
+    return NextResponse.json(fallbackTooltips);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+
+  try {
+    const body = await request.json();
+    const res = await fetch(`${backendUrl}/api/tooltips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
+    }
+
+    return NextResponse.json({ success: false }, { status: res.status });
+  } catch (e) {
+    console.error("Failed to post tooltips to backend:", e);
+    return NextResponse.json({ success: false }, { status: 500 });
+  }
 }

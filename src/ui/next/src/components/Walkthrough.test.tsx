@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { InteractiveWalkthrough } from './Walkthrough';
+import { InteractiveWalkthrough, WalkthroughTarget } from './Walkthrough';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('Walkthrough Component', () => {
@@ -9,7 +9,7 @@ describe('Walkthrough Component', () => {
 
   beforeEach(() => {
     mockGetElementById = vi.spyOn(document, 'getElementById').mockImplementation((id) => {
-      if (id === 'test-target') {
+      if (id.startsWith('test-target')) {
         const div = document.createElement('div');
         div.id = id;
         div.scrollIntoView = vi.fn();
@@ -60,8 +60,10 @@ describe('Walkthrough Component', () => {
     render(
       <InteractiveWalkthrough
         steps={[
-          { targetId: 'test-target', title: 'Step 1', content: 'content 1' },
-          { targetId: 'test-target', title: 'Step 2', content: 'content 2' }
+          { targetId: 'test-target', title: 'Step 1', content: 'content 1', position: 'top' },
+          { targetId: 'test-target', title: 'Step 2', content: 'content 2', position: 'bottom' },
+          { targetId: 'test-target', title: 'Step 3', content: 'content 3', position: 'left' },
+          { targetId: 'test-target', title: 'Step 4', content: 'content 4', position: 'right' }
         ]}
         isOpen={true}
         onClose={handleClose}
@@ -73,17 +75,28 @@ describe('Walkthrough Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Step 1')).toBeInTheDocument();
       expect(screen.getByText('content 1')).toBeInTheDocument();
-      expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
+      expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
     });
 
-    const nextBtn = screen.getByText('Next');
-    fireEvent.click(nextBtn);
+    fireEvent.click(screen.getByText('Next'));
 
     // Second step
     await waitFor(() => {
       expect(screen.getByText('Step 2')).toBeInTheDocument();
-      expect(screen.getByText('content 2')).toBeInTheDocument();
-      expect(screen.getByText('Step 2 of 2')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Next'));
+
+    // Third step
+    await waitFor(() => {
+      expect(screen.getByText('Step 3')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Next'));
+
+    // Fourth step
+    await waitFor(() => {
+      expect(screen.getByText('Step 4')).toBeInTheDocument();
     });
 
     const finishBtn = screen.getByText('Finish');
@@ -110,17 +123,40 @@ describe('Walkthrough Component', () => {
       expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
 
-    // SVG is inside a button, find the button by getting the closest button to the SVG
-    // Or we can query the skip button by its class name or hover state which we know from the component
-    // We can also query all buttons and pick the one with SVG inside.
     const buttons = screen.getAllByRole('button');
     const skipButton = buttons.find(btn => btn.querySelector('svg'));
     if (skipButton) {
       fireEvent.click(skipButton);
-    } else {
-      // Fallback if svg inside button isn't found, try clicking the generic skip button by text or class if we add it, or just call handleClose directly in extreme test isolation scenarios. Actually, wait, let's just make it robust.
     }
 
     expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('handles missing target gracefully', async () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { container } = render(
+      <InteractiveWalkthrough
+        steps={[{ targetId: 'missing-target', title: 'Missing', content: 'Missing' }]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Walkthrough: Target element with id "missing-target" not found.');
+    });
+
+    expect(container.firstChild).toBeNull();
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('WalkthroughTarget renders correctly', () => {
+     // disable document getElementById mock for this test so render can append directly
+     mockGetElementById.mockRestore();
+     const { container } = render(<WalkthroughTarget id="target1" className="test-class"><div>content</div></WalkthroughTarget>);
+     const el = container.querySelector('#target1');
+     expect(el).toBeInTheDocument();
+     expect(el).toHaveClass('test-class');
+     expect(el).toHaveTextContent('content');
   });
 });
