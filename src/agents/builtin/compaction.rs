@@ -1,6 +1,7 @@
 use crate::types::{ChatRequest, Message};
 use crate::llm::LlmClient;
 use std::sync::Arc;
+use std::fmt::Write as _;
 
 pub async fn compact_context(
     messages: &[Message],
@@ -20,9 +21,13 @@ pub async fn compact_context(
     let middle_end = messages.len() - 3;
 
     if middle_end > middle_start {
-        let mut middle_text = String::new();
+        // Optimizing string allocations by guessing capacity:
+        // ~200 chars per message in the middle section.
+        let estimated_capacity = (middle_end - middle_start) * 200;
+        let mut middle_text = String::with_capacity(estimated_capacity);
+
         for m in &messages[middle_start..middle_end] {
-            middle_text.push_str(&format!("[Role: {}]\n", m.role));
+            let _ = writeln!(middle_text, "[Role: {}]", m.role);
             if !m.content.is_empty() {
                 middle_text.push_str(&m.content);
                 middle_text.push('\n');
@@ -30,7 +35,7 @@ pub async fn compact_context(
             if !m.tool_calls.is_empty() {
                 middle_text.push_str("Tool Calls:\n");
                 for tc in &m.tool_calls {
-                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments.to_string()));
+                    let _ = writeln!(middle_text, "  {} ({})", tc.name, tc.arguments.to_string());
                 }
             }
             if !m.tool_results.is_empty() {
@@ -42,7 +47,7 @@ pub async fn compact_context(
                     } else {
                         &tr.error
                     };
-                    middle_text.push_str(&format!("  tool_call_id: {} -> {}\n", tr.tool_call_id, status));
+                    let _ = writeln!(middle_text, "  tool_call_id: {} -> {}", tr.tool_call_id, status);
                 }
             }
             middle_text.push_str("---\n");
@@ -160,12 +165,6 @@ mod tests {
 
         let compacted = compact_context(&messages, "test-model", &llm).await.unwrap();
 
-        // Expected layout:
-        // 0: Initial prompt
-        // 1: Compacted summary message
-        // 2: messages[len - 3] -> Message 4
-        // 3: messages[len - 2] -> Message 5
-        // 4: messages[len - 1] -> Message 6
         assert_eq!(compacted.len(), 5);
         assert_eq!(compacted[0].content, "Message 0 (Start)");
         assert!(compacted[1].content.contains("[Context Compacted by Harness]"));

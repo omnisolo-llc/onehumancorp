@@ -1,4 +1,3 @@
-
 use ohc_builtin_agent_core::types::{Message, Role};
 use serde_json::Value;
 
@@ -9,14 +8,26 @@ use serde_json::Value;
 pub struct JetBrainsObservationMasker {
     threshold: usize,
     size_limit: usize,
+    max_depth: usize,
 }
 
 impl JetBrainsObservationMasker {
     pub fn new(threshold: usize, size_limit: usize) -> Self {
-        Self { threshold, size_limit }
+        Self { threshold, size_limit, max_depth: 20 } // default depth limit 20
     }
 
-    fn mask_json_value(val: &mut Value, size_limit: usize) -> bool {
+    pub fn with_max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
+    }
+
+    fn mask_json_value(val: &mut Value, size_limit: usize, current_depth: usize, max_depth: usize) -> bool {
+        if current_depth >= max_depth {
+            // Reached maximum depth, replace entire subtree to avoid stack overflow
+            *val = Value::String("[Masked string: depth limit exceeded]".to_string());
+            return true;
+        }
+
         let mut modified = false;
         match val {
             Value::String(s) => {
@@ -36,14 +47,14 @@ impl JetBrainsObservationMasker {
             }
             Value::Array(arr) => {
                 for item in arr {
-                    if Self::mask_json_value(item, size_limit) {
+                    if Self::mask_json_value(item, size_limit, current_depth + 1, max_depth) {
                         modified = true;
                     }
                 }
             }
             Value::Object(obj) => {
                 for (_, value) in obj.iter_mut() {
-                    if Self::mask_json_value(value, size_limit) {
+                    if Self::mask_json_value(value, size_limit, current_depth + 1, max_depth) {
                         modified = true;
                     }
                 }
@@ -65,7 +76,7 @@ impl JetBrainsObservationMasker {
                             if bytes > self.size_limit {
                                 // Try structural JSON masking first
                                 if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content) {
-                                    if Self::mask_json_value(&mut json_val, self.size_limit) {
+                                    if Self::mask_json_value(&mut json_val, self.size_limit, 0, self.max_depth) {
                                         tr.content = serde_json::to_string(&json_val).unwrap_or_else(|_| tr.content.clone());
                                         continue; // Successfully masked as JSON
                                     }
@@ -159,6 +170,7 @@ mod tests {
         assert!(!messages[2].tool_results[0].content.contains("[Observation Masked"));
         assert_eq!(messages[2].tool_results[0].content, "B".repeat(500));
     }
+
     #[test]
     fn test_mask_json_value() {
         let mut messages = vec![
@@ -194,8 +206,6 @@ mod tests {
             },
         ];
 
-        // Mask messages older than 1 message from the end. Only 'call_3' is older.
-        // Size limit 100 bytes.
         apply_observation_masking(&mut messages, 1, 100);
 
         let masked_content = &messages[0].tool_results[0].content;
@@ -205,5 +215,44 @@ mod tests {
         let parsed: Value = serde_json::from_str(masked_content).expect("Should be valid JSON");
         assert_eq!(parsed["small"].as_str().unwrap(), "abc");
         assert!(parsed["large"].as_str().unwrap().contains("Masked string"));
+    }
+
+    #[test]
+    fn test_max_depth_masking() {
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![
+                    ToolResult {
+                        tool_call_id: "call_4".to_string(),
+                        content: r#"{"level1":{"level2":{"level3":"too deep"}}}"#.to_string(),
+                        error: String::new(),
+                    },
+                ],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Hmm".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let masker = JetBrainsObservationMasker::new(0, 10).with_max_depth(2);
+        masker.apply_masking(&mut messages);
+
+        let masked_content = &messages[0].tool_results[0].content;
+        let parsed: Value = serde_json::from_str(masked_content).expect("Should be valid JSON");
+
+        // Depth 0: root object
+        // Depth 1: level1 object
+        // Depth 2: level2 object (should be replaced because max_depth=2)
+        assert_eq!(parsed["level1"]["level2"].as_str().unwrap(), "[Masked string: depth limit exceeded]");
     }
 }
