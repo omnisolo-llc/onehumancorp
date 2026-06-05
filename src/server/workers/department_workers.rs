@@ -920,33 +920,18 @@ impl CustomerSuccessWorker {
                 }
             }
 
-            let description = if event_type == "CustomerMessageReceived" {
-                let original_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
-                format!(
-                    "The Ambassador drafted a response for your review. | Payload: {}",
-                    json!({
-                        "feature_type": "ambassador_reply",
-                        "original_message": original_message,
-                        "generated_response": drafted_msg
-                    }).to_string()
-                )
-            } else {
-                "The Ambassador drafted a response for your review.".to_string()
-            };
-
             match &db.store {
                 crate::db::DbStore::Postgres => {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
                             INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'HIGH', 'PENDING', $5)
+                            VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
                         .bind(&title)
-                        .bind(&description)
                         .bind(&drafted_msg)
                         .execute(&db.pool)
                         .await;
@@ -978,13 +963,12 @@ impl CustomerSuccessWorker {
                         let _ = sqlx::query(
                             r#"
                             INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
+                            VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
                             "#
                         )
                         .bind(&task_id)
                         .bind(&tenant_id)
                         .bind(&title)
-                        .bind(&description)
                         .bind(&drafted_msg)
                         .execute(sqlite_pool)
                         .await;
@@ -1040,7 +1024,6 @@ impl PromoterWorker {
 
         // Handle product creation for social auto-posting
 
-        let _db_clone = _db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
@@ -1052,84 +1035,10 @@ impl PromoterWorker {
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
                             }
-
-                            let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("New Product");
-
-                            // Let's generate a social media plan
-                            let prompt = format!("You are The Promoter, an AI marketing agent. A new product '{}' was just added. Create 3 short, engaging social media captions for Instagram/TikTok promoting this product. Return only the 3 captions separated by newlines.", product_name);
-
-                            let mut generated_content = String::new();
-                            let mut attempts = 0;
-                            while attempts < MAX_RETRIES {
-                                let ai_op = async {
-                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
-                                            prompt: prompt.clone(),
-                                            from_agent_id: "promoter".to_string(),
-                                        };
-                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                                            return Ok(res.into_inner().content);
-                                        }
-                                    }
-                                    Err("AI call failed".to_string())
-                                };
-
-                                match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
-                                    Ok(Ok(content)) => {
-                                        generated_content = content;
-                                        break;
-                                    },
-                                    _ => {
-                                        attempts += 1;
-                                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
-                                    }
-                                }
-                            }
-
-                            if generated_content.is_empty() {
-                                generated_content = format!("Check out our amazing new {}! #newarrival #shoplocal", product_name);
-                            }
-
-                            // Generate social calendar tasks
-                            let task_id = uuid::Uuid::new_v4().to_string();
-                            let title = "7-Day Social Calendar Generated".to_string();
-                            let description = "The Generative Promoter has created a week of content | Payload: {\"feature_type\": \"social_calendar\"}".to_string();
-
-                            match &_db_clone.store {
-                                crate::db::DbStore::Postgres => {
-                                    let _ = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
-                                        "#
-                                    )
-                                    .bind(&task_id)
-                                    .bind(&org_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&generated_content)
-                                    .execute(&_db_clone.pool)
-                                    .await;
-                                },
-                                crate::db::DbStore::Sqlite(sqlite_pool) => {
-                                    let _ = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
-                                        "#
-                                    )
-                                    .bind(&task_id)
-                                    .bind(&org_id)
-                                    .bind(&title)
-                                    .bind(&description)
-                                    .bind(&generated_content)
-                                    .execute(sqlite_pool)
-                                    .await;
-                                }
-                            }
                         }
                     }
                 }
+
             }
         });
 
@@ -1483,17 +1392,15 @@ mod tests {
 
         if let DbStore::Sqlite(pool) = &db.store {
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, proposed_content, description, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
                 .fetch_one(pool).await.unwrap();
             let title: String = row.get("title");
             let content: String = row.get("proposed_content");
-            let description: String = row.get("description");
             let approval_status: String = row.get("approval_status");
 
             assert_eq!(title, "Draft Reply");
             // Either the dynamic LLM response or fallback string should be here
             assert!(content.contains("Hello, do you have vegan cakes?") || content.len() > 0);
-            assert!(description.contains("ambassador_reply"));
             assert_eq!(approval_status, "PENDING");
 
              // Verify task was marked PAUSED (since AI call fails in test environment)
