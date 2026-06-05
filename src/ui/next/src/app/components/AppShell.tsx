@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { WithTooltip } from "../../components/TooltipRegistry";
 
 type StatusItem = {
   label: string;
@@ -95,22 +94,12 @@ function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname();
   const active = pathname === item.href || (pathname || "").startsWith(`${item.href}/`);
 
-  const link = (
+  return (
     <Link className={`app-nav-link ${active ? "is-active" : ""}`} href={item.href}>
       <span className="app-nav-marker"><ShellIcon name={item.icon} /></span>
       <span>{item.label}</span>
     </Link>
   );
-
-  if (item.href === "/kairos") {
-    return (
-      <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
-        {link}
-      </WithTooltip>
-    );
-  }
-
-  return link;
 }
 
 export function AppShell({

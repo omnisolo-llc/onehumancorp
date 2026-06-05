@@ -2,6 +2,12 @@ use crate::integrations::stripe::client::StripeClient;
 
 impl StripeClient {
     pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            tenant_id,
+            "stripe_terminal_connection_token",
+            0.05 // mock cost for api orchestration
+        ).await;
 
         // In a real implementation, this would make an HTTP POST to Stripe's /v1/terminal/connection_tokens
         // endpoint. Since we're mocking external APIs, we return a mock token string here.
@@ -12,6 +18,12 @@ impl StripeClient {
     }
 
     pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            tenant_id,
+            "stripe_terminal_payment_intent",
+            0.05 // mock cost for api orchestration
+        ).await;
 
         // In a real implementation, this would make an HTTP POST to Stripe's /v1/payment_intents
         // endpoint with specific parameters like payment_method_types=["card_present"] and capture_method="manual".

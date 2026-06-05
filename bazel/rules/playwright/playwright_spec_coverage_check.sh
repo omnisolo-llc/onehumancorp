@@ -35,22 +35,23 @@ fi
 all_unique="$(printf '%s\n' "${all_specs[@]}" | sort -u)"
 ci_unique="$(printf '%s\n' "${ci_specs[@]}" | sort -u)"
 
-if [[ -n "$(comm -13 <(printf '%s\n' "$all_unique") <(printf '%s\n' "$ci_unique"))" ]]; then
-  echo "Playwright Bazel coverage check failed: CI aggregate contains specs not discovered by the all-spec glob."
+if [[ "$(printf '%s\n' "$all_unique" | wc -l)" != "$(printf '%s\n' "$ci_unique" | wc -l)" ]]; then
+  echo "Playwright Bazel coverage check failed: discovered ${#all_specs[@]} specs, but the Bazel aggregate runs ${#ci_specs[@]}."
+  comm -23 <(printf '%s\n' "$all_unique") <(printf '%s\n' "$ci_unique") | sed 's/^/missing from aggregate: /'
   comm -13 <(printf '%s\n' "$all_unique") <(printf '%s\n' "$ci_unique") | sed 's/^/not in spec glob: /'
   exit 1
 fi
 
-declare -A all_spec_set=()
-for spec in "${all_specs[@]}"; do
-  all_spec_set["$spec"]=1
+declare -A ci_spec_set=()
+for spec in "${ci_specs[@]}"; do
+  ci_spec_set["$spec"]=1
 done
 
-for spec in "${ci_specs[@]}"; do
-  if [[ -z "${all_spec_set[$spec]:-}" ]]; then
-    echo "Playwright Bazel coverage check failed: '$spec' was not discovered by the all-spec glob."
+for spec in "${all_specs[@]}"; do
+  if [[ -z "${ci_spec_set[$spec]:-}" ]]; then
+    echo "Playwright Bazel coverage check failed: '$spec' is not included in //src/e2e:playwright."
     exit 1
   fi
 done
 
-echo "Bazel aggregate CI subset includes ${#ci_specs[@]} of ${#all_specs[@]} discovered Playwright specs."
+echo "Bazel aggregate includes all ${#all_specs[@]} Playwright specs from src/e2e/*.spec.ts."

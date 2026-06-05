@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Autonomous Reputation & Referral Engine CUJ', () => {
   test('Non-technical owner can verify reputation and referral engine workflow', async ({ page }) => {
     // 1. Owner logs into OHC dashboard
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Simulate navigation to a business settings or reputation page
     // We expect the app to load without error

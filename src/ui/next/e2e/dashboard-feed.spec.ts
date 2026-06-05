@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard Actionable Feed', () => {
   test('should display database-backed operations console', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('http://localhost:3000/dashboard');
 
     await expect(page.locator('text="Business Analytics"')).toBeVisible();
     await expect(page.locator('text="Operations Map"')).toBeVisible();

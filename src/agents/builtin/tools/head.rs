@@ -128,14 +128,11 @@ mod tests {
     #[tokio::test]
     async fn test_head_jit_limit() {
         let executor = HeadExecutor { working_dir: None };
-        let dir = tempfile::tempdir().unwrap();
-        let file_path = dir.path().join("test.txt");
-        fs::write(&file_path, "test").await.unwrap();
-        let args = json!({ "path": file_path.to_str().unwrap(), "lines": 1001 });
+        let args = json!({ "path": "test.txt", "lines": 1001 });
         let result = executor.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Cannot read more than 1000 lines"), "msg was: {}", msg);
+            assert!(msg.contains("Cannot read more than 1000 lines"));
         } else {
             panic!("Expected LlmRecoverable error");
         }

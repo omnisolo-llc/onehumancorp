@@ -652,13 +652,6 @@ impl AgentServiceImpl {
         memory_accessor: Option<Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>>,
         observation_store: Arc<dashmap::DashMap<String, String>>,
     ) -> Vec<Tool> {
-        if std::env::var("OHC_AGENT_DISABLE_TOOLS")
-            .map(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
-            .unwrap_or(false)
-        {
-            return Vec::new();
-        }
-
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
@@ -913,7 +906,7 @@ impl AgentService for AgentServiceImpl {
             while attempt < max_attempts {
                 attempt += 1;
                 let res = tokio::time::timeout(
-                    crate::agent::agent_task_timeout(),
+                    std::time::Duration::from_secs(60),
                     agent_clone.run(&run_cfg, &task, &mut on_event)
                 ).await;
 

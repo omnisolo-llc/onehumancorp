@@ -658,43 +658,18 @@ impl GrowthService for MyGrowthService {
             sqlx::query(&query).bind(&org_id).bind(&req.user_id).fetch_one(&mut *tx).await
         }.map_err(|e| Status::internal(e.to_string()))?;
 
-        let total_conversions: i64 = row.try_get(0).unwrap_or(0);
-        let _referral_quota = 50 + (total_conversions as i32) * 10;
-
-        let product_count_row = sqlx::query("SELECT COUNT(*)::BIGINT FROM products WHERE tenant_id = $1")
-            .bind(&org_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let product_count: i64 = product_count_row.try_get(0).unwrap_or(0);
-
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-        
-        let tier = self.hub.tracker().get_tenant_tier(&org_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
-        let product_limit = tier.max_products().map(|limit| limit as i32).unwrap_or(0);
-        let soft_limit_reached = tier.max_products().map(|limit| product_count >= limit as i64).unwrap_or(false);
-        let upgrade_message = if soft_limit_reached {
-            format!(
-                "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
-                match tier {
-                    ::server_pricing::rate_limit::PlanTier::Free => "Free",
-                    ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
-                    ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
-                    ::server_pricing::rate_limit::PlanTier::Business => "Business",
-                },
-                product_limit
-            )
-        } else {
-            String::new()
-        };
 
-        let response = QuotaMetrics {
-            used: product_count as i32,
-            max: product_limit,
-            soft_limit_reached,
-            upgrade_message,
-            is_allowed: !soft_limit_reached,
-        };
+        let total_conversions: i64 = row.try_get(0).unwrap_or(0);
+        let max_quota = 50 + (total_conversions as i32) * 10;
+        
+        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
+
+        let response = QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed };
         self.quota_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
