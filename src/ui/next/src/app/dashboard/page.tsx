@@ -286,6 +286,13 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
+              <Link href="/delivery-dispatch" className="app-list-item hover:bg-gray-50">
+                <div>
+                  <div className="app-list-title text-indigo-700 font-bold">Start Deliveries</div>
+                  <div className="app-list-subtitle">You have local orders ready for dispatch.</div>
+                </div>
+                <span className="app-badge bg-indigo-100 text-indigo-800">Dispatch</span>
+              </Link>
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
