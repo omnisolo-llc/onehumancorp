@@ -52,6 +52,7 @@ _ROOT_UI_E2E_SPECS = [
     "//:e2e/offline_pos.spec.ts",
     "//:e2e/onboarding.spec.ts",
     "//:e2e/pos-offline.spec.ts",
+    "//:e2e/reputation-engine.spec.ts",
     "//:e2e/subscription-box.spec.ts",
 ]
 
