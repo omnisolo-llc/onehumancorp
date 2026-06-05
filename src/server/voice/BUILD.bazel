@@ -1,6 +1,7 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files([
+    "gateway.rs",
     "mod.rs",
     "engine.rs",
     "router.rs",
@@ -21,6 +22,9 @@ rust_library(
         "@crates//:chrono",
         "@crates//:uuid",
         "@crates//:sqlx",
+        "@crates//:axum",
+        "@crates//:futures",
+        "@crates//:base64",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
