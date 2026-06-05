@@ -89,7 +89,7 @@ pub async fn conversational_webhook_handler(
     axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
     Json(payload): Json<ConversationalWebhookPayload>,
 ) -> impl IntoResponse {
-    let store = DbSessionStore::new(hub.db.pool.clone());
+    let store = DbSessionStore::new(hub.pool.clone());
     handle_conversational_webhook_internal(&store, payload).await
 }
 
