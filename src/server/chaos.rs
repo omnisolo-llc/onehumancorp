@@ -810,8 +810,8 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
-        let timeout_duration = Duration::from_millis(150);
+        // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 50ms)
+        let timeout_duration = Duration::from_millis(50);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
