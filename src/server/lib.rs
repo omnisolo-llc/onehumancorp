@@ -2589,10 +2589,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+    let meta_webhook_state = api::meta_webhook::MetaWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
-        .with_state(hub.clone());
+        .with_state(meta_webhook_state);
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
@@ -3530,7 +3535,7 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()).with_state(mesh_transport.clone()))
+        .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
