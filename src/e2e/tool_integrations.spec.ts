@@ -55,7 +55,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
 
   test('can connect Social Media Accounts', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
+    const connectButton = page.locator('div').filter({ hasText: /^Social Media AccountsManage all your social media messages and posts in one place\.Connect$/ }).getByRole('button', { name: 'Connect' })
 
     // Check that we show an alert correctly
     page.on('dialog', dialog => dialog.accept());
@@ -64,35 +64,35 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
 
   test('can enable Autonomous Booking Agent', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Autonomous Booking Agent' }).getByRole('button', { name: 'Enable Booking Agent' });
+    const connectButton = page.locator('div').filter({ hasText: /^Autonomous Booking AgentLet your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links\.Connect$/ }).getByRole('button', { name: 'Connect' });
     page.on('dialog', dialog => dialog.accept());
     await connectButton.click();
   });
 
   test('can connect Customer Emails and Local Payments', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const emailBtn = page.locator('div.card.glass').filter({ hasText: 'Customer Emails' }).getByRole('button', { name: 'Start sending emails' });
+    const emailBtn = page.locator('div').filter({ hasText: /^Customer EmailsSend email updates and promotions to your customers\.Connect$/ }).getByRole('button', { name: 'Connect' });
     page.on('dialog', dialog => dialog.accept());
     await emailBtn.click();
 
-    const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Local Payments' }).getByRole('button', { name: 'Accept local payments' });
+    const paymentBtn = page.locator('div').filter({ hasText: /^Local PaymentsGet paid easily using local payment methods in Latin America\.Connect$/ }).getByRole('button', { name: 'Connect' });
     await paymentBtn.click();
   });
 
   test('can connect Shipping, Text Notifications, and Online Meetings', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const shippingBtn = page.locator('div.card.glass').filter({ hasText: 'Shipping Labels' }).getByRole('button', { name: 'Set up shipping' });
+    const shippingBtn = page.locator('div').filter({ hasText: /^Shipping LabelsPrint shipping labels and automatically track packages for your orders\.Connect$/ }).getByRole('button', { name: 'Connect' });
     page.on('dialog', dialog => dialog.accept());
     await shippingBtn.click();
-    const smsBtn = page.locator('div.card.glass').filter({ hasText: 'Text Notifications' }).getByRole('button', { name: 'Enable text messages' });
+    const smsBtn = page.locator('div').filter({ hasText: /^Text NotificationsSend automatic text message updates to your customers about their orders\.Connect$/ }).getByRole('button', { name: 'Connect' });
     await smsBtn.click();
-    const meetingBtn = page.locator('div.card.glass').filter({ hasText: 'Online Meetings' }).getByRole('button', { name: 'Create my meeting room' });
+    const meetingBtn = page.locator('div').filter({ hasText: /^Online MeetingsHost online video meetings with your customers easily without extra downloads\.Connect$/ }).getByRole('button', { name: 'Connect' });
     await meetingBtn.click();
   });
 
   test('can connect Front', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Omnichannel Inbox' }).getByRole('button', { name: 'Connect Front' });
+    const connectButton = page.locator('div').filter({ hasText: /^Omnichannel InboxUnified inbox aggregating messages from Front, Instagram, WhatsApp, and email\.Connect$/ }).getByRole('button', { name: 'Connect' });
     await connectButton.click();
   });
 });
