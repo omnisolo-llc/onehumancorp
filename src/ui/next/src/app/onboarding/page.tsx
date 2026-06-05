@@ -362,18 +362,15 @@ export default function OnboardingWizard() {
               </div>
 
               {chatStep === 0 && (
-                <div className="flex flex-col justify-center items-center gap-6 flex-1 animate-fade-in text-center p-8 mac-glass-container rounded-[24px]">
-                  <div className="w-20 h-20 bg-[#0066FF]/10 rounded-[20px] flex items-center justify-center mb-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                    <svg className="w-10 h-10 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <h2 className="text-4xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] animate-fade-in" style={{ animationDelay: '0.2s' }}>Welcome to OHC</h2>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-base mb-4 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                    The simplest way to launch, run, and grow your small business online. Let's get your business live in under 10 minutes.
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in text-center">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Let's get your business online in under 10 minutes.
                   </p>
-                  <button onClick={() => setChatStep(1)}
-                    className="w-full sm:w-auto px-8 bg-[#0066FF] text-white min-h-[54px] rounded-[12px] font-bold text-lg shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] animate-fade-in" style={{ animationDelay: '0.4s' }}
+                  <button
+                    role="link"
+                    onClick={() => setChatStep(1)}
+                    className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                   >
                     Start Onboarding
                   </button>
@@ -430,9 +427,7 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}}</p>}
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
@@ -495,9 +490,7 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}}</p>}
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
@@ -563,9 +556,7 @@ export default function OnboardingWizard() {
                     </div>
                   </div>
 
-                  {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}}</p>}
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
@@ -632,9 +623,7 @@ export default function OnboardingWizard() {
                     }}
                     className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
-                  {validationErrors.businessName && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.businessName}}</p>}
+                  {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
@@ -651,9 +640,7 @@ export default function OnboardingWizard() {
                     }}
                     className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
-                  {validationErrors.businessType && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.businessType}}</p>}
+                  {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
@@ -692,16 +679,12 @@ export default function OnboardingWizard() {
                         }}
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
-                      {validationErrors.firstProductPrice && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.firstProductPrice}}</p>}
+                      {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
                 </div>
               </div>
 
-              {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}}</p>}
+              {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => {
@@ -793,9 +776,7 @@ export default function OnboardingWizard() {
                         placeholder="e.g. Maya Smith"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
-                      {validationErrors.adminName && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.adminName}}</p>}
+                      {validationErrors.adminName && <p className="text-red-500 text-xs mt-1">{validationErrors.adminName}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
@@ -806,9 +787,7 @@ export default function OnboardingWizard() {
                         placeholder="you@example.com"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
-                      {validationErrors.adminEmail && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.adminEmail}}</p>}
+                      {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
@@ -819,9 +798,7 @@ export default function OnboardingWizard() {
                         placeholder="••••••••"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
-                      {validationErrors.adminPassword && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.adminPassword}}</p>}
+                      {validationErrors.adminPassword && <p className="text-red-500 text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>
                   </div>
                 </div>
