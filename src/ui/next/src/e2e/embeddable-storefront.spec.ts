@@ -5,12 +5,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         // Go to dashboard
         await page.goto('http://localhost:3000/dashboard');
 
-        // Look for the "Storefront Widget" link in the Dashboard Growth & Virality section
-        const widgetLink = page.locator('text=Storefront Widget');
-        await expect(widgetLink).toBeVisible();
-        await widgetLink.click();
-
-        // Should now be on the Storefront Widget page
+        // Look for the "Embed Your Store" section
         const sectionHeader = page.locator('text=Embed Your Store');
         await expect(sectionHeader).toBeVisible();
 

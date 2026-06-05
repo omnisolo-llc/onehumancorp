@@ -224,49 +224,28 @@ export default function Dashboard() {
               <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
-            <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
-              <WalkthroughTarget id="sales-card-target" className="app-card">
-                <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
-                  <div className="app-metric-label">Total Sales</div>
-                </WithTooltip>
-                <div className="app-metric-value">{money(metrics.total_sales)}</div>
-                <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
-              </WalkthroughTarget>
-              <div className="app-card">
-                <div className="app-metric-label">Customers</div>
-                <div className="app-metric-value">{metrics.active_customers}</div>
-                <div className="app-metric-note">Database customer records</div>
-              </div>
-              <div className="app-card">
-                <div className="app-metric-label">Pending Orders</div>
-                <div className="app-metric-value">{metrics.pending_orders}</div>
-                <div className="app-metric-note">Open fulfillment workload</div>
-              </div>
-              <div className="app-card">
-                <div className="app-metric-label">Low Stock</div>
-                <div className="app-metric-value">{lowStockCount}</div>
-                <div className="app-metric-note">Materials below threshold</div>
-              </div>
+          <div className="app-grid metrics">
+            <WalkthroughTarget id="sales-card-target" className="app-card">
+              <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
+                <div className="app-metric-label">Total Sales</div>
+              </WithTooltip>
+              <div className="app-metric-value">{money(metrics.total_sales)}</div>
+              <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
+            </WalkthroughTarget>
+            <div className="app-card">
+              <div className="app-metric-label">Customers</div>
+              <div className="app-metric-value">{metrics.active_customers}</div>
+              <div className="app-metric-note">Database customer records</div>
             </div>
-
-            <div className="mac-glass-container p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
-              <h4 className="text-sm font-bold font-outfit text-gray-900 mb-1 flex items-center gap-1">
-                <span className="text-indigo-500">✨</span> Advanced AI Insights
-              </h4>
-              <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
-              <button
-                onClick={() => {
-                  if (window.confirm('Upgrade to Pro to access Advanced AI Insights?')) {
-                    router.push('/pricing');
-                  }
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
-              >
-                Upgrade to Pro
-              </button>
+            <div className="app-card">
+              <div className="app-metric-label">Pending Orders</div>
+              <div className="app-metric-value">{metrics.pending_orders}</div>
+              <div className="app-metric-note">Open fulfillment workload</div>
+            </div>
+            <div className="app-card">
+              <div className="app-metric-label">Low Stock</div>
+              <div className="app-metric-value">{lowStockCount}</div>
+              <div className="app-metric-note">Materials below threshold</div>
             </div>
           </div>
         </section>
@@ -403,7 +382,7 @@ export default function Dashboard() {
               <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link href="/referrals" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
@@ -429,33 +408,6 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Social Share Cards</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
-            </Link>
-
-            <Link href="/storefront-widget" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Storefront Widget</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
-            </Link>
-
-            <Link href="/social-proof-nudge" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
-                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Social Proof Nudge</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
-            </Link>
-
-            <Link href="/link-in-bio-generator" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
-                <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Link</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Link in Bio</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create a beautiful Link in Bio for your social media profiles.</p>
             </Link>
           </div>
         </section>
