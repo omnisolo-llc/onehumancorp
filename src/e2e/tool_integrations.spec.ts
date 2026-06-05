@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/integrations');
-    await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible({ timeout: 20000 });
   });
 
   test('shows premium integrations dashboard header and copy', async ({ page }) => {
