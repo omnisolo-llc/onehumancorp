@@ -281,6 +281,8 @@ rust_library(
         "//src/proto:app_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:common_prost",
+
+        "//src/proto:tax_tonic",
         "//src/proto:docs_prost",
         "//src/proto:docs_tonic",
         "//src/proto:hub_tonic",

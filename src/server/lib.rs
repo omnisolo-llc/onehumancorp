@@ -391,6 +391,9 @@ pub mod proto {
     pub mod billing {
         pub use billing_proto::ohc::billing::*;
     }
+    pub mod tax {
+        pub use tax_tonic::ohc::tax::*;
+    }
     pub mod agent {
         pub use agent_proto::ohc::agent::*;
         pub mod service {
@@ -3373,7 +3376,6 @@ async fn create_ui_bom_item_handler(
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
-        .nest("/api/v1/tax", api::tax_engine::router().with_state(std::sync::Arc::new(api::tax_engine::TaxEngineState::new(db.pool.clone()))))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -3585,7 +3587,6 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
-        .add_service(crate::proto::ohc::tax::v1::tax_engine_service_server::TaxEngineServiceServer::new(api::tax_engine::TaxEngineState::new(db.pool.clone())))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .serve(addr)
         .await?;

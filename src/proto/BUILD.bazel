@@ -103,8 +103,7 @@ proto_rust_library(
 # ── Skills ─────────────────────────────────────────────────────────────────────
 
 proto_library(
-    name = "skills.proto",
-    "tax.proto",
+    name = "skills_proto",
     srcs = ["skills.proto"],
     deps = [":common_proto"],
     visibility = ["//visibility:public"],
@@ -246,6 +245,13 @@ proto_library(
 
 proto_rust_library(
     name = "tax",
+    proto = ":tax_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "tax_tonic",
     proto = ":tax_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
