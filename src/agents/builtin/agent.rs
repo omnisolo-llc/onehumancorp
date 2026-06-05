@@ -2030,7 +2030,7 @@ impl Agent {
             }
         }
 
-        let generated_uuid_path = format!(".agent_checkpoint_{}.json", uuid::Uuid::new_v4());
+        let generated_uuid_path = format!("{}/.agent_checkpoint_{}.json", std::env::temp_dir().to_str().unwrap_or("."), uuid::Uuid::new_v4());
         let scratchpad_path = final_cfg.state_scratchpad_path.clone().unwrap_or(generated_uuid_path);
 
         if messages.is_empty() && final_cfg.enable_state_checkpointing {
