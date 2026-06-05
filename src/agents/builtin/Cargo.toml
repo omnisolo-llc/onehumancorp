@@ -4,13 +4,53 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+async-nats = "0.47.0"
+async-recursion = "1"
+async-trait = "0.1"
+axum = { version = "0.8.1", features = ["ws"] }
+base64 = "0.22"
+chrono = { workspace = true }
+dashmap = "5"
+flate2 = "1"
+futures = { workspace = true }
+futures-util = "0.3.32"
+glob = "0.3"
+hex = "0.4"
+hmac = "0.12"
+ohc_builtin_agent_core = { path = "core" }
+ohc_builtin_agent_llm = { path = "llm" }
+ohc_builtin_agent_tools = { path = "tools" }
+once_cell = "1"
+opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
+opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+qrcode = { version = "0.14", default-features = false }
+rand = "0.8"
+redis = { version = "0.27.6", features = ["tokio-comp"] }
+regex = "1"
+reqwest = { workspace = true }
+server_harness = { path = "../../server/harness" }
+server_ohc = { path = "../../server/ohc" }
+server_pricing = { path = "../../server/pricing" }
+server_telemetry = { path = "../../server/telemetry" }
+sha2 = "0.10"
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+temp-env = "0.3.6"
+tempfile = "3.27.0"
+tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tracing = "0.1"
-async-trait = "0.1"
+tracing-opentelemetry = "0.28"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tree-sitter = "0.26.8"
+tree-sitter-bash = "0.25.1"
+tower = "0.4"
+urlencoding = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
 
 [lib]
 path = "lib.rs"
