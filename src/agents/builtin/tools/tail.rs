@@ -35,7 +35,7 @@ impl ToolExecutor for TailExecutor {
             return Ok(String::new());
         }
         if lines_to_read > 1000 {
-            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1500 lines at once.".to_string()));
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
         }
 
         let metadata = file.metadata().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
@@ -152,8 +152,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_tail_path_traversal() {
-
-        let executor = TailExecutor { working_dir: None }; let args = json!({ "path": "../../../etc/passwd" });
+        let executor = TailExecutor { working_dir: None };
+        let args = json!({ "path": "../../../etc/passwd" });
         let result = executor.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
@@ -183,12 +183,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_tail_jit_limit() {
-
-        let dir = tempfile::tempdir().unwrap(); let file_path = dir.path().join("test.txt"); tokio::fs::write(&file_path, "line1\n").await.unwrap(); let executor = TailExecutor { working_dir: Some(dir.path().to_path_buf()) }; let args = json!({ "path": "test.txt", "lines": 2000 });
+        let dir = tempfile::tempdir().unwrap(); let file_path = dir.path().join("test.txt"); tokio::fs::write(&file_path, "a\n".repeat(2000)).await.unwrap(); let executor = TailExecutor { working_dir: None };
+        let args = json!({ "path": file_path.to_str().unwrap(), "lines": 1500 });
         let result = executor.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Cannot read more than 1500 lines"));
+            assert!(msg.contains("Cannot read more than 1000 lines"));
         } else {
             panic!("Expected LlmRecoverable error");
         }

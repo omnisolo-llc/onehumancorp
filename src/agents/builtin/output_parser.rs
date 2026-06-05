@@ -379,7 +379,10 @@ mod tests {
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Expected native tool_calls API object, but got plain text."));
+
+
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }

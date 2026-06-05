@@ -130,4 +130,3 @@ dummy.*
 dummy_*
 .next/
 /*.patch
-.agent_checkpoint_*.json
