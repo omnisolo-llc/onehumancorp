@@ -1,9 +1,28 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { GET } from './route';
+import { NextRequest } from 'next/server';
+
+const mockArticles = [
+  { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
+  { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" },
+  { title: "Getting Paid", desc: "Set up how you get paid, view deposits, and handle simple taxes.", link: "/help/payments" },
+  { title: "Your AI Helpers", desc: "Learn how to hire AI helpers and give them tasks to do.", link: "/help/ai-agents" },
+  { title: "Finding Customers", desc: "Send emails to customers and grow your business easily.", link: "/help/marketing" },
+  { title: "Account & Billing", desc: "View your bills, manage your plan, and invite team members.", link: "/help/account-billing" }
+];
+
+global.fetch = vi.fn().mockResolvedValue({
+  ok: true,
+  json: async () => mockArticles,
+});
 
 describe('/api/help GET', () => {
   it('returns the help articles list with specific content', async () => {
-    const response = await GET();
+    const request = new NextRequest('http://localhost:3000/api/help');
+    const response = await GET(request);
+
+    // In next 13+, if we mock fetch, we can check the status from the real NextResponse returned by the handler
+    // Wait, the handler returns the response directly.
     expect(response.status).toBe(200);
     const data = await response.json();
 
