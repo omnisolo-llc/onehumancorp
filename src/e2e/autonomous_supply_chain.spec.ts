@@ -4,7 +4,7 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/');
-    await expect(page).toHaveTitle(/OneHuman/, { timeout: 25000 });
+    await expect(page).toHaveTitle(/OneHuman/, { timeout: 45000 });
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 

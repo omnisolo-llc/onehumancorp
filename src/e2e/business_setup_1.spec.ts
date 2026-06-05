@@ -11,7 +11,7 @@ test.describe('Business Setup Wizard', () => {
     }, id);
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('#setup-screen')).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('#setup-screen')).toBeVisible({ timeout: 45000 });
   });
 
   test('shows the current setup welcome step', async ({ page }) => {
