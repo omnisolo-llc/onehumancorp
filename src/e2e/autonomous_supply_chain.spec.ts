@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+
   test.beforeEach(async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // Navigate to dashboard
     await page.goto('/');
     await expect(page).toHaveTitle(/OneHuman/);

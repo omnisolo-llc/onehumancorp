@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Tool Integrations UI Premium Dashbaord', () => {
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+
   test.beforeEach(async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
   });

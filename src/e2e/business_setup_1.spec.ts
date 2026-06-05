@@ -1,8 +1,10 @@
 import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard', () => {
+  // Use test.skip at the describe level if we want to skip the entire suite
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+
   test.beforeEach(async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     const id = `business-setup-${Date.now()}-${Math.random()}`;
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
