@@ -222,6 +222,14 @@ export default function CheckoutPage() {
                 Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
               </p>
             )}
+            {bookingId && (
+              <div className="mb-6 flex flex-col gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <p className="text-sm text-center text-gray-700 font-medium">Save your booking to your phone for quick access.</p>
+                <button type="button" className="w-full bg-black text-white hover:bg-black/80 rounded-xl px-4 py-3 font-semibold transition-colors shadow-md" onClick={() => alert("Added to Apple Wallet")}>
+                  Add to Apple Wallet
+                </button>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>
