@@ -15,7 +15,7 @@ test.describe('Unified Agent Feed', () => {
     // Verify we are on dashboard and the Unified Agent Feed is present
     await expect(page.locator('button', { hasText: 'Proposals' }).first()).toBeVisible();
 
-    await expect(page.locator('h3').filter({ hasText: /New product detected/ }).or(page.getByText(/All caught up!|Requires Review|Loading Agent Proposals/)).first()).toBeVisible();
+    await expect(page.locator('h3', { hasText: /New product detected/ }).or(page.getByText(/All caught up!|Requires Review|Loading Agent Proposals/)).first()).toBeVisible();
     await page.getByRole('button', { name: 'Activity Feed' }).click();
     await expect(page.getByRole('button', { name: 'Activity Feed' })).toBeVisible();
   });

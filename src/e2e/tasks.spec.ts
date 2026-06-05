@@ -37,6 +37,6 @@ test.describe('Navigation', () => {
 
   test('should show welcome message', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.getByText(/Welcome back/)).toBeVisible();
   });
 });

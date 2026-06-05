@@ -16,7 +16,7 @@ test.describe('Grandmother Test - Plain Language Check', () => {
 
   test('should show welcome message on dashboard', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.getByText(/Welcome back/)).toBeVisible();
   });
 
   test('should display agents page', async ({ page }) => {
