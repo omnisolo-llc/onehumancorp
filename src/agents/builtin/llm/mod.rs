@@ -127,8 +127,7 @@ pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, Role, ToolResult};
-
+    use ohc_builtin_agent_core::types::{Message, Role, ToolResult};
 
     #[test]
     fn test_minify_json_string() {
@@ -181,7 +180,7 @@ mod tests {
                 "system": "instruction"
             }"#.to_string(),
             messages: vec![
-                ohc_builtin_agent_core::types::Message {
+                Message {
                     role: Role::User,
                     content: r#"{
                         "user": "input"
