@@ -128,7 +128,8 @@ CLOUD_HELM_SMOKE_ARGS=(
   --set valkey.enabled=true
   --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
   --set-string backend.env.OHC_STANDALONE_MODE=false
-  --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
+  --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes \
+  --set-string backend.env.MINIMAX_API_KEY=test-minimax-key
 )
 
 STANDALONE_HELM_SMOKE_ARGS=(
@@ -138,7 +139,8 @@ STANDALONE_HELM_SMOKE_ARGS=(
   --set-string backend.env.OHC_SQLITE_KEY=kind-e2e-standalone-sqlite-key
   --set-string backend.env.OHC_STANDALONE_MODE=true
   --set-string backend.env.OHC_TELEMETRY_ENABLED=false
-  --set-string backend.env.OHC_STANDALONE_MODE=true
+  --set-string backend.env.OHC_STANDALONE_MODE=true \
+  --set-string backend.env.MINIMAX_API_KEY=test-minimax-key
 )
 
 # ── Create Kind cluster ────────────────────────────────────────────────────────
