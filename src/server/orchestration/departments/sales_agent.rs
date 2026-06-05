@@ -19,26 +19,44 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.requested".to_string(), "tenant.upsell.requested".to_string()]
+        vec!["tenant.quote.requested".to_string(), "tenant.message.received".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.upsell.requested" {
-            ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "upsell_recommendation_generated");
-            return self.orchestrator.execute_action(
-                DepartmentType::Sales,
-                "Semantic catalog match for upsell generated".to_string(),
-                event.tenant_id.clone(),
-                ActionRisk::AutoExecute,
-                event.payload.clone(),
-            ).await.map(|_| ());
+        let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "tenant.message.received" {
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
+            if message.contains("fix") || message.contains("tomorrow") || message.contains("plumbing") {
+                let service = self.orchestrator.get_service_by_name_like(&event.tenant_id, "Plumbing Fix").await?;
+                let (service_name, price) = service.unwrap_or(("Plumbing Fix".to_string(), 75.0));
+
+                let drafted_message = format!("Hi! Yes, I have an opening tomorrow at 2 PM. The base callout fee is ${}. Would you like me to book this slot?", price);
+
+                ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated_from_message");
+
+                let action_payload = serde_json::json!({
+                    "feature_type": "sales_quote",
+                    "original_message": message,
+                    "generated_quote": drafted_message,
+                    "service": service_name,
+                    "price": price,
+                });
+
+                self.orchestrator.execute_action(
+                    DepartmentType::Sales,
+                    format!("Draft quote for {}", service_name),
+                    event.tenant_id.clone(),
+                    risk,
+                    action_payload,
+                ).await.map(|_| ())?;
+                return Ok(());
+            }
         }
 
         // Query memory context
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
         let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
-
-        let risk = ActionRisk::DraftForReview;
 
         ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated");
 

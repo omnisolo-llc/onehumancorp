@@ -1003,7 +1003,28 @@ pub async fn buffer_metric_i64(
     value: i64,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(pool, metric_name, metric_type, value as f32, labels).await
+    let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+
+    if !is_telemetry_enabled {
+        return Ok(());
+    }
+
+    let redacted_labels = redact_interface_pii(labels);
+    let labels_json = serde_json::to_string(&redacted_labels)?;
+
+    query(
+        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+         VALUES ($1, $2, $3, $4, $5, 'pending')"
+    )
+    .bind(metric_name)
+    .bind(metric_type)
+    .bind(value as f64)
+    .bind(labels_json)
+    .bind(Utc::now())
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn buffer_metric(
@@ -1085,6 +1106,11 @@ pub fn is_pii_value_pattern(s: &str) -> bool {
 
 pub fn is_sensitive_key(key: &str) -> bool {
     let k = key.to_lowercase();
+    // Exclude tenant_id and organization_id from being redacted
+    if k == "tenant_id" || k == "organization_id" {
+        return false;
+    }
+
     k.contains("password")
         || k.contains("secret")
         || k.contains("key")
@@ -1341,7 +1367,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
-    use super::*;
+    // use super::*;
 
 
     #[test]
@@ -1491,4 +1517,65 @@ pub fn record_rag_sync_error(reason: &str, deployment_mode: &str) {
             opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
         ],
     );
+}
+
+
+pub static CHAOS_INJECTED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+pub static TASK_RECOVERY_TIME_MS: OnceLock<opentelemetry::metrics::Histogram<f64>> = OnceLock::new();
+
+pub fn get_chaos_injected_total() -> &'static Counter<u64> {
+    CHAOS_INJECTED_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.chaos");
+        meter
+            .u64_counter("ohc_chaos_injected_total")
+            .with_description("Total number of injected chaos events")
+            .build()
+    })
+}
+
+pub fn get_task_recovery_time_ms() -> &'static opentelemetry::metrics::Histogram<f64> {
+    TASK_RECOVERY_TIME_MS.get_or_init(|| {
+        let meter = global::meter("ohc.chaos");
+        meter
+            .f64_histogram("ohc_task_recovery_time_ms_bucket")
+            .with_description("Time taken to recover from chaos injected failures")
+            .build()
+    })
+}
+
+pub fn record_chaos_injected(env_mode: &str) {
+    let counter = get_chaos_injected_total();
+    counter.add(
+        1,
+        &[opentelemetry::KeyValue::new("EnvMode", env_mode.to_string())],
+    );
+}
+
+pub fn record_task_recovery_time(env_mode: &str, duration_ms: f64) {
+    let histogram = get_task_recovery_time_ms();
+    histogram.record(
+        duration_ms,
+        &[opentelemetry::KeyValue::new("EnvMode", env_mode.to_string())],
+    );
+}
+
+pub struct ChaosRecoveryTracker {
+    env_mode: String,
+    start: std::time::Instant,
+}
+
+impl ChaosRecoveryTracker {
+    pub fn new(env_mode: &str) -> Self {
+        record_chaos_injected(env_mode);
+        Self {
+            env_mode: env_mode.to_string(),
+            start: std::time::Instant::now(),
+        }
+    }
+}
+
+impl Drop for ChaosRecoveryTracker {
+    fn drop(&mut self) {
+        record_task_recovery_time(&self.env_mode, self.start.elapsed().as_millis() as f64);
+    }
 }
