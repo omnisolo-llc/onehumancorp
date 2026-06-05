@@ -7,7 +7,6 @@ rust_library(
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
     deps = [
-        "//src/proto:questionnaire",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",

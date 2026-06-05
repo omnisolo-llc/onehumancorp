@@ -10,7 +10,6 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
-        .route("/intake/questions", get(get_intake_questions))
         .route("/intake", post(process_intake_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
@@ -23,22 +22,20 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
 
 #[derive(serde::Deserialize)]
 pub struct IntakeRequest {
-    pub customer_id: Option<String>,
-    pub description: Option<String>,
-    pub answers: Option<Vec<serde_json::Value>>,
+    pub description: String,
 }
 
 async fn process_intake_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<IntakeRequest>,
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
-    match agent.process_intake(&payload.description.clone().unwrap_or_default()).await {
+    match agent.process_intake(&payload.description).await {
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::warn!("onboarding intake fallback used after agent error: {}", error);
             Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
                 business_name: {
-                    let desc = payload.description.clone().unwrap_or_default();
+                    let desc = payload.description.trim();
                     if desc.len() > 30 {
                         format!("{}...", &desc[..27])
                     } else {
@@ -142,20 +139,4 @@ async fn save_state(
         Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
-}
-
-
-async fn get_intake_questions(
-    State(agent): State<Arc<OnboardingAgent>>,
-) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    // In a real app we query DB or grpc here.
-    // For now we map to the expected E2E fallback schema because it must not be empty.
-    let qs = serde_json::json!({
-        "questions": [
-            { "id": "q1", "text": "Describe the issue or project details:", "type": "text", "is_required": true },
-            { "id": "q2", "text": "Upload any relevant photos:", "type": "photo_upload", "is_required": false },
-            { "id": "q3", "text": "Preferred timeline:", "type": "text", "is_required": false }
-        ]
-    });
-    Ok(Json(qs))
 }
