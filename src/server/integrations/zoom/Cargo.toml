@@ -10,3 +10,9 @@ path = "mod.rs"
 reqwest.workspace = true
 serde_json.workspace = true
 server_integrations_core = { version = "0.1.0", path = "../core" }
+async-trait = "0.1"
+serde = { workspace = true }
+tokio = { workspace = true }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "serde"] }
