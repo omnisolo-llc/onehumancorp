@@ -482,4 +482,12 @@ describe('OnboardingWizard', () => {
       method: 'POST'
     }));
   });
+
+  it('renders with mac-glass-container styling', () => {
+    const { container } = render(<OnboardingWizard />);
+
+    // Check that the main setup-screen container has the mac-glass-container class
+    const setupScreen = container.querySelector('#setup-screen');
+    expect(setupScreen).toHaveClass('mac-glass-container');
+  });
 });

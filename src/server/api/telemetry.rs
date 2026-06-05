@@ -75,7 +75,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "tenant_id": tenant_id.clone(),
                             "model": model_string.clone()
                         });
-                        let _ = ::server_telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                        let _ = ::server_telemetry::buffer_metric_i64(&pool, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
                     });
                 }
             }
@@ -112,7 +112,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "tenant_id": tenant_id.clone(),
                             "api": api_string.clone()
                         });
-                        let _ = ::server_telemetry::buffer_metric(&pool, "ohc_mission_cost_cents", "counter", cost_cents as f32, labels_cents).await;
+                        let _ = ::server_telemetry::buffer_metric_i64(&pool, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
                     });
                 }
             }
