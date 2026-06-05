@@ -16,11 +16,11 @@ backend:
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "500m"
+      memory: "512Mi"
     limits:
-      cpu: "2000m"
-      memory: "1Gi"
+      cpu: "1000m"
+      memory: "512Mi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
@@ -64,8 +64,8 @@ ohcCore:
       cpu: "250m"
       memory: "256Mi"
     limits:
-      cpu: "2000m"
-      memory: "1Gi"
+      cpu: "1000m"
+      memory: "512Mi"
 
 # Valkey - Redis-compatible cache and pub/sub service
 valkey:

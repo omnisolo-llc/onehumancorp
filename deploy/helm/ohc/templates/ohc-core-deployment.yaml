@@ -16,6 +16,10 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-ohc-core
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "{{ .Values.ohcCore.service.port }}"
     spec:
       securityContext:
         runAsNonRoot: true
