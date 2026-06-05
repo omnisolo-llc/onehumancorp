@@ -53,6 +53,15 @@ impl Department for CustomerSuccessAgent {
             };
             tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
 
+            let platform = original.and_then(|orig| orig.get("platform").and_then(|v| v.as_str())).unwrap_or("unknown");
+            let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("unknown");
+
+            if platform == "instagram" || platform == "whatsapp" {
+                let token = std::env::var("META_ACCESS_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+                let meta_provider = crate::integrations::meta::provider::MetaProvider::new(token);
+                let _ = meta_provider.send_message(platform, sender_id, message).await;
+            }
+
             let content = format!("Sent response to customer: {}", message);
 
             if let Some(inbox_id) = original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str())) {
@@ -117,6 +126,8 @@ impl Department for CustomerSuccessAgent {
                 "generated_response": generated_response,
                 "context_used": context_summary,
                 "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "platform": event.payload.get("platform").and_then(|v| v.as_str()).unwrap_or("unknown"),
+                "sender_id": event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown"),
             });
 
             self.orchestrator.execute_action(

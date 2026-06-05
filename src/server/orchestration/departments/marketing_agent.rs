@@ -25,11 +25,23 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "agent:marketing:approved".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "agent:marketing:approved" {
+            let payload = &event.payload;
+            let original = payload.get("original_payload");
+            let copy = original.and_then(|orig| orig.get("draft_copy").and_then(|v| v.as_str())).unwrap_or("");
+
+            tracing::info!("EXECUTING APPROVED DRAFT: Scheduling/Posting to social media: {}", copy);
+            // Here we would integrate with Buffer or Meta APIs to schedule the post
+
+            return Ok(());
+        }
 
 
         if event.event_type == "tenant.product.created" {
