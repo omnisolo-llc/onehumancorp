@@ -108,8 +108,13 @@ if [[ -d "$workspace_root/node_modules" ]]; then
 elif [[ -d "$workspace_root/src/ui/next/node_modules" ]]; then
   ln -s "$workspace_root/src/ui/next/node_modules" "$WORK_DIR/node_modules"
 else
-  echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $workspace_root/src/ui/next/node_modules"
-  exit 1
+  NODE_MODULES_SRC="$(find -L "$workspace_root" -type d -name "node_modules" -not -path "*/\.next/*" -not -path "*/out/*" | head -n 1 || true)"
+  if [[ -n "$NODE_MODULES_SRC" && -d "$NODE_MODULES_SRC" ]]; then
+    ln -s "$NODE_MODULES_SRC" "$WORK_DIR/node_modules"
+  else
+    echo "[playwright] Error: node_modules not found in Bazel runfiles anywhere under $workspace_root"
+    exit 1
+  fi
 fi
 mkdir -p "$WORK_DIR/src/e2e"
 
