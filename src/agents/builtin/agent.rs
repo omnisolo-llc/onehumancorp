@@ -699,7 +699,7 @@ impl Agent {
                 cfg.model.to_lowercase().as_str(),
                 usage.input_tokens as i64,
                 usage.output_tokens as i64,
-                0,
+                usage.cache_read_input_tokens as i64,
             );
             if turn_cost > 0.0 {
                 total_session_cost += turn_cost;
@@ -2342,6 +2342,7 @@ impl Agent {
 
             let turn_input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
+            let cached_tokens = resp.usage.cache_read_input_tokens;
             let total_tokens = (turn_input_tokens + output_tokens) as i64;
             self.progress.add_tokens(total_tokens);
             global_turn_tokens += output_tokens;
@@ -2367,7 +2368,7 @@ impl Agent {
                 final_cfg.model.to_lowercase().as_str(),
                 turn_input_tokens as i64,
                 output_tokens as i64,
-                0,
+                cached_tokens as i64,
             );
 
             if turn_cost > 0.0 {
