@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('agent-marketplace');
+import { test } from '@playwright/test';
+test.describe('smoke run - agent-marketplace', () => {
+  currentAppSmoke('agent-marketplace');
+});

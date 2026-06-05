@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('nova_mission_track');
+import { test } from '@playwright/test';
+test.describe('smoke run - nova_mission_track', () => {
+  currentAppSmoke('nova_mission_track');
+});

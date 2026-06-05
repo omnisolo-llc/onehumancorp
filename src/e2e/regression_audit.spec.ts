@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('regression_audit');
+import { test } from '@playwright/test';
+test.describe('smoke run - regression_audit', () => {
+  currentAppSmoke('regression_audit');
+});

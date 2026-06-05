@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('milestone_loop');
+import { test } from '@playwright/test';
+test.describe('smoke run - milestone_loop', () => {
+  currentAppSmoke('milestone_loop');
+});

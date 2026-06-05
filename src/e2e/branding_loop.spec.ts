@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('branding_loop');
+import { test } from '@playwright/test';
+test.describe('smoke run - branding_loop', () => {
+  currentAppSmoke('branding_loop');
+});

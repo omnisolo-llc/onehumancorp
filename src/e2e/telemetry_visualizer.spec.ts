@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('telemetry_visualizer');
+import { test } from '@playwright/test';
+test.describe('smoke run - telemetry_visualizer', () => {
+  currentAppSmoke('telemetry_visualizer');
+});

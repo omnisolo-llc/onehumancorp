@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('twilio_omnichannel');
+import { test } from '@playwright/test';
+test.describe('smoke run - twilio_omnichannel', () => {
+  currentAppSmoke('twilio_omnichannel');
+});

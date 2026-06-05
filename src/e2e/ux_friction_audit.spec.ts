@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('ux_friction_audit');
+import { test } from '@playwright/test';
+test.describe('smoke run - ux_friction_audit', () => {
+  currentAppSmoke('ux_friction_audit');
+});

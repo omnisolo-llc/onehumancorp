@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('full_journey_e2e');
+import { test } from '@playwright/test';
+test.describe('smoke run - full_journey_e2e', () => {
+  currentAppSmoke('full_journey_e2e');
+});

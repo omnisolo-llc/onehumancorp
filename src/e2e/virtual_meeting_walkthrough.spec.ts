@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('virtual_meeting_walkthrough');
+import { test } from '@playwright/test';
+test.describe('smoke run - virtual_meeting_walkthrough', () => {
+  currentAppSmoke('virtual_meeting_walkthrough');
+});

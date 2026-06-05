@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('login_lens');
+import { test } from '@playwright/test';
+test.describe('smoke run - login_lens', () => {
+  currentAppSmoke('login_lens');
+});

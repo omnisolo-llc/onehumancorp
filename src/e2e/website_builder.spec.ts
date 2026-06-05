@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('website_builder');
+import { test } from '@playwright/test';
+test.describe('smoke run - website_builder', () => {
+  currentAppSmoke('website_builder');
+});

@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('team_chat');
+import { test } from '@playwright/test';
+test.describe('smoke run - team_chat', () => {
+  currentAppSmoke('team_chat');
+});

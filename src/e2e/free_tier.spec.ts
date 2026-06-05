@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('free_tier');
+import { test } from '@playwright/test';
+test.describe('smoke run', () => {
+  currentAppSmoke('free_tier');
+});

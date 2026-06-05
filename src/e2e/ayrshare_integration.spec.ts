@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('ayrshare_integration');
+import { test } from '@playwright/test';
+test.describe('smoke run - ayrshare_integration', () => {
+  currentAppSmoke('ayrshare_integration');
+});

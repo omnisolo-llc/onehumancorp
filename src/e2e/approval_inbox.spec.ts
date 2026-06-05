@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('approval_inbox');
+import { test } from '@playwright/test';
+test.describe('smoke run - approval_inbox', () => {
+  currentAppSmoke('approval_inbox');
+});

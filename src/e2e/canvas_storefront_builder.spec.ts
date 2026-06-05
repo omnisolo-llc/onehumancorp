@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('canvas_storefront_builder');
+import { test } from '@playwright/test';
+test.describe('smoke run - canvas_storefront_builder', () => {
+  currentAppSmoke('canvas_storefront_builder');
+});

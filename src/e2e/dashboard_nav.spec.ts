@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('dashboard_nav');
+import { test } from '@playwright/test';
+test.describe('smoke run - dashboard_nav', () => {
+  currentAppSmoke('dashboard_nav');
+});

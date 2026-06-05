@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('unified_catalog');
+import { test } from '@playwright/test';
+test.describe('smoke run - unified_catalog', () => {
+  currentAppSmoke('unified_catalog');
+});

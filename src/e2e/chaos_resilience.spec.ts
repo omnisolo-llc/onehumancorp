@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('chaos_resilience');
+import { test } from '@playwright/test';
+test.describe('smoke run - chaos_resilience', () => {
+  currentAppSmoke('chaos_resilience');
+});

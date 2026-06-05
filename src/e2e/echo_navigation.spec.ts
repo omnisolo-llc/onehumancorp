@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('echo_navigation');
+import { test } from '@playwright/test';
+test.describe('smoke run - echo_navigation', () => {
+  currentAppSmoke('echo_navigation');
+});

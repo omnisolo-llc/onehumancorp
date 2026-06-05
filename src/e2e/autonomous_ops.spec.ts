@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('autonomous_ops');
+import { test } from '@playwright/test';
+test.describe('smoke run', () => {
+  currentAppSmoke('autonomous_ops');
+});

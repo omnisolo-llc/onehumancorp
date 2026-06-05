@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_trial_extension');
+import { test } from '@playwright/test';
+test.describe('smoke run - viral_trial_extension', () => {
+  currentAppSmoke('viral_trial_extension');
+});

@@ -1,3 +1,6 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('seasonal_promo_paywall');
+import { test } from '@playwright/test';
+test.describe('smoke run - seasonal_promo_paywall', () => {
+  currentAppSmoke('seasonal_promo_paywall');
+});
