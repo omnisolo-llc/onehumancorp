@@ -87,6 +87,7 @@ define_playwright_tests(
         "scribe_extra.spec.ts",
         "//src/ui/next:e2e/dashboard-feed.spec.ts",
         "//src/ui/next:src/e2e/review-campaign.spec.ts",
+        "cost_dashboard.spec.ts",
     ],
     ci_shard_count = 16,
     data = [
