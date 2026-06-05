@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProposalCard, AgentProposal } from './ProposalCard';
 
 export const AgentFeed: React.FC = () => {
@@ -8,162 +6,100 @@ export const AgentFeed: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const tenantId = () => {
-    if (typeof window === 'undefined') return 'default';
-    return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-  };
-
   useEffect(() => {
-    let mounted = true;
-    async function fetchProposals() {
-      try {
-        const tenant = tenantId();
-        const res = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-          headers: {
-            'x-tenant-id': tenant,
-            'x-user-id': 'default',
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error('Failed to load agent proposals');
-        }
-
-        const data = await res.json();
-        if (mounted && data.pending_approvals) {
-          // Map backend response to AgentProposal interface
-          const mappedProposals: AgentProposal[] = data.pending_approvals.map((p: any) => ({
-            id: p.id,
-            department: p.department,
-            description: p.description,
-            actionRisk: p.action_risk,
-            status: p.status,
-            payload: p.payload,
-          }));
-          setProposals(mappedProposals);
-        }
-      } catch (err: any) {
-        if (mounted) {
-          setError(err.message || 'Failed to load proposals');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
     fetchProposals();
-    return () => {
-      mounted = false;
-    };
   }, []);
 
-  const handleDecision = async (id: string, approved: boolean) => {
-    // Optimistic UI update
-    setProposals((prev) => prev.filter((p) => p.id !== id));
-
+  const fetchProposals = async () => {
     try {
-      const tenant = tenantId();
-      const res = await fetch(`/api/agents/approvals/${id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenant,
-          'x-user-id': 'default',
-        },
-        body: JSON.stringify({ approved }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to submit decision');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Action failed');
-      // Refresh feed on failure
-      const tenant = tenantId();
-      const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`);
-      if (refreshRes.ok) {
-        const data = await refreshRes.json();
-        setProposals(data.pending_approvals.map((p: any) => ({
-          id: p.id,
-          department: p.department,
-          description: p.description,
-          actionRisk: p.action_risk,
-          status: p.status,
-          payload: p.payload,
-        })));
-      }
+      setLoading(true);
+      const res = await fetch('/api/agents/approvals?tenant_id=default');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      setProposals(data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load agent proposals');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  const handleApprove = async (id: string) => {
+    // Optimistic UI
+    setProposals(prev =>
+      prev.map(p => p.id === id ? { ...p, status: 'approved' } : p)
+    );
+
+    try {
+      await fetch(`/api/agents/approvals/${id}/approve`, { method: 'POST' });
+    } catch (err) {
+      // Revert on failure
+      fetchProposals();
+    }
+  };
+
+  const handleDecline = async (id: string) => {
+    // Optimistic UI
+    setProposals(prev =>
+      prev.map(p => p.id === id ? { ...p, status: 'declined' } : p)
+    );
+
+    try {
+      await fetch(`/api/agents/approvals/${id}/decline`, { method: 'POST' });
+    } catch (err) {
+      // Revert on failure
+      fetchProposals();
+    }
+  };
+
+  if (loading && proposals.length === 0) {
     return (
-      <div
-        className="w-full mb-6 p-8 rounded-[16px] text-center text-gray-500 font-inter animate-pulse"
-        style={{
-          background: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(30px) saturate(210%)',
-          border: '1px solid rgba(255, 255, 255, 0.4)',
-        }}
-      >
-        Synchronizing with Agents...
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-8 h-8 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+        <p className="text-white/40 text-sm animate-pulse">Consulting agent council...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-6 rounded-[16px] border border-red-500/20 bg-red-50 text-red-600 text-center font-inter">
-        {error}
+      <div className="p-8 rounded-2xl border border-red-500/20 bg-red-500/5 text-center">
+        <p className="text-red-400 font-medium mb-4">{error}</p>
+        <button
+          onClick={fetchProposals}
+          className="text-white/60 text-xs underline hover:text-white"
+        >
+          Try again
+        </button>
       </div>
     );
   }
 
   if (proposals.length === 0) {
     return (
-      <div
-        className="w-full mb-6 p-8 rounded-[16px] text-center"
-        style={{
-          background: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(30px) saturate(210%)',
-          border: '1px solid rgba(255, 255, 255, 0.4)',
-        }}
-      >
-        <div className="text-4xl mb-3">✨</div>
-        <h3 className="text-xl font-bold font-outfit text-[#1D1D1F]">All Clear!</h3>
-        <p className="text-sm text-gray-600 font-inter mt-1">
-          Your AI agents are monitoring your business in the background.
+      <div className="text-center py-20">
+        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+          <span className="text-2xl">✨</span>
+        </div>
+        <h3 className="text-white font-medium">All caught up</h3>
+        <p className="text-white/40 text-sm max-w-[240px] mx-auto mt-1">
+          Your agents are working silently in the background. No actions needed right now.
         </p>
       </div>
     );
   }
 
   return (
-    <section className="mb-8 w-full" aria-label="Unified Agent Feed">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold font-outfit text-[#1D1D1F]">Daily Feed</h2>
-        <span
-          className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-          style={{
-            backgroundColor: 'rgba(255, 149, 0, 0.1)',
-            color: '#FF9500',
-          }}
-        >
-          {proposals.length} Items
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        {proposals.map((proposal) => (
-          <ProposalCard
-            key={proposal.id}
-            proposal={proposal}
-            onApprove={(id) => handleDecision(id, true)}
-            onDecline={(id) => handleDecision(id, false)}
-          />
-        ))}
-      </div>
-    </section>
+    <div className="space-y-4">
+      {proposals.map(proposal => (
+        <ProposalCard
+          key={proposal.id}
+          proposal={proposal}
+          onApprove={handleApprove}
+          onDecline={handleDecline}
+        />
+      ))}
+    </div>
   );
 };

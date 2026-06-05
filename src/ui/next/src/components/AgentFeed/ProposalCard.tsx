@@ -1,13 +1,12 @@
-'use client';
-
 import React from 'react';
 
 export interface AgentProposal {
   id: string;
-  department: string;
+  agent_id: string;
+  title: string;
   description: string;
-  actionRisk: 'LOW' | 'HIGH';
-  status: 'PendingApproval' | 'Approved' | 'Rejected';
+  status: 'pending' | 'approved' | 'declined';
+  created_at: string;
   payload?: any;
 }
 
@@ -18,83 +17,58 @@ interface ProposalCardProps {
 }
 
 export const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onApprove, onDecline }) => {
-  const isHighRisk = proposal.actionRisk === 'HIGH';
+  const isPending = proposal.status === 'pending';
 
   return (
-    <div
-      className="p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all hover:shadow-md"
-      style={{
-        background: 'rgba(255, 255, 255, 0.65)',
-        backdropFilter: 'blur(30px) saturate(210%)',
-        border: '1px solid rgba(255, 255, 255, 0.4)',
-      }}
-    >
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md"
-            style={{
-              backgroundColor: 'rgba(0, 102, 255, 0.1)',
-              color: '#0066FF',
-            }}
-          >
-            {proposal.department.replace('_', ' ')}
-          </span>
-          {isHighRisk && (
-            <span
-              className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md"
-              style={{
-                backgroundColor: 'rgba(255, 59, 48, 0.1)',
-                color: '#FF3B30',
-              }}
-            >
-              Requires Review
+    <div className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-3xl p-5 transition-all hover:bg-white/10">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+            <span className="text-blue-400 text-xs font-bold uppercase tracking-wider">
+              {proposal.agent_id.substring(0, 2)}
+            </span>
+          </div>
+          <div>
+            <h3 className="text-white font-medium text-sm leading-tight">{proposal.title}</h3>
+            <p className="text-white/40 text-[10px] uppercase tracking-widest mt-1">
+              {proposal.agent_id} • {new Date(proposal.created_at).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center">
+          {proposal.status === 'approved' && (
+            <span className="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full border border-green-500/30 font-medium">
+              Approved
+            </span>
+          )}
+          {proposal.status === 'declined' && (
+            <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded-full border border-red-500/30 font-medium">
+              Declined
             </span>
           )}
         </div>
-        <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] leading-snug mt-1">
-          {proposal.description}
-        </h3>
-
-        {proposal.payload?.context && (
-          <div className="mt-2 flex flex-col gap-1 p-3 rounded-lg bg-black/5">
-            {Object.entries(proposal.payload.context).map(([key, value]) => (
-              <div key={key} className="flex justify-between items-center text-sm font-inter">
-                <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}:</span>
-                <span className="font-semibold text-[#1D1D1F]">
-                  {typeof value === 'number' && key.includes('revenue') ? `$${value.toFixed(2)}` : String(value)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      <div className="flex flex-col gap-3 w-full mt-2">
-        <button
-          onClick={() => onApprove(proposal.id)}
-          className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-sm font-inter"
-          aria-label="Approve proposal"
-        >
-          Approve
-        </button>
-        <div className="flex gap-3 w-full">
+      <p className="text-white/80 text-sm leading-relaxed mb-5">
+        {proposal.description}
+      </p>
+
+      {isPending && (
+        <div className="flex space-x-3">
           <button
-            onClick={() => {}}
-            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-200 text-[#1D1D1F] font-medium hover:bg-white/50 transition-colors font-inter"
-            aria-label="Edit proposal"
+            onClick={() => onApprove(proposal.id)}
+            className="flex-1 h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold transition-all hover:bg-blue-500 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           >
-            Edit
+            Approve
           </button>
           <button
             onClick={() => onDecline(proposal.id)}
-            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-200 text-[#1D1D1F] font-medium hover:bg-white/50 transition-colors font-inter"
-            aria-label="Decline proposal"
+            className="flex-1 h-11 rounded-xl bg-white/5 text-white/70 text-sm font-semibold border border-white/10 transition-all hover:bg-white/10 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-white/20"
           >
             Decline
           </button>
         </div>
-      </div>
+      )}
     </div>
   );
 };
