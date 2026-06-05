@@ -316,6 +316,10 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+    #[cfg(ohc_bazel)]
+    pub use ::server_services_docs as docs;
+    #[cfg(not(ohc_bazel))]
+    pub mod docs;
 
     #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
@@ -3556,19 +3560,27 @@ async fn create_ui_bom_item_handler(
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
-            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
-        ])) }))
+        .route("/api/help", axum::routing::get(|| async {
+            let articles = ::server_services_docs::service::get_articles();
+            let json_articles: Vec<serde_json::Value> = articles.iter().map(|a| serde_json::json!({
+                "id": a.id,
+                "title": a.title,
+                "desc": a.content_markdown,
+                "topic": a.topic,
+                "link": format!("/help/{}", a.id)
+            })).collect();
+            axum::Json(json_articles)
+        }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
-            let m = registry.read().unwrap();
-            axum::Json(serde_json::to_value(&*m).unwrap())
+            let mut m = registry.read().unwrap().clone();
+
+            // Also merge in static tooltips from docs service
+            let tooltips = ::server_services_docs::service::get_tooltips();
+            for t in tooltips {
+                m.entry(t.element_id.clone()).or_insert(t.plain_language_description.clone());
+            }
+            axum::Json(serde_json::to_value(&m).unwrap())
         }).post(|axum::Json(payload): axum::Json<HashMap<String, String>>| async {
             let registry = get_tooltips_registry();
             let mut m = registry.write().unwrap();
@@ -3577,56 +3589,34 @@ async fn create_ui_bom_item_handler(
             }
             axum::Json(serde_json::json!({"success": true}))
         }))
-        .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
-            { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
-            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
-            { "id": 4, "title": "Adding staff to your account", "duration": "1:05" },
-            { "id": 5, "title": "Review an order", "duration": "1:10" },
-            { "id": 6, "title": "Send a campaign", "duration": "1:25" },
-            { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
-            { "id": 8, "title": "Manage inventory", "duration": "1:00" },
-            { "id": 9, "title": "View analytics", "duration": "0:45" },
-            { "id": 10, "title": "Update your profile", "duration": "0:55" }
-        ])) }))
+        .route("/api/videos", axum::routing::get(|| async {
+            let videos = ::server_services_docs::service::get_video_tutorials();
+            let json_videos: Vec<serde_json::Value> = videos.iter().map(|v| serde_json::json!({
+                "id": v.id,
+                "title": v.title,
+                "duration": v.duration
+            })).collect();
+            axum::Json(json_videos)
+        }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
-            let help_articles = vec![
-                ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
-                ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
-                ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
-                ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
-                ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "Interactive API reference for integrations."),
-            ];
-
             let query = req.message.to_lowercase();
-            let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let articles = ::server_services_docs::service::get_articles();
 
-            if query.contains("getting started") {
-                reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
-            } else if query.contains("store") {
-                reply = format!("Based on our help center: {}", help_articles[1].1);
-                link_url = "/help/my-store";
-            } else if query.contains("payment") {
-                reply = format!("Based on our help center: {}", help_articles[2].1);
-                link_url = "/help/payments";
-            } else if query.contains("ai agent") {
-                reply = format!("Based on our help center: {}", help_articles[3].1);
-                link_url = "/help/ai-agents";
-            } else if query.contains("marketing") {
-                reply = format!("Based on our help center: {}", help_articles[4].1);
-                link_url = "/help/marketing";
-            } else if query.contains("billing") {
-                reply = format!("Based on our help center: {}", help_articles[5].1);
-                link_url = "/help/account-billing";
-            } else if query.contains("api") || query.contains("advanced") {
-                reply = format!("Based on our help center: {}", help_articles[6].1);
-                link_url = "/api-docs";
+            let mut best_match = None;
+            for article in articles {
+                if query.contains(&article.topic.to_lowercase()) || query.contains(&article.title.to_lowercase()) || article.content_markdown.to_lowercase().contains(&query) {
+                    best_match = Some(article);
+                    break;
+                }
             }
+
+            let (reply, link_url) = if let Some(article) = best_match {
+                (format!("Based on our help center: {}", article.content_markdown), format!("/help/{}", article.id))
+            } else {
+                ("I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string(), "/help/getting-started-1".to_string())
+            };
+
+            let link_title = "Read the full article →";
 
             axum::Json(serde_json::json!({
                 "reply": reply,

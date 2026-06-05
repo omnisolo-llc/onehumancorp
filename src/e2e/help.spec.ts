@@ -75,3 +75,48 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 });
+
+test.describe('Help Center Page', () => {
+  test('should load help center and navigate to article', async ({ page }) => {
+    await page.goto('/help');
+
+    await expect(page.getByRole('heading', { name: 'Help Center' })).toBeVisible();
+    await expect(page.locator('h2:has-text("Getting Started")')).toBeVisible();
+    await page.locator('h2:has-text("Getting Started")').click();
+    await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
+    await expect(page.locator('text=Welcome to One Human Corp!')).toBeVisible();
+  });
+});
+
+test.describe('API Documentation', () => {
+  test('should load Swagger UI', async ({ page }) => {
+    await page.goto('/api-docs');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('.swagger-ui')).toBeVisible();
+  });
+});
+
+test.describe('Help Chat Widget', () => {
+  test('should verify widget functionality', async ({ page }) => {
+    const response = await page.request.post('/api/chat', {
+        data: { message: "How do I add a product?" }
+    });
+
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.reply).toBeDefined();
+    expect(result.link).toBeDefined();
+  });
+});
+
+test.describe('Video Tutorials in Help Widget', () => {
+  test('should verify video endpoint', async ({ page }) => {
+    const response = await page.request.get('/api/videos');
+    expect(response.status()).toBe(200);
+
+    const result = await response.json();
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].title).toBeDefined();
+    expect(result[0].duration).toBeDefined();
+  });
+});

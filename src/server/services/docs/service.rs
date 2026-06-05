@@ -1,7 +1,8 @@
 use ::docs_proto::ohc::docs::v1::docs_service_server::DocsService;
+use tonic::{Request, Response, Status};
+
 use ::docs_proto::ohc::docs::v1::*;
 use std::sync::OnceLock;
-use tonic::{Request, Response, Status};
 
 static HELP_ARTICLES: OnceLock<Vec<HelpArticle>> = OnceLock::new();
 static TOOLTIPS: OnceLock<Vec<Tooltip>> = OnceLock::new();
@@ -15,7 +16,7 @@ impl MyDocsService {
     }
 }
 
-fn get_articles() -> &'static Vec<HelpArticle> {
+pub fn get_articles() -> &'static Vec<HelpArticle> {
     HELP_ARTICLES.get_or_init(|| {
         vec![
             HelpArticle {
@@ -58,7 +59,7 @@ fn get_articles() -> &'static Vec<HelpArticle> {
     })
 }
 
-fn get_video_tutorials() -> &'static Vec<VideoTutorial> {
+pub fn get_video_tutorials() -> &'static Vec<VideoTutorial> {
     VIDEO_TUTORIALS.get_or_init(|| {
         vec![
             VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string() },
@@ -75,7 +76,7 @@ fn get_video_tutorials() -> &'static Vec<VideoTutorial> {
     })
 }
 
-fn get_tooltips() -> &'static Vec<Tooltip> {
+pub fn get_tooltips() -> &'static Vec<Tooltip> {
     TOOLTIPS.get_or_init(|| {
         vec![
             Tooltip {

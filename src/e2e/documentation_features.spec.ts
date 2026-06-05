@@ -12,7 +12,7 @@ test.describe('Help Center Page', () => {
 
     await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
 
-    await expect(page.locator('text=Welcome to OneHumanCorp!')).toBeVisible();
+    await expect(page.locator('text=Welcome to One Human Corp!')).toBeVisible();
   });
 });
 
