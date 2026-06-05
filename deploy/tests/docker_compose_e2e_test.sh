@@ -104,6 +104,7 @@ docker version
 docker info
 
 log "Starting Docker Compose stack ..."
+export MINIMAX_API_KEY="${MINIMAX_API_KEY:-}"
 compose up -d postgres valkey server
 
 SERVER_BINDING="$(compose port server 8080)"
