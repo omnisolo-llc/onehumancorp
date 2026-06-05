@@ -760,6 +760,7 @@ impl DB {
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         tenant_id TEXT NOT NULL DEFAULT 'system',
+                        organization_id TEXT NOT NULL DEFAULT 'system',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
                         last_synced_at TIMESTAMP,
