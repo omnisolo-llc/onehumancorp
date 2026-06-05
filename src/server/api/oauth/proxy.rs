@@ -44,13 +44,17 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
-            let code_encoded = urlencoding::encode(&query.code);
-            let state_encoded = urlencoding::encode(&actual_state);
+            let mut code_encoded = String::new();
+            code_encoded.extend(reqwest::Url::parse(&format!("http://a/?{}", query.code)).unwrap().query().unwrap().chars());
+            let mut state_encoded = String::new();
+            state_encoded.extend(reqwest::Url::parse(&format!("http://a/?{}", actual_state)).unwrap().query().unwrap().chars());
             let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
                 tunnel_base_url, tunnel_id, code_encoded, state_encoded);
             for (k, v) in query.extra {
-                let k_encoded = urlencoding::encode(&k);
-                let v_encoded = urlencoding::encode(&v);
+                let mut k_encoded = String::new();
+                k_encoded.extend(reqwest::Url::parse(&format!("http://a/?{}", k)).unwrap().query().unwrap().chars());
+                let mut v_encoded = String::new();
+                v_encoded.extend(reqwest::Url::parse(&format!("http://a/?{}", v)).unwrap().query().unwrap().chars());
                 redirect_url.push_str(&format!("&{}={}", k_encoded, v_encoded));
             }
             return Redirect::temporary(&redirect_url).into_response();

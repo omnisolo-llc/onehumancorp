@@ -150,7 +150,6 @@ rust_library(
         "@crates//:tracing-subscriber",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
-        "@crates//:urlencoding",
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
