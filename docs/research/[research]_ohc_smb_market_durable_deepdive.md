@@ -1,7 +1,7 @@
 # SMB Platform Market Mapping & Competitor Deep Dive: Durable
 
 ## Executive Summary
-This report maps the current landscape of the small business platform market, segmenting traditional giants from rising AI-native upstarts. Through a deep-dive audit into **Durable** (a leading AI-native competitor) and an analysis of adjacent SMB infrastructure orchestration platforms (Zapier, Make, Temporal, etc.), we identify critical feature gaps, analyze user sentiment, and highlight unresolved SMB pain points. Finally, we provide structured, agentic solutions using OHC's unique "Teammate Mesh" architecture to address these gaps and dominate the market.
+This report maps the current landscape of the small business platform market, segmenting traditional giants from rising AI-native upstarts. Through a deep-dive audit into **Durable** (a leading AI-native competitor), we identify critical feature gaps, analyze user sentiment, and highlight unresolved SMB pain points. Finally, we provide structured, agentic solutions using OHC's unique "Teammate Mesh" architecture to address these gaps and dominate the market.
 
 ---
 
@@ -22,17 +22,30 @@ This report maps the current landscape of the small business platform market, se
 | 10. Hostinger (Zyro) | hostinger.com | Ultra-affordable, grid-based builder | Budget-conscious beginners |
 
 
-### Adjacent SMB Infrastructure Orchestration Platforms
-| Platform | URL | Core Value Proposition | Target Segment | Orchestration / Swarm Capabilities | Pricing | Tradeoffs |
-|---|---|---|---|---|---|---|
-| 1. Zapier | zapier.com | SMB-friendly trigger-based automation | General SMBs, non-technical users | Linear workflows (Zaps), basic conditional logic, massive app ecosystem | Freemium (limited), $19.99/mo for basic, scales rapidly with volume | High volume can be very expensive; lacks deep stateful execution or custom UI generation |
-| 2. Make (Integromat) | make.com | Visual orchestration with deep logic | Tech-savvy SMBs, ops teams | Advanced visual flow builder, iterators, error handling | Freemium, $9/mo for core, highly affordable scaling | Steeper learning curve than Zapier; UI can become cluttered for very complex flows |
-| 3. n8n | n8n.io | Fair-code/open-source workflow automation | Developers, technical founders | Code-first and visual, deep webhook support, robust data manipulation | Free (self-hosted), Cloud starts at €20/mo | Requires self-hosting or higher technical skills to fully leverage; smaller community than Zapier |
-| 4. Workato | workato.com | Enterprise-grade iPaaS orchestration | Mid-market to Enterprise | "Recipes" for complex enterprise integrations, high security | Custom Enterprise Pricing (Often $10k+/yr) | Prohibitively expensive and complex for typical SMBs; overkill for simple workflows |
-| 5. Temporal | temporal.io | Durable code execution and state management | Engineering teams, complex distributed systems | Re-entrant workflows, massive scale, guaranteed state | Open-source, Cloud pricing based on actions | Extremely technical; requires dedicated engineering to implement and maintain; not for end-users |
-| 6. Camunda | camunda.com | BPMN-based workflow orchestration | Process-heavy enterprises | Visual BPMN modeling, human-in-the-loop, microservices orchestration | Open-source, Enterprise pricing | Geared towards heavy enterprise process management; high overhead for SMBs |
-| 7. Retool Workflows | retool.com | Visual backend logic connected to UI | Internal tool builders | Cron jobs, webhooks, connects directly to Retool UIs | Included with Retool ($10/user/mo) | Tied to the Retool ecosystem; best for internal operations rather than customer-facing automation |
-| 8. Huginn | github.com/huginn/huginn | Open-source agentic automation | Hobbyists, hackers | "Agents" that scrape, watch, and react to the web | Free (Open Source) | Requires complete self-hosting and maintenance; UI is dated; no official support |
+### Top Adjacent SMB Orchestration Platforms
+| Platform | URL | Core Value Proposition | Key Target Audience |
+|---|---|---|---|
+| 1. Zapier | zapier.com | Ubiquitous point-to-point integration | Every SMB, general automation |
+| 2. Make | make.com | Visual, complex branching workflows | Operations teams, agencies |
+| 3. n8n | n8n.io | Source-available, highly technical workflows | Developers, tech-savvy founders |
+| 4. Workato | workato.com | Enterprise-grade iPaaS with AI | Mid-market to Enterprise IT |
+| 5. Temporal | temporal.io | Durable execution for code-based workflows | Software engineering teams |
+| 6. Camunda | camunda.com | BPMN-standard process orchestration | Enterprise operations, Java shops |
+| 7. Retool | retool.com | Build internal tools & workflows fast | Developers, internal ops teams |
+| 8. Huginn | github.com/huginn/huginn | Open-source agentic web scraping/events | Hackers, self-hosters |
+
+
+### Top Adjacent SMB Orchestration Platforms
+| Platform | URL | Core Value Proposition | Key Target Audience |
+|---|---|---|---|
+| 1. Zapier | zapier.com | Ubiquitous point-to-point integration | Every SMB, general automation |
+| 2. Make | make.com | Visual, complex branching workflows | Operations teams, agencies |
+| 3. n8n | n8n.io | Source-available, highly technical workflows | Developers, tech-savvy founders |
+| 4. Workato | workato.com | Enterprise-grade iPaaS with AI | Mid-market to Enterprise IT |
+| 5. Temporal | temporal.io | Durable execution for code-based workflows | Software engineering teams |
+| 6. Camunda | camunda.com | BPMN-standard process orchestration | Enterprise operations, Java shops |
+| 7. Retool | retool.com | Build internal tools & workflows fast | Developers, internal ops teams |
+| 8. Huginn | github.com/huginn/huginn | Open-source agentic web scraping/events | Hackers, self-hosters |
 
 ### Top 10 AI-Native Competitors
 | Platform | URL | AI Capabilities | Traction Driver |
@@ -75,6 +88,14 @@ This report maps the current landscape of the small business platform market, se
 
 ---
 
+
+### Internal Context: Teammate Mesh & Orchestration
+OHC's "Teammate Mesh" architecture bridges the gap between traditional UI-driven platforms (like Shopify) and pure orchestration engines (like Make/Temporal). By running a background orchestrator that coordinates AI agents, OHC allows a zero-technical business owner to reap the benefits of complex, durable state execution without writing workflows or connecting API keys.
+
+
+### Internal Context: Teammate Mesh & Orchestration
+OHC's "Teammate Mesh" architecture bridges the gap between traditional UI-driven platforms (like Shopify) and pure orchestration engines (like Make/Temporal). By running a background orchestrator that coordinates AI agents, OHC allows a zero-technical business owner to reap the benefits of complex, durable state execution without writing workflows or connecting API keys.
+
 ## Track 3: OHC Gap & Pain Point Identification
 
 ### Gap Matrix: Durable vs. OHC vs. Traditional
@@ -101,10 +122,6 @@ This report maps the current landscape of the small business platform market, se
 *   **Fatima (Food Cart):** Research on `r/foodtrucks` reveals operators abandoning complex POS systems because they cannot handle offline scenarios or quick prep-time adjustments on the fly. They need dynamic, operations-aware inventory, not just a digital menu.
 
 ### Agentic Solution Design: The "Zero-Drop" Autonomous Operations Workflow
-
-**Internal Context: Teammate Mesh & Orchestration**
-The OHC architecture natively outperforms fragmented third-party orchestration (like Zapier or Make) by using a unified `Teammate Mesh` to coordinate swarm agents directly. Operating seamlessly in both Cloud (Redis/Redlock) and Standalone (SQLite/Local file locks) modes, it provides native distributed locking, mission state handoffs (`system:state_handoff`), and cross-mode health monitoring. This prevents the fragility and high cost of API-glued workflows, ensuring reliable, stateful "Zero-Drop" operations even when the business owner is offline or switching environments.
-
 
 **Architecture Flow:**
 1. **Intake (The Ambassador):** Customer submits a custom request via the OHC site.

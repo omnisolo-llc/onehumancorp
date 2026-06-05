@@ -4,44 +4,18 @@
 High-Performance Agentic Background Job Queue
 
 ## Problem Statement
-The OHC Hybrid Agentic OS requires a robust, high-performance background job queue to reliably execute asynchronous tasks. Non-technical business owners expect instantaneous UI responses, but AI agent workflows (like the Customer Success "Ambassador" drafting a reply, or the Operations Agent synchronizing inventory) take time. Currently, the lack of a formalized, highly scalable queueing system with persistence, retries, and dead-letter queues limits the platform's ability to scale and guarantees job execution, leading to potential data inconsistencies and "lost" tasks.
+Small business owners rely on OneHumanCorp (OHC) to automate complex tasks silently in the background. Whether it's the Operations Agent updating inventory across channels for Priya's boutique, or the Marketing Agent drafting follow-up emails for Leo's tutoring students, these tasks must execute reliably without impacting the frontend responsiveness. Currently, as the user base scales, synchronous processing or inefficient batching can lead to dropped tasks, sluggish UI performance, and delayed automations. We need a high-performance, distributed background job queue designed specifically for agentic workflows to ensure seamless, invisible automation.
 
 ## Research Report
-- **Market Baseline (Shopify/Stripe):** Leading platforms rely on distributed, durable job queues (e.g., Sidekiq, Celery) to ensure eventual consistency. Stripe extensively uses PostgreSQL-backed queues for transactional guarantees alongside business data.
-- **Current OHC Constraints:** The Go backend utilizes simple goroutines or basic channels which are not durable across server restarts and do not support complex multi-tenant isolation safely.
-- **Architectural Proposal:** Implement a PostgreSQL-backed job queue leveraging the `SKIP LOCKED` pattern. This provides ACID transactional guarantees, seamlessly integrates with our existing multi-tenant data model (enforcing Row Level Security), and avoids the operational complexity of introducing a new infrastructure component (like Kafka or RabbitMQ).
+**Competitive Analysis:**
+- **Shopify:** Utilizes a robust background processing system (Sidekiq/Resque equivalents) to handle webhooks, email dispatches, and inventory updates. This ensures the merchant dashboard remains highly responsive.
+- **Wix:** Processes background tasks but often surfaces loading indicators or delays to the user during complex operations like site duplication or mass inventory updates.
+- **Stripe:** Exceptional at background processing for webhooks and payment state transitions, ensuring high availability and exact-once processing semantics.
+
+**Market Needs:**
+For OHC to succeed as an "invisible" OS, the background queue must handle potentially millions of AI-driven micro-tasks (e.g., parsing an Instagram DM, generating a quote, updating the ledger) with sub-second latency for critical tasks and guaranteed delivery. It must support prioritization, retries, and rate-limiting to prevent LLM API exhaustion.
 
 ## Design Doc
-### High-Level Architecture
-- **Data Model (`agent_jobs`):** A centralized table storing job payloads, execution status, tenant isolation keys, and retry counters.
-  ```sql
-  CREATE TABLE agent_jobs (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      tenant_id VARCHAR NOT NULL,
-      job_type VARCHAR NOT NULL,
-      payload JSONB NOT NULL,
-      status VARCHAR NOT NULL DEFAULT 'pending',
-      attempts INT NOT NULL DEFAULT 0,
-      max_attempts INT NOT NULL DEFAULT 3,
-      run_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      locked_at TIMESTAMPTZ,
-      locked_by VARCHAR
-  );
-  CREATE INDEX idx_agent_jobs_pickup ON agent_jobs (status, run_at) WHERE status = 'pending';
-  ```
-- **Execution Workers:** A pool of Go workers continuously polls the table using:
-  ```sql
-  UPDATE agent_jobs
-  SET status = 'processing', locked_at = now(), locked_by = $1, attempts = attempts + 1
-  WHERE id = (
-      SELECT id FROM agent_jobs
-      WHERE status = 'pending' AND run_at <= now()
-      ORDER BY run_at ASC
-      FOR UPDATE SKIP LOCKED
-      LIMIT 1
-  ) RETURNING *;
-  ```
-- **Agent Integration:** AI departments (Marketing, Sales, Operations) publish intent payloads to this queue rather than executing long-running LLM calls synchronously.
 
 ### Architecture Diagram
 ```mermaid
@@ -52,7 +26,8 @@ graph TD;
 
     subgraph OHC Backend
         API --> ActionController[Action Controller];
-        ActionController --> Queue[(Postgres agent_jobs)];
+        ActionController --> Queue[Distributed Job Queue (Redis/NATS)];
+        ActionController --> DB[(Postgres Main DB)];
     end
 
     subgraph Worker Nodes
@@ -68,20 +43,49 @@ graph TD;
     end
 ```
 
-### Mobile-First & UX Impact
-- **Optimistic UI:** When Carlos the Handyman approves a quote, the UI updates instantly. The heavy lifting (email generation, calendar syncing, PDF creation) is pushed to the queue.
-- **Visuals:** Uses skeleton loading states and subtle push notifications upon job completion instead of blocking loaders.
+### Data Model & Invariants
+```mermaid
+erDiagram
+    TENANT ||--o{ JOB : "enqueues"
+    JOB {
+        uuid id
+        string type "e.g., ig_dm_reply, inventory_sync"
+        json payload
+        string status "pending, processing, completed, failed"
+        int priority "0 (high) to 10 (low)"
+        int retry_count
+        timestamp created_at
+        timestamp process_after
+    }
+    JOB ||--o{ JOB_LOG : "has"
+    JOB_LOG {
+        uuid id
+        string message
+        timestamp logged_at
+    }
+```
+**Invariants:**
+- **Multi-Tenant Isolation:** Every job must strictly encapsulate its `tenant_id`. Workers must assume the tenant context before execution to guarantee zero data leakage.
+- **Idempotency:** Job execution must be idempotent to handle at-least-once delivery semantics safely.
+
+### Mobile UX Flow (375px First)
+1.  **Trigger:** Leo creates a new "Holiday Discount" campaign on his phone. He taps "Launch Campaign".
+2.  **Optimistic UI:** The button immediately transitions to a checkmark stating "Campaign Launched". No spinning loader blocks his screen.
+3.  **Background Processing:** The app enqueues a background job to generate personalized emails for his 50 active students using the Marketing Agent.
+4.  **Completion Notification:** Once the queue finishes processing (seconds or minutes later), Leo receives a subtle push notification: "Your Holiday Campaign emails have been sent!"
+
+### AI Agent Integration Points
+- **The Orchestrator Agent:** Dynamically routes complex, multi-step tasks into a DAG (Directed Acyclic Graph) of smaller jobs to be executed concurrently by different departments.
+- **The Customer Success Agent:** Ingests high-priority jobs (e.g., a customer DM asking for a quote) and processes them ahead of lower-priority background syncs.
+
+### Key Design Decisions
+- **Asynchronous by Default:** Any action that doesn't strictly require a synchronous response to the client must be offloaded to the queue.
+- **Priority Tiers:** The queue must support strict priority levels (e.g., P0 for real-time chat replies, P3 for daily reporting rollups).
+- **Graceful Degradation:** If LLM APIs are rate-limited or degraded, jobs must safely pause and exponentially back off without failing.
 
 ## Implementation Prompt
-**Objective:** Architect and implement a PostgreSQL-backed Job Queue for the Go backend.
-**CUJ & Acceptance Criteria:**
-1. Define the `agent_jobs` PostgreSQL schema migration with strict multi-tenant Row Level Security.
-2. Implement the `JobQueue` repository to `enqueue` and `dequeue` jobs using the `FOR UPDATE SKIP LOCKED` pattern.
-3. Implement a worker pool that processes jobs, handles exponential backoff for retries, and moves failed jobs to a dead-letter state after max attempts.
-4. Provide comprehensive unit and integration tests verifying transactional safety and multi-worker contention handling.
-
-## Testing & Verification Note
-Build verification was skipped during this research phase due to environment issues (missing `bazelisk` binary and external `cncf/xds` network failure), so a maintainer MUST run the test suite manually before merging any implementation of this design.
+**To Implementer Agent:**
+Implement a distributed, high-performance background job queue. Define the core `Job` and `Worker` interfaces. Ensure the queue supports priority levels, retries with exponential backoff, and strict multi-tenant isolation based on `tenant_id`. Create a robust API for enqueueing tasks from the Action Controller. The system must guarantee at-least-once delivery and encourage idempotent worker design. Do not surface queue internals or errors directly to the mobile UI; rely on optimistic updates and push notifications for status changes.
 
 ## Priority
 P0
