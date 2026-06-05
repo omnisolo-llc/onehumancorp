@@ -872,7 +872,10 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                let mut sys_tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_system_context(&mut *sys_tx).await?;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&mut *sys_tx).await?;
+                sys_tx.commit().await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
@@ -946,7 +949,10 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                let mut sys_tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_system_context(&mut *sys_tx).await?;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&mut *sys_tx).await?;
+                sys_tx.commit().await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
@@ -987,14 +993,17 @@ impl DB {
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
                 .bind(content)
                 .bind(embedding)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await?;
+                tx.commit().await?;
             }
         };
 
@@ -1025,6 +1034,8 @@ impl DB {
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -1033,8 +1044,9 @@ impl DB {
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -1064,6 +1076,8 @@ impl DB {
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -1132,7 +1146,10 @@ impl DB {
                     .await?.rows_affected()
             },
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                let mut sys_tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_system_context(&mut *sys_tx).await?;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&mut *sys_tx).await?;
+                sys_tx.commit().await?;
                 let mut total_affected = 0;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
@@ -1504,7 +1521,15 @@ mod security_tests_final {
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-                        let _ = fs::File::create(&db_path);
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::OpenOptionsExt;
+                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = std::fs::File::create(&db_path);
+                        }
 
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
@@ -1534,7 +1559,7 @@ mod security_tests_final {
                         }
                         #[cfg(not(unix))]
                         {
-                            let _ = fs::File::create(&db_path);
+                            let _ = std::fs::File::create(&db_path);
                         }
 
                         let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
