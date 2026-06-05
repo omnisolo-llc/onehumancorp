@@ -53,7 +53,7 @@ test.describe('In-App Video Tutorials', () => {
         await expect(modalContainer.locator('div.max-w-\\[375px\\]')).toBeVisible();
 
         // Verify the video title is shown in the modal header
-        await expect(modalContainer.locator('h3', { hasText: 'How to set up your first store easily' })).toBeVisible();
+        await expect(modalContainer.locator('h3', { hasText: 'How to set up your first store easily' }).nth(1)).toBeVisible();
 
         // Click the close button
         const closeButton = modalContainer.locator('button[aria-label="Close video"]');
