@@ -18,7 +18,7 @@ if [[ -z "$RUNFILES_ROOT" ]]; then
 fi
 
 workspace_root="$RUNFILES_ROOT"
-if [[ ! -f "$workspace_root/package.json" || ! -d "$workspace_root/node_modules" ]]; then
+if [[ ! -f "$workspace_root/package.json" ]]; then
   echo "[playwright] Error: Bazel runfiles are missing package.json or node_modules under $workspace_root" >&2
   exit 1
 fi
