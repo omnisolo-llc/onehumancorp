@@ -319,7 +319,7 @@ impl Agent {
             } else {
                 phase_cfg.server_system_message = format!("You are in the {} phase.", phase_prompt);
             }
-            let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&phase_cfg, session_tools).build();
+            let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&phase_cfg, session_tools, None).build();
 
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
@@ -548,7 +548,7 @@ impl Agent {
         let mut total_session_cost = 0.0;
         let mut budget_tracker = crate::budget::BudgetTracker::default();
 
-        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools).build();
+        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools, None).build();
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools.iter().map(|t| crate::types::ToolDefinition {
             name: t.name.clone(),
             description: t.description.clone(),
@@ -818,7 +818,7 @@ impl Agent {
         let tools_def_arc = std::sync::Arc::new(tools_def);
         let session_tools_arc = std::sync::Arc::new(session_tools);
 
-        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg_arc, &session_tools_arc).build();
+        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg_arc, &session_tools_arc, None).build();
 
         // --- NODE 1: LLM Call ---
         let llm_cfg = cfg_arc.clone();
@@ -1376,7 +1376,7 @@ impl Agent {
             planner_cfg.server_system_message = planner_instructions;
         }
 
-        let planner_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&planner_cfg, &[]).build();
+        let planner_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&planner_cfg, &[], None).build();
 
         let plan_req = ChatRequest {
             model: cfg.model.clone(),
@@ -1620,7 +1620,7 @@ impl Agent {
             replier_cfg.server_system_message = replier_instructions;
         }
 
-        let replier_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&replier_cfg, &[]).build();
+        let replier_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&replier_cfg, &[], None).build();
 
         let replier_req = ChatRequest {
             model: cfg.model.clone(),
@@ -2053,7 +2053,7 @@ impl Agent {
 
         let max_iterations = if final_cfg.max_iterations <= 0 { 100 } else { final_cfg.max_iterations };
 
-        let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&final_cfg, &session_tools).build();
+        let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&final_cfg, &session_tools, None).build();
 
         // Long-Term Memory Retrieval
         let mut checkpoint_history: Vec<String> = Vec::new();
@@ -5360,7 +5360,7 @@ mod tests {
             execute: std::sync::Arc::new(MockToolExecutor),
         };
 
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool]).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None).build();
 
         let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
 
@@ -5375,7 +5375,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
         assert_eq!(
             prompt,
             "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
@@ -5390,7 +5390,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
         assert_eq!(
             prompt,
             "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
@@ -5400,7 +5400,7 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[]).build();
+        let prompt2 = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None).build();
         assert_eq!(
             prompt2,
             "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
@@ -5418,27 +5418,33 @@ mod tests {
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
         // This should safely truncate without panicking
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
-        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
+        let notice = "[User Instructions TRUNCATED TO 32KiB]\n...\n";
         assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768 + notice.len());
+        // Also verify the notice is at the beginning of the user instructions
+        assert!(prompt.contains("[User Instructions]\n[User Instructions TRUNCATED TO 32KiB]"));
     }
 
-    #[test]
+        #[test]
     fn test_hierarchical_system_prompt_truncation_safe_boundary() {
         let mut cfg = AgentRunConfig::default();
         // Construct a string where the 32768th byte is in the middle of a multibyte character.
-        // Let's use 1-byte chars until 32766, then a 3-byte char.
-        cfg.user_instructions = "a".repeat(32766);
-        cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
+        // Let's use a 3-byte char at the start, followed by 1-byte chars.
+        cfg.user_instructions = "€".to_string(); // 3 bytes
+        cfg.user_instructions.push_str(&"a".repeat(32766)); // total 32769 bytes.
 
-        // Truncating at 32768 would split the '€' character.
-        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
+        // Truncating 32768 bytes from the *end* means we start dropping from the *beginning*.
+        // We drop 1 byte, which splits the '€'. So we must skip 3 bytes.
+        let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None).build();
 
-        let user_part = prompt.trim_start_matches("[User Instructions]\n");
-        // The truncation should back up to 32766 to avoid splitting the character.
-        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
+        let user_part = prompt.split("[User Instructions]
+").nth(1).unwrap();
+        let notice = "[User Instructions TRUNCATED TO 32KiB]
+...
+";
+        // It drops the whole '€' (3 bytes), keeping the 32766 'a's.
         assert_eq!(user_part.len(), 32766 + notice.len());
     }
 
@@ -7113,7 +7119,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = true;
 
         let tools = vec![];
-        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
         let prompt = builder.build();
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
@@ -7130,7 +7136,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let tools = vec![];
-        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None);
         let prompt = builder.build();
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
@@ -7614,5 +7620,44 @@ mod guardrail_tests {
 
         let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
         assert!(has_tripped_event);
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_hierarchical_system_prompt_cascade_order() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let root_dir = temp_dir.path().join("root");
+        fs::create_dir(&root_dir).unwrap();
+        let root_agents = root_dir.join("AGENTS.md");
+        fs::write(&root_agents, "ROOT_INSTRUCTIONS").unwrap();
+
+        let child_dir = root_dir.join("child");
+        fs::create_dir(&child_dir).unwrap();
+        let child_agents = child_dir.join("AGENTS.md");
+        fs::write(&child_agents, "CHILD_INSTRUCTIONS").unwrap();
+
+        let grandchild_dir = child_dir.join("grandchild");
+        fs::create_dir(&grandchild_dir).unwrap();
+
+        let cfg = AgentRunConfig::default();
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], Some(grandchild_dir));
+        let prompt = builder.build();
+
+        // The prompt should contain both instructions.
+        // Since we reverse the paths, ROOT should appear BEFORE CHILD.
+        let root_idx = prompt.find("ROOT_INSTRUCTIONS").unwrap_or(usize::MAX);
+        let child_idx = prompt.find("CHILD_INSTRUCTIONS").unwrap_or(usize::MAX);
+
+        assert!(root_idx < usize::MAX, "Prompt missing ROOT_INSTRUCTIONS");
+        assert!(child_idx < usize::MAX, "Prompt missing CHILD_INSTRUCTIONS");
+        assert!(root_idx < child_idx, "ROOT_INSTRUCTIONS should appear before CHILD_INSTRUCTIONS to allow child precedence overriding");
     }
 }

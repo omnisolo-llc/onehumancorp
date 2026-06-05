@@ -79,7 +79,7 @@ pub struct HierarchicalPromptBuilder {
 }
 
 impl HierarchicalPromptBuilder {
-    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> Self {
+    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool], base_dir: Option<std::path::PathBuf>) -> Self {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
@@ -93,16 +93,23 @@ impl HierarchicalPromptBuilder {
         let mut source_name = "User Instructions";
         let mut user_instr = if cfg.user_instructions.is_empty() {
             let mut combined_agents_md = String::new();
-            let mut current_dir = std::env::current_dir().ok();
+            let mut paths = Vec::new();
+            let mut current_dir = base_dir.or_else(|| std::env::current_dir().ok());
             while let Some(dir) = current_dir {
                 let agents_file = dir.join("AGENTS.md");
-                if let Ok(content) = std::fs::read_to_string(&agents_file) {
-                    if !combined_agents_md.is_empty() {
-                        combined_agents_md.insert_str(0, "\n\n");
-                    }
-                    combined_agents_md.insert_str(0, &content);
+                if agents_file.exists() {
+                    paths.push(agents_file);
                 }
                 current_dir = dir.parent().map(|p| p.to_path_buf());
+            }
+            paths.reverse();
+            for path in paths {
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    if !combined_agents_md.is_empty() {
+                        combined_agents_md.push_str("\n\n");
+                    }
+                    combined_agents_md.push_str(&content);
+                }
             }
             if !combined_agents_md.is_empty() {
                 source_name = "AGENTS.md";
@@ -113,15 +120,14 @@ impl HierarchicalPromptBuilder {
             cfg.user_instructions.clone()
         };
 
-        let mut end_idx = 32768;
         if user_instr.len() > 32768 {
-            while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
-                end_idx -= 1;
+            let mut start_idx = user_instr.len() - 32768;
+            while start_idx < user_instr.len() && !user_instr.is_char_boundary(start_idx) {
+                start_idx += 1;
             }
-            let truncated = &user_instr[..end_idx];
-            user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
+            let truncated = &user_instr[start_idx..];
+            user_instr = format!("[{} TRUNCATED TO 32KiB]\n...\n{}", source_name, truncated);
         }
-
         Self {
             server_system_message: cfg.server_system_message.clone(),
             tool_definitions: tool_defs,
