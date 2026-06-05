@@ -21,9 +21,6 @@ rust_library(
         "@crates//:chrono",
         "@crates//:uuid",
         "@crates//:sqlx",
-        "@crates//:axum",
-        "@crates//:futures",
-        "@crates//:base64",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
