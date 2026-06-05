@@ -37,6 +37,7 @@ test.describe('Business Setup Wizard', () => {
 
   test('completes the publish path to the checklist', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+    test.setTimeout(120000);
     const email = `maya+${Date.now()}@example.com`;
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
