@@ -76,7 +76,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
 
   for candidate in "${BROWSER_PATH_CANDIDATES[@]}"; do
     if [[ -d "$candidate" ]]; then
-      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$candidate")"
+      export PLAYWRIGHT_BROWSERS_PATH="$(cd "$candidate" && pwd -L)"
       break
     fi
   done
@@ -84,13 +84,13 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       ACTUAL_SHELL=$(find "$RUNFILES_ROOT" \( -name "chrome-headless-shell" -o -name "headless_shell" \) -type f -executable 2>/dev/null | head -n 1)
       if [[ -n "$ACTUAL_SHELL" ]]; then
-          ACTUAL_SHELL_ABS="$(realpath "$ACTUAL_SHELL")"
+          ACTUAL_SHELL_ABS="$(cd "$(dirname "$ACTUAL_SHELL")" && pwd -L)/$(basename "$ACTUAL_SHELL")"
           export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
       fi
   fi
 
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+      export PLAYWRIGHT_BROWSERS_PATH="$(cd "$PLAYWRIGHT_BROWSERS_PATH" && pwd -L)"
       echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
   else
       echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
@@ -204,6 +204,50 @@ with socket.socket() as sock:
 PY
 }
 
+playwright_port_window_start() {
+  local target="${TEST_TARGET:-playwright}"
+  if [[ "$target" =~ playwright_shard_([0-9]+)_of_([0-9]+) ]]; then
+    local shard_index="${BASH_REMATCH[1]}"
+    echo $((30000 + (shard_index - 1) * 20))
+    return
+  fi
+
+  local hash
+  hash="$(printf '%s' "$target" | cksum | awk '{print $1}')"
+  echo $((30400 + (hash % 40) * 20))
+}
+
+is_port_free() {
+  local port="$1"
+  python3 - "$port" <<'PY'
+import socket
+import sys
+
+port = int(sys.argv[1])
+with socket.socket() as sock:
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind(("127.0.0.1", port))
+    except OSError:
+        sys.exit(1)
+PY
+}
+
+pick_window_port() {
+  local window_start="$1"
+  local offset="$2"
+  local port
+  for step in $(seq 0 9); do
+    port=$((window_start + offset + step))
+    if is_port_free "$port"; then
+      echo "$port"
+      return
+    fi
+  done
+
+  pick_free_port
+}
+
 cleanup() {
   local exit_code=$?
   if [[ -n "${NEXT_PID:-}" ]]; then
@@ -301,9 +345,12 @@ if [[ -n "$AGENT_BIN" ]]; then
   export OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-$AGENT_BIN}"
 fi
 
-# Pick currently free ports for the server to avoid collisions during parallel tests.
-OHC_SERVER_PORT="$(pick_free_port)"
-OHC_GRPC_SERVER_PORT="$(pick_free_port)"
+# Pick ports from a target-specific window. Plain "bind to port 0, close, then
+# later start the server" is racy when CI runs all Playwright shard targets in
+# parallel.
+PORT_WINDOW_START="$(playwright_port_window_start)"
+OHC_SERVER_PORT="$(pick_window_port "$PORT_WINDOW_START" 0)"
+OHC_GRPC_SERVER_PORT="$(pick_window_port "$PORT_WINDOW_START" 10)"
 export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
@@ -372,8 +419,11 @@ if [[ -n "${NEXT_APP_PACKAGE_JSON:-}" ]]; then
 
   for candidate in "${NEXT_APP_PACKAGE_JSON_CANDIDATES[@]}"; do
     if [[ -f "$candidate" ]]; then
-      NEXT_APP_ROOT="$(dirname "$(realpath "$candidate")")"
-      break
+      candidate_dir="$(dirname "$candidate")"
+      if [[ -d "$candidate_dir/src/app" && -d "$candidate_dir/node_modules" ]]; then
+        NEXT_APP_ROOT="$(cd "$candidate_dir" && pwd -L)"
+        break
+      fi
     fi
   done
 fi
@@ -382,7 +432,7 @@ if [[ -z "$NEXT_APP_ROOT" ]]; then
   for package_json in $(find "$workspace_root" -path '*/node_modules/*' -prune -o -name package.json -print); do
     candidate="$(dirname "$package_json")"
     if [[ -d "$candidate/src/app" ]]; then
-      NEXT_APP_ROOT="$(realpath "$candidate")"
+      NEXT_APP_ROOT="$(cd "$candidate" && pwd -L)"
       break
     fi
   done
@@ -396,7 +446,7 @@ if [[ -z "$NEXT_APP_ROOT" ]]; then
   for package_json in $(find "$RUNFILES_ROOT" -path '*/node_modules/*' -prune -o -name package.json -print); do
     candidate="$(dirname "$package_json")"
     if [[ -d "$candidate/src/app" ]]; then
-      NEXT_APP_ROOT="$(realpath "$candidate")"
+      NEXT_APP_ROOT="$(cd "$candidate" && pwd -L)"
       break
     fi
   done
@@ -444,7 +494,7 @@ NEXT_PID=$!
 
 echo "[playwright] Waiting for Next UI on port $NEXT_PORT..."
 for i in $(seq 1 120); do
-  if curl -fsS "$BASE_URL" >/dev/null 2>&1; then
+  if curl -sS -o /dev/null "$BASE_URL/login" >/dev/null 2>&1; then
     echo "[playwright] Next UI is ready."
     break
   fi
