@@ -389,7 +389,6 @@ impl MinimaxClient {
     }
 }
 
-#[allow(dead_code)]
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
@@ -397,7 +396,6 @@ pub struct LocalLLMClient {
     cache: PromptCache,
 }
 
-#[allow(dead_code)]
 impl LocalLLMClient {
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
