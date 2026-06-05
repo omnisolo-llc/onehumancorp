@@ -55,7 +55,6 @@ test.describe('Cost Dashboard', () => {
   });
 
   test('should return correct JSON payload from backend API', async ({ request }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     const response = await request.get('/api/billing/cost-dashboard');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
