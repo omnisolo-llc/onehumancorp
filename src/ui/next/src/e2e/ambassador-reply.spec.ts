@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Ambassador Auto-Responder CUJ', () => {
   test('Owner connects Meta Graph API and approves Ambassador drafted reply', async ({ page, request }) => {
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // 1. Connect Instagram via Integrations
     // Start from login to satisfy the rules
     await page.goto('http://localhost:3000/login');
