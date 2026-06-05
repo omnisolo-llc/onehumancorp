@@ -1,0 +1,15 @@
+[package]
+name = "server_integrations_pkpass"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+server_common = { path = "../../common" }
+tracing = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha1 = "0.10"
+zip = "0.6"

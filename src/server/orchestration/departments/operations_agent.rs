@@ -51,12 +51,54 @@ impl Department for OperationsAgent {
             event.payload.clone(),
         ).await?;
 
+        let mut cs_payload = event.payload.clone();
+
+        // If it's an order creation, try to generate a wallet pass
+        if event.event_type == "tenant.order.created" {
+            let customer_id_val = event.payload.get("customer_id").and_then(|v| v.as_str());
+            let order_id_val = event.payload.get("order_id").and_then(|v| v.as_str());
+
+            if let (Some(customer_id), Some(order_id)) = (customer_id_val, order_id_val) {
+                let pass_token = uuid::Uuid::new_v4().to_string();
+                let pass_id = uuid::Uuid::new_v4().to_string();
+                let pass_payload = serde_json::json!({
+                    "order_id": order_id,
+                });
+
+                // Set the current tenant for RLS
+                let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, false)")
+                    .bind(&event.tenant_id)
+                    .execute(&self.orchestrator.get_pool())
+                    .await;
+
+                // Insert into wallet_passes
+                let insert_result: Result<sqlx::postgres::PgQueryResult, sqlx::Error> = sqlx::query(
+                    "INSERT INTO wallet_passes (id, tenant_id, customer_id, token, pass_type, payload) VALUES ($1, $2, $3, $4, $5, $6)"
+                )
+                .bind(&pass_id)
+                .bind(&event.tenant_id)
+                .bind(customer_id)
+                .bind(&pass_token)
+                .bind("store.order")
+                .bind(&pass_payload)
+                .execute(&self.orchestrator.get_pool())
+                .await;
+
+                if insert_result.is_ok() {
+                    let pass_url = format!("https://ohc.store/api/v1/passes/{}", pass_token);
+                    if let Some(obj) = cs_payload.as_object_mut() {
+                        obj.insert("wallet_pass_url".to_string(), serde_json::Value::String(pass_url));
+                    }
+                }
+            }
+        }
+
         // Dispatch event for customer success agent
         let cs_event = DepartmentEvent {
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: event.tenant_id.clone(),
             event_type: "tenant.order.fulfillment_ready".to_string(),
-            payload: event.payload.clone(),
+            payload: cs_payload,
         };
         self.orchestrator.dispatch_event(cs_event).await
     }

@@ -2596,6 +2596,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .route("/api/v1/passes/:token", axum::routing::get(api::wallet::download_pass))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
