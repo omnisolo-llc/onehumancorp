@@ -77,7 +77,7 @@ describe('WebsiteBuilderPage', () => {
 
   it('renders initial setup screen', async () => {
     render(<WebsiteBuilderPage />);
-    expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
+    expect(screen.getByText('10-Minute Setup')).toBeInTheDocument();
 
     // Check local storage init fetching
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.any(Object));
