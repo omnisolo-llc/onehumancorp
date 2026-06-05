@@ -77,7 +77,7 @@ impl KvMcpServer {
     }
 
     fn is_standalone(&self) -> bool {
-        ::server_utils::runtime::is_standalone_runtime() || self.redis_client.is_none()
+        ::server_common::runtime::is_standalone_runtime() || self.redis_client.is_none()
     }
 
     pub async fn invoke_tool(&self, req: &McpInvokeRequest) -> Result<McpInvokeResponse, tonic::Status> {

@@ -102,7 +102,7 @@ impl WizardService for MyWizardService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
-        let is_standalone = ::server_utils::runtime::is_standalone_runtime();
+        let is_standalone = ::server_common::runtime::is_standalone_runtime();
 
         
         let mut health_checks = Vec::new();

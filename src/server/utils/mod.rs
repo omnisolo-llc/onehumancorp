@@ -13,4 +13,3 @@ pub mod cache;
 pub mod sip_protocol;
 
 pub mod payload_validator;
-pub mod runtime;

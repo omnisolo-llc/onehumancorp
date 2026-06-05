@@ -283,7 +283,7 @@ impl SipDB {
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
 
-        let is_standalone = ::server_utils::runtime::is_standalone_runtime();
+        let is_standalone = ::server_common::runtime::is_standalone_runtime();
 
         loop {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
