@@ -37,6 +37,7 @@ export default function GettingStartedArticle() {
 
           <div className="pt-6 border-t border-gray-200/50">
             <WithTooltip id="help-back-btn-tooltip" defaultText="Return to the main Help Center page.">
+            <WithTooltip id="help-back-btn-tooltip" defaultText="Return to the main Help Center page.">
             <button
               onClick={() => router.push('/help')}
               className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-50 text-gray-900 font-bold rounded-xl border border-gray-200 shadow-sm transition-all active:scale-95"
@@ -46,6 +47,7 @@ export default function GettingStartedArticle() {
               </svg>
               Back to Help Center
             </button>
+            </WithTooltip>
             </WithTooltip>
           </div>
         </div>

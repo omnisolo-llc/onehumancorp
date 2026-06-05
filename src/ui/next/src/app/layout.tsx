@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 // TODO: Migrate Help Center and Walkthrough features to Tauri app (src/ui/tauri) as per OHC Architecture.
+// TODO: Migrate Help Center and Walkthrough features to Tauri app (src/ui/tauri) as per OHC Architecture.
 export default function RootLayout({
   children,
 }: {

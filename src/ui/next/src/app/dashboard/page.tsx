@@ -294,7 +294,9 @@ export default function Dashboard() {
                 <div className="app-list-subtitle">Live database state across the store workflow.</div>
               </div>
               <WithTooltip id="view-orders-btn-tooltip" defaultText="View and manage all your customer orders.">
+                <WithTooltip id="view-orders-btn-tooltip" defaultText="View and manage all your customer orders.">
                 <Link href="/orders" className="app-button">Open Orders</Link>
+              </WithTooltip>
               </WithTooltip>
             </div>
             <div className="app-panel-body">
@@ -396,7 +398,9 @@ export default function Dashboard() {
             <div className="app-panel-header">
               <div className="app-panel-title">Inbox Activity</div>
               <WithTooltip id="open-inbox-btn-tooltip" defaultText="Read and reply to messages from your customers.">
+                <WithTooltip id="open-inbox-btn-tooltip" defaultText="Read and reply to messages from your customers.">
                 <Link href="/inbox" className="app-button">Open Inbox</Link>
+              </WithTooltip>
               </WithTooltip>
             </div>
             <div className="app-list">
