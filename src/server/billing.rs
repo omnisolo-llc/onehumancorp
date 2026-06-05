@@ -202,6 +202,22 @@ impl Tracker {
         }
     }
 
+    pub fn get_tenant_cost_cents(&self, tenant_id: &str) -> i64 {
+        if let Some(ref auditor) = self.auditor {
+            auditor.get_tenant_cost_cents(tenant_id)
+        } else {
+            0
+        }
+    }
+
+    pub fn get_total_cost_cents(&self) -> i64 {
+        if let Some(ref auditor) = self.auditor {
+            auditor.get_total_cost_cents()
+        } else {
+            0
+        }
+    }
+
     pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) {
         if let Some(ref auditor) = self.auditor {
             auditor.record_bandwidth_compression(tenant_id, original_bytes, compressed_bytes);
