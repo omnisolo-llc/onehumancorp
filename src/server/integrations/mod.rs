@@ -1,7 +1,10 @@
 pub mod catalog;
 pub mod registry;
 pub mod chat;
+#[cfg(ohc_bazel)]
 pub mod chatwoot;
+#[cfg(not(ohc_bazel))]
+pub use ::server_integrations_chatwoot as chatwoot;
 pub mod githubissues;
 pub mod imessage;
 pub mod jira;
@@ -17,10 +20,12 @@ pub mod meta;
 pub mod google_calendar;
 pub use ::server_integrations_cal_com as cal_com;
 pub use ::server_integrations_sendgrid as sendgrid;
+pub mod lob;
 pub use ::server_integrations_shippo as shippo;
 pub use ::server_integrations_zoom as zoom;
 pub use ::server_integrations_calendly as calendly;
 pub use ::server_integrations_mailchimp as mailchimp;
+
 pub use ::server_integrations_ayrshare as ayrshare;
 pub use ::server_integrations_listmonk as listmonk;
 pub use ::server_integrations_doordash as doordash;

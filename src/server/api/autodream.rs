@@ -7,6 +7,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+#[cfg(ohc_bazel_package)]
+use ::server_lib::autodream::AutoDreamWorker;
+#[cfg(not(ohc_bazel_package))]
 use crate::autodream::AutoDreamWorker;
 
 #[derive(Deserialize)]
@@ -56,6 +59,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
             let embedding = match client.generate_embedding(&params.text).await {
                 Ok(emb) => format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(",")),
                 Err(e) => {
+                    ::server_telemetry::record_error_signal("AutoDream API: failed to generate embedding");
                     tracing::error!("AutoDream API: failed to generate embedding: {}", e);
                     format!("[{}]", vec!["0.0"; 1536].join(", "))
                 }
