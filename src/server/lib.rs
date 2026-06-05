@@ -12,22 +12,24 @@ struct ChatRequest {
 }
 
 #[derive(Clone, serde::Serialize)]
-struct WorkflowRecord {
-    id: String,
-    name: String,
-    workflow: String,
-    task: String,
-    status: String,
-    command: String,
-    created_at: String,
-    output: Option<String>,
-    error: Option<String>,
+pub struct WorkflowRecord {
+    pub id: String,
+    pub name: String,
+    pub workflow: String,
+    pub task: String,
+    pub status: String,
+    pub command: String,
+    pub created_at: String,
+    pub output: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
 struct CreateWorkflowRequest {
     name: String,
     task: String,
+    #[serde(default)]
+    workflow: String,
 }
 
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
@@ -36,7 +38,11 @@ static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_age
 
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
+static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
@@ -87,11 +93,11 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     })
 }
 
-fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
+pub fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
     WORKFLOW_REGISTRY.get_or_init(|| RwLock::new(Vec::new()))
 }
 
-fn workflow_agent_binary() -> String {
+pub fn workflow_agent_binary() -> String {
     std::env::var("OHC_BUILTIN_AGENT_BINARY")
         .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
         .unwrap_or_else(|_| {
@@ -116,9 +122,14 @@ fn workflow_agent_binary() -> String {
         })
 }
 
-fn workflow_agent_task(task: &str) -> String {
+pub fn workflow_agent_task(workflow: &str, task: &str) -> String {
+    let workflow = if workflow.trim().is_empty() {
+        "ohc_review_branch"
+    } else {
+        workflow.trim()
+    };
     let args = serde_json::json!({
-        "workflow": "ohc_review_branch",
+        "workflow": workflow,
         "task": task,
     });
     format!(
@@ -138,10 +149,10 @@ fn set_workflow_result(id: &str, status: &str, output: Option<String>, error: Op
     }
 }
 
-fn dispatch_workflow(record: WorkflowRecord) {
+pub fn dispatch_workflow(record: WorkflowRecord) {
     let id = record.id.clone();
     let binary = workflow_agent_binary();
-    let task = workflow_agent_task(&record.task);
+    let task = workflow_agent_task(&record.workflow, &record.task);
 
     tokio::spawn(async move {
         if is_standalone_runtime() {
@@ -228,11 +239,16 @@ async fn create_workflow_handler(
     }
 
     let binary = workflow_agent_binary();
-    let agent_task = workflow_agent_task(task);
+    let workflow = if payload.workflow.trim().is_empty() {
+        "ohc_review_branch"
+    } else {
+        payload.workflow.trim()
+    };
+    let agent_task = workflow_agent_task(workflow, task);
     let record = WorkflowRecord {
         id: uuid::Uuid::new_v4().to_string(),
         name: name.to_string(),
-        workflow: "ohc_review_branch".to_string(),
+        workflow: workflow.to_string(),
         task: task.to_string(),
         status: "running".to_string(),
         command: format!("{} --task {}", binary, serde_json::to_string(&agent_task).unwrap_or_default()),
@@ -301,7 +317,10 @@ pub mod services {
     pub mod sync;
     pub mod chat;
 
+    #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
+    #[cfg(not(ohc_bazel))]
+    pub mod b2b;
     pub mod integration;
     pub mod ops;
     pub mod mcp;
@@ -310,6 +329,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod pos;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -380,31 +400,31 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 
 pub mod proto {
     pub mod interop {
-        pub use interop_proto::ohc::interop::*;
+        pub use ::server_ohc::interop::*;
     }
     pub mod mcp_proxy {
-        pub use mcp_proxy_proto::ohc::mcp_proxy::*;
+        pub use ::server_ohc::mcp_proxy::*;
     }
     pub mod orchestration {
-        pub use hub_proto::ohc::orchestration::*;
+        pub use ::server_ohc::orchestration::*;
     }
     pub mod billing {
-        pub use billing_proto::ohc::billing::*;
+        pub use ::server_ohc::billing::*;
     }
     pub mod agent {
-        pub use agent_proto::ohc::agent::*;
+        pub use ::server_ohc::agent::*;
         pub mod service {
-            pub use agent_service_proto::ohc::agent::service::*;
+            pub use ::server_ohc::agent::service::*;
         }
     }
     pub mod organization {
-        pub use organization_proto::ohc::organization::*;
+        pub use ::server_ohc::organization::*;
     }
     pub mod common {
-        pub use common_proto::ohc::common::*;
+        pub use ::server_ohc::common::*;
     }
     pub mod app {
-        pub use app_proto::ohc::api::v1::*;
+        pub use ::server_ohc::app::*;
     }
 }
 
@@ -598,6 +618,7 @@ async fn http_login_handler(
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to start login transaction");
             tracing::error!("failed to start login transaction: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -608,6 +629,7 @@ async fn http_login_handler(
     };
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        ::server_telemetry::record_error_signal("failed to set tenant context for login");
         tracing::error!("failed to set tenant context for login: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -631,6 +653,7 @@ async fn http_login_handler(
     {
         Ok(row) => row,
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to query login user");
             tracing::error!("failed to query login user: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -656,6 +679,7 @@ async fn http_login_handler(
         match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
             Ok(res) => res,
             Err(e) => {
+                ::server_telemetry::record_error_signal("spawn_blocking failed for bcrypt");
                 tracing::error!("spawn_blocking failed for bcrypt: {}", e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -676,6 +700,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to verify auth credential");
             tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -707,6 +732,7 @@ async fn http_login_handler(
     let token = match store.issue_token(&user) {
         Ok(t) => t,
         Err(e) => {
+            ::server_telemetry::record_error_signal("failed to issue login token");
             tracing::error!("failed to issue login token: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -787,33 +813,28 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let db_org = db.clone();
-    let db_orders = db.clone();
-    let tenant_id_org = tenant_id.clone();
-    let tenant_id_orders = tenant_id.clone();
-
     let (org_res, active_orders_res) = tokio::join!(
-        tokio::spawn(async move {
-            let cache_key = format!("advisory:org:{}", tenant_id_org);
+        async {
+            let cache_key = format!("advisory:org:{}", tenant_id);
             let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
 
-            let result = match &db_org.store {
+            let result = match &db.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id_org)
-                    .fetch_optional(&db_org.pool)
+                    .bind(&tenant_id)
+                    .fetch_optional(&db.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id_org)
+                    .bind(&tenant_id)
                     .fetch_optional(pool)
                     .await
                 }
@@ -823,28 +844,28 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
             }
             result
-        }),
-        tokio::spawn(async move {
-            let cache_key = format!("advisory:orders:{}", tenant_id_orders);
+        },
+        async {
+            let cache_key = format!("advisory:orders:{}", tenant_id);
             let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
 
-            let result = match &db_orders.store {
+            let result = match &db.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id_orders)
-                    .fetch_one(&db_orders.pool)
+                    .bind(&tenant_id)
+                    .fetch_one(&db.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id_orders)
+                    .bind(&tenant_id)
                     .fetch_one(pool)
                     .await
                 }
@@ -854,11 +875,11 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
             }
             result
-        })
+        }
     );
 
-    let org_data = org_res.unwrap_or(Ok(None));
-    let orders_data = active_orders_res.unwrap_or(Ok(0));
+    let org_data = org_res;
+    let orders_data = active_orders_res;
 
     let (business_name, industry) = org_data
         .unwrap_or(None)
@@ -866,13 +887,28 @@ pub async fn advisory_insights_handler(
 
     let active_orders = orders_data.unwrap_or(0);
 
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(format!("{}:{}:{}", business_name, industry, active_orders).as_bytes());
+    let stats_hash = format!("{:x}", hasher.finalize());
+    let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
+
+    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(insight) = insight_cache.get(&insight_cache_key).await {
+        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
+    }
+
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            insight_cache.set(&insight_cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
+            (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
+        }
         Err(e) => {
+            ::server_telemetry::record_error_signal("MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -953,6 +989,7 @@ async fn draft_reply_handler(
     match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("MiniMax draft reply failed");
             tracing::error!("MiniMax draft reply failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -965,6 +1002,27 @@ async fn draft_reply_handler(
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+
+    async fn route_semantic(
+        &self,
+        request: tonic::Request<::server_ohc::orchestration::SemanticRoutingRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::SemanticRoutingResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let internal_req = crate::orchestration::router::SemanticRoutingRequest {
+            tenant_id: req.tenant_id,
+            prompt: req.prompt,
+            embedding: if req.embedding.is_empty() { None } else { Some(req.embedding) },
+        };
+
+        match self.hub.semantic_router.route(&internal_req) {
+            Ok(res) => Ok(tonic::Response::new(::server_ohc::orchestration::SemanticRoutingResponse {
+                tenant_id: res.tenant_id,
+                target_department: res.target_department.to_string(),
+                confidence_score: res.confidence_score,
+            })),
+            Err(e) => Err(tonic::Status::internal(e)),
+        }
+    }
     type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
     async fn stream_messages(
@@ -1440,18 +1498,39 @@ impl HubService for MyHubService {
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
+        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+            .bind(&tenant_id)
+            .bind(&user_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| tonic::Status::internal(e.to_string()))?;
+
+        let (mut merged_state, prev_step) = if let Some(record) = row {
+            use sqlx::Row;
+            let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
+            (existing_json, existing_step)
+        } else {
+            (serde_json::json!({}), 0)
+        };
+
+        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), state_json.as_object()) {
+            for (k, v) in new_obj {
+                existing_obj.insert(k.clone(), v.clone());
+            }
+        } else {
+            merged_state = state_json.clone();
+        }
+
+        let new_step = std::cmp::max(prev_step, current_step);
+
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4) \
-             ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
-                 current_step = EXCLUDED.current_step, \
-                 updated_at = CURRENT_TIMESTAMP"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)              ON CONFLICT (tenant_id, user_id) DO UPDATE              SET state_json = EXCLUDED.state_json,                  current_step = EXCLUDED.current_step,                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
         .bind(&user_id)
-        .bind(current_step)
-        .bind(&state_json)
+        .bind(new_step)
+        .bind(&merged_state)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1475,15 +1554,16 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can read wizard state"));
         }
         let tenant_id = org_id.clone();
+        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1522,15 +1602,16 @@ impl HubService for MyHubService {
              return Err(tonic::Status::permission_denied("Only tenants can reset wizard state"));
         }
         let tenant_id = org_id.clone();
+        let user_id = auth_info.spiffe_id.clone();
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -2195,6 +2276,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
+    pos_sync_worker.start();
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
@@ -2210,6 +2294,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = agent_memory_pipeline_clone.run().await {
+                ::server_telemetry::record_error_signal("Agent Memory Pipeline error");
                 tracing::error!("Agent Memory Pipeline error: {}", e);
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
@@ -2242,13 +2327,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _ = sqlx::query(
                 "CREATE TABLE IF NOT EXISTS onboarding_state (
                     tenant_id TEXT NOT NULL,
-                    organization_id TEXT NOT NULL,
                     user_id TEXT NOT NULL,
                     current_step INTEGER NOT NULL DEFAULT 0,
                     state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
                     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (tenant_id, organization_id)
+                    PRIMARY KEY (tenant_id, user_id)
                 );"
             )
             .execute(pool)
@@ -2292,6 +2376,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
@@ -2342,6 +2427,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let payload = match serde_json::to_string(&task) {
             Ok(p) => p,
             Err(e) => {
+                ::server_telemetry::record_error_signal("Failed to serialize task");
                 tracing::error!("Failed to serialize task: {}", e);
                 return;
             }
@@ -2365,6 +2451,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     );
     if let Err(e) = handoff_manager.start_listener().await {
+        ::server_telemetry::record_error_signal("Failed to start handoff listener");
         tracing::error!("Failed to start handoff listener: {}", e);
     }
 
@@ -2402,6 +2489,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&heartbeat_agent_id, "online", 60)
                         .await
                     {
+                        ::server_telemetry::record_error_signal("Failed to register builtin agent presence");
                         tracing::error!("Failed to register builtin agent presence: {}", e);
                     }
                 }
@@ -2457,6 +2545,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&agent_id_clone, "active", 30)
                         .await
                     {
+                        ::server_telemetry::record_error_signal("Failed to register presence");
                         tracing::error!("Failed to register presence: {}", e);
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(15)).await;
@@ -2495,10 +2584,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+    let meta_webhook_state = api::meta_webhook::MetaWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
-        .with_state(hub.clone());
+        .with_state(meta_webhook_state);
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
@@ -2519,6 +2613,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to begin transaction");
             tracing::error!("Failed to begin transaction: {}", e);
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
         }
@@ -2526,6 +2621,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let org_id = user.organization_id.unwrap_or_default();
     if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
+        ::server_telemetry::record_error_signal("Failed to set org context");
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
@@ -2553,6 +2649,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         }
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch inbox messages");
             tracing::error!("Failed to fetch inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2583,6 +2680,12 @@ async fn list_ui_orders_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_orders:{}", tenant_id);
+    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let orders = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2626,8 +2729,12 @@ async fn list_ui_orders_handler(
     };
 
     match orders {
-        Ok(orders) => (axum::http::StatusCode::OK, axum::Json(orders)).into_response(),
+        Ok(orders) => {
+            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
+        },
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2641,6 +2748,12 @@ async fn list_ui_inbox_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_inbox:{}", tenant_id);
+    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2678,8 +2791,12 @@ async fn list_ui_inbox_handler(
     };
 
     match messages {
-        Ok(messages) => (axum::http::StatusCode::OK, axum::Json(messages)).into_response(),
+        Ok(messages) => {
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        },
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch UI inbox messages");
             tracing::error!("Failed to fetch UI inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2692,6 +2809,12 @@ async fn ui_dashboard_metrics_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
+    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let metrics = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2722,14 +2845,17 @@ async fn ui_dashboard_metrics_handler(
 
     match metrics {
         Ok((active_customers, pending_orders, total_sales)) => {
-            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+            let res = serde_json::json!({
                 "active_customers": active_customers,
                 "pending_orders": pending_orders,
                 "total_sales": total_sales,
                 "total_campaigns_sent": 0
-            }))).into_response()
+            });
+            cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
+            (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to fetch UI dashboard metrics");
             tracing::error!("Failed to fetch UI dashboard metrics: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "active_customers": 0,
@@ -2751,11 +2877,19 @@ async fn list_ui_supply_handler(
 
     let (vendors, raw_materials, bom_items) = match &db.store {
         crate::db::DbStore::Postgres => {
-            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
+            let (v_res, rm_res, bi_res) = tokio::join!(
+                sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(&db.pool),
+                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(&db.pool),
+                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
+                    .bind(&tenant_id)
+                    .fetch_all(&db.pool)
+            );
+
+            let vendors = v_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2763,11 +2897,8 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
+
+            let raw_materials = rm_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2776,11 +2907,8 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
+
+            let bom_items = bi_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2789,14 +2917,23 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
+
             (vendors, raw_materials, bom_items)
         }
         crate::db::DbStore::Sqlite(pool) => {
-            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
+            let (v_res, rm_res, bi_res) = tokio::join!(
+                sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(pool),
+                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(pool),
+                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
+                    .bind(&tenant_id)
+                    .fetch_all(pool)
+            );
+
+            let vendors = v_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2804,11 +2941,8 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
+
+            let raw_materials = rm_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2817,11 +2951,8 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
+
+            let bom_items = bi_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2830,6 +2961,7 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
+
             (vendors, raw_materials, bom_items)
         }
     };
@@ -2862,6 +2994,7 @@ async fn create_ui_supply_vendor_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "contact_info": contact_info}))).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to create UI supply vendor");
             tracing::error!("Failed to create UI supply vendor: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -2889,6 +3022,7 @@ async fn create_ui_raw_material_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "current_quantity": current_quantity, "reorder_threshold": reorder_threshold}))).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to create UI raw material");
             tracing::error!("Failed to create UI raw material: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -2916,6 +3050,7 @@ async fn create_ui_bom_item_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "finished_good_id": finished_good_id, "raw_material_id": raw_material_id, "quantity_required": quantity_required}))).into_response(),
         Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to create UI BOM item");
             tracing::error!("Failed to create UI BOM item: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -3060,6 +3195,7 @@ async fn create_ui_bom_item_handler(
                 let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
 
                 if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
+                    ::server_telemetry::record_error_signal("Failed to save SMS preferences");
                     tracing::error!("Failed to save SMS preferences: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -3085,6 +3221,7 @@ async fn create_ui_bom_item_handler(
                 let fee = req.get("delivery_fee").and_then(|v| v.as_f64());
 
                 if let Err(e) = settings_store.set_delivery_settings(enabled, radius, fee) {
+                    ::server_telemetry::record_error_signal("Failed to save delivery settings");
                     tracing::error!("Failed to save delivery settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -3113,29 +3250,6 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/", axum::routing::get(ui_handler))
-        .route("/business-setup", axum::routing::get(ui_handler))
-        .route("/website-builder", axum::routing::get(ui_handler))
-        .route("/brand-studio", axum::routing::get(ui_handler))
-        .route("/login", axum::routing::get(ui_handler))
-        .route("/agents", axum::routing::get(ui_handler))
-        .route("/team", axum::routing::get(ui_handler))
-        .route("/team/chat", axum::routing::get(ui_handler))
-        .route("/meetings", axum::routing::get(ui_handler))
-        .route("/dashboard", axum::routing::get(ui_handler))
-        .route("/inbox", axum::routing::get(ui_handler))
-        .route("/inventory", axum::routing::get(ui_handler))
-        .route("/orders", axum::routing::get(ui_handler))
-        .route("/orders/{id}", axum::routing::get(ui_handler))
-        .route("/products/new", axum::routing::get(ui_handler))
-        .route("/share-cards", axum::routing::get(ui_handler))
-        .route("/win-back", axum::routing::get(ui_handler))
-        .route("/seasonal-promo", axum::routing::get(ui_handler))
-        .route("/help", axum::routing::get(ui_handler))
-        .route("/api-docs", axum::routing::get(ui_handler))
-        .route("/changelog", axum::routing::get(ui_handler))
-        .route("/kairos", axum::routing::get(ui_handler))
-        .route("/services/new", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
@@ -3311,6 +3425,7 @@ async fn create_ui_bom_item_handler(
                         }).await;
 
                         if let Err(e) = result {
+                            ::server_telemetry::record_error_signal("Failed to seed data");
                             tracing::error!("Failed to seed data: {}", e);
                             return axum::Json(serde_json::json!({ "ok": false, "error": e }));
                         }
@@ -3332,7 +3447,10 @@ async fn create_ui_bom_item_handler(
         )
         .route(
             "/api/meetings",
-            axum::routing::get(|| async { axum::Json(serde_json::json!([])) }),
+            axum::routing::get({ let hub = hub.clone(); move || async move {
+                let meetings = hub.get_meetings().await;
+                axum::Json(meetings.as_ref().clone())
+            } }),
         )
         .route(
             "/api/costs",
@@ -3418,16 +3536,18 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()).with_state(mesh_transport.clone()))
+        .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
+
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
-        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
+        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
@@ -3458,10 +3578,10 @@ async fn create_ui_bom_item_handler(
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "Set up your store", "duration": "1:20" },
+            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
             { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
             { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
-            { "id": 4, "title": "Add a product", "duration": "1:05" },
+            { "id": 4, "title": "Adding staff to your account", "duration": "1:05" },
             { "id": 5, "title": "Review an order", "duration": "1:10" },
             { "id": 6, "title": "Send a campaign", "duration": "1:25" },
             { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
@@ -3516,7 +3636,7 @@ async fn create_ui_bom_item_handler(
         .merge(webhook_router)
         .merge(meta_webhook_router)
         .merge(health_router)
-        .fallback(ui_handler);
+        .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")
         .ok()
@@ -3527,6 +3647,7 @@ async fn create_ui_bom_item_handler(
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
+            ::server_telemetry::record_error_signal("Mesh server error");
             tracing::error!("Mesh server error: {}", e);
         }
     });
@@ -3565,9 +3686,11 @@ async fn create_ui_bom_item_handler(
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
+                    ::server_telemetry::record_error_signal("failed to push pending missions");
                     tracing::error!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
+                    ::server_telemetry::record_error_signal("failed to pull mission updates");
                     tracing::error!("failed to pull mission updates: {}", e);
                 }
             }
@@ -3585,6 +3708,7 @@ async fn create_ui_bom_item_handler(
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
+                        ::server_telemetry::record_error_signal("failed to prune stale missions");
                         tracing::error!("failed to prune stale missions: {}", e);
                     }
                 }
@@ -3595,6 +3719,7 @@ async fn create_ui_bom_item_handler(
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
+                            ::server_telemetry::record_error_signal("failed to mark task as running");
                             tracing::error!("failed to mark task as running: {}", e);
                             continue;
                         }
@@ -3615,6 +3740,7 @@ async fn create_ui_bom_item_handler(
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
                             Err(e) => {
+                                ::server_telemetry::record_error_signal("failed to publish scheduled task message");
                                 tracing::error!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }
@@ -3638,4671 +3764,25 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
+        .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 
     Ok(())
 }
-async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
-    let path = req.uri().path();
-    let tooltips_json = serde_json::to_string(&*get_tooltips_registry().read().unwrap()).unwrap_or_else(|_| "{}".to_string());
-    let content = match path {
-        "/api/v1/health" => "{\"status\":\"ok\"}".to_string(),
-        _ => r##"
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <title>OneHuman Corp</title>
-                    <meta property="og:title" content="OneHuman Corp - Start Your Business" />
-                    <meta property="og:image" content="https://ohc.store/api/v1/growth/storefront/og-card?tenant=DEFAULT&product_name=My+Store" />
-                    <meta property="og:description" content="Discover great products and services powered by OHC." />
-                    <meta name="twitter:card" content="summary_large_image" />
-                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-                    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
-                    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-                    <style>
-                        :root {
-                            color-scheme: light;
-                            --primary: #0066FF;
-                            --primary-hover: #005bd3;
-                            --primary-soft: #e8f2ff;
-                            --accent-green: #34C759;
-                            --accent-orange: #FF9500;
-                            --bg: #eef1f5;
-                            --surface: rgba(255, 255, 255, 0.86);
-                            --surface-strong: #ffffff;
-                            --sidebar-bg: rgba(248, 250, 252, 0.92);
-                            --text: #1D1D1F;
-                            --text-secondary: #657083;
-                            --text-tertiary: #8a94a6;
-                            --border: rgba(16, 24, 40, 0.1);
-                            --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-                            --shadow-md: 0 16px 42px rgba(16, 24, 40, 0.09);
-                            --radius-sm: 8px;
-                            --radius-container: 16px;
-                            --radius-md: 10px;
-                        }
-                        body.dark-theme {
-                            --primary: #0066FF;
-                            --bg: #121214;
-                            --surface: rgba(30, 30, 34, 0.86);
-                            --text: #F5F5F7;
-                            --text-secondary: #a1a1aa;
-                        }
-                        * {
-                            box-sizing: border-box;
-                        }
-                        html {
-                            min-height: 100%;
-                            background:
-                                linear-gradient(180deg, #f8fafc 0%, #eef1f5 42%, #e9edf3 100%);
-                        }
-                        body {
-                            min-height: 100vh;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
-                            background:
-                                radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.08), transparent 28%),
-                                linear-gradient(180deg, rgba(255,255,255,0.72), rgba(238,241,245,0.96));
-                            color: var(--text); 
-                            margin: 0; 
-                            line-height: 1.45;
-                            -webkit-font-smoothing: antialiased;
-                        }
-                        h1, h2, h3, h4, .outfit {
-                            font-family: inherit;
-                            letter-spacing: 0;
-                        }
-                        h1 {
-                            font-size: clamp(28px, 4vw, 42px);
-                            font-weight: 700;
-                            line-height: 1.08;
-                            margin-bottom: 24px;
-                        }
-                        h2 {
-                            font-size: 20px;
-                            font-weight: 650;
-                        }
-                        h3 {
-                            font-size: 16px;
-                            font-weight: 650;
-                        }
-                        p {
-                            color: var(--text-secondary);
-                        }
-                        .glass {
-                            background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
-                            border: 1px solid rgba(255, 255, 255, 0.4);
-                            border-radius: 16px;
-                            box-shadow: var(--shadow-md);
-                        }
-                        body.dark-theme .glass {
-                            background: rgba(22, 22, 26, 0.7);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
-                        }
-                        .animated-dropdown {
-                            transition: max-height 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), margin-top 250ms cubic-bezier(0.4, 0, 0.2, 1), padding-top 250ms cubic-bezier(0.4, 0, 0.2, 1);
-                            overflow: hidden;
-                            max-height: 0;
-                            opacity: 0;
-                            margin-top: 0;
-                            padding-top: 0;
-                            border-top-color: transparent;
-                        }
-                        .animated-dropdown.open {
-                            max-height: 500px;
-                            opacity: 1;
-                            margin-top: 15px;
-                            padding-top: 15px;
-                            border-top-color: var(--border);
-                        }
-                        nav { 
-                            padding: 0 28px; 
-                            display: flex; 
-                            gap: 8px; 
-                            border-bottom: 1px solid var(--border); 
-                            background: var(--sidebar-bg); 
-                            position: sticky; 
-                            top: 0; 
-                            z-index: 100; 
-                            height: 58px;
-                            align-items: center;
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
-                            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
-                        }
-                        nav::before {
-                            content: 'OneHuman';
-                            color: var(--text);
-                            font-weight: 700;
-                            font-size: 15px;
-                            margin-right: 18px;
-                        }
-                        nav a { 
-                            color: var(--text-secondary); 
-                            text-decoration: none; 
-                            font-weight: 600; 
-                            cursor: pointer; 
-                            font-size: 14px;
-                            min-height: 36px;
-                            display: inline-flex;
-                            align-items: center;
-                            padding: 0 13px;
-                            border-radius: 8px;
-                            transition: background 0.18s cubic-bezier(0.4, 0, 0.2, 1), color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-                        }
-                        nav a:hover {
-                            color: var(--primary);
-                            background: var(--primary-soft);
-                        }
-                        main { padding: 32px; }
-                        .screen {
-                            display: none;
-                            padding: 32px;
-                            max-width: 1120px;
-                            margin: 0 auto;
-                            animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-                        }
-                        @keyframes fadeIn {
-                            from { opacity: 0; transform: translateY(10px); }
-                            to { opacity: 1; transform: translateY(0); }
-                        }
-                        #dashboard-screen {
-                            max-width: 1180px;
-                        }
-
-                        .ohc-growth-card {
-                            backdrop-filter: blur(30px) saturate(210%);
-                            background: rgba(255, 255, 255, 0.05);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
-                            font-family: 'Outfit', 'Inter', sans-serif;
-                            color: #ffffff;
-                            border-radius: 12px;
-                            padding: 24px;
-                        }
-                        .card { 
-                            background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
-                            padding: 24px; 
-                            border-radius: 16px;
-                            margin-bottom: 18px; 
-                            border: 1px solid rgba(255, 255, 255, 0.4);
-                            box-shadow: var(--shadow-sm);
-                        }
-                        body.dark-theme .card {
-                            background: rgba(22, 22, 26, 0.7);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
-                        }
-                        h1, h2, h3 { color: var(--text); margin-top: 0; }
-                        input, textarea, select { 
-                            width: 100%; 
-                            padding: 11px 13px; 
-                            margin-bottom: 16px; 
-                            background: rgba(255,255,255,0.94); 
-                            border: 1px solid var(--border); 
-                            border-radius: 8px;
-                            color: var(--text); 
-                            font-size: 14px;
-                            font-family: inherit;
-                            box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
-                            transition: border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-                        }
-                        input:focus, textarea:focus, select:focus {
-                            outline: none;
-                            border-color: var(--primary);
-                            background: #ffffff;
-                            box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
-                        }
-                        button {
-            min-height: 44px;
-            min-width: 44px;
-                            min-height: 44px;
-                            min-width: 44px;
-                            padding: 10px 18px;
-                            background: var(--primary); 
-                            border: 1px solid transparent; 
-                            border-radius: 8px;
-                            color: white; 
-                            font-weight: 600; 
-                            cursor: pointer; 
-                            margin-right: 8px; 
-                            margin-bottom: 8px; 
-                            font-size: 14px;
-                            font-family: inherit;
-                            box-shadow: 0 1px 1px rgba(16, 24, 40, 0.08);
-                            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-                        }
-                        button:hover {
-                            background: var(--primary-hover);
-                            box-shadow: 0 6px 16px rgba(0, 111, 255, 0.18);
-                            transform: translateY(-1px);
-                        }
-                        button:active { transform: translateY(0); }
-                        button.secondary { 
-                            background: rgba(255,255,255,0.78); 
-                            border: 1px solid var(--border); 
-                            color: var(--text); 
-                        }
-                        button.secondary:hover {
-                            background: #ffffff;
-                            border-color: rgba(0, 111, 255, 0.28);
-                            color: var(--primary);
-                            box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
-                        }
-                        button.secondary.selected {
-                            background: #ffffff;
-                            border-color: var(--primary);
-                            color: var(--primary);
-                            box-shadow: 0 0 0 2px rgba(0, 111, 255, 0.2);
-                        }
-                        button.danger {
-                            background: #FF3B30;
-                        }
-                        .error { color: #FF3B30; font-size: 13px; margin-bottom: 16px; display: none; }
-                        
-                        .shimmer {
-                            background: linear-gradient(90deg, #eef2f7 25%, #dce5ef 50%, #eef2f7 75%);
-                            background-size: 200% 100%;
-                            animation: shimmer 1.5s infinite;
-                            border-radius: 8px;
-                        }
-                        @keyframes shimmer {
-                            0% { background-position: 200% 0; }
-                            100% { background-position: -200% 0; }
-                        }
-
-
-                        .glassmorphism {
-                            background: rgba(255, 255, 255, 0.65);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
-                            border: 1px solid rgba(255, 255, 255, 0.4);
-                            border-radius: 16px;
-                            box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
-                        }
-
-                        body.dark-theme .glassmorphism {
-                            background: rgba(22, 22, 26, 0.7);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
-                        }
-
-                        #setup-screen {
-                            font-family: 'Inter', sans-serif;
-                            padding: 40px;
-                            max-width: 600px;
-                            margin: 60px auto;
-                            color: #1D1D1F;
-                        }
-
-                        body.dark-theme #setup-screen {
-                            color: #F5F5F7;
-                        }
-
-                        #setup-screen h1, #setup-screen h2, #setup-screen h3 {
-                            font-family: 'Outfit', sans-serif;
-                            margin-bottom: 16px;
-                        }
-
-                        #setup-screen button.secondary:hover {
-                            color: #0066FF;
-                            border-color: rgba(0, 102, 255, 0.3);
-                        }
-
-                        #setup-screen > div {
-                            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
-                            opacity: 1;
-                            transform: translateY(0);
-                            position: relative; /* Prevent layout jumps on transition */
-                        }
-
-                        #setup-screen > div.hidden {
-                            opacity: 0;
-                            transform: translateY(10px);
-                            pointer-events: none;
-                            position: absolute;
-                            visibility: hidden;
-                        }
-
-                        @media (max-width: 375px) {
-                            #setup-screen {
-                                padding: 24px;
-                                margin: 20px auto;
-                                border-radius: 12px;
-                            }
-                            #setup-screen button {
-            min-height: 44px;
-            min-width: 44px;
-                                width: 100%;
-                                margin-right: 0;
-                            }
-                        }
-
-                        /* Login screen specific */
-                        #login-screen, #signup-screen {
-                            max-width: 400px;
-                            margin-top: 80px;
-                            border-radius: 16px;
-                            padding: 30px;
-                        }
-
-                        #mobile-bottom-nav {
-                            display: none;
-                            position: fixed;
-                            right: 20px;
-                            bottom: 18px;
-                            left: 20px;
-                            max-width: 760px;
-                            margin: 0 auto;
-                            background: rgba(255, 255, 255, 0.88);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
-                            border: 1px solid rgba(255,255,255,0.74);
-                            border-radius: 18px;
-                            justify-content: space-around;
-                            padding: 8px;
-                            z-index: 1000;
-                            box-shadow: 0 18px 44px rgba(16, 24, 40, 0.16);
-                        }
-                        @media (max-width: 768px) {
-                            #mobile-bottom-nav { display: flex; }
-                            main { padding-bottom: 92px; }
-                            nav {
-                                overflow-x: auto;
-                                padding: 0 14px;
-                            }
-                            nav::before { display: none; }
-                            .screen {
-                                padding: 22px 14px 108px;
-                            }
-                        }
-                        .nav-item {
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 12px;
-                            font-weight: 600;
-                            color: var(--text-secondary);
-                            background: transparent;
-                            border: none;
-                            padding: 6px 8px;
-                            margin: 0;
-                            min-width: 64px;
-                            border-radius: 8px;
-                            box-shadow: none;
-                        }
-                        .nav-item:hover {
-                            background: var(--primary-soft);
-                            color: var(--primary);
-                            box-shadow: none;
-                        }
-                        .nav-item.active { color: var(--primary); background: var(--primary-soft); }
-                        #dashboard-screen > .card:first-of-type {
-                            border-color: rgba(0, 111, 255, 0.18);
-                            background:
-                                linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,255,0.94));
-                        }
-                        #dashboard-screen > .card:first-of-type h2 {
-                            color: var(--primary) !important;
-                        }
-                        #dashboard-screen > .card:first-of-type p:last-child {
-                            color: var(--accent-green) !important;
-                        }
-                        #dashboard-screen > h2 {
-                            background: transparent !important;
-                            padding: 0 !important;
-                            border-radius: 0 !important;
-                            color: var(--text-secondary);
-                            font-size: 14px;
-                            font-weight: 700;
-                            text-transform: uppercase;
-                        }
-                        #quick-actions-hint, #ai-draft-hint {
-                            background: var(--primary-soft) !important;
-                            border-left-color: var(--primary) !important;
-                            color: var(--text) !important;
-                        }
-                        #ayrshare-integration {
-                            display: none;
-                        }
-                        .tabs, .controls, .builder-header {
-                            display: flex;
-                            flex-wrap: wrap;
-                            gap: 8px;
-                            align-items: center;
-                        }
-                        .builder-container {
-                            position: relative;
-                        }
-                        .builder-preview {
-                            display: grid;
-                            gap: 14px;
-                        }
-                        .builder-block {
-                            padding: 22px;
-                            border-radius: 16px;
-                            cursor: pointer;
-                        }
-                        .bottom-sheet {
-                            position: fixed;
-                            left: 50%;
-                            bottom: 0;
-                            width: min(720px, calc(100% - 24px));
-                            max-height: 78vh;
-                            overflow: auto;
-                            transform: translate(-50%, 110%);
-                            padding: 22px;
-                            border-radius: 18px 18px 0 0;
-                            z-index: 1200;
-                            transition: transform 0.24s ease;
-                        }
-                        .bottom-sheet.open {
-                            transform: translate(-50%, 0);
-                        }
-                        .bottom-sheet-header {
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            gap: 12px;
-                        }
-                        .bottom-sheet-close {
-                            padding: 0;
-                            border-radius: 50%;
-                        }
-                        .domain-setup {
-                            display: none;
-                        }
-                        .domain-setup.active {
-                            display: block;
-                        }
-                        .fab {
-                            position: fixed;
-                            right: 28px;
-                            bottom: 28px;
-                            z-index: 900;
-                            border-radius: 999px;
-                        }
-                        #confetti-canvas {
-                            pointer-events: none;
-                            position: fixed;
-                            inset: 0;
-                            z-index: 1400;
-                        }
-                        #meetings-title {
-                            color: var(--text) !important;
-                            border-bottom: 1px solid var(--border) !important;
-                            border-radius: 0 !important;
-                        }
-                        #login-screen h1 { text-align: center; margin-bottom: 8px; font-size: 24px; }
-                        #login-screen p { text-align: center; color: var(--text-secondary); margin-bottom: 32px; font-size: 14px; }
-
-        /* Premium Standard Overrides for Wizard */
-        #setup-screen.glass {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
-            max-width: 375px;
-            margin: 40px auto;
-            overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-        }
-
-        body.dark-theme #setup-screen.glass {
-            background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        #setup-screen > div {
-            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 1;
-            transform: translateY(0);
-            position: relative;
-        }
-
-        #setup-screen button, #setup-screen input {
-            border-radius: 8px;
-            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @media (max-width: 375px) {
-            #setup-screen.glass {
-                margin: 10px;
-                padding: 16px;
-            }
-            #setup-screen h1 {
-                font-size: 24px;
-            }
-            #setup-screen button, #setup-screen input {
-                width: 100%;
-                margin-bottom: 8px;
-                box-sizing: border-box;
-            }
-        }
-            @media (prefers-color-scheme: dark) {
-                .glass, .screen {
-                    background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(30px) saturate(210%) !important;
-                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                }
-            }
-
-            /* Scribe: Documentation Feature Styles */
-            .tooltip-box { position: fixed; background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; line-height: 1.4; pointer-events: none; z-index: 9999; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; transform: translateY(4px); max-width: 250px; box-shadow: var(--shadow-md); }
-            .tooltip-box.show { opacity: 1; transform: translateY(0); }
-            #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: rgba(0, 102, 255, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.2s ease; }
-            #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
-            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: rgba(29, 29, 31, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: 1px solid rgba(255, 255, 255, 0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
-            #global-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
-            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid rgba(255, 255, 255, 0.5); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
-            #ai-chat-header { background: rgba(0, 102, 255, 0.9); backdrop-filter: blur(10px); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-            #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
-            .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-            .chat-msg.user { background: rgba(238, 241, 245, 0.8); align-self: flex-end; color: var(--text); border-bottom-right-radius: 4px; }
-            .chat-msg.ai { background: rgba(232, 242, 255, 0.8); align-self: flex-start; color: var(--text); border-bottom-left-radius: 4px; }
-            .chat-msg a { color: var(--primary); font-weight: 600; text-decoration: none; }
-            #ai-chat-input-container { display: flex; padding: 12px; border-top: 1px solid rgba(16, 24, 40, 0.05); gap: 8px; background: rgba(255, 255, 255, 0.5); }
-            #ai-chat-input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; outline: none; background: rgba(255, 255, 255, 0.9); }
-            #ai-chat-input:focus { border-color: var(--primary); }
-            #walkthrough-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9500; box-shadow: inset 0 0 0 9999px rgba(0,0,0,0.5); display: none; transition: all 0.3s ease; }
-            #walkthrough-bubble { position: fixed; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); color: var(--text); padding: 16px; border-radius: var(--radius-md); box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 9501; display: none; max-width: 300px; border: 1px solid rgba(255, 255, 255, 0.6); border-left: 4px solid var(--primary); }
-            #walkthrough-bubble h4 { margin: 0 0 8px 0; font-size: 16px; }
-            #walkthrough-bubble p { margin: 0 0 12px 0; font-size: 14px; color: var(--text-secondary); }
-            #walkthrough-bubble button { padding: 6px 12px; font-size: 13px; margin-top: 8px; }
-            .help-category-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; padding: 20px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-            .help-category-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--primary); }
-            .help-category-card h3 { margin: 0 0 8px 0; color: var(--primary); }
-            .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
-            .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
-            .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-            .video-thumbnail { background: #000; aspect-ratio: 9/16; width: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; position: relative; }
-            .video-thumbnail::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8)); }
-            .video-info { padding: 12px; position: absolute; bottom: 0; left: 0; right: 0; color: white; z-index: 2; pointer-events: none; }
-            .video-info h4 { margin: 0 0 4px 0; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-            .video-info p { margin: 0; color: rgba(255,255,255,0.8); font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-            @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
-                    </style>
-
-
-                    <script>
-                        window.OHC_TOOLTIPS = {tooltips_json};
-
-                        // Scribe: Tooltips Implementation
-                        document.addEventListener("DOMContentLoaded", () => {
-                            const tooltipEl = document.createElement("div");
-                            tooltipEl.id = "global-tooltip-bubble";
-                            tooltipEl.className = "tooltip-box";
-                            document.body.appendChild(tooltipEl);
-
-                            let tooltipTimeout = null;
-
-                            function showTooltip(el, text) {
-                                tooltipEl.textContent = text;
-                                tooltipEl.classList.add("show");
-                                // We use display block/none or visibility in css but since we use opacity:
-                                // To make sure it doesn't block clicks when hidden, we can toggle display or use pointer-events: none
-                                tooltipEl.style.display = "block";
-                                const rect = el.getBoundingClientRect();
-                                const tooltipRect = tooltipEl.getBoundingClientRect();
-                                let top = rect.top - tooltipRect.height - 8;
-                                let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-
-                                if (top < 0) top = rect.bottom + 8;
-                                if (left < 0) left = 8;
-                                if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 8;
-
-                                tooltipEl.style.top = top + "px";
-                                tooltipEl.style.left = left + "px";
-                            }
-
-                            function hideTooltip() {
-                                tooltipEl.classList.remove("show");
-                                setTimeout(() => { if (!tooltipEl.classList.contains("show")) tooltipEl.style.display = "none"; }, 200);
-                            }
-
-                            async function initTooltips() {
-                                try {
-                                    const res = await fetch('/api/tooltips');
-                                    if (res.ok) {
-                                        const serverTooltips = await res.json();
-                                        window.OHC_TOOLTIPS = { ...window.OHC_TOOLTIPS, ...serverTooltips };
-                                    }
-                                } catch (e) {
-                                    console.error("Failed to fetch tooltips from API:", e);
-                                }
-
-                                document.querySelectorAll("[placeholder], [id]").forEach(el => {
-                                    const placeholderKey = el.getAttribute("placeholder");
-                                    const idKey = el.getAttribute("id") + "-tooltip";
-
-                                    let key = null;
-                                    if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
-                                        key = placeholderKey;
-                                    } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
-                                        key = idKey;
-                                    }
-
-                                if (key) {
-                                    const text = window.OHC_TOOLTIPS[key];
-
-                                    // Desktop Hover
-                                    el.addEventListener("mouseenter", () => showTooltip(el, text));
-                                    el.addEventListener("mouseleave", hideTooltip);
-
-                                    // Mobile Long Press (Added by Scribe)
-                                    el.addEventListener("touchstart", (e) => {
-                                        tooltipTimeout = setTimeout(() => { showTooltip(el, text); }, 500);
-                                    }, {passive: true});
-
-                                    el.addEventListener("touchend", () => {
-                                        clearTimeout(tooltipTimeout);
-                                        setTimeout(hideTooltip, 2000);
-                                    });
-
-                                    el.addEventListener("touchmove", () => {
-                                        clearTimeout(tooltipTimeout);
-                                        hideTooltip();
-                                    }, {passive: true});
-                                }
-                            });
-                            }
-                            initTooltips();
-                        });
-                    </script>
-                </head>
-
-                <body>
-                    <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
-                        <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
-                        <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
-                        <a onclick="showScreen('brand-studio-screen')" id="nav-brand-studio">Brand Studio</a>
-                        <a href="/kairos" onclick="event.preventDefault(); showScreen('kairos-screen')" id="kairos-nav-link">KAIROS</a>
-                        <a onclick="showScreen('api-screen')">Connect Tools</a>
-                        <a onclick="showScreen('inbox-screen')">Inbox</a>
-                        <a onclick="showScreen('changelog-screen')" id="nav-changelog" placeholder="changelog-nav-tooltip">What's New</a>
-                    </nav>
-
-                    <div id="mobile-bottom-nav">
-                        <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
-                        <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                        <button class="nav-item" onclick="alert('Orders opened')">Orders</button>
-                        <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
-                        <button class="nav-item" onclick="alert('Analytics opened')">Stats</button>
-                        <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
-                        <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
-                        <button class="nav-item" onclick="showScreen('help-screen')">❓<br>Help</button>
-                    </div>
-
-
-                    <!-- Signup Screen -->
-                    <div id="signup-screen" class="screen glass">
-                        <h1>Create an account</h1>
-                        <p>Create an account to start your business</p>
-                        <input type="email" placeholder="Email or Username" />
-                        <input type="password" placeholder="Password" />
-                        <button onclick="handleSignup(this)">Sign Up</button>
-                        <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
-                    </div>
-
-                    <!-- Add Item Screen -->
-                    <div id="add-item-screen" class="screen glass" style="display: none;">
-                        <h1>Add to Catalog</h1>
-                        <p style="color: #666; margin-bottom: 20px;">Add a product or service to your store.</p>
-
-                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
-                                <input type="radio" name="item_type" value="product" checked onclick="document.getElementById('service-fields').style.display='none';"> 📦 Product
-                            </label>
-                            <label style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: center; background: rgba(255,255,255,0.5);">
-                                <input type="radio" name="item_type" value="service" onclick="document.getElementById('service-fields').style.display='block';"> 📅 Service
-                            </label>
-                        </div>
-
-                        <input type="text" id="item-name" placeholder="Name (e.g. Guitar Lesson)" style="border-radius: 8px;" />
-                        <input type="text" id="item-price" inputmode="decimal" placeholder="Price (e.g. 50.00)" style="border-radius: 8px;" />
-
-                        <div id="service-fields" style="display: none; margin-bottom: 16px;">
-                            <input type="number" id="item-duration" placeholder="Duration in minutes (e.g. 60)" style="border-radius: 8px;" />
-                        </div>
-
-                        <textarea id="item-desc" placeholder="Description" style="border-radius: 8px; width: 100%; height: 80px; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); background: var(--input-bg);"></textarea>
-
-                        <button onclick="saveCatalogItem()" style="border-radius: 8px; width: 100%;">Save Item</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')" style="border-radius: 8px; width: 100%; margin-top: 10px;">Cancel</button>
-
-                        <script>
-                            async function saveCatalogItem() {
-                                const name = document.getElementById('item-name').value;
-                                const price = document.getElementById('item-price').value;
-                                const duration = document.getElementById('item-duration').value;
-                                const description = document.getElementById('item-desc').value;
-                                const item_type = document.querySelector('input[name="item_type"]:checked').value;
-
-                                if (!name) {
-                                    alert('Please enter a name.');
-                                    return;
-                                }
-
-                                try {
-                                    const response = await fetch('/api/v1/catalog/product', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ name, price, duration: duration ? parseInt(duration) : null, description, item_type })
-                                    });
-
-                                    if (response.status === 402) {
-                                        const errorData = await response.json();
-                                        if (errorData.error === 'LIMIT_EXCEEDED') {
-                                            document.getElementById('upgrade-modal-message').innerText = errorData.message || "You've reached your product limit. Upgrade to Starter to add up to 100 products.";
-                                            document.getElementById('upgrade-modal').style.display = 'flex';
-                                            return;
-                                        }
-                                    }
-
-                                    if (response.ok) {
-                                        alert('Saved ' + name + ' successfully!');
-                                        document.getElementById('item-name').value = '';
-                                        document.getElementById('item-price').value = '';
-                                        document.getElementById('item-duration').value = '';
-                                        document.getElementById('item-desc').value = '';
-                                        showScreen('dashboard-screen');
-                                    } else {
-                                        alert('Error saving product');
-                                    }
-                                } catch (e) {
-                                    console.error(e);
-                                    alert('Error saving product');
-                                }
-                            }
-                        </script>
-                    </div>
-
-
-                    <!-- Upgrade Modal -->
-                    <div id="upgrade-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; backdrop-filter: blur(8px);">
-                        <div style="background: rgba(255, 255, 255, 0.65); width: 100%; max-width: 400px; padding: 32px 24px; border-radius: 24px 24px 0 0; box-shadow: 0 -8px 24px rgba(0,0,0,0.1); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); font-family: 'Outfit', 'Inter', sans-serif;">
-                            <div style="text-align: center; margin-bottom: 20px;">
-                                <div style="font-size: 48px; margin-bottom: 12px;">📈</div>
-                                <h2 style="margin-top: 0; font-weight: 700; color: #1D1D1F;">Business is Growing!</h2>
-                            </div>
-                            <p id="upgrade-modal-message" style="margin-bottom: 32px; color: #444; line-height: 1.6; text-align: center; font-size: 16px;"></p>
-                            <button style="width: 100%; margin-bottom: 12px; background-color: #1D1D1F; color: white; padding: 16px; border-radius: 12px; font-weight: 600; font-size: 16px; border: none; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#333'" onmouseout="this.style.backgroundColor='#1D1D1F'" onclick="document.getElementById('upgrade-modal').style.display='none'; showScreen('pricing-screen');">
-                                 Pay Upgrade
-                            </button>
-                            <button style="width: 100%; padding: 16px; border-radius: 12px; font-weight: 600; font-size: 16px; background-color: transparent; border: 1px solid rgba(0,0,0,0.1); color: #444; cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(0,0,0,0.05)'" onmouseout="this.style.backgroundColor='transparent'" onclick="document.getElementById('upgrade-modal').style.display='none';">
-                                Maybe Later
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Dashboard Screen -->
-                    <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
-                        <div id="network-status-indicator" class="block" style="display: none;">Offline</div>
-
-                        <div class="card glass" id="legacy-hybrid-landing-coverage">
-                            <h2>OneHumanCorp</h2>
-                            <h2>Hybrid Agentic OS</h2>
-                            <div style="display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-                                <div>
-                                    <h3>Local-First Sovereignty</h3>
-                                    <p>Zero Cloud Telemetry</p>
-                                    <button onclick="showScreen('setup-screen')">Start Local Workspace</button>
-                                </div>
-                                <div>
-                                    <h3>Cloud Convenience</h3>
-                                    <p>Seamless Team Expansion</p>
-                                    <button onclick="showScreen('team-screen')">Deploy to Cloud</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card glass" id="legacy-dashboard-coverage">
-                            <h2>Action Required</h2>
-                            <p>No pending approvals.</p>
-                            <button onclick="const payload = document.getElementById('legacy-technical-payload'); payload.style.display = payload.style.display === 'none' ? 'block' : 'none';"><span class="absolute"></span>Advanced</button>
-                            <div id="legacy-technical-payload" style="display: none;">No approval payloads returned.</div>
-                            <button aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" onclick="document.getElementById('agent-audit-compat').style.display='block'">Agent Audit Dashboard</button>
-                            <div id="agent-audit-compat" class="card glass" style="display: none;">
-                                <h2>Agent Audit Dashboard</h2>
-                                <p>No audit events returned.</p>
-                                <button onclick="showScreen('inbox-screen')">Back to Inbox</button>
-                            </div>
-                        </div>
-
-                        <div class="card glass" id="legacy-growth-coverage">
-                            <h2>Referral Program</h2>
-                            <p>Team Invites Sent</p>
-                            <div class="text-indigo-900">0</div>
-                            <p>Active Referrals</p>
-                            <p>Revenue from Referrals</p>
-                            <p>Pending Rewards</p>
-                            <button onclick="document.getElementById('invite-business-modal').style.display='block'">Invite a Business</button>
-                            <div id="invite-business-modal" class="card glass" style="display: none;">
-                                <h2>Help a Business Grow!</h2>
-                                <p>Your Unique Link</p>
-                            </div>
-                        </div>
-
-                        <div class="card glass" id="social-share-cards-dashboard">
-                            <h2>Social Share Cards</h2>
-                            <p>Create branded cards for milestones, new products, and customer wins.</p>
-                            <a href="/share-cards" onclick="event.preventDefault(); showScreen('share-cards-screen')" style="display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-weight:600;">Generate Share Cards</a>
-                        </div>
-
-                        <!-- Milestone Viral Share Loop Banner -->
-                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 8px solid #f6d365;">
-                            <div class="flex items-center gap-4">
-                                <div id="milestone-banner-preview" style="width: 120px; height: 63px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.1);">
-                                    <img id="milestone-banner-img" src="" style="width: 100%; height: 100%; object-fit: cover;" />
-                                </div>
-                                <div>
-                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked!</h3>
-                                    <p class="m-0 text-sm opacity-90" style="margin: 0; opacity: 0.9; color: white;">You've reached <span id="milestone-customers-count">0</span> active customers. Share your store's success to earn a free month of Pro!</p>
-                                </div>
-                            </div>
-                            <button
-                                id="milestone-share-btn"
-                                onclick="shareMilestoneToX('first_sale')"
-                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold shadow-sm transition-colors hover:bg-orange-50"
-                                style="background: white; color: #667eea; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
-                            >
-                                Share & Claim Reward
-                            </button>
-                        </div>
-
-                        <!-- Success Milestones Widget -->
-                        <div id="milestones-widget" class="card glass" style="margin-top: 24px; display: none;">
-                            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 20px;">🏆</span> Recent Achievements
-                            </h3>
-                            <div id="milestones-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
-                                <!-- Milestones will be injected here -->
-                            </div>
-                        </div>
-
-                        <div class="card glass" style="text-align: center; padding: 40px 20px;">
-                            <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
-                            <h2 id="todays-sales" placeholder="todays-sales-tooltip" style="font-size: 48px; margin: 0; color: var(--primary); cursor: help;">$0.00</h2>
-                            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 8px;">Loaded from your order data.</p>
-                        </div>
-
-                        <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
-                        <div class="card glass">
-                            <h2>Welcome back, Human.</h2>
-                            <p>Your agents are working on your behalf.</p>
-                            <p>Your AI assistants are working on your behalf.</p>
-                            <p>Business status appears after setup is complete.</p>
-                            <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
-                            <button onclick="showScreen('team-screen')">Your Team</button>
-                        </div>
-                        <div class="card glass">
-                            <h3>Business Snapshot</h3>
-                            <p>Orders to Ship</p>
-                            <p>Team Members</p>
-                            <p>Ongoing Tasks</p>
-                            <p>Needs Your Approval</p>
-                            <button onclick="showScreen('orders-screen')">Review Orders</button>
-                            <div id="milestone-card" class="card glass" style="display: none;">
-                                <h3 id="milestone-title"></h3>
-                                <p id="milestone-body"></p>
-                                <button onclick="dismissMilestone()">Dismiss</button>
-                                <a id="whatsapp-share-btn" href="#" target="_blank" style="display: none; background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-top: 8px; text-align: center;">Share to WhatsApp</a>
-                            </div>
-                        </div>
-                        <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
-                            <h3>Pending Actions Hub</h3>
-                        </div>
-                        <div class="card glass" id="activity-feed"></div>
-                        <div class="card glass">
-                            <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
-                            <p>Store Tips</p>
-                            <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
-                            <button onclick="showScreen('setup-screen')">Launch Site</button>
-                            <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
-                            <button onclick="showScreen('brand-studio-screen')">Create Brand Toolbox</button>
-                            <button onclick="showScreen('calendar-screen')">Calendar</button>
-                            <button onclick="showScreen('calendar-screen')">Calendar 📅</button>
-                            <button onclick="showScreen('meetings-screen')">Agenda</button>
-                            <button onclick="showScreen('settings-screen')">Settings</button>
-                            <button onclick="showScreen('my-plan-screen')">Billing</button>
-                            <button onclick="showScreen('advisory-dashboard-screen')">Advisory</button>
-                            <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
-                            <button onclick="showScreen('supply-chain-screen')">Supply</button>
-                            <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <a href="/products/new" onclick="event.preventDefault(); showScreen('product-new-screen')" style="display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;background:var(--primary);color:white;border-radius:8px;text-decoration:none;font-weight:600;margin-right:8px;margin-bottom:8px;">✨ Auto-Catalog</a>
-                            <button onclick="alert('Help Center')">Help Center</button>
-                            <button onclick="alert('Connect Apps')">Connect Apps</button>
-                            <button onclick="alert('Tutorial started')">Video Tutorials</button>
-                            <button onclick="showScreen('dashboard-screen')">How to use this app</button>
-                            <button onclick="alert(&quot;What's New&quot;)">What's New</button>
-                            <button id="integrations-btn" onclick="document.getElementById('ayrshare-integration').style.display='block';">Integrations</button>
-                            <button onclick="toggleMenu()">Menu</button>
-                        </div>
-                        <div id="ayrshare-integration" class="card glass" style="display: none;">
-                            <h3>📱 Ayrshare</h3>
-                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified API for posting and retrieving messages across social networks.</p>
-                            <button onclick="alert('Configure Ayrshare'); showScreen('inbox-screen')">Configure</button>
-                        </div>
-                        <!-- Business Analytics Widget with Soft Paywall -->
-                        <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Business Analytics</h3>
-                            </div>
-
-                            <!-- Basic Metrics (Free) -->
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
-                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Total Sales</p>
-                                    <p id="analytics-total-sales" style="margin: 4px 0 0 0; font-size: 24px; font-weight: 700; color: #1D1D1F;">Loading...</p>
-                                </div>
-                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
-                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Visitors</p>
-                                    <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600; color: #1D1D1F;">No visitor records returned from the database.</p>
-                                </div>
-                            </div>
-
-                            <!-- Advanced AI Insights (Locked / Soft Paywall) -->
-                            <div style="position: relative; padding: 24px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: linear-gradient(135deg, rgba(240,249,255,0.8) 0%, rgba(255,255,255,0.8) 100%);">
-                                <h4 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
-                                    <span style="font-size: 18px;">✨</span> Advanced AI Insights
-                                </h4>
-
-                                <div style="filter: blur(4px); opacity: 0.7; pointer-events: none; user-select: none;">
-                                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1D1D1F;">No predictive insight records returned from the database.</p>
-                                </div>
-
-                                <!-- CTA Overlay -->
-                                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 12px;">
-                                    <p style="margin: 0 0 12px 0; font-weight: 600; color: #1D1D1F; text-align: center; max-width: 80%;">Unlock predictive analytics & AI recommendations to grow faster.</p>
-                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { showScreen('pricing-screen'); }">Upgrade to Pro</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card glass">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Agent Activity</h3>
-                                <div style="display: flex; align-items: center; gap: 8px; background: rgba(52, 199, 89, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(52, 199, 89, 0.2);">
-                                    <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #34C759; box-shadow: 0 0 8px #34C759;"></div>
-                                    <span style="font-size: 12px; font-weight: 600; color: #1f853b;">Swarm Online</span>
-                                </div>
-                            </div>
-                            <div id="agent-activity-feed" style="background: rgba(255, 255, 255, 0.5); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); overflow: hidden;">
-<div style="padding: 32px; text-align: center; color: var(--text-secondary);"><div style="display: inline-block; width: 32px; height: 32px; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;"></div><p style="margin: 0; font-size: 14px;">Waiting for team activity...</p></div>
-                            </div>
-                            <button class="secondary" style="width: 100%; margin-top: 16px; font-weight: 600;" onclick="fetchActivityFeed()">Refresh Activity</button>
-                        </div>
-                        <div id="extra-menu" class="card glass" style="display: none;">
-                            <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <div class="card glass">
-                                <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Tutorial Library</button>
-                                <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
-                            </div>
-                        </div>
-
-                        <!-- Bottom Nav for dashboard_nav.spec.ts -->
-                        <div class="glass" role="navigation" style="display: flex; justify-content: space-around; padding: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button class="nav-item" onclick="showScreen('dashboard-screen')">Home</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
-                            <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
-                            <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="showScreen('add-item-screen')">Add Product</span>
-                            <button class="nav-item" onclick="showScreen('orders-screen')">Orders</button>
-                            <button class="nav-item">Analytics</button>
-                            <button class="nav-item">Stats</button>
-                            <button class="nav-item">Distribute</button>
-                        </div>
-                    </div>
-
-                    <!-- Recovered Inventory Intelligence -->
-                    <div id="inventory-screen" class="screen glass">
-                        <h1>Inventory Intelligence</h1>
-                        <div id="inventory-proposal" class="card glass">
-                            <h2>⚠️ Running low: Medium Red Dress</h2>
-                            <p>Inventory proposals appear after product and stock records exist.</p><button onclick="resolveInventoryProposal()">Dismiss</button>
-                        </div>
-                        <p id="inventory-empty" style="display:none;">No active restock proposals. You're all set!</p>
-                    </div>
-
-                    <!-- Recovered Supply Chain & Vendor Mesh -->
-                    <div id="supply-chain-screen" class="screen glass">
-                        <h1>Supply Chain & Vendors 📦</h1>
-                        <div class="card glass">
-                            <h2>Vendors</h2>
-                            <input id="new-vendor-name" placeholder="Vendor name" />
-                            <input id="new-vendor-contact" placeholder="Vendor contact" />
-                            <button onclick="addSupplyVendor()">Add Vendor</button>
-                            <div id="vendor-list"></div>
-                        </div>
-                        <div class="card glass">
-                            <h2>Raw Materials</h2>
-                            <input id="new-rm-name" placeholder="Material name" />
-                            <input id="new-rm-qty" type="number" placeholder="Quantity" />
-                            <input id="new-rm-thresh" type="number" placeholder="Threshold" />
-                            <button onclick="addRawMaterial()">Add Material</button>
-                            <div id="raw-material-list"></div>
-                        </div>
-                        <div class="card glass">
-                            <h2>Bill of Materials</h2>
-                            <input id="new-bom-fg" placeholder="Finished good id" />
-                            <input id="new-bom-rm" placeholder="Raw material id" />
-                            <input id="new-bom-qty" type="number" placeholder="Quantity needed" />
-                            <button onclick="linkBomItem()">Link BOM</button>
-                            <div id="bom-list"></div>
-                        </div>
-                    </div>
-
-                    <!-- Recovered Orders and Shipping Labels -->
-                    <div id="orders-screen" class="screen glass">
-                        <div id="orders-list-view">
-                            <h1>Orders</h1>
-                            <div id="orders-list-container" class="card glass">
-                                <p>Loading orders from the database...</p>
-                            </div>
-                        </div>
-                        <div id="order-detail-view" style="display:none;">
-                            <h1>Order</h1>
-                            <span id="order-status"></span>
-                            <div class="card glass">
-                                <h2>Fulfillment</h2>
-                                <p>Shipping labels appear after a real order is selected.</p>
-                                <input type="number" id="shipping-weight" placeholder="Weight" />
-                                <input id="shipping-dimensions" placeholder="Dimensions" />
-                                <button onclick="showShippingRates()">Get Shipping Rates</button>
-                                <div id="shipping-rates" style="display:none;">
-                                    <p>Powered by Shippo<br>Select a Service<br><input type="radio" name="shipping_rate" value="usps">USPS Priority Mail<br><button onclick="buyShippingLabel()">Buy Label & Print</button></p>
-                                </div>
-                                <div id="shipping-label-success" style="display:none;">
-                                    <h3>Label Purchased Successfully</h3><a href="#">Print Label</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Recovered Auto-Catalog -->
-                    <div id="product-new-screen" class="screen glass">
-                        <h1>Add Product</h1>
-                        <div id="auto-catalog-upload" class="card glass">
-                            <label for="auto-catalog-file" style="display:block;font-weight:700;margin-bottom:12px;">Take a photo or upload</label>
-                            <input id="auto-catalog-file" type="file" accept="image/*" onchange="runAutoCatalog()" />
-                        </div>
-                        <p id="auto-catalog-loading" style="display:none;">AutoDream AI is analyzing your photo...</p>
-                        <div id="auto-catalog-form" class="card glass" style="display:none;">
-                            <input id="auto-catalog-title" placeholder="Title returned by AutoDream" />
-                            <input id="auto-catalog-price" placeholder="Price returned by AutoDream" />
-                            <input id="auto-catalog-category" placeholder="Category returned by AutoDream" />
-                            <textarea id="auto-catalog-description" placeholder="Description returned by AutoDream"></textarea>
-                            <button onclick="publishAutoCatalogProduct()">Publish Product</button>
-                        </div>
-                        <div id="auto-catalog-published" class="card glass" style="display:none;">
-                            <h1>Product Published!</h1>
-                            <a href="/dashboard" onclick="event.preventDefault(); showScreen('dashboard-screen')">Return to Dashboard</a>
-                        </div>
-                    </div>
-
-                    <!-- Recovered Social Share Cards -->
-                    <div id="share-cards-screen" class="screen glass">
-                        <h1>Social Share Cards</h1>
-                        <div class="card glass" style="max-width:420px;">
-                            <h2>No share card generated yet</h2>
-                            <p>Share cards appear after your store has real milestones or product data.</p>
-                            <span>⚡ Powered by OHC</span>
-                        </div>
-                    </div>
-
-                    <!-- Recovered Customer Win-back Campaign -->
-                    <div id="win-back-screen" class="screen glass">
-                        <h1>Customer Win-back Campaign 💌</h1>
-                        <div class="card glass">
-                            <label for="winback-product">Product to Feature (Optional)</label>
-                            <input id="winback-product" placeholder="Signature Coffee Blend" />
-                            <label for="winback-discount">Discount Offer (%)</label>
-                            <input id="winback-discount" type="number" placeholder="15" />
-                            <button onclick="generateWinBackCampaign()">Generate AI Campaign</button>
-                        </div>
-                        <div id="winback-paywall" class="card glass" style="display:none;">
-                            <h2>Upgrade to Pro</h2>
-                            <p>Customer Win-back Campaigns are a Pro feature.</p>
-                            <button>Upgrade to Pro</button>
-                            <button onclick="claimWinBackTrial()">Share on X to get 7 Days Free</button>
-                        </div>
-                        <div id="winback-draft" class="card glass" style="display:none;">
-                            <h2>AI Generated Draft</h2>
-                            <pre id="winback-draft-text" style="white-space:pre-wrap;"></pre>
-                            <button onclick="document.getElementById('winback-sent').style.display='block'; this.style.display='none';">Send to 34</button>
-                            <p id="winback-sent" style="display:none;">✅ Campaign sent to 34 inactive customers!</p>
-                        </div>
-                    </div>
-
-                    <!-- Seasonal Promos Generator -->
-                    <div id="seasonal-promo-screen" class="screen glass" style="margin-bottom: 80px;">
-                        <h1>Seasonal Promotion Generator ✨</h1>
-                        <p>Generate highly-converting, AI-styled seasonal campaigns for your business instantly.</p>
-
-                        <div class="card glass">
-                            <label for="promo-occasion" style="display: block; margin-bottom: 8px; font-weight: 500;">Occasion / Season</label>
-                            <input type="text" id="promo-occasion" placeholder="e.g., Summer Sale, Back to School, Halloween" style="width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-
-                            <label for="promo-discount" style="display: block; margin-bottom: 8px; font-weight: 500;">Discount Percentage</label>
-                            <input type="number" id="promo-discount" placeholder="20" style="width: 100%; margin-bottom: 24px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
-
-                            <button class="primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="generateSeasonalPromo()">Generate Campaign</button>
-                        </div>
-
-                        <div id="seasonal-paywall" class="card glass" style="display:none;">
-                            <h2>Upgrade to Pro</h2>
-                            <p>Seasonal Promotion Generator is a Pro feature.</p>
-                            <button onclick="showScreen('pricing-screen')">Upgrade to Pro</button>
-                            <button onclick="localStorage.setItem('has_pro','true'); document.getElementById('seasonal-paywall').style.display='none'; generateSeasonalPromo();">Share on X to get 7 Days Free</button>
-                        </div>
-
-                        <div id="promo-result" class="card glass" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
-                            <h3 style="color: var(--primary); margin-top: 0;">Generated Campaign</h3>
-                            <div id="promo-content" style="font-size: 16px; line-height: 1.6; color: #333;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Referral Dashboard -->
-                    <div id="referral-dashboard-screen" class="screen glass">
-                        <h1>Referral Dashboard</h1>
-
-                        <!-- Hero Card: Give a Month, Get a Month -->
-                        <div class="card glass" style="background: #3b82f6; background: linear-gradient(135deg, var(--primary, #0066ff) 0%, #3b82f6 100%); color: white; text-align: center; padding: 40px 24px; border: none; position: relative; overflow: hidden;">
-                            <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
-                            <div style="position: absolute; bottom: -50px; left: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
-                            <h2 style="font-size: 32px; font-weight: 800; margin-bottom: 12px; color: white; position: relative; z-index: 1;">Give 1 Month, Get 1 Month Free</h2>
-                            <p style="color: rgba(255,255,255,0.9); font-size: 16px; max-width: 400px; margin: 0 auto 24px; line-height: 1.5; position: relative; z-index: 1;">Invite other small business owners to OHC. When they launch, you both get a free month of OHC Pro. There's no limit!</p>
-
-                            <p style="font-size: 14px; font-weight: bold; margin-bottom: 8px; position: relative; z-index: 1; color: white;">Your Referral Link</p>
-                            <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
-                                <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
-                                <button style="margin: 0; background: white; color: var(--primary, #0066ff); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); alert('Copied');">Copy</button>
-                            </div>
-
-                            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1; flex-wrap: wrap;">
-                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; width: 100%; max-width: 375px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 2000);">Copy Invite Message</button>
-                                <div id="invite-copied-msg" style="display: none; width: 100%; font-size: 14px; color: #a7f3d0; margin-top: 4px;">Invite message copied!</div>
-                            </div>
-
-                            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1; flex-wrap: wrap;">
-                                <button style="background: #E1306C; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://instagram.com', '_blank')">Share to Instagram</button>
-                                <button style="background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://wa.me/?text=Launch+your+business+on+OHC!', '_blank')">WhatsApp</button>
-                                <button style="background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
-                            </div>
-                            <div style="margin-top: 16px; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;">
-                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('Join OHC using my link! ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='inline-block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 3000);">Copy Invite Message</button>
-                                <div id="invite-copied-msg" style="display: none; margin-top: 8px; color: white; font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px;">Invite message copied!</div>
-                            </div>
-                        </div>
-
-                        <!-- Progress Section -->
-                        <div class="card glass">
-                            <h3 style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>Your Growth Progress</span>
-                                <span style="font-size: 14px; font-weight: 500; color: var(--text-secondary); background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 99px;">0 / 5 Referrals</span>
-                            </h3>
-                            <div style="width: 100%; background: #e2e8f0; border-radius: 99px; height: 12px; overflow: hidden; margin-bottom: 12px;">
-                                <div style="width: 10%; background: var(--primary); height: 100%; border-radius: 99px; box-shadow: 0 0 10px rgba(0,111,255,0.5);"></div>
-                            </div>
-                            <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">You're on your way! Invite 1 more business to unlock your first reward.</p>
-                        </div>
-
-                        <!-- One-Tap Share Tools -->
-                        <div class="card glass">
-                            <h3 style="margin-bottom: 20px;">Share with 1-Tap</h3>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
-                                <button style="margin: 0; width: 100%; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Instagram story editor...')">
-                                    <span style="font-size: 24px;">📷</span>
-                                    <span>Share to Instagram</span>
-                                </button>
-                                <button style="margin: 0; width: 100%; background: #25D366; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening WhatsApp...')">
-                                    <span style="font-size: 24px;">💬</span>
-                                    <span>WhatsApp</span>
-                                </button>
-                                <button style="margin: 0; width: 100%; background: #0077b5; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening LinkedIn...')">
-                                    <span style="font-size: 24px;">💼</span>
-                                    <span>LinkedIn</span>
-                                </button>
-                                <button style="margin: 0; width: 100%; background: #ea4335; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Email draft...')">
-                                    <span style="font-size: 24px;">✉️</span>
-                                    <span>Email</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Embeddable Storefront Widget -->
-                        <div class="card glass" style="margin-top: 24px;">
-                            <h3 style="margin-bottom: 12px;">Embed on Your Website</h3>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Showcase your OHC storefront directly on your existing blog or website to maximize reach.</p>
-                            <textarea id="embed-code" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">&lt;iframe src="https://mybusiness.ohc.store" width="100%" height="600px" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;</textarea>
-                            <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
-                        </div>
-
-                        <!-- Automated AI Review Requests -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
-                            </div>
-
-                            <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
-                                ✓ Campaign sent to <span id="review-emails-sent">0</span> customers!
-                            </div>
-                            <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">✨ Send AI Review Requests</button>
-                        </div>
-
-                        <!-- Social Media Discount Share -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Social Media Discount Share <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Offer a 10% discount on social media when you hit a new milestone. Drive instant traffic back to your store!</p>
-                            <button onclick="generateDiscountShare()" style="width: 100%; background: #000; color: #fff;">🐦 Share 10% Off on X (Twitter)</button>
-                        </div>
-
-                        <!-- Growth Loop: Interactive Analytics Soft Paywall -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(255, 165, 0, 0.3); position: relative; overflow: hidden;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Advanced Analytics <span style="font-size: 12px; background: rgba(255, 165, 0, 0.1); color: #d97706; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">Premium Growth Loop</span></h3>
-                            </div>
-
-                            <div style="filter: blur(4px); opacity: 0.6; user-select: none;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px;">
-                                    <span style="font-weight: 600;">Conversion Rate</span>
-                                    <span style="color: #10b981; font-weight: bold; font-size: 18px;">4.2%</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px;">
-                                    <span style="font-weight: 600;">Customer Lifetime Value</span>
-                                    <span style="color: #3b82f6; font-weight: bold; font-size: 18px;">$184.50</span>
-                                </div>
-                                <div style="text-align: center; margin-top: 16px; background: rgba(0,0,0,0.02); padding: 24px; border-radius: 8px;">
-                                    <div style="font-size: 32px; margin-bottom: 8px;">📈</div>
-                                    <span style="font-weight: 500; color: var(--text-secondary);">Top Traffic: Organic Search</span>
-                                </div>
-                            </div>
-
-                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(2px);">
-                                <div style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid rgba(255, 165, 0, 0.2); text-align: center; max-width: 300px;">
-                                    <div style="width: 48px; height: 48px; background: rgba(255, 165, 0, 0.1); color: #d97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px auto;">🔒</div>
-                                    <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--text-primary);">Unlock Growth Insights</h3>
-                                    <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-secondary);">See exactly where your best customers come from and optimize your store to double your conversion rate.</p>
-                                    <button onclick="showScreen('pricing-screen')" style="width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); font-weight: bold; padding: 12px; border-radius: 8px; color: white; border: none; cursor: pointer;">Upgrade to Premium</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card glass" style="margin-top: 24px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
-                                    <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Referral Logs</button>
-                                    <button class="secondary" style="margin: 0;" onclick="alert('Data exported')">Export Data</button>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- KAIROS Screen -->
-                    <div id="kairos-screen" class="screen glass" style="background: #16161A; color: #F5F5F7;">
-                        <header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; margin-bottom: 24px;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <a href="/dashboard" onclick="event.preventDefault(); showScreen('dashboard-screen')" style="color: #6aa9ff; text-decoration: none; font-weight: 700;">Back to Dashboard</a>
-                                <h1 style="margin: 0; color: #F5F5F7;">KAIROS Orchestration</h1>
-                            </div>
-                            <span style="font-size: 12px; font-weight: 700; color: #0066FF; background: #e8f2ff; border-radius: 999px; padding: 6px 10px;">System Synchronized</span>
-                        </header>
-
-                        <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 24px;">
-                            <section id="kairos-brain" class="card glass" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
-                                <h2 style="color: #F5F5F7;">Shared Task List</h2>
-                                <p style="color: #a1a1aa;">KAIROS prioritizes and assigns work across the autonomous team.</p>
-                                <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;">Inventory Reorder Strategy</div>
-                            </section>
-
-                            <section id="kairos-memory" class="card glass" style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
-                                <h2 style="color: #F5F5F7;">AutoDream Memory</h2>
-                                <h3 style="color: #F5F5F7;">Infinite Context</h3>
-                                <p style="color: #a1a1aa;">AutoDream stores business interactions so agents retain context.</p>
-                                <div style="font-size: 16px; font-weight: 700; color: #d8b4fe;">842.5 MB</div>
-                            </section>
-
-                            <section id="kairos-nerves" class="card glass" style="grid-column: 1 / -1; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">
-                                <h2 style="color: #F5F5F7;">Teammate Mesh</h2>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
-                                    <div class="card" style="background: rgba(255,255,255,0.06); color: #F5F5F7;"><div>Brain</div><div>Nerve</div><div>Memory</div></div>
-                                </div>
-                            </section>
-                        </div>
-                        <div id="kairos-walkthrough-copy" style="margin-top: 20px; padding: 12px; border-radius: 8px; background: rgba(0,102,255,0.15); color: #cfe3ff;">
-                            KAIROS data appears after shared task records are written to the database. <span style="display:none;" id="kairos-tooltip">The Shared Task List is the 'Brain'</span>
-                        </div>
-                    </div>
-
-                    <!-- Inbox Screen -->
-                    <div id="inbox-screen" class="screen glass" style="max-width: 375px; margin: 0 auto; padding: 16px; box-sizing: border-box;">
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
-                        <h1>Customer Inbox</h1>
-                        <div id="inbox-list" class="card glass">
-                            <p>Loading inbox messages from the database...</p>
-                        </div>
-                        <div class="card glass">
-                            <h3>Reply Draft <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
-                            <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
-                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                        </div>
-                        <button onclick="const p = document.createElement('p'); p.textContent = 'Are you open today?'; document.getElementById('messages-list').appendChild(p); setTimeout(() => { const badge = document.createElement('div'); badge.textContent = 'AI Replied'; const reply = document.createElement('p'); reply.textContent = 'Hi! Yes, we are open until 6 PM today and we currently have 12 Vanilla Cupcakes left. Shall I set one aside for you?'; document.getElementById('messages-list').appendChild(badge); document.getElementById('messages-list').appendChild(reply); }, 500);">🤖 Simulate Incoming Message</button>
-                            <div id="chat-window" class="card glass">
-                            <p>Select a conversation</p>
-                            <div id="messages-list"></div>
-                            <input id="reply-input" type="text" placeholder="Type a message...">
-                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
-                        </div>
-                    </div>
-
-                    <!-- Meetings Screen -->
-                    <div id="meetings-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
-                        <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
-
-                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Autonomous Booking Agent</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Enable your AI agent to auto-schedule appointments from the unified inbox without any third-party tools.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
-                        </div>
-
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
-                                onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
-                            + Schedule New Appointment
-                        </button>
-
-                        <div class="card glass meeting" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Team Sync - 14:00</h3>
-                            <p>No meeting records returned from the database.</p>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
-                            </div>
-                        </div>
-
-                        <div id="scheduler" class="card glass" style="display: none; border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h2 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Plan Create</h2>
-                            <div style="display: flex; flex-direction: column; gap: 12px;">
-                                <input type="text" placeholder="Meeting Title" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
-                                <input type="date" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
-                                <input type="time" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
-                                <input type="email" placeholder="Participant Email" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
-                            </div>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px;">
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1D1D1F; color: white; border: none; flex: 1;" onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
-                            </div>
-                        </div>
-
-                        <div class="tabs" style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 8px;">
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('History shown')">📜 View Log</button>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Records')">Past</button>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Calendar')">Calendar</button>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Archive')">Archive</button>
-                        </div>
-                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%;" onclick="showScreen('dashboard-screen')">Back</button>
-                    </div>
-
-                    <!-- Meeting Room Screen -->
-                    <div id="meeting-room-screen" class="screen glass">
-                        <h1>Meeting Room Video Audio</h1>
-                        <div class="video-container card glass">
-                            <p>Feed</p>
-                            <p id="status-text">Off</p>
-                        </div>
-                        <div class="controls">
-                            <button onclick="document.getElementById('status-text').textContent = 'Video Off'">Camera</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Muted'">Mic</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Sharing Screen'">Share</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Hand Raised'">Signal</button>
-                            <button onclick="document.getElementById('status-text').textContent = 'Recording'">Record</button>
-                            <button onclick="alert('Participants list')">Participants List</button>
-                            <button onclick="alert('Chat opened')">Chat</button>
-                            <button class="danger" onclick="document.getElementById('status-text').textContent = 'left'; alert('Left meeting')">End</button>
-                        </div>
-                    </div>
-
-                    <div id="calendar-screen" class="screen glass">
-                        <header><a onclick="showScreen('dashboard-screen')">Back</a></header>
-                        <h1>Calendar & Bookings</h1>
-                        <div class="card glass">
-                            <h2>Upcoming Appointments</h2>
-                            <p>No appointment records returned from the database.</p>
-                        </div>
-                        <div class="card glass">
-                            <h2>Operations Agent</h2>
-                            <p>No scheduling automation records returned from the database.</p>
-                            <button class="bg-green-300" onclick="this.className='bg-gray-300'">Toggle scheduling</button>
-                        </div>
-                    </div>
-
-                    <!-- Agents Page (Your Team) -->
-                    <div id="team-screen" class="screen">
-                        <h1 class="outfit">Your Team</h1>
-                        <h2>Agents</h2>
-                        <h2>AI Departments</h2>
-                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
-                        <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
-
-                        <div class="card glass" id="voice-ai-config" style="margin-bottom: 20px;">
-                            <h2>Select an AI Voice</h2>
-                            <p style="color: var(--text-secondary); margin-top: -4px;">AI Voice Receptionist</p>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Activate AI Receptionist" style="margin-right: 8px;"> Activate AI Receptionist</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 8px;"><input type="checkbox" aria-label="Allow AI to book appointments" style="margin-right: 8px;"> Allow AI to book appointments</label>
-                            <label style="display:flex; align-items:center; margin-bottom: 16px;"><input type="checkbox" aria-label="Allow AI to text callers links" style="margin-right: 8px;"> Allow AI to text callers links</label>
-                            <button onclick="document.getElementById('voice-ai-save-msg').style.display='block'">Save Voice Settings</button>
-                            <div id="voice-ai-save-msg" style="display:none; color: var(--success); margin-top: 8px; font-weight: 500;">Voice settings updated successfully</div>
-                        </div>
-
-                        <div class="card glass" id="team-invite-loop" style="margin-bottom: 20px;">
-                            <h2 class="outfit" style="margin-top: 0;">Grow Your Team</h2>
-                            <p style="color: var(--text-secondary);">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
-                            <button style="width: 100%; margin-top: 8px;" onclick="openCloudBridgeInvite()">Invite to Cloud Team</button>
-                        </div>
-
-                        <div id="cloud-bridge-invite-modal" class="card glass" role="dialog" aria-modal="true" aria-labelledby="cloud-bridge-invite-title" style="display: none; position: fixed; z-index: 3000; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 32px)); box-shadow: var(--shadow-lg);">
-                            <button aria-label="Close Cloud Bridge Invite" onclick="closeCloudBridgeInvite()" style="position: absolute; right: 12px; top: 12px; width: 36px; height: 36px; padding: 0; border-radius: 999px; background: transparent; color: var(--text-secondary);">×</button>
-                            <h2 id="cloud-bridge-invite-title" class="outfit" style="margin-top: 8px;">Cloud Bridge Invite</h2>
-                            <p style="color: var(--text-secondary);">Share this link to provision a temporary multi-tenant context for your collaborator, while you maintain local sovereignty.</p>
-                            <input id="cloud-bridge-invite-link" type="text" readonly value="https://ohc.app/invite/team-default" style="width: 100%; margin: 8px 0 12px 0;" />
-                            <button id="cloud-bridge-copy-button" style="width: 100%;" onclick="copyCloudBridgeInvite()">Copy Link</button>
-                        </div>
-
-                        <div class="card glass" id="legacy-departments" style="display: grid; gap: 10px; margin-bottom: 20px; backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px;">
-                            <button onclick="openLegacyDepartment('The Ambassador')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>✨ The Ambassador (Omnichannel Inbox)</span>
-                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Manager')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Manager - Operations</span>
-                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Closer')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Closer - Sales</span>
-                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Promoter')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Promoter - Marketing</span>
-                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Salesperson')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Salesperson - Sales</span>
-                                <span style="background: rgba(255, 0, 0, 0.2); color: #ff6b6b; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;">1 action</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Accountant')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Accountant - Finance</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Protector')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Protector - Security</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Advisor')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Advisor - Strategy</span>
-                            </button>
-                            <button onclick="openLegacyDepartment('The Scout')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>The Scout - Research</span>
-                            </button>
-                            <div style="margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px;">
-                                <span style="font-size: 0.9em; opacity: 0.8;">Advanced Settings</span>
-                                <button onclick="document.getElementById('legacy-agent-settings').style.display='block'" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 4px 8px; margin-left: 10px; font-size: 0.8em;">Show settings</button>
-                                <p id="legacy-agent-settings" style="display: none; font-size: 0.8em; margin-top: 5px; opacity: 0.7;">Auto-approve: $0</p>
-                            </div>
-                        </div>
-
-                        <div id="legacy-department-detail" class="card glass" style="display: none;">
-                            <h1 id="legacy-department-title">The Ambassador</h1>
-                            <p>No pending department actions returned from the database.</p>
-                            <span class="bg-orange-100 text-orange-700">High Risk</span>
-                            <span class="bg-blue-100 text-blue-700">Low Risk</span>
-                            <button onclick="markLegacyDepartmentDone()">Approve</button>
-                            <button onclick="markLegacyDepartmentDone()">Reject / Edit</button>
-                            <p id="legacy-department-empty" style="display: none;">All Caught Up!</p>
-                            <p id="legacy-department-empty-detail" style="display: none;">There are no pending actions requiring your review.</p>
-                            <svg onclick="document.getElementById('legacy-department-detail').style.display='none'" width="20" height="20" role="button"><path d="M12 4 L6 10 L12 16" stroke="currentColor" fill="none"/></svg>
-                        </div>
-
-                        <div class="card glass" id="workflow-builder" style="margin-bottom: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-                                <div>
-                                    <h2 class="outfit" style="margin: 0;">Create Workflow</h2>
-                                    <p style="font-size: 14px; color: var(--text-secondary); margin-top: 6px;">Create a branch review workflow and send it to the backend agent CLI.</p>
-                                </div>
-                                <span style="font-size: 12px; font-weight: 700; color: var(--primary); background: var(--primary-soft); padding: 6px 8px; border-radius: 8px; white-space: nowrap;">RunWorkflow</span>
-                            </div>
-                            <label for="workflow-name" style="display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px;">Name</label>
-                            <input id="workflow-name" value="Branch review" style="width: 100%; min-height: 44px; margin-bottom: 12px;" />
-                            <label for="workflow-task" style="display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px;">Task</label>
-                            <textarea id="workflow-task" style="width: 100%; min-height: 112px; border-radius: 8px; border: 1px solid var(--border); padding: 12px; font-family: 'Inter', sans-serif; resize: vertical;">Review the current branch for correctness, security, deployment, and test coverage issues.</textarea>
-                            <button id="create-workflow-button" style="width: 100%; margin-top: 12px;" onclick="createWorkflow()">Create & Run Workflow</button>
-                            <p id="workflow-status-message" style="font-size: 13px; color: var(--text-secondary); margin: 12px 0 0 0;"></p>
-                            <div id="workflow-list" style="margin-top: 14px;"></div>
-                        </div>
-
-                        <div id="departments-container">
-                            <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
-                                <h3 class="outfit">Marketing Pro</h3>
-                                <p style="color: var(--accent-green);">Status: Active</p>
-                                <p style="font-size: 14px; margin-top: 8px;">No recent marketing activity returned from the database.</p>
-                                <div id="ambassador-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
-                                    <h4 style="margin-top: 0;">Settings</h4>
-                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
-                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
-                                        Require approval for quotes > $100
-                                        <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="card glass" onclick="toggleDepartment('manager')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">Ops Helper</h3>
-                                <p style="color: var(--accent-green);">Status: Active</p>
-                                <p style="font-size: 14px; margin-top: 8px;">No recent operations activity returned from the database.</p>
-                                <div id="manager-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
-                                    <h4 style="margin-top: 0;">Settings</h4>
-                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
-                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
-                                        Require approval for order refunds
-                                        <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('manager', this.checked)">
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="card glass" onclick="toggleDepartment('salesperson')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">Sales Agent</h3>
-                                <p style="color: var(--accent-orange);">Status: Waiting for database activity</p>
-                                <p style="font-size: 14px; margin-top: 8px;">No recent sales activity returned from the database.</p>
-                                <button style="margin-top: 15px; width: 100%;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
-                            </div>
-                        </div>
-
-                        <button class="secondary" style="margin-top: 20px;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <script>
-                        async function openCloudBridgeInvite() {
-                            const modal = document.getElementById('cloud-bridge-invite-modal');
-                            const input = document.getElementById('cloud-bridge-invite-link');
-                            const copyButton = document.getElementById('cloud-bridge-copy-button');
-                            if (modal) modal.style.display = 'block';
-                            if (copyButton) copyButton.textContent = 'Copy Link';
-                            if (input) input.value = 'https://ohc.app/invite/team-default';
-                            try {
-                                const response = await fetch('/api/v1/growth/team-invites', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ team_id: 'default_team', inviter_id: 'current_user', invitee_id: 'new_user' })
-                                });
-                                if (!response.ok) return;
-                                const data = await response.json();
-                                if (data && data.invite_link && input) input.value = data.invite_link;
-                            } catch (e) {
-                                console.error('Failed to create team invite', e);
-                            }
-                        }
-
-                        function closeCloudBridgeInvite() {
-                            const modal = document.getElementById('cloud-bridge-invite-modal');
-                            if (modal) modal.style.display = 'none';
-                        }
-
-                        function copyCloudBridgeInvite() {
-                            const input = document.getElementById('cloud-bridge-invite-link');
-                            const button = document.getElementById('cloud-bridge-copy-button');
-                            const value = input ? input.value : '';
-                            if (navigator.clipboard) navigator.clipboard.writeText(value);
-                            if (button) button.textContent = 'Copied!';
-                        }
-
-                        function openLegacyDepartment(name) {
-                            const detail = document.getElementById('legacy-department-detail');
-                            const title = document.getElementById('legacy-department-title');
-                            const empty = document.getElementById('legacy-department-empty');
-                            const emptyDetail = document.getElementById('legacy-department-empty-detail');
-                            if (title) title.textContent = name;
-                            if (detail) detail.style.display = 'block';
-                            if (empty) empty.style.display = name === 'The Accountant' || name === 'The Protector' ? 'block' : 'none';
-                            if (emptyDetail) emptyDetail.style.display = name === 'The Accountant' ? 'block' : 'none';
-                        }
-
-                        function markLegacyDepartmentDone() {
-                            const empty = document.getElementById('legacy-department-empty');
-                            const emptyDetail = document.getElementById('legacy-department-empty-detail');
-                            if (empty) empty.style.display = 'block';
-                            if (emptyDetail) emptyDetail.style.display = 'block';
-                        }
-
-                        function toggleDepartment(deptId) {
-                            const settingsDiv = document.getElementById(deptId + '-settings');
-                            if (settingsDiv) {
-                                settingsDiv.classList.toggle('open');
-                            }
-                        }
-
-
-                        function updateApprovalSetting(deptId, isChecked) {
-                            const tenantId = localStorage.getItem('tenant_id') || 'default';
-                            fetch(`/api/agents/settings/${deptId}`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
-                                },
-                                body: JSON.stringify({ auto_approve_limits: isChecked ? 0.0 : 100.0, tone_of_voice: "professional" })
-                            }).then(() => {
-                                alert(`Settings updated for ${deptId}: auto-execute is now ${!isChecked}.`);
-                            }).catch(e => {
-                                console.error('Failed to update settings', e);
-                            });
-                        }
-
-                        function renderWorkflows(workflows) {
-                            const list = document.getElementById('workflow-list');
-                            if (!list) return;
-                            if (!workflows || workflows.length === 0) {
-                                list.innerHTML = '<p style="font-size: 13px; color: var(--text-secondary);">No workflows yet.</p>';
-                                return;
-                            }
-                            list.innerHTML = workflows.map(workflow => `
-                                <div class="card glass" style="padding: 12px; margin-top: 10px; border: 1px solid var(--border);">
-                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                                        <div>
-                                            <h3 class="outfit" style="margin: 0; font-size: 16px;">${workflow.name}</h3>
-                                            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--primary); font-weight: 700;">${workflow.workflow}</p>
-                                        </div>
-                                        <span style="font-size: 12px; font-weight: 700; color: ${workflow.status === 'failed' ? '#b91c1c' : workflow.status === 'completed' ? '#166534' : 'var(--primary)'};">${workflow.status}</span>
-                                    </div>
-                                    <p style="font-size: 13px; color: var(--text-secondary); margin: 10px 0;">${workflow.task}</p>
-                                    <div style="background: rgba(255,255,255,0.55); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
-                                        <p style="margin: 0 0 4px 0; font-size: 11px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Backend CLI</p>
-                                        <p style="margin: 0; font-size: 12px; word-break: break-word; font-family: monospace;">${workflow.command || 'Preparing command...'}</p>
-                                    </div>
-                                    ${workflow.error ? `<p style="font-size: 13px; color: #b91c1c; margin-bottom: 0;">${workflow.error}</p>` : ''}
-                                </div>
-                            `).join('');
-                        }
-
-                        async function fetchWorkflows() {
-                            try {
-                                const res = await fetch('/api/agents/workflows');
-                                if (!res.ok) return;
-                                const data = await res.json();
-                                renderWorkflows(data.workflows || []);
-                            } catch (e) {
-                                console.error('Error fetching workflows:', e);
-                            }
-                        }
-
-                        async function createWorkflow() {
-                            const nameInput = document.getElementById('workflow-name');
-                            const taskInput = document.getElementById('workflow-task');
-                            const status = document.getElementById('workflow-status-message');
-                            const button = document.getElementById('create-workflow-button');
-                            const name = nameInput ? nameInput.value.trim() : '';
-                            const task = taskInput ? taskInput.value.trim() : '';
-                            if (!name || !task) {
-                                if (status) status.textContent = 'Workflow name and task are required.';
-                                return;
-                            }
-
-                            if (button) button.disabled = true;
-                            if (status) status.textContent = 'Creating workflow...';
-                            try {
-                                const res = await fetch('/api/agents/workflows', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ name, task })
-                                });
-                                const data = await res.json();
-                                if (!res.ok) {
-                                    if (status) status.textContent = data.error || 'Workflow could not be created.';
-                                    return;
-                                }
-                                if (status) status.textContent = 'Workflow sent to backend agent CLI.';
-                                renderWorkflows([data.workflow]);
-                                fetchWorkflows();
-                            } catch (e) {
-                                if (status) status.textContent = 'Workflow service is unavailable.';
-                                console.error('Error creating workflow:', e);
-                            } finally {
-                                if (button) button.disabled = false;
-                            }
-                        }
-
-                        async function fetchActivityFeed() {
-                            try {
-                                const container = document.getElementById('activity-feed');
-                                if (!container) return;
-                                const res = await fetch('/api/agents/approvals/activity', {
-                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
-                                });
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
-                                        container.innerHTML = '<h3>Activity Feed</h3>';
-                                        data.pending_approvals.forEach(activity => {
-                                            container.innerHTML += `
-                                                <div style="background: rgba(255,255,255,0.4); border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-                                                    <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Auto-Executed by ${activity.department}: ${activity.description}</p>
-                                                </div>
-                                            `;
-                                        });
-                                    } else {
-                                        container.innerHTML = '<h3>Activity Feed</h3><p style="font-size: 13px; color: var(--text-secondary);">No recent activities.</p>';
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error fetching activity feed:', e);
-                            }
-                        }
-
-                        async function fetchApprovals() {
-                            try {
-                                const res = await fetch('/api/agents/approvals', {
-                                    method: 'GET',
-                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
-                                });
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    const container = document.getElementById('approval-inbox');
-                                    if (!container) return;
-
-                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
-                                        container.innerHTML = '<h3>Pending Actions Hub</h3>';
-                                        data.pending_approvals.forEach(approval => {
-                                            const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
-                                            container.innerHTML += `
-                                                <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
-                                                    <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
-                                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
-                                                    ${payloadStr}
-                                                    <div style="display: flex; gap: 8px; margin-top: 10px;">
-                                                        <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
-                                                        <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
-                                                    </div>
-                                                </div>
-                                            `;
-                                        });
-                                    } else {
-                                        container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error fetching approvals:', e);
-                            }
-                        }
-
-                        async function decideApproval(id, approved) {
-                            const card = document.getElementById('approval-card-' + id);
-                            if (card) {
-                                card.style.display = 'none';
-                            }
-                            try {
-                                const res = await fetch('/api/agents/approvals/' + id, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
-                                    },
-                                    body: JSON.stringify({ approved })
-                                });
-                                if (res.ok) {
-                                    fetchApprovals();
-                                    fetchActivityFeed();
-                                } else {
-                                    if (card) card.style.display = 'block';
-                                    alert('Failed to process approval.');
-                                }
-                            } catch (e) {
-                                if (card) card.style.display = 'block';
-                                console.error('Error processing approval:', e);
-                            }
-                        }
-
-                    </script>
-
-
-
-                    <!-- API Screen -->
-                    <div id="api-screen" class="screen glass">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Custom Software</h1>
-                            <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                        </div>
-
-                        <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
-                        <div class="card glass">
-                            <h2>Custom Integration</h2>
-                            <h2>Custom Software</h2>
-                            <h2>Product Data Access</h2>
-                            <p>Read Product List</p>
-                            <p>Manage your custom software connections here.</p>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Meta Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Social Media Accounts</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Meta...')">Connect my Instagram and Facebook</button>
-                            </div>
-
-                            <!-- Autonomous Booking Agent -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Autonomous Booking Agent</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
-                            </div>
-
-                            <!-- Mailchimp Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Customer Emails</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mailchimp...')">Start sending emails</button>
-                            </div>
-
-                            <!-- Mercado Pago Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Local Payments</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Get paid easily using local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
-                            </div>
-
-                            <!-- Shippo Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Shipping Labels</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
-                            </div>
-
-                            <!-- Front Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Omnichannel Inbox</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📥</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified inbox aggregating messages from Front, Instagram, WhatsApp, and email.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Front...')">Connect Front</button>
-                            </div>
-
-                            <!-- Twilio Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Text Notifications</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send automatic text message updates to your customers about their orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
-                            </div>
-
-                            <!-- Zoom Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Online Meetings</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Create my meeting room</button>
-                            </div>
-                        </div>
-
-                        <!-- Elements Required by E2E test -->
-                        <div style="display: none;">
-                            <h1>Connect Custom Software</h1>
-                            <h1>Custom Integration</h1>
-                            <h1>Custom Software</h1>
-                            <h2>Product Data Access</h2>
-                            <p>Read Product List</p>
-                            <p>Manage your custom software connections here.</p>
-                        </div>
-                    </div>
-
-                    <!-- Settings Screen -->
-                    <div id="settings-screen" class="screen">
-                        <h1>Settings</h1>
-                        <h2>General</h2>
-                        <label><input type="checkbox"> Enable Email Notifications</label>
-                        <label><input type="checkbox"> Enable SMS Reminders</label>
-                        <p>SMS Content</p>
-                        <p style="font-size: 14px; color: var(--text-secondary);">Sent 24h before appointment: "Hi, this is a reminder for your upcoming appointment tomorrow."</p>
-                        <p>Closing Greeting</p>
-                        <input type="text" placeholder="e.g. See you soon!" />
-                        <label><input type="checkbox"> Enable Push Notifications</label>
-
-                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);" />
-
-                        <h2>Global SMS Notifications for Critical Alerts</h2>
-                        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Get immediate text alerts for urgent business events.</p>
-                        <div style="margin-bottom: 12px;">
-                            <input type="text" id="sms-critical-phone" placeholder="Mobile Phone Number (e.g. +1234567890)" style="width: 100%; max-width: 300px; margin-bottom: 8px;" />
-                            <br/>
-                            <button onclick="verifySmsNumber()" id="btn-verify-sms" style="background: var(--primary); color: white;">Verify Number</button>
-                        </div>
-
-                        <div id="sms-otp-container" style="display: none; margin-bottom: 12px; background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 102, 255, 0.2);">
-                            <p style="font-size: 14px; margin-bottom: 8px;">A 6-digit code has been sent. Enter it below:</p>
-                            <input type="text" id="sms-critical-otp" placeholder="123456" style="width: 100px; margin-right: 8px;" />
-                            <button onclick="confirmSmsNumber()" style="background: var(--accent-green); color: white;">Confirm OTP</button>
-                        </div>
-                        <div id="sms-verified-badge" style="display: none; margin-bottom: 12px; color: var(--accent-green); font-weight: 600; font-size: 14px;">
-                            ✓ Number Verified
-                        </div>
-
-                        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-                            <label><input type="checkbox" id="sms-alert-urgent-booking" onchange="saveSmsPreferences()"> Urgent Bookings</label>
-                            <label><input type="checkbox" id="sms-alert-failed-payment" onchange="saveSmsPreferences()"> Failed Payments</label>
-                            <label><input type="checkbox" id="sms-alert-new-order" onchange="saveSmsPreferences()"> New Orders</label>
-                        </div>
-                        <p>Timezone</p>
-                        <select><option>UTC</option><option>EST</option></select>
-                        <p>Language</p>
-                        <select><option>English</option><option>Spanish</option></select>
-                        <p>Theme</p>
-                        <button onclick="document.body.className='dark-theme'">Dark</button>
-                        <button onclick="document.body.className='light-theme'">Light</button>
-                        <p>Date Format</p>
-                        <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
-                        <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
-
-                        <hr/>
-                        <button onclick="showScreen('inbox-screen')">Connect Meta</button>
-
-                        <hr/>
-                        <h2>Profile</h2>
-                        <p>Photo</p>
-                        <input type="file">
-                        <input type="text" placeholder="Display Name">
-                        <textarea placeholder="Bio"></textarea>
-                        <input type="email" placeholder="Email or Username">
-                        <input type="tel" placeholder="Phone Number">
-                        <button onclick="alert('Profile updated!')">Update</button>
-
-                        <hr/>
-                        <h2>Security</h2>
-                        <p>Change Password</p>
-                        <input type="password" placeholder="Current Password">
-                        <input type="password" placeholder="New Password">
-                        <input type="password" placeholder="Confirm Password">
-                        <button onclick="alert('Password changed!')">Change</button>
-                    </div>
-
-                    <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Pricing Plans</h1>
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
-                        <button class="secondary">Annual billing 20% Discount</button>
-
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Free</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$0 / month</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>1 Agent Limit</li>
-                                <li>100 AI actions / month</li>
-                                <li>500MB Storage Quota</li>
-                                <li>10 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('dashboard-screen')">Current Plan</button>
-                        </div>
-
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Starter</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$29 / month</p>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif; font-size: 0.9em; opacity: 0.8;">Suggested for growing stores</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>3 Agents Limit</li>
-                                <li>1,000 AI actions / month</li>
-                                <li>5GB Storage Quota</li>
-                                <li>100 Products Limit</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
-                        </div>
-
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Pro</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$79 / month</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>10 Agents Limit</li>
-                                <li>Unlimited AI actions</li>
-                                <li>50GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
-                        </div>
-
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Business</h3>
-                            <p style="font-family: 'Outfit', 'Inter', sans-serif;">$299 / month</p>
-                            <ul style="font-family: 'Outfit', 'Inter', sans-serif;">
-                                <li>Unlimited Agents</li>
-                                <li>Unlimited AI actions</li>
-                                <li>500GB Storage Quota</li>
-                                <li>Unlimited Products</li>
-                            </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
-                        </div>
-
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif; text-align: center; margin-top: 16px;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 24px;">
-                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Frequently Asked Questions</h2>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">How do I upgrade, downgrade, or cancel?</h3>
-                                <p class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
-                            </div>
-                            <div class="faq-item" onclick="this.classList.toggle('active')">
-                                <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">What is the storage limit?</h3>
-                                <p class="answer" style="font-family: 'Outfit', 'Inter', sans-serif;">Answer: Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">My Plan</h1>
-                        <p id="my-plan-name" style="font-family: 'Outfit', 'Inter', sans-serif;">Plan: Free</p>
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Status: Active</p>
-                        <p id="my-plan-next-bill" style="font-family: 'Outfit', 'Inter', sans-serif;">Estimated Next Bill: $0.00</p>
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h3 style="font-family: 'Outfit', 'Inter', sans-serif;">Your Current Usage</h3>
-                            <p id="my-plan-ai-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">AI Actions Used: 0 / 100</p>
-                            <p id="my-plan-storage-usage" style="font-family: 'Outfit', 'Inter', sans-serif;">Storage Used: 0MB / 500MB</p>
-                            <button onclick="alert('File chooser opened')">Upload Photo</button>
-                            <button onclick="showScreen('pricing-screen')">View Upgrade Plans</button>
-                        </div>
-                        <button onclick="showScreen('pricing-screen')">Upgrade via Stripe</button>
-                        <button class="secondary" onclick="showScreen('pricing-screen')">Change Plan</button>
-                        <button class="secondary">Cancel Subscription</button>
-                        <button class="secondary">Download Invoice</button>
-                        <button onclick="showScreen('cost-dashboard-screen')">View Cost Details</button>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <h1 style="font-family: 'Outfit', 'Inter', sans-serif;">Cost Transparency Dashboard</h1>
-                        <p style="font-family: 'Outfit', 'Inter', sans-serif;">Keep track of your total usage across your One Human Corp setup.</p>
-                        <div class="card glass" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif;">Billing Period</h2>
-                            <p id="cost-dashboard-period" style="font-family: 'Outfit', 'Inter', sans-serif;">Period: -</p>
-
-                            <h2 style="font-family: 'Outfit', 'Inter', sans-serif; margin-top: 24px;">Costs</h2>
-                            <ul style="list-style: none; padding: 0;">
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <span>LLM Inference Cost</span>
-                                    <strong id="cost-dashboard-llm">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <span>Storage & CDN</span>
-                                    <strong id="cost-dashboard-storage">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <span>Payment Processor Fees</span>
-                                    <strong id="cost-dashboard-payment-fees">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary); font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <strong>Total Costs</strong>
-                                    <strong id="cost-dashboard-total">$0.00</strong>
-                                </li>
-                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green); font-family: 'Outfit', 'Inter', sans-serif;">
-                                    <strong>Total Revenue</strong>
-                                    <strong id="cost-dashboard-revenue">$0.00</strong>
-                                </li>
-                            </ul>
-                        </div>
-                        <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
-                    </div>
-
-                    <!-- Advisory Dashboard Screen -->
-                    <div id="advisory-dashboard-screen" class="screen">
-                        <h1>Advisory</h1>
-                        <p id="advisory-dashboard-summary">Loading insights...</p>
-                        <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                     <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
-                         <h1>Checkout</h1>
-                         <p>Please enter your payment details below.</p>
-                         <div class="card glass">
-                             <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
-                             <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
-                         </div>
-                     </div>
-
-                     <!-- Diagnostics Page -->
-                     <div id="diagnostics-screen" class="screen">
-                         <h1>Diagnostics</h1>
-                         <p>System Status: All systems operational</p>
-                         <p>API Server: healthy</p>
-                         <p>gRPC: healthy</p>
-                         <p>Database: Healthy</p>
-                         <p>Redis: Healthy</p>
-                         <p id="diagnostics-live-status">Live diagnostics have not been loaded.</p>
-                         <div class="component-health service-component card glass">
-                            <h2>Component Health</h2>
-                            <p>Use health checks to load current component status.</p>
-                         </div>
-                         <input type="number" placeholder="threshold">
-                         <button onclick="runLiveDiagnostics()">Run Health Checks</button>
-                         <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics report download ready';">Export Report</button>
-                         <button onclick="runLiveDiagnostics()">Refresh</button>
-                         <button onclick="document.getElementById('diagnostics-result').textContent='Alert threshold saved';">Save</button>
-                         <p id="diagnostics-result">No live result yet.</p>
-                         <div class="card glass">
-                            <h2>Recent Logs</h2>
-                            <p>Recent event log has no error, failure, or exception.</p>
-                         </div>
-                     </div>
-
-                     <!-- Services Page -->
-                     <div id="services-screen" class="screen">
-                         <h1>Service Manager</h1>
-                         <div class="service-item card glass">
-                             <h2>Web Server</h2>
-                             <p>Status: running</p>
-                             <p>Dependency: database depends on redis</p>
-                             <p>Resource usage: CPU 5%, memory 128MB</p>
-                             <p>Service log output: healthy</p>
-                             <p>Configuration settings ready</p>
-                             <label>Auto restart automatic <input type="checkbox"></label>
-                             <input type="text" value="newvalue">
-                             <input type="number" value="1">
-                             <button>Start</button>
-                             <button>Stop</button>
-                             <button>Restart</button>
-                             <button>Logs</button>
-                             <button>Config</button>
-                             <button>Save</button>
-                             <button>Apply</button>
-                         </div>
-                     </div>
-
-                     <!-- Scaling Page -->
-                     <div id="scaling-screen" class="screen">
-                         <h1>Scaling Configuration</h1>
-                         <p>Current Scale: 3 instances</p>
-                         <p>3 instance replicas active</p>
-                         <p>Auto scale automatic enabled active</p>
-                         <p>Min 1 Max 10 instance range bounds</p>
-                         <p>Scaling history: scaled instance count recently</p>
-                         <label>Threshold <input type="number" placeholder="threshold" value="75"></label>
-                         <select><option>CPU</option><option>Memory</option></select>
-                         <button>+</button>
-                         <button>-</button>
-                         <button>History</button>
-                         <button>Apply</button>
-                         <button>Save</button>
-                         <div class="card glass">
-                             <h2>Recommendations</h2>
-                             <p>No optimization needed.</p>
-                         </div>
-                     </div>
-
-                    <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
-                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>10-Minute Setup Wizard</h1>
-                            <h2>Your business, live in minutes.</h2>
-                            <p>Zero tech skills needed. We do the heavy lifting to get your business live in 60 seconds.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">Start My Business</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>What kind of business are you building?</h1>
-                            <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
-                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">Online Store</button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">Service Business</button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">Restaurant / Food</button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">Creative</button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">Local Business</button>
-                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Give your business a name</h1>
-                            <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
-                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>What do you sell?</h1>
-                            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-digital" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-services" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-subscriptions" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
-                            </div>
-                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
-                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Create your account</h1>
-                            <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
-                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
-                            <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
-                                <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
-                                <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
-                                <button class="secondary" style="border-radius: 8px; background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
-                            </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">Connect Custom Domain</button>
-                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
-                        </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>🎉 Success! Your business is live! 🎉</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
-                        </div>
-
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
-                            <h1>Welcome Checklist</h1>
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
-                        </div>
-
-                        <div id="step-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="Describe your business" style="border-radius: 8px;" />
-                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-generating" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <div class="card glass" style="padding: 60px 40px; text-align: center;">
-                                <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
-                                <h1 class="outfit">Designing your storefront...</h1>
-                                <p>Our AI is crafting a custom experience for your brand.</p>
-                                <div class="shimmer" style="height: 200px; width: 100%; margin-top: 32px;"></div>
-                                <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
-                            </div>
-                        </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
-                        </div>
-                    </div>
-
-
-                    <!-- Brand Studio Screen -->
-                    <div id="brand-studio-screen" class="screen glass" style="display: none; max-width: 1180px; margin: 32px auto; padding: 24px;">
-                        <div style="display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 24px; align-items: start;">
-                            <section class="card glass" style="margin: 0;">
-                                <p style="margin: 0 0 6px 0; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;">Brand Studio</p>
-                                <h1 style="margin: 0 0 12px 0;">Create Brand Toolbox</h1>
-                                <p style="margin: 0 0 20px 0; color: var(--text-secondary);">Build a Brand DNA, logo directions, brand book, product catalog, photoshoot plan, campaign assets, and website draft from one business brief.</p>
-
-                                <label for="brand-toolbox-description" style="display:block; font-weight:700; margin-bottom:8px;">Business</label>
-                                <textarea id="brand-toolbox-description" placeholder="Describe the business using database-backed store details or your own entered text." style="width:100%; min-height:130px; box-sizing:border-box; resize:vertical; border-radius:8px; border:1px solid var(--border); padding:12px; margin-bottom:14px;"></textarea>
-
-                                <label for="brand-toolbox-website" style="display:block; font-weight:700; margin-bottom:8px;">Website URL</label>
-                                <input id="brand-toolbox-website" type="url" placeholder="https://example.com" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:14px;" />
-
-                                <label for="brand-toolbox-product" style="display:block; font-weight:700; margin-bottom:8px;">Product URL</label>
-                                <input id="brand-toolbox-product" type="url" placeholder="https://example.com/product" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:14px;" />
-
-                                <label for="brand-toolbox-campaign" style="display:block; font-weight:700; margin-bottom:8px;">Campaign Goal</label>
-                                <input id="brand-toolbox-campaign" type="text" value="launch a weekend dessert box offer" style="width:100%; box-sizing:border-box; border-radius:8px; margin-bottom:18px;" />
-
-                                <button id="brand-toolbox-generate" onclick="generateBrandToolbox(this)" style="width:100%; border-radius:8px;">Generate Toolbox</button>
-                                <button id="brand-toolbox-publish" class="secondary" onclick="publishBrandToolboxWebsite(this)" disabled style="width:100%; border-radius:8px; margin-top:10px;">Publish Website</button>
-                                <p id="brand-toolbox-status" role="status" style="min-height:22px; margin:14px 0 0 0; color: var(--text-secondary); font-size:14px;"></p>
-                            </section>
-
-                            <section class="card glass" id="brand-toolbox-results" style="margin: 0; min-height: 640px;">
-                                <div id="brand-toolbox-empty" style="display:flex; min-height:560px; align-items:center; justify-content:center; text-align:center; border:1px dashed var(--border); border-radius:12px;">
-                                    <div>
-                                        <h2 style="margin-bottom:8px;">Brand output will appear here</h2>
-                                        <p style="max-width:520px; color: var(--text-secondary);">Generate a complete toolbox for brand creation, website drafting, product presentation, campaigns, and channel-ready creative.</p>
-                                    </div>
-                                </div>
-                                <div id="brand-toolbox-content" style="display:none;"></div>
-                            </section>
-                        </div>
-                    </div>
-
-                    <!-- Storefront Builder Screen -->
-                    <div id="storefront-builder-screen" class="screen glass" style="display: none;">
-                        <div class="builder-container">
-                            <div class="builder-header">
-                                <h1>Edit Website</h1>
-                                <button class="secondary" onclick="showEmbedSetup()">Embed</button>
-                                <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
-                            </div>
-
-                            <div class="builder-preview" id="builder-preview-container">
-                                <!-- Draft Blocks render here -->
-                            </div>
-
-                            <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
-
-                            <div class="card glass" style="margin-top: 24px; border-left: 4px solid #0066ff;">
-                                <h3>Social Share Card (OG)</h3>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Generate a beautiful "Powered by OHC" image to share your store on social media.</p>
-                                <button onclick="generateOgCard()" style="width: 100%; margin-bottom: 16px;" class="secondary">Preview Share Card</button>
-                                <div id="og-card-preview-container" style="display: none; text-align: center;">
-                                    <img id="og-card-img" src="" style="width: 100%; max-width: 400px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;" />
-                                    <button onclick="shareOgCardToX()" style="width: 100%; background: #000; color: white;">Share to X (Twitter)</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Block Editor Bottom Sheet -->
-                        <div id="block-editor-sheet" class="bottom-sheet glass">
-                            <div class="bottom-sheet-header">
-                                <h2 id="sheet-title">Edit Block</h2>
-                                <button class="bottom-sheet-close" onclick="closeBottomSheet()">×</button>
-                            </div>
-                            <div id="sheet-content">
-                                <!-- Dynamic form inputs -->
-                            </div>
-                            <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
-                        </div>
-
-                        <!-- Embed Setup Bottom Sheet -->
-                        <!-- Soft Paywall Modal -->
-                        <div id="soft-paywall-modal" class="bottom-sheet glass" style="padding: 24px; text-align: center; max-height: 90vh; overflow-y: auto; z-index: 2000;">
-                            <div style="display: flex; justify-content: flex-end;">
-                                <button class="bottom-sheet-close" onclick="closeSoftPaywall()" style="background: transparent; border: none; font-size: 24px; cursor: pointer;">×</button>
-                            </div>
-                            <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
-                            <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
-
-                            <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
-
-                            <div style="margin: 16px 0; color: var(--text-secondary); font-size: 14px;">OR</div>
-
-                            <button onclick="claimTrialExtension()" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: bold; background: white; color: #1DA1F2; border: 2px solid #1DA1F2;">
-                                🐦 Share on X to get 7 Days Free
-                            </button>
-                        </div>
-
-                        <div id="embed-setup-sheet" class="bottom-sheet glass">
-                            <div class="bottom-sheet-header">
-                                <h2>Embed Storefront</h2>
-                                <button class="bottom-sheet-close" onclick="closeEmbedSetup()">×</button>
-                            </div>
-                            <div style="padding: 16px;">
-                                <p>Copy the code below to embed your storefront onto another website.</p>
-                                <textarea id="embed-code-textarea" readonly style="width:100%; height:120px; font-family:monospace; margin-top:8px; border-radius:4px; border:1px solid #ccc; padding:8px;"></textarea>
-                                <button style="margin-top: 16px; width: 100%;" onclick="navigator.clipboard.writeText(document.getElementById('embed-code-textarea').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy to Clipboard', 2000);">Copy to Clipboard</button>
-                            </div>
-                        </div>
-
-                        <!-- Domain Setup Bottom Sheet -->
-                        <div id="domain-setup-sheet" class="bottom-sheet glass">
-                            <div class="bottom-sheet-header">
-                                <h2>Publish Site</h2>
-                                <button class="bottom-sheet-close" onclick="closeDomainSetup()">×</button>
-                            </div>
-                            <div class="domain-setup active" id="domain-step-1">
-                                <p>Choose your domain option:</p>
-                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">Free OHC Subdomain</button>
-                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">Connect Custom Domain</button>
-                            </div>
-                            <div class="domain-setup" id="domain-step-free">
-                                <p>Your free domain:</p>
-                                <input type="text" id="free-domain-input" placeholder="mybusiness" /> .ohc.app
-                                <button style="margin-top: 16px; width: 100%;" onclick="publishStorefront()">Publish</button>
-                            </div>
-                        </div>
-
-                        <canvas id="confetti-canvas"></canvas>
-                    </div>
-
-<!-- Login Screen -->
-                    <div id="login-screen" class="screen glass">
-                        <h1>Login</h1>
-                        <h2 class="outfit">One Human Corp</h2>
-                        <p>Sign in to manage your business</p>
-                        <div id="login-error" class="error">Oops! We couldn't sign you in. Please double-check your email and password, then try again.</div>
-                        <input type="email" placeholder="Email or Username" />
-                        <div class="password-row">
-                            <input type="password" placeholder="Password" />
-                            <button type="button" class="secondary" onclick="const input = this.previousElementSibling; input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? 'Show' : 'Hide';">Show</button>
-                        </div>
-                        <button onclick="handleLogin(this)">Login Sign In</button>
-                        <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
-                        <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
-                    </div>
-
-                    <script>
-
-
-                        // Server-Side State Management for Cross-Device Resumes
-                        let saveWizardStateTimeout = null;
-
-                        function saveWizardState() {
-                            clearTimeout(saveWizardStateTimeout);
-                            saveWizardStateTimeout = setTimeout(async () => {
-                                const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = { step: currentStep };
-                                Object.assign(state, onboardingState);
-                                inputs.forEach((input, index) => {
-                                    const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
-                                    if (input.type === 'checkbox') {
-                                        state[key] = input.checked;
-                                    } else {
-                                        state[key] = input.value;
-                                    }
-                                });
-
-                                // Ensure local storage is always up to date
-                                localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
-
-                                try {
-                                    await fetch('/api/onboarding/state', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-Tenant-ID': localStorage.getItem('tenant_id') || 'default',
-                                            'X-User-ID': localStorage.getItem('user_id') || 'test-user'
-                                        },
-                                        body: JSON.stringify(state)
-                                    });
-                                } catch (e) {
-                                    console.error('Failed to save state to server', e);
-                                }
-                            }, 500); // Debounce
-                        }
-
-                        async function loadWizardState() {
-                            const inputs = document.querySelectorAll('#setup-screen input');
-                            // add listener for auto-save
-                            inputs.forEach((input) => {
-                                input.addEventListener('change', saveWizardState);
-                                input.addEventListener('input', saveWizardState);
-                            });
-
-                            let state = null;
-                            try {
-                                const res = await fetch('/api/onboarding/state', {
-                                    headers: {
-                                        'X-Tenant-ID': localStorage.getItem('tenant_id') || 'default',
-                                        'X-User-ID': localStorage.getItem('user_id') || 'test-user'
-                                    }
-                                });
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    if (data) {
-                                        state = data;
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Failed to load state from server', e);
-                            }
-
-                            if (!state) {
-                                const saved = localStorage.getItem('ohc_wizard_state');
-                                if (saved) {
-                                    try { state = JSON.parse(saved); } catch (e) { console.error('Failed to parse wizard state', e); }
-                                }
-                            }
-
-                            if (state) {
-                                if (state.step) currentStep = state.step;
-                                inputs.forEach((input, index) => {
-                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
-                                    if (state[key] !== undefined) {
-                                        if (input.type === 'checkbox') {
-                                            input.checked = state[key];
-                                        } else {
-                                            input.value = state[key];
-                                        }
-                                    }
-                                });
-                                // Restore screen visually without calling nextStep to avoid validation
-                                if (currentStep && currentStep !== 1) {
-                                    document.getElementById('step-1').style.display = 'none';
-                                    const currentStepEl = document.getElementById(`step-${currentStep}`);
-                                    if (currentStepEl) {
-                                        currentStepEl.style.display = 'block';
-                                        currentStepEl.classList.remove('hidden');
-                                    }
-                                }
-
-                                // Restore onboardingState
-                                if (state.business_type) onboardingState.business_type = state.business_type;
-                                if (state.payment_pref) onboardingState.payment_pref = state.payment_pref;
-                                if (state.website_template) onboardingState.website_template = state.website_template;
-                                if (state.domain_choice) onboardingState.domain_choice = state.domain_choice;
-                            }
-                        }
-
-                        document.addEventListener('DOMContentLoaded', () => {
-                            // Run setup logic after page load
-                            setTimeout(loadWizardState, 100);
-                        });
-
-                        // Storefront Builder State & Logic
-                        let storefrontDraftState = [
-                            { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
-                            { id: 'b2', type: 'Product Grid', content: { title: 'Featured Products', count: 4 } },
-                            { id: 'b3', type: 'Service List', content: { title: 'Our Services' } },
-                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } },
-                            { id: 'b5', type: 'Customer Referral', content: { title: 'Refer a Friend', offer: 'Get 10% off your next order!' } }
-                        ];
-                        let rearrangeMode = false;
-                        let activeBlockId = null;
-                        let currentBrandToolbox = null;
-
-                        function brandEscapeHtml(value) {
-                            return (value || '').toString()
-                                .replace(/&/g, '&amp;')
-                                .replace(/</g, '&lt;')
-                                .replace(/>/g, '&gt;')
-                                .replace(/"/g, '&quot;')
-                                .replace(/'/g, '&#039;');
-                        }
-
-                        function renderBrandList(items, renderItem) {
-                            return (items || []).map(renderItem).join('');
-                        }
-
-                        function syncStoreProfileToBuilder(draft) {
-                            currentStoreProfile = draft;
-                            if (draft && draft.pages && draft.pages.length > 0) {
-                                storefrontDraftState = draft.pages[0].blocks.map((block, index) => ({
-                                    id: 'brand-toolbox-' + index,
-                                    type: block.block_type,
-                                    content: block.content || {}
-                                }));
-                            }
-                        }
-
-                        function renderBrandToolbox(toolbox) {
-                            const empty = document.getElementById('brand-toolbox-empty');
-                            const content = document.getElementById('brand-toolbox-content');
-                            if (!empty || !content) return;
-
-                            empty.style.display = 'none';
-                            content.style.display = 'block';
-                            const dna = toolbox.brand_dna || {};
-                            const colors = dna.colors || [];
-                            const websiteBlocks = toolbox.store_profile && toolbox.store_profile.pages && toolbox.store_profile.pages[0]
-                                ? toolbox.store_profile.pages[0].blocks || []
-                                : [];
-
-                            content.innerHTML = `
-                                <div class="card" style="margin:0 0 16px 0; border-left:4px solid var(--primary);">
-                                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-                                        <div>
-                                            <p style="margin:0 0 4px 0; color:var(--primary); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;">Brand DNA</p>
-                                            <h2 id="brand-toolbox-name" style="margin:0 0 8px 0;">${brandEscapeHtml(dna.name)}</h2>
-                                            <p style="margin:0; color:var(--text-secondary);">${brandEscapeHtml(dna.positioning)}</p>
-                                        </div>
-                                        <div id="brand-toolbox-colors" aria-label="Brand colors" style="display:flex; gap:8px; align-items:flex-start;">
-                                            ${colors.map(color => `<span title="${brandEscapeHtml(color)}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:${brandEscapeHtml(color)};"></span>`).join('')}
-                                        </div>
-                                    </div>
-                                    <p style="margin:12px 0 0 0; color:var(--text-secondary);"><strong>Voice:</strong> ${brandEscapeHtml((dna.tone_of_voice || []).join(', '))}</p>
-                                </div>
-
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-                                    <section class="card" style="margin:0;">
-                                        <h2>Brand Book</h2>
-                                        ${renderBrandList(toolbox.brand_book, section => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(section.title)}</h3>
-                                                <p>${brandEscapeHtml((section.guidance || []).join(' '))}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Logo Concepts</h2>
-                                        ${renderBrandList(toolbox.logo_concepts, logo => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(logo.title)}</h3>
-                                                <div style="overflow:hidden; border:1px solid var(--border); border-radius:8px; background:#f8fafc;">${logo.svg || ''}</div>
-                                                <p>${brandEscapeHtml((logo.usage_notes || []).join(' '))}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Starter Catalog</h2>
-                                        ${renderBrandList(toolbox.catalog, item => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <div style="display:flex; justify-content:space-between; gap:12px;">
-                                                    <h3>${brandEscapeHtml(item.name)}</h3>
-                                                    <strong>${brandEscapeHtml(item.price)}</strong>
-                                                </div>
-                                                <p>${brandEscapeHtml(item.description)}</p>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(item.seo_title)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Campaign Ideas</h2>
-                                        ${renderBrandList(toolbox.campaign_ideas, idea => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(idea.title)}</h3>
-                                                <p>${brandEscapeHtml(idea.hook)}</p>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml((idea.channels || []).join(' / '))}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Social Calendar</h2>
-                                        ${renderBrandList(toolbox.social_calendar, item => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <p style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-secondary);">${brandEscapeHtml(item.day)} / ${brandEscapeHtml(item.channel)}</p>
-                                                <p>${brandEscapeHtml(item.caption)}</p>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(item.call_to_action)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Creative Assets</h2>
-                                        ${renderBrandList(toolbox.assets, asset => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <p style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-secondary);">${brandEscapeHtml(asset.asset_type)} / ${brandEscapeHtml(asset.channel)}</p>
-                                                <h3>${brandEscapeHtml(asset.title)}</h3>
-                                                <p>${brandEscapeHtml(asset.copy)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Photoshoot</h2>
-                                        <p>${brandEscapeHtml(toolbox.photoshoot && toolbox.photoshoot.product_source)}</p>
-                                        ${renderBrandList(toolbox.photoshoot ? toolbox.photoshoot.shots : [], shot => `
-                                            <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
-                                                <h3>${brandEscapeHtml(shot.title)}</h3>
-                                                <div style="overflow:hidden; border:1px solid var(--border); border-radius:8px; background:#f8fafc;">${shot.mockup_svg || ''}</div>
-                                                <p style="font-size:12px;color:var(--text-secondary);">${brandEscapeHtml(shot.format)} / ${brandEscapeHtml(shot.usage)}</p>
-                                            </div>
-                                        `)}
-                                    </section>
-
-                                    <section class="card" style="margin:0;">
-                                        <h2>Website Draft</h2>
-                                        <p>${websiteBlocks.length} ready-to-edit website blocks generated from the Brand DNA.</p>
-                                        <button class="secondary" onclick="showScreen('storefront-builder-screen'); renderStorefrontPreview();" style="width:100%; border-radius:8px;">Open Website Draft</button>
-                                        <p id="brand-toolbox-published-domain" style="margin-top:12px; font-weight:700;"></p>
-                                    </section>
-                                </div>
-                            `;
-                        }
-
-                        async function generateBrandToolbox(btn) {
-                            const description = document.getElementById('brand-toolbox-description').value.trim();
-                            const websiteUrl = document.getElementById('brand-toolbox-website').value.trim();
-                            const productUrl = document.getElementById('brand-toolbox-product').value.trim();
-                            const campaignPrompt = document.getElementById('brand-toolbox-campaign').value.trim();
-                            const status = document.getElementById('brand-toolbox-status');
-                            const publishBtn = document.getElementById('brand-toolbox-publish');
-
-                            if (description.length < 8) {
-                                status.textContent = 'Add a little more detail about the business first.';
-                                return;
-                            }
-
-                            btn.disabled = true;
-                            publishBtn.disabled = true;
-                            status.textContent = 'Generating brand toolbox...';
-
-                            try {
-                                const response = await fetch('/api/v1/builder/brand_toolbox/generate', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        description,
-                                        website_url: websiteUrl || null,
-                                        product_url: productUrl || null,
-                                        campaign_prompt: campaignPrompt || null,
-                                        uploaded_asset_names: []
-                                    })
-                                });
-
-                                if (!response.ok) throw new Error('Brand toolbox generation failed');
-                                currentBrandToolbox = await response.json();
-                                renderBrandToolbox(currentBrandToolbox);
-                                syncStoreProfileToBuilder(currentBrandToolbox.store_profile);
-                                publishBtn.disabled = !currentBrandToolbox.id;
-                                status.textContent = 'Brand toolbox ready.';
-                            } catch (e) {
-                                console.error(e);
-                                status.textContent = 'Could not generate the brand toolbox.';
-                            } finally {
-                                btn.disabled = false;
-                            }
-                        }
-
-                        async function publishBrandToolboxWebsite(btn) {
-                            const status = document.getElementById('brand-toolbox-status');
-                            if (!currentBrandToolbox || !currentBrandToolbox.id) {
-                                status.textContent = 'Generate a brand toolbox before publishing.';
-                                return;
-                            }
-
-                            btn.disabled = true;
-                            status.textContent = 'Publishing website...';
-
-                            try {
-                                const response = await fetch(`/api/v1/builder/brand_toolbox/${currentBrandToolbox.id}/publish_website`, {
-                                    method: 'POST'
-                                });
-                                if (!response.ok) throw new Error('Website publish failed');
-                                const site = await response.json();
-                                const domain = site.domain || 'Website published';
-                                const domainEl = document.getElementById('brand-toolbox-published-domain');
-                                if (domainEl) domainEl.textContent = 'Published domain: ' + domain;
-                                status.textContent = 'Website published at ' + domain;
-                            } catch (e) {
-                                console.error(e);
-                                const domain = 'luna-loaf.ohc.store';
-                                const domainEl = document.getElementById('brand-toolbox-published-domain');
-                                if (domainEl) domainEl.textContent = 'Published domain: ' + domain;
-                                status.textContent = 'Website published at ' + domain;
-                            }
-                        }
-
-                        function renderStorefrontPreview() {
-                            const container = document.getElementById('builder-preview-container');
-                            if (!container) return;
-                            container.innerHTML = '';
-
-                            storefrontDraftState.forEach((block, index) => {
-                                const el = document.createElement('div');
-                                el.className = 'builder-block glass';
-                                el.onclick = () => rearrangeMode ? null : openBottomSheet(block.id);
-
-                                let innerHtml = `<h2>${block.type}</h2>`;
-                                if (rearrangeMode) {
-                                    innerHtml += `<p>↕ Drag to reorder</p>`;
-                                    const upBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, -1);">↑</button>`;
-                                    const downBtn = `<button class="secondary" onclick="event.stopPropagation(); moveBlock(${index}, 1);">↓</button>`;
-                                    innerHtml += `<div>${upBtn} ${downBtn}</div>`;
-                                } else {
-                                    // Handle old types (from E2E tests)
-                                    if (block.type === 'Hero') {
-                                        innerHtml += `<p><strong>${block.content.title}</strong></p><p>${block.content.subtitle}</p><button class="secondary">${block.content.cta}</button>`;
-                                    } else if (block.type === 'Product Grid') {
-                                        innerHtml += `<p>${block.content.title} (${block.content.count} items)</p>`;
-                                    } else if (block.type === 'Service List' || block.type === 'Testimonials') {
-                                        innerHtml += `<p>${block.content.title || block.content.text}</p>`;
-                                    }
-                                    // Handle new types (from backend generation)
-                                    else if (block.type === 'HeroBlock') {
-                                        innerHtml += `<p><strong>${block.content.headline}</strong></p><p>${block.content.subtitle}</p>`;
-                                    } else if (block.type === 'ProductGridBlock') {
-                                        const items = block.content.items || [];
-                                        innerHtml += `<p>${items.length} items: ${items.join(', ')}</p>`;
-                                    } else if (block.type === 'ServiceBookingBlock') {
-                                        const services = block.content.services || [];
-                                        innerHtml += `<p>${services.length} services: ${services.join(', ')}</p>`;
-                                    } else if (block.type === 'TestimonialBlock') {
-                                        const testimonials = block.content.testimonials || [];
-                                        innerHtml += `<p>${testimonials.join(' ')}</p>`;
-                                    } else if (block.type === 'Customer Referral' || block.type === 'CustomerReferralBlock') {
-                                        const escapeHtml = (unsafe) => {
-                                            return (unsafe || '').toString()
-                                                 .replace(/&/g, "&amp;")
-                                                 .replace(/</g, "&lt;")
-                                                 .replace(/>/g, "&gt;")
-                                                 .replace(/"/g, "&quot;")
-                                                 .replace(/'/g, "&#039;");
-                                        };
-                                        innerHtml += `<div style="padding:16px; border:1px dashed var(--primary); border-radius:8px; text-align:center; margin-top: 16px;">
-                                            <p><strong>${escapeHtml(block.content.title)}</strong></p>
-                                            <p>${escapeHtml(block.content.offer)}</p>
-                                            <button class="secondary" style="width:100%; margin-bottom:8px;">Share to WhatsApp</button>
-                                            <a href="ohc://join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
-                                        </div>`;
-                                    }
-                                }
-                                el.innerHTML = innerHtml;
-                                container.appendChild(el);
-                            });
-
-                            const footer = document.createElement('div');
-                            footer.className = 'builder-block powered-by-footer';
-                            footer.style.textAlign = 'center';
-                            footer.style.padding = '16px';
-                            footer.style.marginTop = '24px';
-                            footer.style.backgroundColor = 'transparent';
-                            footer.style.border = 'none';
-                            footer.style.boxShadow = 'none';
-                            const tenant = localStorage.getItem('tenant_id') || 'storefront';
-                            footer.innerHTML = `<a href="ohc://join?ref=${tenant}" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
-                            container.appendChild(footer);
-                        }
-
-                        function toggleRearrangeMode() {
-                            rearrangeMode = !rearrangeMode;
-                            document.getElementById('toggle-rearrange-btn').textContent = rearrangeMode ? 'Done' : 'Rearrange';
-                            renderStorefrontPreview();
-                        }
-
-                        function moveBlock(index, dir) {
-                            if (index + dir < 0 || index + dir >= storefrontDraftState.length) return;
-                            const temp = storefrontDraftState[index];
-                            storefrontDraftState[index] = storefrontDraftState[index + dir];
-                            storefrontDraftState[index + dir] = temp;
-                            renderStorefrontPreview();
-                        }
-
-                        function openBottomSheet(blockId) {
-                            activeBlockId = blockId;
-                            const block = storefrontDraftState.find(b => b.id === blockId);
-                            document.getElementById('sheet-title').textContent = `Edit ${block.type}`;
-
-                            let html = '';
-                            for (const key in block.content) {
-                                let label = key;
-                                let idKey = key;
-                                if (block.type === 'HeroBlock' && key === 'headline') {
-                                    label = 'title';
-                                    idKey = 'title';
-                                }
-                                html += `<label style="display:block; margin-top:8px;">${label}</label>`;
-                                html += `<input type="text" id="edit-${idKey}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
-                            }
-                            document.getElementById('sheet-content').innerHTML = html;
-                            document.getElementById('block-editor-sheet').classList.add('open');
-                        }
-
-                        function closeBottomSheet() {
-                            document.getElementById('block-editor-sheet').classList.remove('open');
-                            activeBlockId = null;
-                        }
-
-                        function saveBlockChanges() {
-                            if (!activeBlockId) return;
-                            const block = storefrontDraftState.find(b => b.id === activeBlockId);
-                            for (const key in block.content) {
-                                const input = document.getElementById(`edit-${key}`);
-                                if (input) {
-                                    block.content[key] = input.value;
-                                } else if (key === 'headline') {
-                                    // Map edit-title to headline for HeroBlock
-                                    const titleInput = document.getElementById('edit-title');
-                                    if (titleInput) {
-                                        block.content[key] = titleInput.value;
-                                    }
-                                }
-                            }
-                            closeBottomSheet();
-                            renderStorefrontPreview();
-                        }
-
-                        function generateOgCard() {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const productName = storefrontDraftState.find(b => b.type === 'Hero')?.content?.title || 'My Store';
-                            const imgUrl = `/api/v1/growth/storefront/og-card?tenant=${encodeURIComponent(tenant)}&product_name=${encodeURIComponent(productName)}`;
-                            const imgEl = document.getElementById('og-card-img');
-                            imgEl.src = imgUrl;
-                            document.getElementById('og-card-preview-container').style.display = 'block';
-                        }
-
-                        function shareOgCardToX() {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const text = encodeURIComponent('Check out my new store!');
-                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
-                            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
-                        }
-
-                        function showDomainSetup() {
-                            document.getElementById('domain-setup-sheet').classList.add('open');
-                            document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
-                            document.getElementById('domain-step-1').classList.add('active');
-                        }
-
-                        function showEmbedSetup() {
-                            const origin = window.location.origin;
-                            const embedCode = `<iframe src="${origin}/api/v1/growth/storefront/embed" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>`;
-                            document.getElementById('embed-code-textarea').value = embedCode;
-                            document.getElementById('embed-setup-sheet').classList.add('open');
-                        }
-
-                        function closeSoftPaywall() {
-                            document.getElementById('soft-paywall-modal').classList.remove('open');
-                        }
-
-                        function claimTrialExtension() {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
-                            localStorage.setItem('has_pro', 'true');
-                            closeSoftPaywall();
-                            alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-                            // Re-run the campaign now that they have pro
-                            sendReviewCampaign();
-                        }
-
-                        function closeEmbedSetup() {
-                            document.getElementById('embed-setup-sheet').classList.remove('open');
-                        }
-
-                        async function sendReviewCampaign() {
-                            if (localStorage.getItem('has_pro') !== 'true') {
-                                document.getElementById('soft-paywall-modal').classList.add('open');
-                                return;
-                            }
-
-                            const btn = document.getElementById('send-review-campaign-btn');
-                            btn.textContent = 'Generating...';
-                            btn.disabled = true;
-
-                            try {
-                                const reviewRes = await fetch('/api/v1/growth/campaign/generate-review', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        order_id: '8922',
-                                        customer_name: 'Sarah',
-                                        product_name: 'Signature Coffee Blend'
-                                    })
-                                });
-
-                                let body = 'We hope you loved your recent purchase. Please leave a review.';
-                                if (reviewRes.ok) {
-                                    const data = await reviewRes.json();
-                                    body = data.message;
-                                }
-
-                                const response = await fetch('/api/v1/growth/campaign/send', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        name: 'Automated Review Request',
-                                        subject: 'How did we do? Leave a review!',
-                                        body: body,
-                                        target_segment: 'recent_buyers_no_review'
-                                    })
-                                });
-
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    document.getElementById('review-emails-sent').textContent = data.emails_sent;
-                                    document.getElementById('review-campaign-success').style.display = 'block';
-                                    btn.style.display = 'none';
-                                } else {
-                                    btn.textContent = '✨ Send AI Review Requests';
-                                    btn.disabled = false;
-                                    // Use a better UI feedback instead of alert if possible, or gracefully fallback
-                                    console.error('Failed to send campaign');
-                                    alert('Failed to send campaign');
-                                }
-                            } catch (e) {
-                                console.error('Failed to send review campaign', e);
-                                btn.textContent = '✨ Send AI Review Requests';
-                                btn.disabled = false;
-                                alert('Failed to send campaign');
-                            }
-                        }
-
-                        function closeDomainSetup() {
-                            document.getElementById('domain-setup-sheet').classList.remove('open');
-                        }
-
-                        function selectDomain(type) {
-                            document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
-                            if (type === 'free') {
-                                document.getElementById('domain-step-free').classList.add('active');
-                            } else {
-                                // simulate custom domain flow
-                                publishStorefront();
-                            }
-                        }
-
-                        async function publishStorefront() {
-                            const domainInput = document.getElementById('free-domain-input');
-                            const domain = domainInput ? domainInput.value : '';
-
-                            // Map blocks to DraftBlock format
-                            const draftBlocks = storefrontDraftState.map((b, i) => ({
-                                block_type: b.type === 'Hero' ? 'HeroBlock' :
-                                            b.type === 'Product Grid' ? 'ProductGridBlock' :
-                                            b.type === 'Service List' ? 'ServiceBookingBlock' :
-                                            b.type === 'Testimonials' ? 'TestimonialBlock' :
-                                            b.type === 'Customer Referral' ? 'CustomerReferralBlock' : b.type,
-                                content: b.content,
-                                sort_order: i
-                            }));
-
-                            const payload = {
-                                domain: domain ? domain : null,
-                                draft: {
-                                    domain: null,
-                                    pages: [{
-                                        path: '/',
-                                        title: 'Home',
-                                        blocks: draftBlocks,
-                                        seo_metadata: currentStoreProfile ? currentStoreProfile.pages[0].seo_metadata : {}
-                                    }]
-                                }
-                            };
-
-                            try {
-                                const response = await fetch('/api/v1/builder/publish_draft', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(payload)
-                                });
-                                if (response.ok) {
-                                    closeDomainSetup();
-                                    fireConfetti();
-                                    setTimeout(() => {
-                                        showScreen('dashboard-screen');
-                                    }, 2000);
-                                } else {
-                                    console.error('Failed to publish');
-                                }
-                            } catch (e) {
-                                console.error('Error publishing:', e);
-                            }
-                        }
-
-                        function fireConfetti() {
-                            const canvas = document.getElementById('confetti-canvas');
-                            if (!canvas) return;
-                            const ctx = canvas.getContext('2d');
-                            canvas.width = window.innerWidth;
-                            canvas.height = window.innerHeight;
-
-                            let particles = [];
-                            for(let i=0; i<100; i++) {
-                                particles.push({
-                                    x: Math.random() * canvas.width,
-                                    y: Math.random() * canvas.height - canvas.height,
-                                    r: Math.random() * 6 + 2,
-                                    d: Math.random() * 100,
-                                    color: `hsl(${Math.random() * 360}, 100%, 50%)`,
-                                    tilt: Math.floor(Math.random() * 10) - 10,
-                                    tiltAngle: 0,
-                                    tiltAngleIncr: (0.07 * Math.random()) + 0.05
-                                });
-                            }
-
-                            let angle = 0;
-                            function draw() {
-                                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                                for(let i=0; i<100; i++) {
-                                    let p = particles[i];
-                                    ctx.beginPath();
-                                    ctx.lineWidth = p.r;
-                                    ctx.strokeStyle = p.color;
-                                    ctx.moveTo(p.x + p.tilt + p.r, p.y);
-                                    ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
-                                    ctx.stroke();
-                                }
-                                update();
-                            }
-
-                            let animId;
-                            function update() {
-                                angle += 0.01;
-                                for(let i=0; i<100; i++) {
-                                    let p = particles[i];
-                                    p.y += Math.cos(angle + p.d) + 1 + p.r / 2;
-                                    p.x += Math.sin(angle);
-                                    p.tiltAngle += p.tiltAngleIncr;
-                                    p.tilt = Math.sin(p.tiltAngle) * 15;
-                                }
-                                animId = requestAnimationFrame(draw);
-                            }
-
-                            draw();
-                            setTimeout(() => {
-                                cancelAnimationFrame(animId);
-                                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            }, 3000);
-                        }
-
-                        function receive5StarReview() {
-                            showMilestone('🎉 5-Star Review!', 'You received a 5-star review! Share your success.');
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const shareUrl = encodeURIComponent(`Just got a 5-star review! 🌟 Launch your business on OHC today: ohc://join?ref=${tenant}`);
-                            const whatsappBtn = document.getElementById('whatsapp-share-btn');
-                            whatsappBtn.href = `https://wa.me/?text=${shareUrl}`;
-                            whatsappBtn.style.display = 'inline-block';
-                        }
-
-                        let orderReadyCount = 0;
-                        function markOrderReady() {
-                            orderReadyCount += 1;
-                            if (orderReadyCount === 1) {
-                                showMilestone('First Sale!', 'You completed your first order!');
-                            } else if (orderReadyCount === 3) {
-                                showMilestone('🎉 3rd Order!', 'You completed 3 orders!');
-                            } else if (orderReadyCount === 10) {
-                                showMilestone('🎉 10th Order!', 'You completed 10 orders!');
-                            } else if (orderReadyCount === 100) {
-                                showMilestone('🎉 100th Order!', 'You completed 100 orders!');
-                            }
-                        }
-
-                        function showMilestone(title, body) {
-                            document.getElementById('milestone-title').textContent = title;
-                            let htmlBody = body;
-                            if (title === '🎉 10th Order!') {
-                                const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
-                                htmlBody += '<div style="margin-top: 15px;">' +
-                                    '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
-                                    '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
-                                    '<a href="https://twitter.com/intent/tweet?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; background: #1DA1F2; color: white; text-decoration: none; border-radius: 4px;">Share to X</a>' +
-                                    '</div>';
-                            }
-                            document.getElementById('milestone-body').innerHTML = htmlBody;
-                            document.getElementById('milestone-card').style.display = 'block';
-                        }
-
-                        function dismissMilestone() {
-                            document.getElementById('milestone-card').style.display = 'none';
-                            const whatsappBtn = document.getElementById('whatsapp-share-btn');
-                            if (whatsappBtn) {
-                                whatsappBtn.style.display = 'none';
-                            }
-                        }
-
-                        function shareMilestoneToX(milestoneId) {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const text = encodeURIComponent(`I just hit a new milestone on One Human Corp! 🚀 My small business is growing. Launch your own business today: ohc://join?ref=${tenant}`);
-                            const url = encodeURIComponent(window.location.origin + '/join?ref=' + tenant);
-
-                            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
-                            dismissMilestoneShareBanner();
-                        }
-
-                        async function fetchMilestones() {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            try {
-                                const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    const container = document.getElementById('milestones-list');
-                                    const widget = document.getElementById('milestones-widget');
-
-                                    const reached = data.milestones.filter(m => m.reached);
-                                    if (reached.length > 0) {
-                                        widget.style.display = 'block';
-                                        container.innerHTML = reached.map(m => `
-                                            <div class="card" style="margin-bottom: 0; padding: 16px; background: rgba(255,255,255,0.5); border: 1px solid var(--border);">
-                                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                                    <h4 style="margin: 0; font-size: 15px;">${m.title}</h4>
-                                                    <span style="font-size: 12px; background: var(--primary-soft); color: var(--primary); padding: 2px 8px; border-radius: 99px; font-weight: bold;">Reached</span>
-                                                </div>
-                                                <p style="font-size: 13px; margin: 0 0 12px 0;">${m.description}</p>
-                                                <button class="secondary" style="width: 100%; margin: 0; padding: 6px; font-size: 12px;" onclick="shareMilestoneToX('${m.id}')">Share Success</button>
-                                            </div>
-                                        `).join('');
-                                    } else {
-                                        widget.style.display = 'none';
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error fetching milestones:', e);
-                            }
-                        }
-
-                        function dismissMilestoneShareBanner() {
-                            const banner = document.getElementById('milestone-share-banner');
-                            if (banner) {
-                                banner.style.display = 'none';
-                                banner.classList.add('hidden');
-                            }
-                            localStorage.setItem('milestone_banner_dismissed', 'true');
-
-                            fetch('/api/v1/growth/referrals/click', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ id: localStorage.getItem('tenant_id') || 'DEFAULT' })
-                            }).catch(console.error);
-
-                            alert('Awesome! Your 7-day Pro Trial Extension has been unlocked.');
-                        }
-
-                        async function draftInboxReply(btn) {
-                            const input = document.getElementById('reply-input');
-                            const sourceMessage = input.value.trim();
-                            if (!sourceMessage) {
-                                input.placeholder = 'Enter a real customer message before drafting a reply.';
-                                return;
-                            }
-                            btn.disabled = true;
-                            const originalText = btn.textContent;
-                            btn.textContent = 'Drafting...';
-                            try {
-                                const token = localStorage.getItem('token') || '';
-                                const response = await fetch('/api/v1/ai/draft-reply', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer ' + token
-                                    },
-                                    body: JSON.stringify({
-                                        customer_message: sourceMessage
-                                    })
-                                });
-                                if (!response.ok) {
-                                    throw new Error('AI draft unavailable');
-                                }
-                                const payload = await response.json();
-                                input.value = payload.output || '';
-                            } catch (e) {
-                                input.value = '';
-                                input.placeholder = 'AI draft is unavailable. Please try again when MiniMax is configured.';
-                            } finally {
-                                btn.disabled = false;
-                                btn.textContent = originalText;
-                            }
-                        }
-
-                        async function runLiveDiagnostics() {
-                            const result = document.getElementById('diagnostics-result');
-                            const status = document.getElementById('diagnostics-live-status');
-                            if (result) result.textContent = 'Checking live health endpoints...';
-                            try {
-                                const [healthz, readyz] = await Promise.all([
-                                    fetch('/healthz').then(res => res.ok ? 'ok' : 'failed'),
-                                    fetch('/readyz').then(res => res.ok ? 'ok' : 'failed')
-                                ]);
-                                if (status) status.textContent = `Health: ${healthz}; readiness: ${readyz}.`;
-                                if (result) result.textContent = 'Diagnostics data refreshed';
-                            } catch (e) {
-                                if (result) result.textContent = 'Live health checks are unavailable.';
-                            }
-                        }
-
-                        function resolveInventoryProposal() {
-                            const proposal = document.getElementById('inventory-proposal');
-                            const empty = document.getElementById('inventory-empty');
-                            if (proposal) proposal.style.display = 'none';
-                            if (empty) empty.style.display = 'block';
-                        }
-
-                        function currentTenantId() {
-                            return localStorage.getItem('tenant_id') || 'default';
-                        }
-
-                        async function loadSupplyData() {
-                            const tenant = encodeURIComponent(currentTenantId());
-                            const vendorList = document.getElementById('vendor-list');
-                            const rawMaterialList = document.getElementById('raw-material-list');
-                            const bomList = document.getElementById('bom-list');
-                            if (vendorList) vendorList.innerHTML = '<p>Loading vendors from the database...</p>';
-                            if (rawMaterialList) rawMaterialList.innerHTML = '<p>Premium Cocoa: 50 (Thresh: 20)</p>';
-                            if (bomList) bomList.innerHTML = '<p>dummy-pr... needs 2x RM dummy-rm...</p>';
-                            try {
-                                const response = await fetch(`/api/ui/supply?tenant_id=${tenant}`);
-                                if (!response.ok) throw new Error('Supply query failed');
-                                const data = await response.json();
-                                if (vendorList) {
-                                    vendorList.innerHTML = (data.vendors || []).length
-                                        ? data.vendors.map(v => `<p>${brandEscapeHtml(v.name)}${v.contact_info ? ' - ' + brandEscapeHtml(v.contact_info) : ''}</p>`).join('')
-                                        : '<p>No vendor records returned from the database.</p>';
-                                }
-                                if (rawMaterialList) {
-                                    rawMaterialList.innerHTML = '<p>Premium Cocoa: 50 (Thresh: 20)</p>' + (data.raw_materials || []).length
-                                        ? data.raw_materials.map(m => `<p>${brandEscapeHtml(m.name)}: ${brandEscapeHtml(String(m.current_quantity))} (Threshold: ${brandEscapeHtml(String(m.reorder_threshold))})</p>`).join('')
-                                        : '<p>No raw material records returned from the database.</p>';
-                                }
-                                if (bomList) {
-                                    bomList.innerHTML = (data.bom_items || []).length
-                                        ? data.bom_items.map(item => `<p>${brandEscapeHtml(item.finished_good_id)} needs ${brandEscapeHtml(String(item.quantity_required))}x ${brandEscapeHtml(item.raw_material_id)}</p>`).join('')
-                                        : '<p>No bill of materials records returned from the database.</p>';
-                                }
-                            } catch (e) {
-                                if (vendorList) vendorList.innerHTML = '<p>Supply records could not be loaded from the database.</p>';
-                                if (rawMaterialList) rawMaterialList.innerHTML = '<p>Material records could not be loaded from the database.</p>';
-                                if (bomList) bomList.innerHTML = '<p>Bill of materials records could not be loaded from the database.</p>';
-                            }
-                        }
-
-                        async function addSupplyVendor() {
-                            const name = document.getElementById('new-vendor-name').value.trim();
-                            if (!name) return alert('Enter a vendor name first.');
-                            const contact = document.getElementById('new-vendor-contact').value.trim();
-                            const response = await fetch(`/api/ui/supply/vendors?tenant_id=${encodeURIComponent(currentTenantId())}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ name, contact_info: contact })
-                            });
-                            if (!response.ok) return alert('Vendor could not be saved to the database.');
-                            document.getElementById('new-vendor-name').value = '';
-                            document.getElementById('new-vendor-contact').value = '';
-                            loadSupplyData();
-                        }
-
-                        async function addRawMaterial() {
-                            const name = document.getElementById('new-rm-name').value.trim();
-                            const qty = document.getElementById('new-rm-qty').value.trim();
-                            const thresh = document.getElementById('new-rm-thresh').value.trim();
-                            if (!name || !qty || !thresh) return alert('Enter material name, quantity, and threshold first.');
-                            const response = await fetch(`/api/ui/supply/raw-materials?tenant_id=${encodeURIComponent(currentTenantId())}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ name, current_quantity: Number(qty), reorder_threshold: Number(thresh) })
-                            });
-                            if (!response.ok) return alert('Raw material could not be saved to the database.');
-                            document.getElementById('new-rm-name').value = '';
-                            document.getElementById('new-rm-qty').value = '';
-                            document.getElementById('new-rm-thresh').value = '';
-                            loadSupplyData();
-                        }
-
-                        async function linkBomItem() {
-                            const fg = document.getElementById('new-bom-fg').value.trim();
-                            const rm = document.getElementById('new-bom-rm').value.trim();
-                            const qty = document.getElementById('new-bom-qty').value.trim();
-                            if (!fg || !rm || !qty) return alert('Enter finished good, raw material, and quantity first.');
-                            const response = await fetch(`/api/ui/supply/bom-items?tenant_id=${encodeURIComponent(currentTenantId())}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ finished_good_id: fg, raw_material_id: rm, quantity_required: Number(qty) })
-                            });
-                            if (!response.ok) return alert('Bill of materials item could not be saved to the database.');
-                            document.getElementById('new-bom-fg').value = '';
-                            document.getElementById('new-bom-rm').value = '';
-                            document.getElementById('new-bom-qty').value = '';
-                            loadSupplyData();
-                        }
-
-                        async function loadOrders() {
-                            const container = document.getElementById('orders-list-container');
-                            if (!container) return;
-                            container.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center;"><span>Unfulfilled</span><button onclick="showOrderDetails()">View</button></div>';
-                            try {
-                                const response = await fetch(`/api/ui/orders?tenant_id=${encodeURIComponent(currentTenantId())}`);
-                                if (!response.ok) throw new Error('Order query failed');
-                                const orders = await response.json();
-                                if (!orders.length) {
-                                    container.innerHTML = '<p>No order records returned from the database.</p>';
-                                    return;
-                                }
-                                container.innerHTML = orders.map(order => `
-                                    <div class="card glass" style="margin-bottom: 12px;">
-                                        <h2>${brandEscapeHtml(order.id)}</h2>
-                                        <p>${order.customer_name ? brandEscapeHtml(order.customer_name) : 'No customer name stored'}</p>
-                                        <p>$${Number(order.total_amount || 0).toFixed(2)} - ${brandEscapeHtml(order.status || 'No status stored')}</p>
-                                        <button data-order-id="${brandEscapeHtml(order.id)}" data-status="${brandEscapeHtml(order.status || '')}" onclick="showOrderDetails(this.dataset.orderId, this.dataset.status)">View Details</button>
-                                    </div>
-                                `).join('');
-                            } catch (e) {
-                                container.innerHTML = '<p>Order records could not be loaded from the database.</p>';
-                            }
-                        }
-
-                        async function loadInboxMessages() {
-                            const list = document.getElementById('inbox-list');
-                            if (!list) return;
-                            list.innerHTML = '<p>Loading inbox messages from the database...</p>';
-                            try {
-                                const response = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(currentTenantId())}`);
-                                if (!response.ok) throw new Error('Inbox query failed');
-                                const messages = await response.json();
-                                if (!messages.length) {
-                                    list.innerHTML = '<p>No inbox message records returned from the database.</p>';
-                                    return;
-                                }
-                                list.innerHTML = messages.map(message => `
-                                    <div class="card glass">
-                                        <h3>${brandEscapeHtml(message.source || 'Inbox')}</h3>
-                                        <p>${brandEscapeHtml(message.content || '')}</p>
-                                        <p style="font-size: 12px; color: var(--text-secondary);">${brandEscapeHtml(message.status || '')}</p>
-                                    </div>
-                                `).join('');
-                            } catch (e) {
-                                list.innerHTML = '<p>Inbox messages could not be loaded from the database.</p>';
-                            }
-                        }
-
-                        function showOrderDetails(orderId, status) {
-                            document.getElementById('orders-list-view').style.display = 'none';
-                            document.getElementById('order-detail-view').style.display = 'block';
-                            const heading = document.querySelector('#order-detail-view h1');
-                            if (heading) heading.textContent = orderId ? 'Order ' + orderId : 'Order';
-                            const statusEl = document.getElementById('order-status');
-                            if (statusEl) statusEl.textContent = status || '';
-                        }
-
-                        function showShippingRates() {
-                            const rates = document.getElementById('shipping-rates');
-                            if (rates) rates.style.display = 'block';
-                        }
-
-                        function buyShippingLabel() {
-                            const success = document.getElementById('shipping-label-success');
-                            const status = document.getElementById('order-status');
-                            if (success) success.style.display = 'block';
-                            if (status) status.textContent = 'Shipped';
-                        }
-
-                        function runAutoCatalog() {
-                            const upload = document.getElementById('auto-catalog-upload');
-                            const loading = document.getElementById('auto-catalog-loading');
-                            const form = document.getElementById('auto-catalog-form');
-                            if (upload) upload.remove();
-                            if (loading) loading.style.display = 'block';
-                            if (form) form.style.display = 'none';
-                            setTimeout(() => {
-                                if (loading) loading.textContent = 'AutoDream analysis is unavailable until a real catalog extraction service is connected.';
-                                if (form) {
-                                    document.getElementById('auto-catalog-title').value = 'Artisan Vanilla Bean Cupcake';
-                                    document.getElementById('auto-catalog-price').value = '4.99';
-                                    document.getElementById('auto-catalog-category').value = 'Baked Goods';
-                                    form.style.display = 'block';
-                                }
-                            }, 2000);
-                        }
-
-                        function publishAutoCatalogProduct() {
-                            const upload = document.getElementById('auto-catalog-upload');
-                            const form = document.getElementById('auto-catalog-form');
-                            const published = document.getElementById('auto-catalog-published');
-                            if (upload) upload.style.display = 'none';
-                            if (form) form.style.display = 'none';
-                            if (published) published.style.display = 'block';
-                        }
-
-                        function generateWinBackCampaign() {
-                            if (localStorage.getItem('has_pro') !== 'true') {
-                                document.getElementById('winback-paywall').style.display = 'block';
-                                return;
-                            }
-                            const product = document.getElementById('winback-product').value;
-                            const discount = document.getElementById('winback-discount').value;
-                            if (!discount) return alert('Enter a discount before generating a campaign.');
-                            document.getElementById('winback-draft-text').textContent = `Subject: We miss you! Here's ${discount}% off your next order 🎁\n\nUse code WINBACK${discount}${product ? ' for ' + product : ''}.\n\n⚡ Powered by OHC`;
-                            document.getElementById('winback-draft').style.display = 'block';
-                        }
-
-                        function claimWinBackTrial() {
-                            window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('I just unlocked AI win-back campaigns on One Human Corp'), '_blank');
-                            localStorage.setItem('has_pro', 'true');
-                            document.getElementById('winback-paywall').style.display = 'none';
-                            generateWinBackCampaign();
-                        }
-
-                        const pathMap = {
-                            'dashboard-screen': '/dashboard',
-                            'login-screen': '/login',
-                            'signup-screen': '/signup',
-                            'pricing-screen': '/pricing',
-                            'my-plan-screen': '/my-plan',
-                            'team-screen': '/agents',
-                            'kairos-screen': '/kairos',
-                            'help-screen': '/help',
-                            'changelog-screen': '/changelog',
-                            'api-screen': '/integrations',
-                            'api-docs-screen': '/api-docs',
-                            'diagnostics-screen': '/diagnostics',
-                            'services-screen': '/services',
-                            'scaling-screen': '/scaling',
-                            'setup-screen': '/website-builder',
-                            'brand-studio-screen': '/brand-studio',
-                            'storefront-builder-screen': '/storefront-builder',
-                            'settings-screen': '/settings',
-                            'checkout-screen': '/checkout',
-                            'users-screen': '/users',
-                            'referral-dashboard-screen': '/referrals',
-                            'supply-chain-screen': '/supply-chain',
-                            'inventory-screen': '/inventory',
-                            'orders-screen': '/orders',
-                            'product-new-screen': '/products/new',
-                            'share-cards-screen': '/share-cards',
-                            'win-back-screen': '/win-back',
-                            'inbox-screen': '/inbox',
-                            'seasonal-promo-screen': '/seasonal-promo',
-                            'meetings-screen': '/meetings',
-                            'calendar-screen': '/calendar',
-                            'meeting-room-screen': '/meetings/room/1',
-                            'cost-dashboard-screen': '/cost-dashboard',
-                            'advisory-dashboard-screen': '/advisory-dashboard'
-                        };
-
-                        async function handleLogin(btn) {
-                            btn.textContent = 'Logging in...';
-                            const email = document.querySelector('input[type="email"]').value;
-                            const password = document.querySelector('input[type="password"]').value;
-                            try {
-                                const response = await fetch('/api/v1/auth/login', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ username: email, password: password })
-                                });
-                                if (response.ok) {
-                                    const data = await response.clone().json();
-                                    localStorage.setItem('tenant_id', data.user.organization_id);
-                                    localStorage.setItem('token', data.token);
-                                    showScreen('dashboard-screen');
-                                } else {
-                                    localStorage.setItem('tenant_id', 'default');
-                                    localStorage.removeItem('token');
-                                    showScreen('dashboard-screen');
-                                }
-                            } catch (e) {
-                                localStorage.setItem('tenant_id', 'default');
-                                localStorage.removeItem('token');
-                                showScreen('dashboard-screen');
-                            } finally {
-                                btn.textContent = 'Login';
-                            }
-                        }
-
-                        async function handleSignup(btn) {
-                            btn.textContent = 'Creating account...';
-                            showScreen('setup-screen');
-                            btn.textContent = 'Sign Up';
-                        }
-
-
-                        let onboardingState = {
-                            business_type: '',
-                            payment_pref: 'online',
-                            website_template: 'Modern',
-                            domain_choice: 'subdomain'
-                        };
-
-                        function setBusinessType(type) {
-                            onboardingState.business_type = type;
-                            const input = document.getElementById('step-2-business-type');
-                            if (input) input.value = type;
-                            saveWizardState();
-                            nextStep(3);
-                        }
-
-                        function setPaymentPref(pref) {
-                            onboardingState.payment_pref = pref;
-                            saveWizardState();
-                            nextStep(7);
-                        }
-
-                        function setTemplate(template, btn) {
-                            onboardingState.website_template = template;
-                            saveWizardState();
-                            selectWizardOption(btn);
-                        }
-
-                        function setDomainChoice(choice, btn) {
-                            onboardingState.domain_choice = choice;
-                            saveWizardState();
-                            selectWizardOption(btn);
-                        }
-
-                        async function publishBusiness(btn) {
-                            const originalText = btn.innerHTML;
-                            btn.innerHTML = 'Publishing...';
-                            btn.disabled = true;
-
-                            try {
-                                const companyName = document.querySelectorAll('#step-3 input[type="text"]')[0].value || '';
-                                const companyDesc = document.querySelectorAll('#step-3 input[type="text"]')[1].value || '';
-
-                                const categoryInputs = document.querySelectorAll('#step-4 input[type="checkbox"]');
-                                const sellingCategories = [];
-                                if (categoryInputs[0] && categoryInputs[0].checked) sellingCategories.push('physical');
-                                if (categoryInputs[1] && categoryInputs[1].checked) sellingCategories.push('physical');
-                                if (categoryInputs[2] && categoryInputs[2].checked) sellingCategories.push('digital');
-                                if (categoryInputs[3] && categoryInputs[3].checked) sellingCategories.push('services');
-                                if (categoryInputs[4] && categoryInputs[4].checked) sellingCategories.push('subscriptions');
-
-                                const firstProductName = document.querySelectorAll('#step-5 input[type="text"]')[0].value || '';
-                                const firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1].value || '';
-
-                                const adminName = document.querySelectorAll('#step-7 input[type="text"]')[0].value || '';
-                                const adminEmail = document.querySelectorAll('#step-7 input[type="email"]')[0].value || '';
-                                const adminPassword = document.querySelectorAll('#step-7 input[type="password"]')[0].value || '';
-
-                                const payload = {
-                                    business_type: onboardingState.business_type,
-                                    company_name: companyName,
-                                    company_description: companyDesc,
-                                    selling_categories: sellingCategories,
-                                    payment_pref: onboardingState.payment_pref,
-                                    admin_email: adminEmail,
-                                    admin_name: adminName,
-                                    admin_password: adminPassword,
-                                    website_template: onboardingState.website_template,
-                                    first_product_name: firstProductName,
-                                    first_product_price: firstProductPrice,
-                                    domain_choice: onboardingState.domain_choice,
-                                    price_type: 'fixed'
-                                };
-
-                                const res = await fetch('/api/onboarding/start', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(payload)
-                                });
-
-                                if (res.ok) {
-                                    nextStep(100);
-                                } else {
-                                    console.error('Failed to publish business');
-                                    nextStep(100);
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                nextStep(100);
-                            } finally {
-                                btn.innerHTML = originalText;
-                                btn.disabled = false;
-                            }
-                        }
-
-                        async function generateDiscountShare() {
-                            try {
-                                const response = await fetch('/api/v1/growth/discount_share/generate', {
-                                    method: 'POST'
-                                });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    const text = encodeURIComponent(`I just unlocked a milestone for my store! 🚀 Here is a special 10% discount for my followers: ${data.share_url}`);
-                                    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-                                } else {
-                                    alert('Failed to generate discount share link');
-                                }
-                            } catch (e) {
-                                alert('Network error');
-                            }
-                        }
-
-                        let currentStep = 1;
-
-
-                        function validateInputs(stepId) {
-                            if (stepId === 3 && currentStep === 2) {
-                                let valid = false;
-                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
-                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
-                                });
-                                if (!valid) {
-                                    alert('Please select a business type');
-                                    return false;
-                                }
-                            }
-                            if (stepId === 4 && currentStep === 3) {
-                                const inputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a business name (at least 3 characters)');
-                                    return false;
-                                }
-                            }
-                            if (stepId === 6 && currentStep === 5) {
-                                const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
-                                const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
-                                if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
-                                    return false;
-                                }
-                                if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
-                                    return false;
-                                }
-                            }
-                            if (stepId === 8 && currentStep === 7) {
-                                const emailInput = document.querySelector('#step-7 input[type="email"]');
-                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                                if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
-                                    return false;
-                                }
-                            }
-                            return true;
-                        }
-
-
-                        async function nextStep(stepId) {
-                            const prevStep = currentStep;
-
-                            if (stepId !== "generating" && typeof stepId !== "undefined") {
-                                // Enhanced Input Validation - only validate when moving forward
-                                let hasError = false;
-                                if (typeof stepId === 'number' && stepId > currentStep) {
-                                    document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
-                                        // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
-                                            input.style.border = "2px solid #FF3B30";
-                                            hasError = true;
-                                        } else {
-                                            input.style.border = "";
-                                        }
-                                    });
-                                }
-                                if (hasError) return;
-
-                                try {
-                                    const stateData = { step: stepId };
-
-                                    const allInputs = document.querySelectorAll('#setup-screen input');
-                                    allInputs.forEach((input, idx) => {
-                                        const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + idx : 'input_' + idx);
-                                        if (input.type === 'checkbox') {
-                                            stateData[key] = input.checked;
-                                        } else {
-                                            stateData[key] = input.value;
-                                        }
-                                    });
-                                    localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
-
-                                    const tenantId = localStorage.getItem('tenant_id') || 'default';
-                                    const userId = localStorage.getItem('user_id') || 'test-user';
-                                    fetch('/api/onboarding/state', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-Tenant-ID': tenantId,
-                                            'X-User-ID': userId
-                                        },
-                                        body: JSON.stringify(stateData)
-                                    }).catch(console.error);
-                                } catch (e) {}
-                            }
-                            if (!validateInputs(parseInt(stepId) || stepId)) return;
-                            if (prevStep === 3 && parseInt(stepId) === 4) {
-                                const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
-                                if (!hasCompanyName) {
-                                    return;
-                                }
-                            }
-                            if (typeof stepId === 'number' || !isNaN(stepId)) {
-                                currentStep = parseInt(stepId);
-                            }
-
-                            document.querySelectorAll('#setup-screen > div').forEach(d => {
-                                if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
-                                    d.classList.add('hidden');
-                                    d.style.display = 'none'; // Fallback for old e2e logic
-                                    setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 250);
-                                    suppressButtonText(d, true);
-                                    suppressInputSelectors(d, true);
-                                }
-                            });
-                            const next = document.getElementById('step-' + stepId);
-                            if (next) {
-                                next.style.display = 'block'; // Fallback for old e2e logic
-                                setTimeout(() => next.classList.remove('hidden'), 10);
-                                suppressButtonText(next, false);
-                                suppressInputSelectors(next, false);
-                                // Ensure nested elements are also visible for Playwright
-                                Array.from(next.children).forEach(child => {
-                                    if (child.style.display === 'none') child.style.display = 'block';
-                                });
-                            }
-
-                            if (stepId === 'generating') {
-                                if (prevStep === 3 || prevStep === 5) {
-                                    nextStep(prevStep);
-                                    return;
-                                }
-
-                                try {
-                                    let businessType = '';
-                                    document.querySelectorAll('#step-2 button.secondary').forEach(b => {
-                                        if (b.classList.contains('selected') || document.activeElement === b) {
-                                            businessType = b.textContent.replace(/[^\w\s]/gi, '').trim();
-                                        }
-                                    });
-                                    let companyName = window.onboardingState?.company_name || document.getElementById('step-3-business-name')?.value || '';
-                                    let companyDesc = window.onboardingState?.company_description || document.getElementById('step-3-business-name-2')?.value || '';
-                                    let firstProductName = window.onboardingState?.first_product_name || document.getElementById('step-5-product-name')?.value || '';
-                                    let firstProductPrice = window.onboardingState?.first_product_price || document.getElementById('step-5-product-price')?.value || '';
-                                    let websiteTemplate = window.onboardingState?.website_template || document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
-                                    let domainChoice = window.onboardingState?.domain_choice || document.querySelector('#step-9 button.selected')?.innerText || '';
-
-                                    if (domainChoice.includes('Free')) {
-                                        domainChoice = 'free';
-                                    } else if (domainChoice.includes('Custom')) {
-                                        domainChoice = 'custom';
-                                    }
-
-                                    let sellingCategories = [];
-                                    document.querySelectorAll('#step-4 input[type="checkbox"]:checked').forEach(cb => {
-                                        sellingCategories.push(cb.parentElement.textContent.replace(/[^\w\s]/gi, '').trim());
-                                    });
-
-                                    const payload = {
-                                        business_type: businessType,
-                                        company_name: companyName,
-                                        company_description: companyDesc,
-                                        selling_categories: sellingCategories,
-                                        first_product_name: firstProductName,
-                                        first_product_price: firstProductPrice,
-                                        website_template: websiteTemplate,
-                                        domain_choice: domainChoice,
-                                        admin_email: window.onboardingState?.admin_email || "admin@ohc.app",
-                                        admin_name: window.onboardingState?.admin_name || "Admin",
-                                        admin_password: window.onboardingState?.admin_password || "password123",
-                                        price_type: "fixed",
-                                        payment_pref: "online"
-                                    };
-
-                                    const res = await fetch('/api/onboarding/start', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(payload)
-                                    });
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
-                                } catch (e) {
-                                    console.error(e);
-                                    if (prevStep === 3) nextStep(4);
-                                    else if (prevStep === 5) nextStep(6);
-                                    else nextStep('launch-ai');
-                                }
-                            }
-                        }
-
-                        let currentStoreProfile = null;
-
-                        async function generateAI() {
-                            const descInput = document.querySelector('#step-ai input');
-                            const description = descInput ? descInput.value : '';
-                            nextStep('generating');
-                            try {
-                                const response = await fetch('/api/v1/builder/generate', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ description })
-                                });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    currentStoreProfile = data;
-
-                                    // Update storefrontDraftState
-                                    if (data.pages && data.pages.length > 0) {
-                                        storefrontDraftState = data.pages[0].blocks.map((b, i) => ({
-                                            id: 'ai-gen-' + i,
-                                            type: b.block_type,
-                                            content: b.content
-                                        }));
-                                    }
-
-                                    // Show builder screen directly
-                                    setTimeout(() => {
-                                        showScreen('storefront-builder-screen');
-                                        renderStorefrontPreview();
-                                    }, 2000); // Wait for the "generating" animation
-                                } else {
-                                    setTimeout(() => nextStep('launch-ai'), 2000);
-                                }
-                            } catch(e) {
-                                console.error(e);
-                                setTimeout(() => nextStep('launch-ai'), 2000);
-                            }
-                        }
-
-                        function selectWizardOption(button) {
-                            const parent = button.parentElement;
-                            parent.querySelectorAll('button.secondary').forEach(btn => btn.classList.remove('selected'));
-                            button.classList.add('selected');
-                        }
-
-                        function setMainNavLabels(id) {
-                            const labels = id === 'setup-screen'
-                                ? ['Overview', 'AI Assistants', 'Setup', 'Brand Studio', 'KAIROS', 'Connect Tools']
-                                : ['Dashboard', 'Agents', 'Setup', 'Brand Studio', 'KAIROS', 'Connect Tools'];
-                            document.querySelectorAll('#main-nav a').forEach((link, index) => {
-                                if (labels[index]) link.textContent = labels[index];
-                            });
-                        }
-
-                        function updateBottomNavState(id) {
-                            document.querySelectorAll('.nav-item').forEach(item => {
-                                if (!item.dataset.originalHtml) {
-                                    item.dataset.originalHtml = item.innerHTML;
-                                }
-                                item.innerHTML = item.dataset.originalHtml;
-                                item.classList.remove('active');
-
-                                const action = item.getAttribute('onclick') || '';
-                                if (action.includes(`showScreen('${id}')`) || action.includes(`showScreen("${id}")`)) {
-                                    item.classList.add('active');
-                                }
-                            });
-                        }
-
-                        function generateSeasonalPromo() {
-                            if (localStorage.getItem('has_pro') !== 'true') {
-                                const paywall = document.getElementById('seasonal-paywall');
-                                if (paywall) paywall.style.display = 'block';
-                            }
-                            const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
-                            const discountInput = document.getElementById('promo-discount').value || '10';
-
-                            // Sanitize inputs to prevent XSS
-                            const occasion = occasionInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                            const discount = discountInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-                            const code = occasionInput.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) + discountInput.replace(/[^0-9]/g, '');
-
-                            const content = `<p><strong>${occasion} Special! ${discount}% OFF</strong></p>🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
-                            document.getElementById('promo-content').innerHTML = content;
-                            document.getElementById('promo-result').style.display = 'block';
-                        }
-
-                        function showScreen(id) {
-                            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-                            const screen = document.getElementById(id);
-
-                            if (id === 'api-docs-screen' || id === 'api-screen') {
-                                if (window.SwaggerUIBundle) {
-                                    window.SwaggerUIBundle({
-                                        spec: {
-                                            "openapi": "3.0.0",
-                                            "info": {
-                                                "title": "OHC Advanced API Reference",
-                                                "version": "1.0.0",
-                                                "description": "API Reference for advanced users integrating with OneHumanCorp."
-                                            },
-                                            "servers": [
-                                                { "url": "http://localhost:8080", "description": "Local Backend Server" }
-                                            ],
-                                            "paths": {
-                                                "/api/orgs/register": {
-                                                    "post": {
-                                                        "summary": "Register an Organization",
-                                                        "description": "Registers a new tenant organization in the multi-tenant OHC environment.",
-                                                        "tags": ["Tenants"],
-                                                        "requestBody": {
-                                                            "required": true,
-                                                            "content": {
-                                                                "application/json": {
-                                                                    "schema": {
-                                                                        "type": "object",
-                                                                        "properties": {
-                                                                            "id": { "type": "string", "example": "acme" },
-                                                                            "name": { "type": "string", "example": "Acme Corp" },
-                                                                            "domain": { "type": "string", "example": "acme.com" }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                        "responses": {
-                                                            "200": { "description": "Success" }
-                                                        }
-                                                    }
-                                                },
-                                                "/api/agents/task": {
-                                                    "post": {
-                                                        "summary": "Dispatch a task",
-                                                        "description": "Dispatches a new task to the AI Swarm Orchestrator.",
-                                                        "tags": ["Agents"],
-                                                        "requestBody": {
-                                                            "required": true,
-                                                            "content": {
-                                                                "application/json": {
-                                                                    "schema": {
-                                                                        "type": "object",
-                                                                        "properties": {
-                                                                            "task_description": { "type": "string", "example": "Build a landing page for a dog groomer" },
-                                                                            "priority": { "type": "string", "example": "high" }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                        "responses": {
-                                                            "202": { "description": "Accepted" }
-                                                        }
-                                                    }
-                                                },
-                                                "/api/videos": {
-                                                    "get": {
-                                                        "summary": "Get video tutorials",
-                                                        "tags": ["Documentation"],
-                                                        "responses": { "200": { "description": "Success" } }
-                                                    }
-                                                },
-                                                "/api/agents/status": {
-                                                    "get": {
-                                                        "summary": "Get workforce status",
-                                                        "tags": ["Agents"],
-                                                        "responses": { "200": { "description": "Success" } }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        dom_id: '#swagger-ui',
-                                    });
-                                }
-                            }
-                            if (screen) {
-                                if (id === 'checklist-screen') {
-                                    const setupScreen = document.getElementById('setup-screen');
-                                    if (setupScreen) setupScreen.style.display = 'block';
-                                }
-                                screen.classList.remove('hidden');
-                                screen.style.display = 'block';
-                                suppressButtonText(screen, false);
-                                suppressInputSelectors(screen, false);
-                                // Auto-advance wizard if nested and needed
-                                if (id === 'setup-screen') {
-                                    nextStep(currentStep || 1);
-                                }
-                                if (id === 'storefront-builder-screen') {
-                                    renderStorefrontPreview();
-                                }
-                            }
-                            setMainNavLabels(id);
-                            updateBottomNavState(id);
-
-                            if (pathMap[id] && window.location.protocol !== 'file:') {
-                                window.history.pushState({}, '', pathMap[id]);
-                            }
-
-                            if (id === 'dashboard-screen') {
-                                const tenant = encodeURIComponent(currentTenantId());
-                                Promise.all([
-                                    fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`).then(res => res.json())
-                                ])
-                                .then(([metricsData]) => {
-                                    const salesEl = document.getElementById('todays-sales');
-                                    if (salesEl) salesEl.innerText = '$' + metricsData.total_sales.toFixed(2);
-                                    const analyticsSalesEl = document.getElementById('analytics-total-sales');
-                                    if (analyticsSalesEl) analyticsSalesEl.innerText = '$' + metricsData.total_sales.toFixed(2);
-
-                                    const banner = document.getElementById('milestone-share-banner');
-                                    const countEl = document.getElementById('milestone-customers-count');
-                                    const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
-                                    if (banner && countEl && !dismissed) {
-                                        if (metricsData.active_customers >= 0) {
-                                            banner.style.display = 'flex'; banner.classList.remove('hidden');
-                                            banner.classList.remove('hidden');
-                                            countEl.textContent = metricsData.active_customers;
-
-                                            // Set preview image and update share button
-                                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                            const mid = metricsData.active_customers >= 00 ? '10th_order' : 'first_sale';
-                                            document.getElementById('milestone-banner-img').src = `/api/v1/growth/milestone/card?tenant=${tenant}&milestone_id=${mid}`;
-                                            document.getElementById('milestone-share-btn').onclick = () => shareMilestoneToX(mid);
-                                        } else {
-                                            banner.style.display = 'none';
-                                            banner.classList.add('hidden');
-                                        }
-                                    }
-
-                                })
-                                .catch(err => console.error('Error fetching dashboard data:', err));
-                                fetchMilestones();
-                                fetchApprovals();
-                                fetchActivityFeed();
-                            }
-
-                            if (id === 'my-plan-screen') {
-
-                                fetch('/api/billing/my-plan')
-                                    .then(res => res.json())
-                                    .then(data => {
-                                        document.getElementById('my-plan-name').textContent = 'Plan: ' + data.current_plan;
-                                        document.getElementById('my-plan-next-bill').textContent = 'Estimated Next Bill: $' + data.next_bill_estimated + '.00';
-
-                                        let aiLimit = data.ai_actions_limit ? data.ai_actions_limit : 'Unlimited';
-                                        document.getElementById('my-plan-ai-usage').textContent = 'AI Actions Used: ' + data.ai_actions_used + ' / ' + aiLimit;
-
-                                        let storageUsedMB = Math.round(data.storage_used_bytes / (1024 * 1024));
-                                        let storageLimitText = data.storage_limit_bytes ? Math.round(data.storage_limit_bytes / (1024 * 1024)) + 'MB' : 'Unlimited';
-                                        document.getElementById('my-plan-storage-usage').textContent = 'Storage Used: ' + storageUsedMB + 'MB / ' + storageLimitText;
-                                    })
-                                    .catch(err => console.error('Error fetching plan info:', err));
-                            }
-
-                            if (id === 'cost-dashboard-screen') {
-                                fetch('/api/billing/cost-dashboard')
-                                    .then(res => res.json())
-                                    .then(data => {
-                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total_costs / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-revenue').textContent = '$' + (data.total_revenue / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
-                                    })
-                                    .catch(err => console.error('Error fetching cost dashboard:', err));
-                            }
-
-                            if (id === 'advisory-dashboard-screen') {
-                                fetch('/api/v1/advisory/insights', {
-                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
-                                })
-                                    .then(res => res.json())
-                                    .then(data => {
-                                        document.getElementById('advisory-dashboard-summary').innerText = data.summary;
-                                    })
-                                    .catch(err => console.error('Error fetching advisory insights:', err));
-                            }
-
-                            if (id === 'team-screen') {
-                                fetchWorkflows();
-                            }
-
-                            if (id === 'orders-screen') {
-                                loadOrders();
-                            }
-
-                            if (id === 'inbox-screen') {
-                                loadInboxMessages();
-                            }
-
-                            if (id === 'supply-chain-screen') {
-                                loadSupplyData();
-                            }
-
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-docs-screen' || id === 'help-screen' || id === 'changelog-screen' || id === 'kairos-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'supply-chain-screen' || id === 'inventory-screen' || id === 'orders-screen' || id === 'product-new-screen' || id === 'share-cards-screen' || id === 'win-back-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'calendar-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'brand-studio-screen' || id === 'advisory-dashboard-screen') {
-                                document.getElementById('main-nav').style.display = 'flex';
-                                document.getElementById('mobile-bottom-nav').style.display = 'flex';
-                            } else {
-                                document.getElementById('main-nav').style.display = 'none';
-                                document.getElementById('mobile-bottom-nav').style.display = 'none';
-                            }
-
-                            normalizeHiddenControls();
-                        }
-
-                        function normalizeHiddenControls() {
-                            document.querySelectorAll('.screen').forEach(screen => {
-                                const hidden = screen.style.display === 'none';
-                                if (hidden) {
-                                    suppressButtonText(screen, true);
-                                    suppressInputSelectors(screen, true);
-                                }
-                                screen.querySelectorAll('input, textarea').forEach(input => {
-                                    if (!input.dataset.originalPlaceholder && input.hasAttribute('placeholder')) {
-                                        input.dataset.originalPlaceholder = input.getAttribute('placeholder');
-                                    }
-                                    if (hidden) {
-                                        input.removeAttribute('placeholder');
-                                    } else {
-                                        if (input.dataset.originalPlaceholder) {
-                                            input.setAttribute('placeholder', input.dataset.originalPlaceholder);
-                                        }
-                                    }
-                                });
-                            });
-                        }
-
-                        function suppressButtonText(root, suppress) {
-                            root.querySelectorAll('button').forEach(button => {
-                                if (!button.dataset.originalHtml) {
-                                    button.dataset.originalHtml = button.innerHTML;
-                                }
-                                button.innerHTML = suppress ? '' : button.dataset.originalHtml;
-                            });
-                        }
-
-                        function suppressInputSelectors(root, suppress) {
-                            root.querySelectorAll('input').forEach(input => {
-                                if (!input.dataset.originalType) {
-                                    input.dataset.originalType = input.getAttribute('type') || 'text';
-                                }
-                                input.setAttribute('type', suppress ? 'hidden' : input.dataset.originalType);
-                            });
-                        }
-
-                        window.onload = async () => {
-                            const path = window.location.pathname;
-                            const pathAliases = {
-                                '/business-setup': 'setup-screen',
-                                '/onboarding': 'setup-screen',
-                                '/setup-screen': 'setup-screen',
-                                '/team': 'team-screen',
-                                '/help': 'help-screen',
-                                '/api-docs': 'api-docs-screen',
-                                '/changelog': 'changelog-screen',
-                                '/builder': 'storefront-builder-screen',
-                                '/calendar': 'calendar-screen',
-                                '/brand-studio': 'brand-studio-screen',
-                                '/website-builder': 'setup-screen',
-                                '/services/new': 'services-screen',
-                                '/inventory': 'inventory-screen',
-                                '/orders': 'orders-screen',
-                                '/products/new': 'product-new-screen',
-                                '/share-cards': 'share-cards-screen',
-                                '/win-back': 'win-back-screen',
-                                '/supply-chain': 'supply-chain-screen',
-                                '/review-campaigns': 'seasonal-promo-screen',
-                                '/nova-mission-track': 'dashboard-screen',
-                                '/scribe-mission-track': 'dashboard-screen'
-                            };
-                            const screenId = path.startsWith('/orders/') ? 'orders-screen' : (pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen');
-
-                            if (screenId === 'setup-screen') {
-                                try {
-                                    const tenantId = localStorage.getItem('tenant_id') || 'default';
-                                    const userId = localStorage.getItem('user_id') || 'test-user';
-                                    const res = await fetch('/api/onboarding/state', {
-                                        headers: {
-                                            'X-Tenant-ID': tenantId,
-                                            'X-User-ID': userId
-                                        }
-                                    });
-                                    if (res.ok) {
-                                        const stateData = await res.json();
-                                        if (stateData && stateData.step) {
-                                            currentStep = stateData.step;
-                                            document.querySelectorAll('input').forEach(input => {
-                                                if (input.placeholder && stateData[input.placeholder]) {
-                                                    input.value = stateData[input.placeholder];
-                                                }
-                                            });
-                                            if (stateData.step > 1) {
-                                                // Wait for display updates before fast-forwarding to currentStep
-                                                setTimeout(() => nextStep(stateData.step), 100);
-                                            }
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.error('Failed to load state', e);
-                                }
-                            }
-
-                            showScreen(screenId);
-
-                            if (path.includes("walkthrough=true")) {
-                                setTimeout(() => {
-                                    const tooltip = document.getElementById("kairos-tooltip");
-                                    if (tooltip) {
-                                        tooltip.style.display = "inline";
-                                    }
-                                }, 1500);
-                            }
-
-                            if (path.startsWith('/orders/')) {
-                                showOrderDetails();
-                            }
-                        };
-
-                        // Scribe: Tooltip Logic
-                        async function verifySmsNumber() {
-                            const phone = document.getElementById('sms-critical-phone').value;
-                            if (!phone) {
-                                alert("Please enter a valid phone number.");
-                                return;
-                            }
-
-                            const btn = document.getElementById('btn-verify-sms');
-                            const originalText = btn.textContent;
-                            btn.textContent = "Sending...";
-                            btn.disabled = true;
-
-                            try {
-                                const res = await fetch('/api/settings/sms-verify', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
-                                    },
-                                    body: JSON.stringify({ phone: phone })
-                                });
-
-                                if (res.ok) {
-                                    document.getElementById('sms-otp-container').style.display = 'block';
-                                    btn.textContent = "Resend Code";
-                                } else {
-                                    alert("Failed to send verification SMS. Check format or backend configuration.");
-                                    btn.textContent = originalText;
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                alert("Network error. Please try again.");
-                                btn.textContent = originalText;
-                            }
-                            btn.disabled = false;
-                        }
-
-                        async function saveSmsPreferences() {
-                            const phone = document.getElementById('sms-critical-phone').value;
-                            const urgent_booking = document.getElementById('sms-alert-urgent-booking').checked;
-                            const failed_payment = document.getElementById('sms-alert-failed-payment').checked;
-                            const new_order = document.getElementById('sms-alert-new-order').checked;
-
-                            try {
-                                await fetch('/api/settings/sms-preferences', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
-                                    },
-                                    body: JSON.stringify({ phone, urgent_booking, failed_payment, new_order })
-                                });
-                            } catch (e) {
-                                console.error("Could not save SMS preferences", e);
-                            }
-                        }
-
-                        async function confirmSmsNumber() {
-                            const phone = document.getElementById('sms-critical-phone').value;
-                            const otp = document.getElementById('sms-critical-otp').value;
-                            if (!otp) {
-                                alert("Please enter the OTP.");
-                                return;
-                            }
-
-                            try {
-                                const res = await fetch('/api/settings/sms-confirm', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
-                                    },
-                                    body: JSON.stringify({ phone, otp })
-                                });
-
-                                if (res.ok) {
-                                    document.getElementById('sms-otp-container').style.display = 'none';
-                                    document.getElementById('btn-verify-sms').style.display = 'none';
-                                    document.getElementById('sms-critical-phone').disabled = true;
-                                    document.getElementById('sms-verified-badge').style.display = 'block';
-                                    await saveSmsPreferences();
-                                } else {
-                                    alert("Invalid OTP.");
-                                }
-                            } catch (e) {
-                                console.error(e);
-                                alert("Network error.");
-                            }
-                        }
-
-
-
-
-
-
-                        // Scribe: Help Chat Logic
-                        async function submitHelpQuery() {
-                            const input = document.getElementById('ai-chat-input');
-                            const messages = document.getElementById('ai-chat-messages');
-                            const query = input.value.trim();
-                            if(!query) return;
-                            const userMsg = document.createElement('div');
-                            userMsg.className = 'chat-msg user';
-                            userMsg.textContent = query;
-                            messages.appendChild(userMsg);
-                            input.value = '';
-                            messages.scrollTop = messages.scrollHeight;
-                            try {
-                                const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: query }) });
-                                const data = await res.json();
-                                const aiMsg = document.createElement('div');
-                                aiMsg.className = 'chat-msg ai';
-                                aiMsg.innerHTML = data.reply;
-                                if(data.link && data.link.title && data.link.url) {
-                                    if(data.link.url === '/api-docs') {
-                                        aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;api-docs-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;; return false;">Read the full article →</a>';
-                                    } else {
-                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_self">Read the full article →</a>';
-                                    }
-                                }
-                                messages.appendChild(aiMsg);
-                                messages.scrollTop = messages.scrollHeight;
-                            } catch(e) { console.error(e); }
-                        }
-
-
-                        // Scribe: Walkthrough Logic
-                        const walkthroughs = {
-                            'Set up your store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
-                            'Activate your AI Support Agent': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ],
-                            'Virtual Meeting Room': [
-                                { target: 'global-help-btn', title: 'Virtual Meeting Room', text: 'Agents join the Virtual Meeting Room to debate and plan before executing tasks.' },
-                                { target: 'global-help-btn', title: 'UltraPlan', text: 'Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol).' }
-                            ]
-                        };
-                        let currentTour = null, currentStepIndex = 0;
-
-                        function startWalkthrough(tourId) {
-                            if(!walkthroughs[tourId]) return;
-                            currentTour = walkthroughs[tourId]; currentStepIndex = 0;
-                            document.getElementById('walkthrough-overlay').style.display = 'block';
-                            document.getElementById('walkthrough-bubble').style.display = 'block';
-                            renderWalkthroughStep();
-                        }
-
-                        function renderWalkthroughStep() {
-                            if(!currentTour || currentStepIndex >= currentTour.length) { endWalkthrough(); return; }
-                            const step = currentTour[currentStepIndex];
-                            const target = document.getElementById(step.target) || document.querySelector(`[placeholder="${step.target}"]`);
-                            if(target) {
-                                const rect = target.getBoundingClientRect();
-                                const overlay = document.getElementById('walkthrough-overlay');
-                                overlay.style.boxShadow = `rgba(0, 0, 0, 0.5) 0px 0px 0px 9999px, rgba(0, 0, 0, 0) 0px 0px 0px 0px inset`;
-                                overlay.style.clipPath = `polygon(0% 0%, 0% 100%, ${rect.left}px 100%, ${rect.left}px ${rect.top}px, ${rect.right}px ${rect.top}px, ${rect.right}px ${rect.bottom}px, ${rect.left}px ${rect.bottom}px, ${rect.left}px 100%, 100% 100%, 100% 0%)`;
-                                const bubble = document.getElementById('walkthrough-bubble');
-                                document.getElementById('walkthrough-title').textContent = step.title;
-                                document.getElementById('walkthrough-text').textContent = step.text;
-                                bubble.style.left = (rect.right + 16) + 'px';
-                                bubble.style.top = rect.top + 'px';
-                                document.getElementById('walkthrough-next-btn').textContent = (currentStepIndex === currentTour.length - 1) ? 'Got it' : 'Next';
-                            } else nextWalkthroughStep();
-                        }
-
-                        function nextWalkthroughStep() { currentStepIndex++; renderWalkthroughStep(); }
-                        function endWalkthrough() { currentTour = null; currentStepIndex = 0; document.getElementById('walkthrough-overlay').style.display = 'none'; document.getElementById('walkthrough-bubble').style.display = 'none'; }
-
-                        // Scribe: Help Center & Videos Logic
-                        const helpTopics = [
-                            { id: 'getting-started', title: 'Start Here', desc: 'Welcome to One Human Corp. Learn the basics.', icon: '🚀' },
-                            { id: 'my-store', title: 'My Store', desc: 'How to add products, photos, and descriptions.', icon: '🛍️' },
-                            { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
-                            { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
-                            { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
-                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
-                        ];
-
-                        function renderHelpCenter() {
-                            const container = document.getElementById('help-categories-container');
-                            if(!container) return; container.innerHTML = '';
-
-                            // Add interactive tour buttons to the top of the help center
-                            const toursDiv = document.createElement('div');
-                            toursDiv.style.gridColumn = '1 / -1';
-                            toursDiv.innerHTML = `
-                                <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-                                    <button class="secondary" onclick="startWalkthrough('Set up your store')">🗺️ Tour: Set up your store</button>
-                                    <button class="secondary" onclick="startWalkthrough('Activate your AI Support Agent')">🗺️ Tour: Activate your AI Support Agent</button>
-                                    <button class="secondary" onclick="startWalkthrough('Accept your first payment')">🗺️ Tour: Accept your first payment</button>
-                                </div>
-                            `;
-                            container.appendChild(toursDiv);
-
-                            helpTopics.forEach(topic => {
-                                const card = document.createElement('div');
-                                card.className = 'help-category-card';
-                                card.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">${topic.icon}</div><h3>${topic.title}</h3><p>${topic.desc}</p>`;
-                                card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
-                                container.appendChild(card);
-                            });
-                        }
-
-                        function filterHelpCenter() {
-                            const query = document.getElementById('help-search').value.toLowerCase();
-                            document.querySelectorAll('.help-category-card').forEach(card => card.style.display = card.textContent.toLowerCase().includes(query) ? 'block' : 'none');
-                        }
-
-                        async function renderVideos() {
-                            try {
-                                const res = await fetch('/api/videos');
-                                const videos = await res.json();
-                                const container = document.getElementById('help-videos-container');
-                                if(!container) return; container.innerHTML = '';
-                                videos.forEach(vid => {
-                                    const card = document.createElement('div');
-                                    card.className = 'video-card';
-                                    card.innerHTML = `<div class="video-thumbnail">▶️</div><div class="video-info"><h4>${vid.title}</h4><p>${vid.duration}</p></div>`;
-                                    container.appendChild(card);
-                                });
-                            } catch(e) { console.error(e); }
-                        }
-
-                        document.addEventListener('DOMContentLoaded', () => {
-
-                            renderHelpCenter();
-                            renderVideos();
-                        });
-                    </script>
-                    <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" aria-label="Help" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
-                    <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
-
-                    <div id="ai-chat-widget">
-                        <div id="ai-chat-header">
-                            <span>Ask AI Help</span>
-                            <span style="cursor:pointer;" onclick="document.getElementById('ai-chat-widget').style.display='none'">✕</span>
-                        </div>
-                        <div id="ai-chat-messages">
-                            <div class="chat-msg ai">Hi! I am your AI Support Agent. How can I help you grow your business today?</div>
-                        </div>
-                        <div id="ai-chat-input-container">
-                            <input type="text" id="ai-chat-input" placeholder="Ask a question..." onkeypress="if(event.key === 'Enter') submitHelpQuery()">
-                            <button onclick="submitHelpQuery()">Send</button>
-                        </div>
-                    </div>
-
-                    <div id="walkthrough-overlay"></div>
-                    <div id="walkthrough-bubble">
-                        <h4 id="walkthrough-title">Step Title</h4>
-                        <p id="walkthrough-text">Step description goes here.</p>
-                        <div style="display:flex; gap:8px; justify-content:flex-end;">
-                            <button class="secondary" onclick="endWalkthrough()">Skip</button>
-                            <button onclick="nextWalkthroughStep()" id="walkthrough-next-btn">Next</button>
-                        </div>
-                    </div>
-
-                    <!-- Help Center Screen -->
-                    <div id="help-screen" class="screen">
-                        <div id="help-widget-container">
-                        <h1>Help Center</h1>
-                        <p>Find answers, watch tutorials, and learn how to grow your business.</p>
-                        <h2>Getting Started</h2>
-                        <p>Welcome to OneHumanCorp!</p>
-                        <div style="margin-bottom: 24px; display: flex; gap: 12px;">
-                            <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);" onkeyup="filterHelpCenter()">
-                            <button onclick="document.getElementById('ai-chat-widget').style.display='flex'" placeholder="ask-ai-tooltip">Ask AI</button>
-                        </div>
-                        <button onclick="startWalkthrough('Virtual Meeting Room')">Tour: Virtual Meeting Room & UltraPlan</button>
-                        <button id="kairos-walkthrough-btn" onclick="showScreen('kairos-screen'); window.history.pushState({}, '', '/kairos?walkthrough=true')">Tour: KAIROS</button>
-
-                        <h2>Topics</h2>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 32px;" id="help-categories-container"></div>
-
-                        <h2>Video Tutorials</h2>
-                        <div class="video-grid" id="help-videos-container"></div>
-                        </div>
-                    </div>
-
-                    <!-- Changelog Screen -->
-                    <div id="changelog-screen" class="screen">
-                        <h1>What's New</h1>
-                        <h1>Release Notes & Changelog</h1>
-                        <h2>Version 1.0 (Latest)</h2>
-                        <p><strong>Interactive AI Store Builder:</strong> Build, edit, and launch your storefront with agent assistance.</p>
-                        <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
-                        <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
-                            <img src="dashboard_with_nudges.png" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" alt="Version 2.4 Update">
-                            <div>
-                                <h3>Version 2.4 - AI Agents Update</h3>
-                                <p>We've supercharged your AI workforce! You can now adjust their autonomy levels and track their real-time activity.</p>
-                                <ul>
-                                    <li><strong>Approval Inbox:</strong> Review and approve tasks before your agents execute them.</li>
-                                    <li><strong>Autonomy Limits:</strong> Set exactly how much money agents can spend automatically.</li>
-                                    <li><strong>Help Center:</strong> A brand new searchable guide to everything in the app.</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <h3>Version 2.3 - Mobile Builder</h3>
-                            <p>Edit your storefront on the go with our completely redesigned mobile experience.</p>
-                        </div>
-                    </div>
-
-                    <!-- API Docs Screen -->
-                    <div id="api-docs-screen" class="screen" style="padding: 0;">
-                        <div class="card glass" style="margin: 24px;">
-                            <h1>OHC Advanced API Reference</h1>
-                            <p>This section is for developers directly integrating with our APIs.</p>
-                        </div>
-                        <div id="swagger-ui"></div>
-                    </div>
-                </body>
-            </html>
-        "##.replace("{tooltips_json}", &tooltips_json),
-    };
-    axum::response::Html(content)
+async fn api_not_found_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
+    use axum::{http::StatusCode, response::IntoResponse};
+
+    let path = req.uri().path().to_string();
+    (
+        StatusCode::NOT_FOUND,
+        axum::Json(serde_json::json!({
+            "error": "not_found",
+            "message": "This Rust service exposes API routes only. Serve browser UI routes from the Next application.",
+            "path": path,
+        })),
+    )
+        .into_response()
 }
 pub mod crypto;
 // resolves #9690

@@ -20,13 +20,7 @@ impl MercadoPagoClient {
         }
     }
 
-    pub async fn create_checkout_preference(&self, _price_id: &str, tenant_id: &str) -> Result<String, String> {
-        let _ = ::server_telemetry::record_api_call_cost(
-            &crate::db::get_pool(),
-            tenant_id,
-            "mercadopago_checkout_preference",
-            0.15 // mock cost for api orchestration
-        ).await;
+    pub async fn create_checkout_preference(&self, _price_id: &str, _tenant_id: &str) -> Result<String, String> {
 
         #[cfg(test)]
         if self.access_token == "test_token" {
@@ -73,12 +67,6 @@ impl MercadoPagoClient {
 
 impl MercadoPagoClient {
     pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        let _ = ::server_telemetry::record_api_call_cost(
-            &crate::db::get_pool(),
-            payer_email, // using email as a proxy for tenant/identity in this stub
-            "mercadopago_create_payment",
-            0.20
-        ).await;
 
         #[cfg(test)]
         if self.access_token == "test_token" {

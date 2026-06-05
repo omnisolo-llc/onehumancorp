@@ -36,7 +36,7 @@ impl ShipengineProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::integrations::shipengine::provider::ShipengineProvider;
+    use crate::provider::ShipengineProvider;
 
     #[test]
     fn test_shipengine_provider_metadata() {

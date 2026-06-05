@@ -16,23 +16,12 @@ impl SQLiteTaskQueue {
 
 #[async_trait]
 impl TaskQueue for SQLiteTaskQueue {
-    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
-
-        let mut query_str = String::from("INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) VALUES ");
-        let mut values = Vec::new();
-
-        for _ in 0..jobs.len() {
-            values.push("(?, ?, ?, ?, 'PENDING', ?, ?)");
-        }
-        query_str.push_str(&values.join(", "));
-
-        let mut query = sqlx::query(&query_str);
-
         let mut unique_tenants = std::collections::HashSet::new();
         for job in &jobs {
             unique_tenants.insert(job.tenant_id.clone());
@@ -57,26 +46,36 @@ impl TaskQueue for SQLiteTaskQueue {
         }
 
         let bursts_threshold = 10;
-        for job in jobs {
-            let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
 
-            let mut next_retry_at = job.next_retry_at;
-            if depth > bursts_threshold {
-                let delay_seconds = (depth - bursts_threshold) * 5;
-                next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
+        // SQLite has a parameter limit (often 32766 or 999). We use a conservative chunk size of 100.
+        // 6 parameters per job * 100 = 600 parameters < 999.
+        for chunk in jobs.chunks(100) {
+            let mut query_builder = sqlx::QueryBuilder::new("INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) ");
+            query_builder.push_values(chunk, |mut b, job| {
+                let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
+                let mut next_retry_at = job.next_retry_at;
+                if depth > bursts_threshold {
+                    let delay_seconds = (depth - bursts_threshold) * 5;
+                    next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
+                }
+
+                b.push_bind(job.id.clone())
+                 .push_bind(job.parent_task_id.clone())
+                 .push_bind(job.job_type.clone())
+                 .push_bind(job.payload.clone())
+                 .push_bind("PENDING")
+                 .push_bind(next_retry_at)
+                 .push_bind(job.tenant_id.clone());
+            });
+
+            let query = query_builder.build();
+            query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+            for job in chunk {
+                *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
             }
-            *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
-
-            query = query
-                .bind(job.id)
-                .bind(job.parent_task_id)
-                .bind(job.job_type)
-                .bind(job.payload)
-                .bind(next_retry_at)
-                .bind(job.tenant_id);
         }
 
-        query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -230,7 +229,7 @@ impl TaskQueue for SQLiteTaskQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
+                let new_next_retry_at = (chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64)).to_rfc3339();
                 sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = ?, next_retry_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
                     .bind(new_next_retry_at)
