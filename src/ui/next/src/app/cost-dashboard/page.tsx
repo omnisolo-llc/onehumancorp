@@ -23,6 +23,10 @@ interface CostDashboardData {
   period_start: string;
   period_end: string;
   trend: DailyCost[];
+  ai_actions_used: number;
+  ai_actions_limit: number | null;
+  storage_used_bytes: number;
+  storage_limit_bytes: number | null;
 }
 
 export default function CostDashboardPage() {
@@ -60,6 +64,13 @@ export default function CostDashboardPage() {
 
   const formatCurrency = (cents: number) => {
       return '$' + (cents / 100).toFixed(2);
+  };
+
+  const formatStorage = (bytes: number) => {
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) return "< 1 MB";
+      if (mb > 1024) return (mb / 1024).toFixed(2) + " GB";
+      return mb.toFixed(1) + " MB";
   };
 
   return (
@@ -110,6 +121,46 @@ export default function CostDashboardPage() {
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">
+                {/* AI Actions Usage Section */}
+                <div className="flex flex-col p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-gray-900">AI Actions Usage</span>
+                        <span id="cost-dashboard-ai-actions" className="text-sm font-medium text-gray-500">
+                            {data?.ai_actions_used} / {data?.ai_actions_limit === null ? 'Unlimited' : data?.ai_actions_limit}
+                        </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div
+                            className="bg-blue-600 h-2.5 rounded-full"
+                            style={{
+                                width: data?.ai_actions_limit ?
+                                    `${Math.min((data.ai_actions_used / data.ai_actions_limit) * 100, 100)}%`
+                                    : '100%'
+                            }}
+                        ></div>
+                    </div>
+                </div>
+
+                {/* Storage Usage Section */}
+                <div className="flex flex-col p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-gray-900">Storage Usage</span>
+                        <span id="cost-dashboard-storage-usage" className="text-sm font-medium text-gray-500">
+                            {formatStorage(data?.storage_used_bytes || 0)} / {data?.storage_limit_bytes === null ? 'Unlimited' : formatStorage(data?.storage_limit_bytes || 0)}
+                        </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div
+                            className="bg-green-500 h-2.5 rounded-full"
+                            style={{
+                                width: data?.storage_limit_bytes ?
+                                    `${Math.min(((data.storage_used_bytes || 0) / data.storage_limit_bytes) * 100, 100)}%`
+                                    : '100%'
+                            }}
+                        ></div>
+                    </div>
+                </div>
+
                 <div className="flex flex-col p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
                     <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
                     <ul id="cost-dashboard-trend" className="space-y-2">

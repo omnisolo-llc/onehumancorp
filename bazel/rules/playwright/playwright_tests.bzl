@@ -67,8 +67,6 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
         "//:package.json",
         "//:package-lock.json",
         "//:node_modules",
-        "//src/ui/next:node_modules",
-
         "@playwright//:chromium-headless-shell",
         "@playwright//:ffmpeg",
     ] + data

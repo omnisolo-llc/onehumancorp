@@ -25,6 +25,10 @@ pub struct CostDashboardResponse {
     pub period_start: String,
     pub period_end: String,
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
+    pub ai_actions_used: i32,
+    pub ai_actions_limit: Option<i32>,
+    pub storage_used_bytes: i64,
+    pub storage_limit_bytes: Option<i64>,
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
@@ -110,7 +114,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![] })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None })
     };
 
     let now = chrono::Utc::now();
@@ -137,13 +141,36 @@ pub async fn cost_dashboard_handler(
         )
     });
 
+    let tenant_id_clone_3 = tenant_id.clone();
+    let tenant_id_clone_4 = tenant_id.clone();
+
     let storage_future = tokio::task::spawn(async move {
         hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
     });
 
-    let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
+    let ai_used_future = tokio::task::spawn({
+        let hub = hub.clone();
+        async move {
+            hub.tracker().get_tenant_actions_used(&tenant_id_clone_3).await.unwrap_or(0)
+        }
+    });
+
+    let tier_future = tokio::task::spawn({
+        let hub = hub.clone();
+        async move {
+            hub.tracker().get_tenant_tier(&tenant_id_clone_4).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free)
+        }
+    });
+
+    let (storage_res, auditor_res, ai_used_res, tier_res) = tokio::join!(storage_future, auditor_future, ai_used_future, tier_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
+    let ai_used = ai_used_res.unwrap_or(0) as i32;
+    let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+
+    let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
+    let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
+
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
 
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
@@ -165,5 +192,9 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
         trend,
+        ai_actions_used: ai_used,
+        ai_actions_limit: ai_limit,
+        storage_used_bytes: storage_bytes,
+        storage_limit_bytes: storage_limit,
     })
 }
