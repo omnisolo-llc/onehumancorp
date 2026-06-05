@@ -73,7 +73,7 @@ export default function DeliveryDispatchPage() {
                     <span className="font-medium">ETA:</span> {new Date(task.estimated_arrival_unix * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <p className="flex items-center gap-2">
-                    <span className="font-medium">Location:</span> {task.delivery_location_lat.toFixed(4)}, {task.delivery_location_lng.toFixed(4)}
+                    <span className="font-medium">Location:</span> {task.delivery_location_lat?.toFixed(4) ?? 0}, {task.delivery_location_lng?.toFixed(4) ?? 0}
                   </p>
                 </div>
 
