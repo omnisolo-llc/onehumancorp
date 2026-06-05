@@ -48,10 +48,6 @@ test.describe('OnboardingWizard CUJ', () => {
     // Navigate to the onboarding page
     await page.goto('/onboarding');
 
-    // Start the onboarding process
-    await expect(page.getByText('Welcome')).toBeVisible();
-    await page.getByText('Start Onboarding').click();
-
     // --- Step 1: Chat/Intake ---
     // Wait for the first prompt
     await expect(page.getByText('Tell us about your business')).toBeVisible();
@@ -97,12 +93,8 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(toggle).toBeChecked();
 
     // Account Setup
-    await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Maya Smith');
     await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
     await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
-
-    // Let the UI finish reacting to input before clicking launch
-    await page.waitForTimeout(100);
 
     // Launch store
     await page.getByRole('button', { name: 'Launch Store' }).click();

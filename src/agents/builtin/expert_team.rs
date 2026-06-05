@@ -275,7 +275,6 @@ impl QualityGates {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
 
     use crate::types::{ChatResponse, Usage};
 

@@ -3,15 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface DailyCost {
-  date: string;
-  total_cost: number;
-  llm_cost: number;
-  storage_cost: number;
-  network_cost: number;
-  compute_cost: number;
-}
-
 interface CostDashboardData {
   total_revenue: number;
   total_costs: number;
@@ -22,7 +13,6 @@ interface CostDashboardData {
   bandwidth_savings: number;
   period_start: string;
   period_end: string;
-  trend: DailyCost[];
 }
 
 export default function CostDashboardPage() {
@@ -110,18 +100,6 @@ export default function CostDashboardPage() {
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">
-                <div className="flex flex-col p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
-                    <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
-                    <ul id="cost-dashboard-trend" className="space-y-2">
-                        {data?.trend?.map((daily, index) => (
-                            <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                                <span className="text-sm text-gray-700">{daily.date}</span>
-                                <span className="text-sm font-medium text-gray-900">{formatCurrency(daily.total_cost)}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
                 <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">LLM Usage</span>

@@ -1,6 +1,5 @@
 use crate::{Tool, ToolExecutor};
 use ohc_builtin_agent_core::types::ToolError;
-use server_ohc::agent::service::SubAgentResponse;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -51,7 +50,7 @@ impl ToolExecutor for SubagentExecutor {
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        Ok(SubAgentResponse {
+                        Ok(agent_service_proto::ohc::agent::service::SubAgentResponse {
                             result: stdout,
                             error: String::new(),
                         })
@@ -100,7 +99,7 @@ impl ToolExecutor for SubagentExecutor {
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        Ok(SubAgentResponse {
+                        Ok(agent_service_proto::ohc::agent::service::SubAgentResponse {
                             result: stdout,
                             error: String::new(),
                         })
@@ -403,5 +402,31 @@ mod tests {
         let msg = result.unwrap();
         assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");
         assert!(msg.len() < 9000, "Expected output length to be less than 9000 after truncation");
+    }
+    #[tokio::test]
+    async fn test_subagent_worktree_mode() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        // The executor makes 4 command calls in worktree mode:
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Worktree added", "")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Subagent ran successfully", "")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Worktree removed", "")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "Branch deleted", "")));
+
+        let executor = SubagentExecutor { runner: runner.clone() };
+        let args = json!({
+            "task": "Test worktree mode",
+            "mode": "worktree"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_ok(), "Expected Ok for worktree mode");
+        let msg = result.unwrap();
+        assert!(msg.contains("[Subagent (Worktree)] Completed task"));
+        assert!(msg.contains("Subagent ran successfully"));
+
+        let calls = runner.get_calls();
+        assert_eq!(calls.len(), 4, "Expected exactly 4 commands to be run");
+        assert!(calls[0].1.contains(&"worktree".to_string()) && calls[0].1.contains(&"add".to_string()) && calls[0].1.contains(&"-b".to_string()), "First command should be git worktree add -b");
+        assert!(calls[2].1.contains(&"worktree".to_string()) && calls[2].1.contains(&"remove".to_string()), "Third command should be git worktree remove");
     }
 }

@@ -211,7 +211,7 @@ mod tests {
 mod extra_tests {
     use super::*;
     use tempfile::tempdir;
-
+    use std::fs;
     #[tokio::test]
     async fn test_repomap_path_traversal() {
         let dir = tempdir().unwrap();
