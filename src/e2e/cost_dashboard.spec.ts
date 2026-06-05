@@ -2,6 +2,9 @@ import { test, expect } from './fixtures';
 
 test.describe('Cost Dashboard', () => {
 
+  test.beforeEach(async () => {
+    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+  });
 
   test('should display 7-Day Trend', async ({ page }) => {
     await page.goto('/cost-dashboard');
