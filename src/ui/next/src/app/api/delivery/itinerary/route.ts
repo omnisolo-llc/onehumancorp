@@ -24,8 +24,8 @@ export async function GET(request: Request) {
     const result = await client.query(
       `SELECT dt.id, dt.organization_id, dt.order_id, dt.status,
               EXTRACT(EPOCH FROM dt.estimated_arrival)::BIGINT as estimated_arrival_unix,
-              ST_Y(dt.delivery_location) as delivery_location_lat,
-              ST_X(dt.delivery_location) as delivery_location_lng,
+              ST_Y(dt.delivery_location::geometry) as delivery_location_lat,
+              ST_X(dt.delivery_location::geometry) as delivery_location_lng,
               rp.delivery_date
        FROM delivery_tasks dt
        LEFT JOIN route_plans rp ON dt.route_plan_id = rp.id
