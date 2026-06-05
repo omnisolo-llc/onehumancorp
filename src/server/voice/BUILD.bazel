@@ -1,7 +1,6 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files([
-    "gateway.rs",
     "mod.rs",
     "engine.rs",
     "router.rs",
