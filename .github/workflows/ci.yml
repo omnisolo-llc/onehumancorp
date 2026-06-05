@@ -421,17 +421,17 @@ jobs:
 
           tool_dir="$(mktemp -d)"
 
-          curl -fsSL -o "$tool_dir/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
+          curl --retry 3 --retry-delay 5 -fsSL -o "$tool_dir/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
           echo "${KIND_SHA256}  $tool_dir/kind" | sha256sum --check --strict
           chmod +x "$tool_dir/kind"
           sudo install "$tool_dir/kind" /usr/local/bin/kind
 
-          curl -fsSL -o "$tool_dir/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
+          curl --retry 3 --retry-delay 5 -fsSL -o "$tool_dir/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
           echo "${KUBECTL_SHA256}  $tool_dir/kubectl" | sha256sum --check --strict
           chmod +x "$tool_dir/kubectl"
           sudo install "$tool_dir/kubectl" /usr/local/bin/kubectl
 
-          curl -fsSL -o "$tool_dir/helm.tar.gz" "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
+          curl --retry 3 --retry-delay 5 -fsSL -o "$tool_dir/helm.tar.gz" "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
           echo "${HELM_SHA256}  $tool_dir/helm.tar.gz" | sha256sum --check --strict
           tar -C "$tool_dir" -xzf "$tool_dir/helm.tar.gz"
           sudo install "$tool_dir/linux-${CI_ARCH}/helm" /usr/local/bin/helm
