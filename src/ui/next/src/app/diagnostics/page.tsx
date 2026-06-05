@@ -22,18 +22,7 @@ export default function DiagnosticsPage() {
 
       <main id="diagnostics-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Operational Telemetry</h2>
-          <div className="mb-4">
-             System Status: All systems operational
-          </div>
-          <div className="mb-4">
-             Database: Healthy
-          </div>
-          <div className="mb-4">
-             Redis: Healthy
-          </div>
-
           <div className="space-y-4">
             <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Response time latency:</span> 42 ms
@@ -49,7 +38,7 @@ export default function DiagnosticsPage() {
 
         <section className="p-6 shadow-sm mt-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <div style={{
-            backdropFilter: 'blur(30px) saturate(210%)',
+            backdropFilter: 'blur(20px) saturate(200%)',
             background: 'rgba(255, 255, 255, 0.03)',
             border: '1px solid rgba(0, 0, 0, 0.1)',
             borderRadius: '12px',
@@ -77,17 +66,7 @@ export default function DiagnosticsPage() {
             </div>
           </div>
         </section>
-
-        <section className="p-6 shadow-sm mt-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-            <button className="mr-4 px-4 py-2 bg-blue-600 text-white rounded-lg">Run Test</button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">Export Report</button>
-            <div id="diagnostics-result" className="mt-4">
-                Running diagnostics test result passed
-                Diagnostics report download ready
-            </div>
-        </section>
       </main>
-
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

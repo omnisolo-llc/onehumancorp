@@ -76,8 +76,6 @@ rust_library(
         "//src/server/services/sync:power_sync_test.rs",
         "//src/server/services/sync:service.rs",
         "//src/server/services/sync:telemetry_sync.rs",
-        "//src/server/services/pos:mod.rs",
-        "//src/server/services/pos:service.rs",
         "//src/server/services/syndication:adapter.rs",
         "//src/server/services/syndication:mesh.rs",
         "//src/server/services/syndication:mod.rs",
@@ -86,7 +84,6 @@ rust_library(
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -110,7 +107,6 @@ rust_library(
         "//src/server/auth:server_auth",
         "//src/server/common:server_common",
         "//src/server/config:server_config",
-        "//src/server/domain:server_domain",
         "//src/server/harness:server_harness",
         "//src/server/integrations/ayrshare:server_integrations_ayrshare",
         "//src/server/integrations/cal_com:server_integrations_cal_com",
@@ -185,7 +181,6 @@ rust_test(
     size = "large",
     crate = ":server_services",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     env = {
         "RUST_TEST_THREADS": "1",
     },

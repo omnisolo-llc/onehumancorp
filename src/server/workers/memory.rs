@@ -29,11 +29,9 @@ impl MemoryConsolidationWorker {
                 interval.tick().await;
                 let older_than = Utc::now() - chrono::Duration::days(prune_threshold_days);
                 if let Err(e) = repository.prune_stale(older_than).await {
-                    ::server_telemetry::record_error_signal("Consolidation Worker: Failed to prune stale context");
                     tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
                 }
                 if let Err(e) = repository.auto_resolve_conflicts().await {
-                    ::server_telemetry::record_error_signal("Consolidation Worker: Failed to resolve memory conflicts");
                     tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
                 }
             }
@@ -161,7 +159,7 @@ mod tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding TEXT,
+                embedding VECTOR(1536),
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

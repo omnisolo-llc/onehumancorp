@@ -34,13 +34,6 @@ interface WebsiteBuilderState {
   setDomainChoice: (domain: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
-  blocks: any[];
-  status: "idle" | "generating" | "draft" | "live";
-  liveUrl: string;
-  setBlocks: (blocks: any[]) => void;
-  moveBlock: (fromIndex: number, toIndex: number) => void;
-  setStatus: (status: "idle" | "generating" | "draft" | "live") => void;
-  setLiveUrl: (url: string) => void;
   loadState?: (state: Partial<WebsiteBuilderState>) => void;
 }
 
@@ -79,31 +72,6 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       setDomainChoice: (domainChoice) => set({ domainChoice }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
-      blocks: [],
-      status: "idle",
-      liveUrl: "",
-      setBlocks: (blocks) => set({ blocks }),
-      moveBlock: (fromIndex, toIndex) =>
-        set((state) => {
-          if (
-            toIndex < 0 ||
-            toIndex >= state.blocks.length ||
-            fromIndex === toIndex
-          ) {
-            return state;
-          }
-          const newBlocks = [...state.blocks];
-          const [moved] = newBlocks.splice(fromIndex, 1);
-          newBlocks.splice(toIndex, 0, moved);
-
-          if (typeof localStorage !== "undefined") {
-              localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
-          }
-
-          return { blocks: newBlocks };
-        }),
-      setStatus: (status) => set({ status }),
-      setLiveUrl: (liveUrl) => set({ liveUrl }),
       loadState: (state) => set(state),
     }),
     {

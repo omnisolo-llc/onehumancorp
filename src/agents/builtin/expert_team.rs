@@ -125,23 +125,8 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
             let fut = async move {
                 let mut local_trace = SkillTrace::new();
                 let expert_instance = DomainExpert { role: role_name, llm: llm_clone };
-
-                let mut retries = 3;
-                let mut last_err = String::new();
-
-                while retries > 0 {
-                    match expert_instance.execute(&task_clone, &mut local_trace).await {
-                        Ok(res) => return (Ok(res), local_trace.skills_used),
-                        Err(e) => {
-                            last_err = e;
-                            retries -= 1;
-                            if retries > 0 {
-                                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                            }
-                        }
-                    }
-                }
-                (Err(last_err), local_trace.skills_used)
+                let output = expert_instance.execute(&task_clone, &mut local_trace).await;
+                (output, local_trace.skills_used)
             };
             futures.push(fut);
         }
@@ -206,19 +191,13 @@ impl QualityGates {
         }
 
         // 75% similarity deduplication using Jaccard index on word tokens
-        let mut token_sets = Vec::with_capacity(summaries.len());
-        for summary in summaries {
-            let set: std::collections::HashSet<&str> = summary.split_whitespace().collect();
-            token_sets.push(set);
-        }
+        for i in 0..summaries.len() {
+            for j in (i + 1)..summaries.len() {
+                let set_i: std::collections::HashSet<&str> = summaries[i].split_whitespace().collect();
+                let set_j: std::collections::HashSet<&str> = summaries[j].split_whitespace().collect();
 
-        for i in 0..token_sets.len() {
-            for j in (i + 1)..token_sets.len() {
-                let set_i = &token_sets[i];
-                let set_j = &token_sets[j];
-
-                let intersection = set_i.intersection(set_j).count() as f64;
-                let union = set_i.union(set_j).count() as f64;
+                let intersection = set_i.intersection(&set_j).count() as f64;
+                let union = set_i.union(&set_j).count() as f64;
 
                 if union > 0.0 {
                     let jaccard_similarity = intersection / union;
@@ -275,7 +254,6 @@ impl QualityGates {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
 
     use crate::types::{ChatResponse, Usage};
 
@@ -324,7 +302,7 @@ mod tests {
         let manager = ExpertTeamManager::new("Lead", experts);
         let res = QualityGates::pre_flight(&manager, "Task");
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("Exactly 6 agent initialization is required")));
+        assert!(res.unwrap_err().contains("Exactly 6 agent initialization is required"));
     }
 
     #[test]
@@ -335,7 +313,7 @@ mod tests {
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("High similarity detected")));
+        assert!(res.unwrap_err().contains("High similarity detected"));
     }
 
     #[test]
@@ -346,17 +324,17 @@ mod tests {
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("Missing: Chapter 5, Chapter 6, Chapter 7, Chapter 8")));
+        assert!(res.unwrap_err().contains("Missing: Chapter 5, Chapter 6, Chapter 7, Chapter 8"));
     }
 
     #[test]
     fn test_pre_deliver_failure_missing_chart() {
-        let final_output = "word ".repeat(20000) + "This output is quite long so it passes the word count check. It is very detailed and thorough, however it is missing something important.";
+        let final_output = "This output is quite long so it passes the word count check. It is very detailed and thorough, however it is missing something important.";
         let mut trace = SkillTrace::new();
         trace.record_skill("test_skill");
         let res = QualityGates::pre_deliver(&final_output, &trace);
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("Missing required chart/analysis verification")));
+        assert!(res.unwrap_err().contains("Missing required chart/analysis verification"));
     }
 
     #[test]
@@ -365,6 +343,6 @@ mod tests {
         let trace = SkillTrace::new(); // Empty trace
         let res = QualityGates::pre_deliver(&final_output, &trace);
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("Skill-trace is incomplete")));
+        assert!(res.unwrap_err().contains("Skill-trace is incomplete"));
     }
 }

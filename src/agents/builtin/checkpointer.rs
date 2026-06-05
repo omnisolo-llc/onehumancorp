@@ -42,7 +42,6 @@ pub trait CheckpointSaver: Send + Sync {
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
     #[allow(unused_variables)]
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> { Ok(()) }
-    fn storage_prefix(&self) -> &'static str { "db" }
 }
 
 pub struct PgCheckpointer {
@@ -124,11 +123,6 @@ impl CheckpointSaver for GitCheckpointer {
 
         Ok(Some(cp))
     }
-
-    fn storage_prefix(&self) -> &'static str {
-        "git"
-    }
-
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
         let file_path = self.progress_file_path(&checkpoint.thread_id);
         let scratchpad_path = self.scratchpad_file_path(&checkpoint.thread_id);
@@ -141,21 +135,6 @@ impl CheckpointSaver for GitCheckpointer {
         scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
         let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
         tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
-
-        // 0. Conflict Resolution / Stale Lock Files: Ensure no stale git index lock prevents us from adding files
-        let lock_file = self.repo_path.join(".git/index.lock");
-        if lock_file.exists() {
-            let _ = tokio::fs::remove_file(&lock_file).await;
-            tracing::warn!("Removed stale git index.lock file before checkpointing.");
-        }
-
-        // 0.5. Missing .gitignore defaults: Ensure we don't snapshot massive build directories if user forgot to ignore them
-        let gitignore_path = self.repo_path.join(".gitignore");
-        if !gitignore_path.exists() {
-            let default_ignore = "target/\nnode_modules/\n.idea/\n.vscode/\ndist/\nbuild/\n";
-            let _ = tokio::fs::write(&gitignore_path, default_ignore).await;
-            tracing::info!("Created default .gitignore to prevent massive snapshotting.");
-        }
 
         // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
         let add_out = Command::new("git")
@@ -226,10 +205,9 @@ impl CheckpointSaver for GitCheckpointer {
             }
         }
 
-        // Robust Restore Edge Cases: Use -fdx to also clean ignored files and artifacts that might have been built after the checkpoint
         let clean_output = Command::new("git")
             .arg("clean")
-            .arg("-fdx")
+            .arg("-fd")
             .current_dir(&self.repo_path)
             .output()
             .map_err(|e| e.to_string())?;
@@ -237,10 +215,6 @@ impl CheckpointSaver for GitCheckpointer {
         if !clean_output.status.success() {
             return Err(format!("Failed to restore workspace (clean): {}", String::from_utf8_lossy(&clean_output.stderr)));
         }
-
-        // Additional edge case: detached HEAD cleanup / checkout logic if needed,
-        // but `git reset --hard` along with `git clean -fdx` usually leaves the working tree spotless.
-        // By doing this we make sure the progress file matches the checkpoint itself.
 
         Ok(())
     }
@@ -553,29 +527,6 @@ mod tests {
 
         let res = saver.put_checkpoint(cp).await;
         assert!(res.is_ok());
-
-        // Also verify the lockfile clearance logic
-        let lock_file = temp_dir.path().join(".git/index.lock");
-        tokio::fs::write(&lock_file, b"test").await.unwrap();
-        assert!(lock_file.exists());
-
-        let cp2 = Checkpoint {
-            thread_id: "thread-git-1".to_string(),
-            checkpoint_id: "cp-git-1-b".to_string(),
-            parent_id: None,
-            data: serde_json::json!({"state": "init2"}),
-            metadata: serde_json::json!({"agent": "git-bot"}),
-            created_at: Utc::now(),
-        };
-        let res2 = saver.put_checkpoint(cp2).await;
-        assert!(res2.is_ok());
-        assert!(!lock_file.exists(), "The checkpoint operation should remove the stale lockfile");
-
-        // Verify .gitignore creation
-        let gitignore = temp_dir.path().join(".gitignore");
-        assert!(gitignore.exists());
-        let content = tokio::fs::read_to_string(&gitignore).await.unwrap();
-        assert!(content.contains("node_modules/"));
     }
 
     #[tokio::test]

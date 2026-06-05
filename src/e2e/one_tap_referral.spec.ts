@@ -1,3 +1,3 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('agent-marketplace');
+currentAppSmoke('one_tap_referral');

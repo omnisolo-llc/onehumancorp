@@ -12,12 +12,12 @@ test.describe('Help Center', () => {
         await searchInput.fill('Getting Started');
 
         // Click on the article
-        const articleLink = page.locator('a[href="/help/getting-started-1"]');
+        const articleLink = page.locator('a[href="/help/getting-started"]');
         await expect(articleLink).toBeVisible();
         await articleLink.click();
 
         // Wait for navigation and API load
-        await page.waitForURL('/help/getting-started-1');
+        await page.waitForURL('/help/getting-started');
 
         // Verify article content
         await expect(page.locator('h1', { hasText: 'Getting Started with Your Store' })).toBeVisible();

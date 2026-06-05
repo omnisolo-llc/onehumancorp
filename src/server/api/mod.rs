@@ -2,7 +2,6 @@ pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;
 pub mod autodream;
-pub mod terminal_api;
 
 pub mod billing_webhook;
 pub mod billing_api;
@@ -17,4 +16,3 @@ pub mod syndication_handler;
 pub mod dynamic_workflows;
 
 pub mod catalog;
-pub mod meta_webhook;

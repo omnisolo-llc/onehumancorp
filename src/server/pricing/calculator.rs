@@ -334,19 +334,6 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_cost_with_cached_tokens() {
-        // gpt-4o: input 5.0, output 15.0, cached 2.50
-        // input 1,000,000 tokens
-        // cached 1,000,000 tokens
-        // output 1,000,000 tokens
-        let cost = calculate_cost("gpt-4o", 1000000, 1000000, 1000000);
-        assert_eq!(cost, 5.00 + 15.00 + 2.50);
-
-        let cost_cents = calculate_cost_cents("gpt-4o", 1000000, 1000000, 1000000);
-        assert_eq!(cost_cents, 2250); // 22.50 * 100
-    }
-
-    #[test]
     fn test_calculate_projected_monthly_cost() {
         assert_eq!(calculate_projected_monthly_cost(10.0, 5, 30), 60.0);
         assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);
