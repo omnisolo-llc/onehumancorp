@@ -41,6 +41,7 @@ pub struct CostAuditor {
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
+    tenant_cached_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     llm_cost_counter: Counter<u64>,
@@ -76,6 +77,7 @@ impl CostAuditor {
             tenant_payment_fees: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
             tenant_tokens: Mutex::new(HashMap::new()),
+            tenant_cached_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
             telemetry_tx: None,
             llm_cost_counter,
@@ -121,6 +123,10 @@ impl CostAuditor {
         let mut tenant_tokens = self.tenant_tokens.lock().unwrap();
         let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_tokens += event.output_tokens + event.input_tokens;
+
+        let mut tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
+        let current_tenant_cached_tokens = tenant_cached_tokens.entry(event.tenant_id.clone()).or_insert(0);
+        *current_tenant_cached_tokens += event.cached_input_tokens;
 
         let cost_cents = (cost * 100.0).round() as u64;
         self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
@@ -254,6 +260,11 @@ impl CostAuditor {
     pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
         let tenant_tokens = self.tenant_tokens.lock().unwrap();
         *tenant_tokens.get(tenant_id).unwrap_or(&0)
+    }
+
+    pub fn get_tenant_cached_tokens(&self, tenant_id: &str) -> i64 {
+        let tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
+        *tenant_cached_tokens.get(tenant_id).unwrap_or(&0)
     }
 
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
