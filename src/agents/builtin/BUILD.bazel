@@ -209,6 +209,7 @@ rust_binary(
 
 AGENT_UNIT_TEST_FILTERS = [
     "agent",
+    "prompt_construction",
     "auth",
     "budget",
     "caveman",
