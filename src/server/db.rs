@@ -123,7 +123,8 @@ impl DB {
                 #[cfg(unix)]
                 {
                     use std::fs::OpenOptions;
-                    use std::os::unix::fs::OpenOptionsExt;
+                    #[allow(unused_imports)]
+                            use std::os::unix::fs::OpenOptionsExt;
                     use std::os::unix::fs::PermissionsExt;
 
                     if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
@@ -194,7 +195,8 @@ impl DB {
                     #[cfg(unix)]
                     {
                         use std::io::Write;
-                        use std::os::unix::fs::OpenOptionsExt;
+                        #[allow(unused_imports)]
+                            use std::os::unix::fs::OpenOptionsExt;
                         if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
                             .create_new(true)
@@ -1523,8 +1525,9 @@ mod security_tests_final {
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
                         #[cfg(unix)]
                         {
+                            #[allow(unused_imports)]
                             use std::os::unix::fs::OpenOptionsExt;
-                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                            let _ = std::fs::File::create(&db_path);
                         }
                         #[cfg(not(unix))]
                         {
@@ -1541,6 +1544,7 @@ mod security_tests_final {
                         #[cfg(unix)]
                         {
                             use std::fs::OpenOptions;
+                            #[allow(unused_imports)]
                             use std::os::unix::fs::OpenOptionsExt;
                             use std::os::unix::fs::PermissionsExt;
                             let file = OpenOptions::new()
