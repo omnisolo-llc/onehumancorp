@@ -811,6 +811,8 @@ message WaitlistResponse {
 service GrowthService {
   rpc SubmitReview(SubmitReviewRequest) returns (SubmitReviewResponse);
   rpc GetReputation(GetReputationRequest) returns (GetReputationResponse);
+  rpc GetReviews(GetReviewsRequest) returns (GetReviewsResponse);
+  rpc ApproveReviewReply(ApproveReviewReplyRequest) returns (ApproveReviewReplyResponse);
 
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
@@ -1749,6 +1751,38 @@ message GetReputationRequest {}
 message GetReputationResponse {
   double average_rating = 1;
   int32 total_reviews = 2;
+}
+
+message ReviewReplyProto {
+  string id = 1;
+  string review_id = 2;
+  string content = 3;
+  string status = 4;
+  int64 drafted_at_unix = 5;
+}
+
+message ReviewProto {
+  string id = 1;
+  string customer_id = 2;
+  string order_id = 3;
+  int32 rating = 4;
+  string comment = 5;
+  int64 created_at_unix = 6;
+  ReviewReplyProto reply = 7;
+}
+
+message GetReviewsRequest {}
+
+message GetReviewsResponse {
+  repeated ReviewProto reviews = 1;
+}
+
+message ApproveReviewReplyRequest {
+  string reply_id = 1;
+}
+
+message ApproveReviewReplyResponse {
+  bool success = 1;
 }
 
 message SemanticRoutingRequest {

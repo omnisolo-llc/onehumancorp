@@ -3,7 +3,11 @@ use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::growth_service_server::GrowthService;
 use ::server_ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
 
-use ::server_ohc::orchestration::{SubmitReviewRequest, SubmitReviewResponse, GetReputationRequest, GetReputationResponse};
+use ::server_ohc::orchestration::{
+    SubmitReviewRequest, SubmitReviewResponse, GetReputationRequest, GetReputationResponse,
+    GetReviewsRequest, GetReviewsResponse, ApproveReviewReplyRequest, ApproveReviewReplyResponse,
+    ReviewProto, ReviewReplyProto,
+};
 use uuid::Uuid;
 
 use std::sync::RwLock;
@@ -112,6 +116,28 @@ impl GrowthService for MyGrowthService {
                     .execute(&mut *tx)
                     .await;
             }
+
+            // Also generate a draft reply for high rating
+            let reply_id = Uuid::new_v4().to_string();
+            let draft_content = format!("Thank you for the amazing {}-star review! We appreciate your business.", req.rating);
+            let _ = sqlx::query("INSERT INTO review_replies (id, tenant_id, review_id, content, status) VALUES ($1, $2, $3, $4, 'Drafted') ON CONFLICT DO NOTHING")
+                .bind(&reply_id)
+                .bind(&tenant_id)
+                .bind(&review_id)
+                .bind(&draft_content)
+                .execute(&mut *tx)
+                .await;
+        } else {
+            // Generate a draft reply for lower rating
+            let reply_id = Uuid::new_v4().to_string();
+            let draft_content = format!("We are sorry to hear about your {}-star experience. Please let us know how we can improve.", req.rating);
+            let _ = sqlx::query("INSERT INTO review_replies (id, tenant_id, review_id, content, status) VALUES ($1, $2, $3, $4, 'Drafted') ON CONFLICT DO NOTHING")
+                .bind(&reply_id)
+                .bind(&tenant_id)
+                .bind(&review_id)
+                .bind(&draft_content)
+                .execute(&mut *tx)
+                .await;
         }
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -151,6 +177,87 @@ impl GrowthService for MyGrowthService {
                 total_reviews: 0,
             }))
         }
+    }
+
+
+    async fn get_reviews(
+        &self,
+        request: Request<GetReviewsRequest>,
+    ) -> Result<Response<GetReviewsResponse>, Status> {
+        let tenant_id = self.get_org_id(request.metadata()).await?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = sqlx::query(
+            "SELECT r.id as review_id, r.customer_id, r.order_id, r.rating, r.comment, r.created_at,
+                    rr.id as reply_id, rr.content as reply_content, rr.status as reply_status, rr.drafted_at
+             FROM reviews r
+             LEFT JOIN review_replies rr ON r.id = rr.review_id AND rr.tenant_id = r.tenant_id
+             WHERE r.tenant_id = $1
+             ORDER BY r.created_at DESC"
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut reviews = Vec::new();
+        for row in rows {
+            let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
+
+            let reply = if let Ok(reply_id) = row.try_get::<String, _>("reply_id") {
+                let drafted_at: chrono::DateTime<chrono::Utc> = row.try_get("drafted_at").unwrap_or_else(|_| chrono::Utc::now());
+                Some(ReviewReplyProto {
+                    id: reply_id,
+                    review_id: row.try_get("review_id").unwrap_or_default(),
+                    content: row.try_get("reply_content").unwrap_or_default(),
+                    status: row.try_get("reply_status").unwrap_or_default(),
+                    drafted_at_unix: drafted_at.timestamp(),
+                })
+            } else {
+                None
+            };
+
+            reviews.push(ReviewProto {
+                id: row.try_get("review_id").unwrap_or_default(),
+                customer_id: row.try_get("customer_id").unwrap_or_default(),
+                order_id: row.try_get("order_id").unwrap_or_default(),
+                rating: row.try_get("rating").unwrap_or_default(),
+                comment: row.try_get("comment").unwrap_or_default(),
+                created_at_unix: created_at.timestamp(),
+                reply,
+            });
+        }
+
+        Ok(Response::new(GetReviewsResponse { reviews }))
+    }
+
+    async fn approve_review_reply(
+        &self,
+        request: Request<ApproveReviewReplyRequest>,
+    ) -> Result<Response<ApproveReviewReplyResponse>, Status> {
+        let tenant_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows_affected = sqlx::query(
+            "UPDATE review_replies SET status = 'Approved' WHERE id = $1 AND tenant_id = $2"
+        )
+        .bind(&req.reply_id)
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .rows_affected();
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(ApproveReviewReplyResponse { success: rows_affected > 0 }))
     }
 
     async fn get_landing_page_experiments(

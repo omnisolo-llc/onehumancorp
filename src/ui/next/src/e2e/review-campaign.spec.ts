@@ -41,3 +41,19 @@ test.describe('Automated Review Campaign Growth Loop', () => {
         expect(msg).toContain('https://ohc.store/review/recent');
     });
 });
+
+    test('reputation reviews endpoint handles fetching data', async ({ request }) => {
+        const response = await request.get('/api/v1/growth/reputation/reviews');
+        expect(response.ok()).toBeTruthy();
+
+        const data = await response.json();
+        expect(data).toHaveProperty('reviews');
+    });
+
+    test('reputation review approve endpoint returns success', async ({ request }) => {
+        const response = await request.post('/api/v1/growth/reputation/reviews/test-id/approve');
+        expect(response.ok()).toBeTruthy();
+
+        const data = await response.json();
+        expect(data).toHaveProperty('success');
+    });
