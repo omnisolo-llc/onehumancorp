@@ -22,10 +22,6 @@ export default function OrderDetailsPage() {
   const [labelUrl, setLabelUrl] = useState<string | null>(null);
   const [sendingReceipt, setSendingReceipt] = useState(false);
   const [receiptSent, setReceiptSent] = useState(false);
-  const [sendingReceipt, setSendingReceipt] = useState(false);
-  const [receiptSent, setReceiptSent] = useState(false);
-  const [sendingReceipt, setSendingReceipt] = useState(false);
-  const [receiptSent, setReceiptSent] = useState(false);
 
   const fetchRates = async () => {
     setLoadingRates(true);
