@@ -161,6 +161,7 @@ message VideoMetadata {
 }
 
 message GetVideoTutorialsRequest {
+  bool mobile_optimized = 1;
 }
 
 message GetVideoTutorialsResponse {

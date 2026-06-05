@@ -542,9 +542,10 @@ impl DashboardService for MyDashboardService {
 
     async fn get_video_tutorials(
         &self,
-        _request: Request<GetVideoTutorialsRequest>,
+        request: Request<GetVideoTutorialsRequest>,
     ) -> Result<Response<GetVideoTutorialsResponse>, Status> {
-        let videos = vec![
+        let mobile_optimized = request.into_inner().mobile_optimized;
+        let mut videos = vec![
             VideoMetadata {
                 title: "How to add your first product".to_string(),
                 description: "A quick 60-second guide to listing items in your store.".to_string(),
@@ -563,6 +564,12 @@ impl DashboardService for MyDashboardService {
                     .to_string(),
             },
         ];
+
+        if mobile_optimized {
+            for video in &mut videos {
+                video.description.clear();
+            }
+        }
 
         Ok(Response::new(GetVideoTutorialsResponse { videos }))
     }
@@ -816,6 +823,20 @@ mod tests {
         let res = service.get_onboarding_state(request).await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn test_video_tutorials_mobile_payload_optimization() {
+        let service = setup_test_dashboard_service().await;
+        let req_mobile = GetVideoTutorialsRequest { mobile_optimized: true };
+        let request_mobile = Request::new(req_mobile);
+        let res_mobile = service.get_video_tutorials(request_mobile).await.unwrap().into_inner();
+        assert_eq!(res_mobile.videos[0].description, "", "Mobile optimization should clear video description");
+
+        let req_desktop = GetVideoTutorialsRequest { mobile_optimized: false };
+        let request_desktop = Request::new(req_desktop);
+        let res_desktop = service.get_video_tutorials(request_desktop).await.unwrap().into_inner();
+        assert_ne!(res_desktop.videos[0].description, "", "Desktop should preserve video description");
     }
 
     #[tokio::test]
