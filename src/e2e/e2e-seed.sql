@@ -11,6 +11,7 @@ ALTER TABLE IF EXISTS products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bookings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
@@ -114,6 +115,17 @@ SET customer_id = EXCLUDED.customer_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status)
+VALUES
+  ('e2e-booking-1', 'e2e-tenant', 'e2e-customer-ava', 'e2e-product-class', CURRENT_TIMESTAMP + interval '1 day', CURRENT_TIMESTAMP + interval '1 day 1 hour', 'confirmed')
+ON CONFLICT (id) DO UPDATE
+SET customer_id = EXCLUDED.customer_id,
+    product_id = EXCLUDED.product_id,
+    start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
 INSERT INTO shared_tasks (id, tenant_id, title, description, status, agent_id, priority, payload)
 VALUES
   ('e2e-task-restock', 'e2e-tenant', 'Prepare weekend inventory', 'Review seeded orders and prep ingredients.', 'PENDING', 'e2e-agent-ops', 'P1', '{"source":"database_seed"}'),
@@ -151,6 +163,7 @@ ALTER TABLE IF EXISTS meeting_transcripts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
@@ -165,5 +178,6 @@ ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;

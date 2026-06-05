@@ -41,6 +41,7 @@ static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCac
 static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
@@ -2741,6 +2742,79 @@ async fn list_ui_orders_handler(
     }
 }
 
+async fn list_ui_bookings_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_bookings:{}", tenant_id);
+    let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
+    let bookings = match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query(
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+            )
+            .bind(&tenant_id)
+            .fetch_all(&db.pool)
+            .await {
+                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "customer_name": row.get::<String, _>("customer_name"),
+                    "product_id": row.get::<String, _>("product_id"),
+                    "product_title": row.get::<String, _>("product_title"),
+                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                    "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                    "status": row.get::<String, _>("status"),
+                })).collect::<Vec<_>>()),
+                Err(e) => Err(e),
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query(
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await {
+                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "customer_name": row.get::<String, _>("customer_name"),
+                    "product_id": row.get::<String, _>("product_id"),
+                    "product_title": row.get::<String, _>("product_title"),
+                    "start_time": row.get::<String, _>("start_time"),
+                    "end_time": row.get::<String, _>("end_time"),
+                    "status": row.get::<String, _>("status"),
+                })).collect::<Vec<_>>()),
+                Err(e) => Err(e),
+            }
+        }
+    };
+
+    match bookings {
+        Ok(v) => {
+            cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(v)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch ui bookings: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+        }
+    }
+}
+
 async fn list_ui_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -3253,6 +3327,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
+        .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
