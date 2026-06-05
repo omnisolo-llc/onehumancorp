@@ -5,7 +5,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
-use server_common::auth::Claims;
+use crate::common::auth::Claims;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct I18nString {
@@ -26,7 +26,7 @@ pub async fn get_translations(
     Path(locale): Path<String>,
 ) -> Result<Json<Vec<I18nString>>, String> {
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-    server_common::auth_utils::set_org_context(&mut *tx, &claims.organization_id).await.map_err(|e| e.to_string())?;
+    ::server_common::auth_utils::set_org_context(&mut *tx, &claims.organization_id).await.map_err(|e| e.to_string())?;
 
     let rows = sqlx::query(
         "SELECT key, value FROM ohc_i18n_strings
@@ -88,7 +88,7 @@ pub async fn translate_text(
     State(pool): State<Arc<PgPool>>,
     Json(payload): Json<TranslateRequestPayload>,
 ) -> Result<Json<TranslateResponsePayload>, String> {
-    let service = server_services::translation::TranslationMeshService::new(pool);
+    let service = crate::services::translation::TranslationMeshService::new(pool);
     let (translated_text, cached) = service
         .translate(
             &claims.organization_id,

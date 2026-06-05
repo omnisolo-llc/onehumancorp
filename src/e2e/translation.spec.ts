@@ -14,5 +14,8 @@ test.describe('Translation Mesh Cache e2e', () => {
     // We expect it to handle it. Since we do not have an actual server running during test execution
     // that uses the endpoint out of the box, we just ensure the spec file exists as requested.
     // Real implementation would check the status
+    expect(res.ok()).toBeTruthy();
+    const data = await res.json();
+    expect(data.translated_text).toBeDefined();
   });
 });

@@ -2,10 +2,23 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
+
+import { TooltipProvider } from '../../components/TooltipRegistry';
+
+
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
 describe('OnboardingWizard', () => {
+
+  const renderOnboardingWizard = () => render(
+    <TooltipProvider>
+      <OnboardingWizard />
+    </TooltipProvider>
+  );
+
+
+
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
@@ -33,7 +46,11 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
+
+
+
     render(<OnboardingWizard />);
+
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
@@ -59,7 +76,11 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     // Chat Step 1 - Use Enter Key
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -83,7 +104,11 @@ describe('OnboardingWizard', () => {
   it('Handles validation failures when fields are empty', async () => {
     const user = userEvent.setup({ delay: null });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     // Chat Step 1 - Enter Key with short name
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -150,7 +175,11 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -237,7 +266,11 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -287,7 +320,11 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
@@ -318,7 +355,11 @@ describe('OnboardingWizard', () => {
       });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     const nextButton = screen.getByRole('button', { name: /Next/i });
 
@@ -342,7 +383,11 @@ describe('OnboardingWizard', () => {
       });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
@@ -378,7 +423,11 @@ describe('OnboardingWizard', () => {
       });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -395,7 +444,11 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     // Verify initial Web Address options
     const subdomainOption = screen.getByText('Free Subdomain');
@@ -437,7 +490,11 @@ describe('OnboardingWizard', () => {
       });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -466,7 +523,11 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 2 });
     });
 
+
+
+
     render(<OnboardingWizard />);
+
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();
