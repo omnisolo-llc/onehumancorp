@@ -2,11 +2,23 @@ import { test, expect } from '@playwright/test';
 
 test.describe('In-App Video Tutorials', () => {
     test('renders videos tab, fetches videos, and opens/closes the modal player', async ({ page }) => {
+        await page.route('**/api/videos', async route => {
+            console.log("Mocking /api/videos route");
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify([
+                    { id: 1, title: 'How to set up your first store easily', duration: '1:23', url: 'https://example.com/video1.mp4' },
+                    { id: 2, title: 'Adding staff to your account', duration: '4:56', url: 'https://example.com/video2.mp4' }
+                ])
+            });
+        });
+
         // Go to a page where HelpWidget is available (layout.tsx ensures it's on pages like dashboard)
         await page.goto('/dashboard'); // Use the dashboard or any public page where layout applies
 
         // The help widget should be present.
-        const helpButton = page.locator('#help-widget-container button').first();
+        const helpButton = page.locator('button[aria-label="Help"]').first();
         await expect(helpButton).toBeVisible();
 
         // Click the help widget floating button to open the menu

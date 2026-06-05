@@ -41,7 +41,8 @@ test('Verify onboarding UI', async ({ page }) => {
 
   await page.goto('http://localhost:3000/onboarding');
   await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'onboarding-step1.png' });
+
+  await page.locator('button:has-text("Start Onboarding")').click();
 
   // Step 1: Business Name
   await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
@@ -56,9 +57,7 @@ test('Verify onboarding UI', async ({ page }) => {
 
   await page.locator('button:has-text("Generate My Business")').click();
   await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'onboarding-step2.png' });
 
   await page.locator('button:has-text("Continue")').click();
   await page.waitForTimeout(1000);
-  await page.screenshot({ path: 'onboarding-step3.png' });
 });
