@@ -11,6 +11,11 @@ export default function PricingPage() {
     router.push('/checkout?tier=' + tier);
   };
 
+  const handleDowngrade = (tier: string) => {
+    console.log(`Downgrading to ${tier}`);
+    alert(`You are downgrading to ${tier}.`);
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
@@ -27,7 +32,7 @@ export default function PricingPage() {
           <p className="text-lg" style={{ color: '#86868B' }}>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Free Tier */}
           <div className="p-8 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div>
@@ -40,9 +45,11 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors" disabled>
-              Current Plan
-            </button>
+            <div className="flex flex-col gap-2">
+                <button className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors" disabled>
+                  Current Plan
+                </button>
+            </div>
           </div>
 
           {/* Starter Tier */}
@@ -59,9 +66,14 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
-              Upgrade to Starter via Stripe
-            </button>
+            <div className="flex flex-col gap-2">
+                <button onClick={() => handleUpgrade('Starter')} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
+                  Upgrade to Starter via Stripe
+                </button>
+                <button onClick={() => handleDowngrade('Starter')} className="w-full px-4 py-2 bg-transparent text-gray-500 rounded-lg font-medium hover:bg-indigo-50 transition-colors">
+                  Downgrade
+                </button>
+            </div>
           </div>
 
           {/* Pro Tier */}

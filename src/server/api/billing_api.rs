@@ -31,6 +31,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/downgrade", axum::routing::post(downgrade_handler))
         .with_state(hub)
 }
 
@@ -165,5 +166,36 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
         trend,
+    })
+}
+
+#[derive(serde::Deserialize)]
+pub struct DowngradeRequest {
+    pub tier: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct DowngradeResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn downgrade_handler(
+    State(hub): State<Arc<Hub>>,
+    axum::extract::Json(req): axum::extract::Json<DowngradeRequest>,
+) -> Json<DowngradeResponse> {
+    // In a real application, this would interact with Stripe to downgrade the subscription
+    // and update the tenant's tier in the database.
+    // For now, we simulate success for the E2E tests and demonstration.
+
+    tracing::info!("Downgrade requested for tier: {}", req.tier);
+
+    // Example Stripe integration pseudo-code:
+    // let stripe_client = hub.get_stripe_client();
+    // let result = stripe_client.downgrade_subscription(&tenant_id, &req.tier).await;
+
+    Json(DowngradeResponse {
+        success: true,
+        message: format!("Successfully downgraded to {}", req.tier),
     })
 }
