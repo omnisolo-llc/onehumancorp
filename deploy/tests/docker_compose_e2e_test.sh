@@ -86,6 +86,9 @@ export OHC_DOCKER_SERVER_PORT="${OHC_DOCKER_SERVER_PORT:-127.0.0.1:0}"
 export OHC_DOCKER_POSTGRES_PORT="${OHC_DOCKER_POSTGRES_PORT:-127.0.0.1:0}"
 export OHC_DOCKER_VALKEY_PORT="${OHC_DOCKER_VALKEY_PORT:-127.0.0.1:0}"
 
+# Mock the API keys for CI tests to prevent validation errors from Docker Compose
+export MINIMAX_API_KEY="mock-key-for-testing"
+
 if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
   SERVER_LOADER="$(find "${TEST_SRCDIR:-${REPO_ROOT}}" -name "server_load.sh" -type f -executable | head -1)"
 fi
