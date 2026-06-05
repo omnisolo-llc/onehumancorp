@@ -13,6 +13,10 @@ vi.mock('../../components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+}));
+
 describe('CheckoutPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
