@@ -122,7 +122,8 @@ pub fn tail_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
-        use tempfile::tempdir;
+    use crate::ToolExecutor;
+    use tempfile::tempdir;
     use tokio::fs;
 
     #[tokio::test]
