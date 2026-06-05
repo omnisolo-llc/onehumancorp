@@ -123,24 +123,27 @@ export default function OnboardingWizard() {
     })
     .then(res => res.json())
     .then(data => {
-      if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
-        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.categories) setCategories(data.wizardState.categories);
-        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
-        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
-        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
-        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
-        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+      if (data) {
+        // Handle both data.wizardState wrapper and direct data mapping due to backend merge logic
+        const stateToUse = data.wizardState ? data.wizardState : data;
+
+        if (stateToUse.step) setStep(stateToUse.step);
+        if (stateToUse.chatStep) setChatStep(stateToUse.chatStep);
+        if (stateToUse.businessDescription) setBusinessDescription(stateToUse.businessDescription);
+        if (stateToUse.businessName) setBusinessName(stateToUse.businessName);
+        if (stateToUse.whatYouSell) setWhatYouSell(stateToUse.whatYouSell);
+        if (stateToUse.location) setLocation(stateToUse.location);
+        if (stateToUse.businessType) setBusinessType(stateToUse.businessType);
+        if (stateToUse.categories) setCategories(stateToUse.categories);
+        if (stateToUse.websiteTemplate) setWebsiteTemplate(stateToUse.websiteTemplate);
+        if (stateToUse.firstProductName) setFirstProductName(stateToUse.firstProductName);
+        if (stateToUse.firstProductPrice) setFirstProductPrice(stateToUse.firstProductPrice);
+        if (stateToUse.adminName) setAdminName(stateToUse.adminName);
+        if (stateToUse.adminEmail) setAdminEmail(stateToUse.adminEmail);
+        if (stateToUse.adminPassword) setAdminPassword(stateToUse.adminPassword);
+        if (stateToUse.domainChoice) setDomainChoice(stateToUse.domainChoice);
+        if (stateToUse.aiAgents) setAiAgents(stateToUse.aiAgents);
+        if (stateToUse.aiAutoRespond !== undefined) setAiAutoRespond(stateToUse.aiAutoRespond);
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err));
