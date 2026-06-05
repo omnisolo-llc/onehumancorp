@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_pre_deliver_failure_missing_chart() {
-        let final_output = "This output is quite long so it passes the word count check. It is very detailed and thorough, however it is missing something important.";
+        let final_output = "word ".repeat(20000) + "This output is quite long so it passes the word count check. It is very detailed and thorough, however it is missing something important.";
         let mut trace = SkillTrace::new();
         trace.record_skill("test_skill");
         let res = QualityGates::pre_deliver(&final_output, &trace);

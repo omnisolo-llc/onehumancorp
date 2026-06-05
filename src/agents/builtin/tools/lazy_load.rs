@@ -59,3 +59,53 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
         execute: Arc::new(LazyLoadToolsExecutor { active_tools }),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[tokio::test]
+    async fn test_lazy_load_tool() {
+        let active_tools = Arc::new(RwLock::new(HashSet::new()));
+        let tool = lazy_load_tool(active_tools.clone());
+
+        let args = serde_json::json!({
+            "tool_names": ["Bash", "Write"]
+        });
+
+        let res = tool.execute.execute(args).await;
+        assert!(res.is_ok());
+
+        let msg = res.unwrap();
+        assert!(msg.contains("Successfully loaded"));
+        assert!(msg.contains("Bash"));
+        assert!(msg.contains("Write"));
+
+        let lock = active_tools.read().await;
+        assert!(lock.contains("Bash"));
+        assert!(lock.contains("Write"));
+        assert_eq!(lock.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_lazy_load_tool_invalid_args() {
+        let active_tools = Arc::new(RwLock::new(HashSet::new()));
+        let tool = lazy_load_tool(active_tools.clone());
+
+        let args = serde_json::json!({
+            "tool_names": "Not an array"
+        });
+
+        let res = tool.execute.execute(args).await;
+        assert!(res.is_err());
+
+        if let Err(ToolError::LlmRecoverable(err_msg)) = res {
+            assert!(err_msg.contains("must be an array"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
+    }
+}
