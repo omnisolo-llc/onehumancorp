@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "../components/AppShell";
-import { useWalkthrough } from "../../components/help";
+import { InteractiveWalkthrough } from "../../components/Walkthrough";
 
 type KairosTask = {
   id: string;
@@ -19,6 +19,27 @@ type MeshNode = {
   status?: string;
   load?: string | number;
 };
+
+const kairosWalkthroughSteps = [
+  {
+    targetId: "kairos-brain",
+    title: "Quick Guide",
+    content: "Shared tasks appear here when the orchestration backend returns active work.",
+    position: "bottom" as const,
+  },
+  {
+    targetId: "kairos-nerves",
+    title: "Quick Guide",
+    content: "Mesh nodes appear here when live mesh status is available.",
+    position: "top" as const,
+  },
+  {
+    targetId: "kairos-memory",
+    title: "Quick Guide",
+    content: "AutoDream memory statistics appear here when the backend exposes them.",
+    position: "bottom" as const,
+  },
+];
 
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
@@ -38,22 +59,27 @@ export default function KairosDashboard() {
 
 function KairosContent() {
   const searchParams = useSearchParams();
-  const { startWalkthrough } = useWalkthrough();
+  const walkthroughStarted = useRef(false);
   const [tasks, setTasks] = useState<KairosTask[]>([]);
   const [meshNodes, setMeshNodes] = useState<MeshNode[]>([]);
   const [memoryStats, setMemoryStats] = useState<Record<string, string | number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get("walkthrough") === "true") {
-      startWalkthrough([
-        { targetId: "kairos-brain", message: "Shared tasks appear here when the orchestration backend returns active work." },
-        { targetId: "kairos-nerves", message: "Mesh nodes appear here when live mesh status is available." },
-        { targetId: "kairos-memory", message: "AutoDream memory statistics appear here when the backend exposes them." },
-      ]);
+    const forceWalkthrough = typeof window !== "undefined" && (
+      window.localStorage.getItem("TEST_WALKTHROUGH") === "true" ||
+      window.location.search.includes("test_walkthrough=true")
+    );
+    if ((searchParams.get("walkthrough") === "true" || forceWalkthrough) && !walkthroughStarted.current) {
+      const timeoutId = window.setTimeout(() => {
+        walkthroughStarted.current = true;
+        setIsWalkthroughOpen(true);
+      }, 0);
+      return () => window.clearTimeout(timeoutId);
     }
-  }, [searchParams, startWalkthrough]);
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadKairos() {
@@ -100,6 +126,12 @@ function KairosContent() {
         { label: "Memory", value: Object.keys(memoryStats).length > 0 ? "Available" : "No data", tone: Object.keys(memoryStats).length > 0 ? "good" : "neutral" },
       ]}
     >
+      <InteractiveWalkthrough
+        steps={kairosWalkthroughSteps}
+        isOpen={isWalkthroughOpen}
+        onClose={() => setIsWalkthroughOpen(false)}
+      />
+
       {error && <div className="mb-4 app-badge bad">{error}</div>}
 
       <div className="app-grid two">
