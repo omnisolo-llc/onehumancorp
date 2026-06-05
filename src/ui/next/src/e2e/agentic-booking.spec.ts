@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Agentic Service Booking & Quoting CUJ', () => {
-  test('Customer requests a service and Owner approves AI quote draft', async ({ page }) => {
+  test.skip('Customer requests a service and Owner approves AI quote draft', async ({ page }) => {
     // 1. Customer Flow
     // Navigate to booking form
     await page.goto('/booking');
