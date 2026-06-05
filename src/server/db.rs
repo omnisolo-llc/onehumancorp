@@ -527,6 +527,18 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS translation_cache (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        text_hash TEXT NOT NULL,
+                        source_lang TEXT NOT NULL,
+                        target_lang TEXT NOT NULL,
+                        translated_text TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_translation_cache_lookup ON translation_cache(tenant_id, text_hash, target_lang);
+
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
