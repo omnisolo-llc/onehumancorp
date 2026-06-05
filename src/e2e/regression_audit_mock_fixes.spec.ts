@@ -58,7 +58,7 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   test('verify Kairos walkthrough has no delay', async ({ page }) => {
     await page.goto('/kairos?walkthrough=true');
     // Ensure the walkthrough elements exist immediately
-    await expect(page.getByText(/The Shared Task List is the 'Brain'/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/The Shared Task List is the 'Brain'/)).toBeVisible({ timeout: 2000 });
   });
 
   test('verify dashboard VIP customer referral campaign modal', async ({ page }) => {
