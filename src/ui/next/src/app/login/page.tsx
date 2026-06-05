@@ -48,7 +48,7 @@ export default function Login() {
       />
       <input type="password" placeholder="Password" />
       <button onClick={handleLogin}>Login</button>
->>>>>>> fb23c2cc (fix: ensure cross-device persistence for onboarding state)
+>>>>>>> 8819bf4c (fix: ensure cross-device persistence for onboarding state)
     </div>
   );
 }
