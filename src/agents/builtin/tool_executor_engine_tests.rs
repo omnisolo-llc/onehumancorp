@@ -4,7 +4,7 @@ use tool_executor_engine::ToolExecutionEngine;
 #[cfg(test)]
 mod tests {
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_jitter_calc() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -72,7 +72,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_immediate_success() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_success_eventually() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -133,7 +133,7 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_exhausted() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -306,7 +306,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "current_thread")]
+    #[tokio::test()]
     async fn test_user_fixable() {
         unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let tool = Tool {
@@ -334,7 +334,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "current_thread")]
+    #[tokio::test()]
     async fn test_user_fixable_resolve() {
         unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "here is the fix"); }
         let tool = Tool {
