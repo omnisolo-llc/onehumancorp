@@ -606,4 +606,127 @@ mod parity_tests {
             assert!(res.is_ok());
         }
     }
+
+    #[tokio::test]
+    async fn test_parity_insert_knowledge_embedding_conflict() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let test_product_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "test_org_parity";
+
+        // Insert first time should work
+        let insert_res_sqlite = sqlite_db.insert_knowledge_embedding(
+            &test_product_id, org_id, "agent_1", "task_1", "content1", "[0.1, 0.2]", "type_a"
+        ).await;
+        assert!(insert_res_sqlite.is_ok());
+
+        // Insert second time with same ID should fail since it's PK
+        let insert_res_sqlite2 = sqlite_db.insert_knowledge_embedding(
+            &test_product_id, org_id, "agent_1", "task_1", "content2", "[0.1, 0.2]", "type_a"
+        ).await;
+        assert!(insert_res_sqlite2.is_err(), "SQLite should fail on duplicate primary key");
+
+        if let Some(ref db) = pg_db {
+            let insert_res_pg = db.insert_knowledge_embedding(
+                &test_product_id, org_id, "agent_1", "task_1", "content1", "[0.1, 0.2]", "type_a"
+            ).await;
+            assert!(insert_res_pg.is_ok());
+
+            let insert_res_pg2 = db.insert_knowledge_embedding(
+                &test_product_id, org_id, "agent_1", "task_1", "content2", "[0.1, 0.2]", "type_a"
+            ).await;
+            assert!(insert_res_pg2.is_err(), "Postgres should fail on duplicate primary key");
+        }
+    }
+
+
+    #[tokio::test]
+    async fn test_parity_inject_truth() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let memory_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "test_org_parity";
+
+        let insert_res_sqlite = sqlite_db.inject_truth(org_id, &memory_id, "initial context", "[0.1, 0.2]").await;
+        assert!(insert_res_sqlite.is_ok());
+
+        let update_res_sqlite = sqlite_db.inject_truth(org_id, &memory_id, "updated context", "[0.3, 0.4]").await;
+        assert!(update_res_sqlite.is_ok());
+
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            let row = sqlx::query("SELECT context FROM swarm_truth_embeddings WHERE memory_id = ?")
+                .bind(&memory_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            let context: String = row.get("context");
+            assert_eq!(context, "updated context");
+        }
+
+        if let Some(ref db) = pg_db {
+            let insert_res_pg = db.inject_truth(org_id, &memory_id, "initial context", "[0.1, 0.2]").await;
+            assert!(insert_res_pg.is_ok());
+
+            let update_res_pg = db.inject_truth(org_id, &memory_id, "updated context", "[0.3, 0.4]").await;
+            assert!(update_res_pg.is_ok());
+
+            let row = sqlx::query("SELECT context FROM swarm_truth_embeddings WHERE memory_id = $1")
+                .bind(&memory_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            let context: String = row.get("context");
+            assert_eq!(context, "updated context");
+        }
+    }
+    #[tokio::test]
+    async fn test_parity_mark_task_auto_dreamed() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "test_org_parity";
+
+        // sqlite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES (?, 'mission_123', 'test', 'PENDING', ?)")
+                .bind(&task_id)
+                .bind(org_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let res = sqlite_db.mark_task_auto_dreamed(org_id, &task_id, "swarm_tasks").await;
+            assert!(res.is_ok());
+
+            let auto_dreamed: bool = sqlx::query_scalar("SELECT auto_dreamed FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(auto_dreamed, true);
+        }
+
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES ($1, 'mission_123', 'test', 'PENDING', $2)")
+                .bind(parsed_id)
+                .bind(org_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let res = db.mark_task_auto_dreamed(org_id, &task_id, "swarm_tasks").await;
+            assert!(res.is_ok());
+
+            let auto_dreamed: bool = sqlx::query_scalar("SELECT auto_dreamed FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(auto_dreamed, true);
+        }
+    }
 }

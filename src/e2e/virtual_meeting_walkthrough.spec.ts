@@ -1,3 +1,5 @@
+import { test } from './fixtures';
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('virtual_meeting_walkthrough');
+test.describe("Smoke", () => { test.describe("Smoke", () => { currentAppSmoke('virtual_meeting_walkthrough'); }); });
