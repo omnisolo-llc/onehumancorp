@@ -90,7 +90,7 @@ async fn setup_db() -> Arc<DB> {
         r#"
         CREATE TABLE swarm_tasks (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL DEFAULT 'system',
+            tenant_id TEXT NOT NULL DEFAULT 'test_org',
             mission_id TEXT NOT NULL,
             parent_plan_id TEXT,
             dependencies TEXT NOT NULL DEFAULT '[]',
@@ -114,7 +114,7 @@ async fn setup_db() -> Arc<DB> {
         r#"
         CREATE TABLE state_machine_transitions (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL DEFAULT 'system',
+            tenant_id TEXT NOT NULL DEFAULT 'test_org',
             entity_id TEXT NOT NULL,
             entity_type TEXT NOT NULL,
             from_state TEXT NOT NULL,
@@ -162,7 +162,7 @@ async fn test_single_agent_flow() {
     let task_id = uuid::Uuid::new_v4().to_string();
 
     if let DbStore::Sqlite(pool) = &db.store {
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 't1', 'PENDING')")
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES (?, 'm1', 't1', 'PENDING', 'default_tenant')")
             .bind(&task_id)
             .execute(pool)
             .await
@@ -172,7 +172,7 @@ async fn test_single_agent_flow() {
     let result = state_manager
         .transition_state(
             &task_id,
-            "system",
+            "test_org",
             "PENDING",
             "IN_PROGRESS",
             Some("agent_1"),
@@ -203,13 +203,13 @@ async fn test_dag_workflow() {
     let deps = format!(r#"["{}"]"#, parent_id);
 
     if let DbStore::Sqlite(pool) = &db.store {
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 'parent', 'PENDING')")
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES (?, 'm1', 'parent', 'PENDING', 'default_tenant')")
             .bind(&parent_id)
             .execute(pool)
             .await
             .unwrap();
 
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'child', 'PENDING', ?)")
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies, tenant_id) VALUES (?, 'm1', 'child', 'PENDING', ?, 'default_tenant')")
             .bind(&child_id)
             .bind(&deps)
             .execute(pool)
@@ -228,7 +228,7 @@ async fn test_dag_workflow() {
     state_manager
         .transition_state(
             &parent_id,
-            "system",
+            "test_org",
             "IN_PROGRESS",
             "COMPLETED",
             Some("agent_1"),
@@ -257,13 +257,13 @@ async fn test_cloud_dag_workflow_mock() {
     let deps = format!(r#"["{}"]"#, parent_id);
 
     if let DbStore::Sqlite(pool) = &db.store {
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES (?, 'm1', 'parent', 'PENDING')")
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES (?, 'm1', 'parent', 'PENDING', 'default_tenant')")
             .bind(&parent_id)
             .execute(pool)
             .await
             .unwrap();
 
-        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES (?, 'm1', 'child', 'PENDING', ?)")
+        sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies, tenant_id) VALUES (?, 'm1', 'child', 'PENDING', ?, 'default_tenant')")
             .bind(&child_id)
             .bind(&deps)
             .execute(pool)
