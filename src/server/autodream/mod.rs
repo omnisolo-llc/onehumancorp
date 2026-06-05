@@ -66,6 +66,7 @@ impl AutoDreamWorker {
                 }
 
                 if let Err(e) = Self::compress_session_contexts(&db).await {
+                    ::server_telemetry::record_error_signal("AutoDream: compress_session_contexts failed");
                     tracing::error!("AutoDream: compress_session_contexts failed: {}", e);
                 }
                 let cache_ref = cache_for_ingest.clone();
@@ -123,13 +124,14 @@ impl AutoDreamWorker {
                          emb_str
                      },
                      Err(e) => {
+                         ::server_telemetry::record_error_signal("AutoDream: failed to generate embedding");
                          tracing::error!("AutoDream: failed to generate embedding: {}", e);
                          format!("[{}]", vec!["0.0"; 1536].join(", "))
                      }
                  }
              };
 
-             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
+             db.inject_truth("system", &format!("session-summary-{}", id), &summary, &embedding).await?;
 
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
@@ -211,7 +213,7 @@ impl AutoDreamWorker {
             
             // Insert into the proper KAIROS knowledge_embeddings table
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
-            db.mark_task_auto_dreamed(&id, &table).await?;
+            db.mark_task_auto_dreamed(&org_id, &id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
         }

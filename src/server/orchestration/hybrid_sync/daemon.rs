@@ -120,7 +120,7 @@ impl HybridSyncDaemon {
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
         // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes')) LIMIT 100")
+        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -130,6 +130,7 @@ impl HybridSyncDaemon {
         for row in rows {
             let id: String = row.get("id");
             let payload: String = row.get("payload");
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
             total_payload_size += payload.len();
 
             let mut tx = match self.pg_pool.begin().await {
@@ -152,9 +153,10 @@ impl HybridSyncDaemon {
                 }
             };
 
-            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, 'system') ON CONFLICT (id) DO UPDATE SET payload = $2")
+            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, $3) ON CONFLICT (id) DO UPDATE SET payload = $2")
                 .bind(&id)
                 .bind(&payload)
+                .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await;
 
@@ -167,11 +169,6 @@ impl HybridSyncDaemon {
                             .execute(&self.sqlite_pool)
                             .await;
                         warn!("Failed to commit pg transaction for mission {}: {}", id, e);
-                        let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                                .bind(e.to_string())
-                                .bind(&id)
-                                .execute(&self.sqlite_pool)
-                                .await;
                         let _ = ::server_telemetry::record_sync_daemon_error_total(
                             &self.pg_pool,
                             1.0,
@@ -212,11 +209,6 @@ impl HybridSyncDaemon {
                         .await;
                     let _ = tx.rollback().await;
                     warn!("Failed to sync agent_mission to pg: {}", e);
-                    let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                            .bind(e.to_string())
-                            .bind(&id)
-                            .execute(&self.sqlite_pool)
-                            .await;
                     let _ = ::server_telemetry::record_sync_daemon_error_total(
                         &self.pg_pool,
                         1.0,
@@ -254,7 +246,7 @@ impl HybridSyncDaemon {
     pub async fn sync_step(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
         // Find tasks requiring cloud escalation
-        let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))")
+        let rows = sqlx::query("SELECT memory_id, context, tenant_id FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute'))")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -265,6 +257,7 @@ impl HybridSyncDaemon {
         for row in rows {
             let id: String = row.get("memory_id");
             let context: String = row.get("context");
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
             // Sanitize PII
             let parsed: Value = serde_json::from_str(&context).unwrap_or(json!({ "raw": context }));
@@ -304,9 +297,10 @@ impl HybridSyncDaemon {
                 }
             };
 
-            let mission_res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, 'system')")
+            let mission_res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, $3)")
                 .bind(&queue_id)
                 .bind(payload.to_string())
+                .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await;
 
@@ -321,10 +315,11 @@ impl HybridSyncDaemon {
                 continue;
             }
 
-            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, 'system', NULL, $2, 'QUEUED', $3, $3, $3)")
+            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $4, NULL, $2, 'QUEUED', $3, $3, $3)")
                 .bind(&queue_id)
                 .bind(payload.to_string())
                 .bind(now)
+                .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await;
 
@@ -353,7 +348,7 @@ impl HybridSyncDaemon {
                     success_count += 1;
 
                     if let Err(e) =
-                        ::server_telemetry::record_rag_escalation(&self.pg_pool, "system", "").await
+                        ::server_telemetry::record_rag_escalation(&self.pg_pool, &tenant_id, "").await
                     {
                         warn!("Failed to record RAG escalation telemetry: {}", e);
                     }

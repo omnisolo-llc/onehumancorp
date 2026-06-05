@@ -198,6 +198,7 @@ impl DepartmentOrchestrator {
                         }
 
                         if !success {
+                            ::server_telemetry::record_error_signal("Dead-letter logging for event  after 3 failed retries. Error");
                             tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
                             let dl_id = Uuid::new_v4().to_string();
                             let redacted_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
@@ -217,6 +218,7 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await;
                                     if let Err(err) = res {
+                                        ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
                                 }
@@ -233,6 +235,7 @@ impl DepartmentOrchestrator {
                                     .execute(pool)
                                     .await;
                                     if let Err(err) = res {
+                                        ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
                                 }
@@ -307,7 +310,7 @@ impl DepartmentOrchestrator {
     pub async fn add_approval_request(&self, req: ApprovalRequest) {
         let now = Utc::now();
         let status_str = match req.status {
-            ApprovalStatus::PendingApproval => "PENDING_APPROVAL",
+            ApprovalStatus::PendingApproval => "DRAFT",
             ApprovalStatus::Approved => "APPROVED",
             ApprovalStatus::Rejected => "REJECTED",
         };
@@ -362,14 +365,14 @@ impl DepartmentOrchestrator {
         match &self.db.store {
             DbStore::Postgres => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING_APPROVAL' AND id > $2 ORDER BY id ASC LIMIT $3")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' AND id > $2 ORDER BY id ASC LIMIT $3")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT $2")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' ORDER BY id ASC LIMIT $2")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
@@ -382,7 +385,7 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
+                            "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
                             _ => ApprovalStatus::PendingApproval,
@@ -410,14 +413,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING_APPROVAL' AND id > ? ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' AND id > ? ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -430,7 +433,7 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
+                            "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
                             _ => ApprovalStatus::PendingApproval,
@@ -438,7 +441,7 @@ impl DepartmentOrchestrator {
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
-                        let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        let payload_opt = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -463,14 +466,14 @@ impl DepartmentOrchestrator {
         match &self.db.store {
             DbStore::Postgres => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING_APPROVAL' AND id < $2 ORDER BY id DESC LIMIT $3")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' AND id < $2 ORDER BY id DESC LIMIT $3")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT $2")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' ORDER BY id DESC LIMIT $2")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
@@ -483,7 +486,7 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
+                            "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
                             _ => ApprovalStatus::PendingApproval,
@@ -511,14 +514,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING_APPROVAL' AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'DRAFT' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'DRAFT' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -531,7 +534,7 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
+                            "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
                             _ => ApprovalStatus::PendingApproval,
@@ -539,7 +542,7 @@ impl DepartmentOrchestrator {
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
-                        let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        let payload_opt = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -618,7 +621,7 @@ impl DepartmentOrchestrator {
                         use sqlx::Row;
                         let dep = r.get::<String, _>("department");
                         let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
-                        let payload_val = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        let payload_val = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         Some((dep, payload_val))
                     }
                     Ok(None) => {
@@ -775,12 +778,297 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn get_customer360(&self, tenant_id: &str, customer_id: &str) -> Result<Option<crate::orchestration::departments::types::Customer360>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT * FROM customer360 WHERE tenant_id = $1 AND customer_id = $2")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let prefs_str: Option<String> = r.get("preferences");
+                    Ok(Some(crate::orchestration::departments::types::Customer360 {
+                        id: r.get("id"),
+                        tenant_id: r.get("tenant_id"),
+                        customer_id: r.get("customer_id"),
+                        email: r.get("email"),
+                        phone: r.get("phone"),
+                        mood: r.get("mood"),
+                        preferences: prefs_str.and_then(|s: String| serde_json::from_str(&s).ok()),
+                        created_at: Some(r.get("created_at")),
+                        updated_at: Some(r.get("updated_at")),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT * FROM customer360 WHERE tenant_id = ? AND customer_id = ?")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let prefs_str: Option<String> = r.get("preferences");
+                    Ok(Some(crate::orchestration::departments::types::Customer360 {
+                        id: r.get("id"),
+                        tenant_id: r.get("tenant_id"),
+                        customer_id: r.get("customer_id"),
+                        email: r.get("email"),
+                        phone: r.get("phone"),
+                        mood: r.get("mood"),
+                        preferences: prefs_str.and_then(|s: String| serde_json::from_str(&s).ok()),
+                        created_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").unwrap_or_else(|_| chrono::Utc::now())),
+                        updated_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").unwrap_or_else(|_| chrono::Utc::now())),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
 
+    pub async fn upsert_customer360(&self, c: &crate::orchestration::departments::types::Customer360) -> Result<(), String> {
+        let prefs_str = c.preferences.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "{}".to_string());
+        let now = chrono::Utc::now();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO customer360 (id, tenant_id, customer_id, email, phone, mood, preferences, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO UPDATE SET mood = EXCLUDED.mood, updated_at = EXCLUDED.updated_at")
+                    .bind(&c.id)
+                    .bind(&c.tenant_id)
+                    .bind(&c.customer_id)
+                    .bind(&c.email)
+                    .bind(&c.phone)
+                    .bind(&c.mood)
+                    .bind(&prefs_str)
+                    .bind(&c.created_at.unwrap_or(now))
+                    .bind(&now)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let exists = sqlx::query("SELECT 1 FROM customer360 WHERE tenant_id = ? AND customer_id = ?")
+                    .bind(&c.tenant_id)
+                    .bind(&c.customer_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?.is_some();
+                if exists {
+                    sqlx::query("UPDATE customer360 SET mood = ?, updated_at = ? WHERE tenant_id = ? AND customer_id = ?")
+                        .bind(&c.mood)
+                        .bind(&now)
+                        .bind(&c.tenant_id)
+                        .bind(&c.customer_id)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                } else {
+                    sqlx::query("INSERT INTO customer360 (id, tenant_id, customer_id, email, phone, mood, preferences, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                        .bind(&c.id)
+                        .bind(&c.tenant_id)
+                        .bind(&c.customer_id)
+                        .bind(&c.email)
+                        .bind(&c.phone)
+                        .bind(&c.mood)
+                        .bind(&prefs_str)
+                        .bind(&c.created_at.unwrap_or(now))
+                        .bind(&now)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+        Ok(())
+    }
 
+    pub async fn update_customer_mood(&self, tenant_id: &str, customer_id: &str, mood: &str) -> Result<(), String> {
+        let c = self.get_customer360(tenant_id, customer_id).await?;
+        if let Some(mut cust) = c {
+            cust.mood = Some(mood.to_string());
+            self.upsert_customer360(&cust).await
+        } else {
+            let cust = crate::orchestration::departments::types::Customer360 {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: tenant_id.to_string(),
+                customer_id: customer_id.to_string(),
+                email: None,
+                phone: None,
+                mood: Some(mood.to_string()),
+                preferences: None,
+                created_at: None,
+                updated_at: None,
+            };
+            self.upsert_customer360(&cust).await
+        }
+    }
 
+    pub async fn get_loyalty_ledger(&self, tenant_id: &str, customer_id: &str) -> Result<Option<crate::orchestration::departments::types::LoyaltyLedger>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT * FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(crate::orchestration::departments::types::LoyaltyLedger {
+                        id: r.get("id"),
+                        tenant_id: r.get("tenant_id"),
+                        customer_id: r.get("customer_id"),
+                        points_balance: r.get("points_balance"),
+                        tier_name: r.get("tier_name"),
+                        last_updated: Some(r.get("last_updated")),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT * FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(crate::orchestration::departments::types::LoyaltyLedger {
+                        id: r.get("id"),
+                        tenant_id: r.get("tenant_id"),
+                        customer_id: r.get("customer_id"),
+                        points_balance: r.get("points_balance"),
+                        tier_name: r.try_get("tier_name").ok(),
+                        last_updated: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("last_updated").unwrap_or_else(|_| chrono::Utc::now())),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
 
+    pub async fn add_loyalty_points(&self, tenant_id: &str, customer_id: &str, points: i32) -> Result<(), String> {
+        let now = chrono::Utc::now();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let id = uuid::Uuid::new_v4().to_string();
+                sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(points)
+                    .bind(&now)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let exists = sqlx::query("SELECT 1 FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?.is_some();
+                if exists {
+                    sqlx::query("UPDATE loyalty_ledger SET points_balance = points_balance + ?, last_updated = ? WHERE tenant_id = ? AND customer_id = ?")
+                        .bind(points)
+                        .bind(&now)
+                        .bind(tenant_id)
+                        .bind(customer_id)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                } else {
+                    let id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES (?, ?, ?, ?, ?)")
+                        .bind(&id)
+                        .bind(tenant_id)
+                        .bind(customer_id)
+                        .bind(points)
+                        .bind(&now)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+        Ok(())
+    }
 
+    pub async fn get_order(&self, tenant_id: &str, order_id: &str) -> Result<Option<(String, f64)>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = $1 AND id = $2")
+                    .bind(tenant_id)
+                    .bind(order_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                } else {
+                    Ok(None)
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = ? AND id = ?")
+                    .bind(tenant_id)
+                    .bind(order_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
 
+    pub async fn get_booking(&self, tenant_id: &str, booking_id: &str) -> Result<Option<String>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT customer_id FROM bookings WHERE tenant_id = $1 AND id = $2")
+                    .bind(tenant_id)
+                    .bind(booking_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(r.get("customer_id")))
+                } else {
+                    Ok(None)
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT customer_id FROM bookings WHERE tenant_id = ? AND id = ?")
+                    .bind(tenant_id)
+                    .bind(booking_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(r.get("customer_id")))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
 }
 
 

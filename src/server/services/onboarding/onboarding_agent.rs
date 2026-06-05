@@ -77,21 +77,39 @@ impl OnboardingAgent {
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
+        use sqlx::Row;
+        let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
+            .bind(tenant_id)
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let (mut merged_state, prev_step) = if let Some(record) = row {
+            let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
+            (existing_json, existing_step)
+        } else {
+            (serde_json::json!({}), 0)
+        };
+
+        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), state_json.as_object()) {
+            for (k, v) in new_obj {
+                existing_obj.insert(k.clone(), v.clone());
+            }
+        } else {
+            merged_state = state_json.clone();
+        }
+
+        let new_step = std::cmp::max(prev_step, current_step);
+
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4) \
-             ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = CASE \
-                 WHEN onboarding_state.state_json IS NULL THEN EXCLUDED.state_json \
-                 ELSE onboarding_state.state_json || EXCLUDED.state_json \
-                 END, \
-                 current_step = GREATEST(onboarding_state.current_step, EXCLUDED.current_step), \
-                 updated_at = CURRENT_TIMESTAMP"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)              ON CONFLICT (tenant_id, user_id) DO UPDATE              SET state_json = EXCLUDED.state_json,                  current_step = EXCLUDED.current_step,                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
         .bind(user_id)
-        .bind(current_step)
-        .bind(state_json)
+        .bind(new_step)
+        .bind(&merged_state)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -141,6 +159,7 @@ impl OnboardingAgent {
         let email = req.admin_email.clone();
         let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
         let password = req.admin_password.clone();
+        let location = req.location.clone();
 
         let req_first_product_name = req.first_product_name.clone();
         let req_first_product_price = req.first_product_price.clone();
@@ -185,14 +204,20 @@ impl OnboardingAgent {
                 ("The Scout", "tenant.seo.optimized"),
             ];
 
+            let start_events = std::time::Instant::now();
+            let mut topic_futures = vec![];
             for (agent_role, topic) in event_topics {
-                let _ = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
-                    .bind(&org_id_clone3)
+                let query = sqlx::query("INSERT INTO agent_event_subscriptions (tenant_id, agent_role, topic) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                    .bind(org_id_clone3.to_string())
                     .bind(agent_role)
-                    .bind(topic)
-                    .execute(&pool)
-                    .await;
+                    .bind(topic);
+                let pool = pool.clone();
+                topic_futures.push(tokio::spawn(async move {
+                    let _ = query.execute(&pool).await;
+                }));
             }
+            futures::future::join_all(topic_futures).await;
+            tracing::info!("publish_events_future event_topics inserts took: {} us", start_events.elapsed().as_micros());
 
             // Trigger KAIROS Orchestration for initial artifacts
             let storefront_event = ::server_ohc::orchestration::TeammateMeshEvent {
@@ -236,6 +261,7 @@ impl OnboardingAgent {
                 .execute(&pool)
                 .await
             {
+                ::server_telemetry::record_error_signal("Failed to schedule weekly health report");
                 tracing::error!("Failed to schedule weekly health report: {}", e);
             }
 
@@ -305,6 +331,7 @@ impl OnboardingAgent {
         // Add initial artifact placeholders to state
         flags.insert("storefront_status".to_string(), json!("generating"));
         flags.insert("policies_status".to_string(), json!("generating"));
+        flags.insert("location".to_string(), json!(location));
         flags.insert("artifacts".to_string(), json!({
             "storefront": {
                 "title": company_name,
@@ -2430,20 +2457,29 @@ impl OnboardingAgent {
             ("Discovery & SEO", "The Scout", "Discovery"),
         ];
 
+        let start_seed = std::time::Instant::now();
+        let mut futures = vec![];
         for (name, role, role_id) in default_agents {
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
-            sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+            let query = sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
                 .bind(id)
                 .bind(name)
                 .bind(role)
-                .bind(org_id)
+                .bind(org_id.to_string())
                 .bind("IDLE")
                 .bind("builtin")
-                .bind(true)
-                .execute(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?;
+                .bind(true);
+
+            let pool = self.db.pool.clone();
+            futures.push(tokio::spawn(async move {
+                query.execute(&pool).await.map_err(|e| e.to_string())
+            }));
         }
+
+        for f in futures {
+            f.await.map_err(|e| e.to_string())??;
+        }
+        tracing::info!("seed_default_agents inserts took: {} us", start_seed.elapsed().as_micros());
 
         Ok(())
     }
@@ -2489,6 +2525,7 @@ mod tests {
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            location: "New York, USA".to_string(),
         };
 
         let req_categories = req.selling_categories.clone();
@@ -2574,6 +2611,7 @@ mod tests {
             first_product_price: "100.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            location: "London, UK".to_string(),
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -2611,6 +2649,7 @@ mod tests {
             first_product_price: "5.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            location: "Austin, TX".to_string(),
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

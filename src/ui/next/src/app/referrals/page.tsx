@@ -1,10 +1,37 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
-  const referralLink = "ohc://join?ref=DEFAULT";
+  const [referralLink, setReferralLink] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReferralLink = async () => {
+      try {
+        const response = await fetch("/api/v1/growth/referrals/generate", {
+          method: "POST",
+        });
+        const data = await response.json();
+        if (data && data.referral_link) {
+          setReferralLink(data.referral_link);
+        } else {
+          const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+          setReferralLink(`ohc://join?ref=${tenant}`);
+        }
+      } catch (e) {
+        console.error("Failed to generate dynamic referral link", e);
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        setReferralLink(`ohc://join?ref=${tenant}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReferralLink();
+  }, []);
+
   const inviteMessage = `Launch your business online instantly with OHC! Use my invite link: ${referralLink}`;
 
   return (
@@ -23,11 +50,41 @@ export default function ReferralsPage() {
               When your friends launch their storefront on OHC, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
             </p>
 
+            <div className="mb-8 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+              <h3 className="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">How it works</h3>
+              <div className="flex flex-col sm:flex-row gap-4 relative">
+                <div className="flex-1 flex flex-col items-center text-center relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold mb-2">1</div>
+                  <h4 className="text-sm font-semibold text-gray-900">Share Link</h4>
+                  <p className="text-xs text-gray-500 mt-1">Send your unique link to a friend</p>
+                </div>
+                <div className="hidden sm:block absolute top-4 left-[16.66%] right-[16.66%] h-0.5 bg-gray-200 z-0"></div>
+                <div className="flex-1 flex flex-col items-center text-center relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold mb-2">2</div>
+                  <h4 className="text-sm font-semibold text-gray-900">They Sign Up</h4>
+                  <p className="text-xs text-gray-500 mt-1">Friend creates their OHC store</p>
+                </div>
+                <div className="hidden sm:block absolute top-4 left-[50%] right-[16.66%] h-0.5 bg-gray-200 z-0"></div>
+                <div className="flex-1 flex flex-col items-center text-center relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold mb-2">3</div>
+                  <h4 className="text-sm font-semibold text-gray-900">You Get $50</h4>
+                  <p className="text-xs text-gray-500 mt-1">Earn credit for premium features</p>
+                </div>
+              </div>
+            </div>
+
             <div className="mb-8">
               <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Your Referral Link</label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center">
-                  <span id="referral-link" className="text-gray-800 font-mono text-sm break-all">{referralLink}</span>
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                      <span className="text-gray-400 text-sm font-medium">Generating your unique link...</span>
+                    </div>
+                  ) : (
+                    <span id="referral-link" className="text-gray-800 font-mono text-sm break-all">{referralLink}</span>
+                  )}
                 </div>
                 <button
                   onClick={() => {
@@ -36,6 +93,7 @@ export default function ReferralsPage() {
                     setTimeout(() => setCopied(false), 2000);
                   }}
                   className={`px-6 py-3 rounded-xl text-sm font-bold transition-all sm:w-auto w-full ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                  disabled={isLoading}
                 >
                   {copied ? 'Copied!' : 'Copy'}
                 </button>

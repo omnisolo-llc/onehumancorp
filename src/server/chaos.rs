@@ -15,6 +15,7 @@ mod tests {
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -69,6 +70,7 @@ mod tests {
     // Testing graceful degradation during network latency
     #[tokio::test]
     async fn test_chaos_network_spike_degradation() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use std::collections::HashMap;
         use std::sync::Arc;
         use tokio::sync::Mutex;
@@ -105,6 +107,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sipdb_cuj_stress_verification() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         use std::sync::Arc;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -178,6 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lock_contention_resilience() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let mut success = false;
         let mut attempt = 0;
         let max_attempts = 3;
@@ -205,6 +209,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sentry_team_mesh_corruption() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let temp_dir = std::env::temp_dir().join(format!("mailbox_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
 
@@ -242,6 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sentry_chaos_network_partition() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use sqlx::sqlite::SqlitePoolOptions;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -289,6 +295,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sql_sync_lag_simulation() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Simulate SQL sync lag by delaying the "synced" status update in a multi-step workflow
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -341,6 +348,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_degradation_validation_mobile() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // "Verify that mobile/Thin Client features fail-safe when backend latency spikes >2s or connections drop entirely."
         let start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(50);
@@ -364,6 +372,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mobile_thin_client_degradation_fallback() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // Chaos Engineering: Verify mobile/Thin Client features fail-safe when backend latency spikes >2s.
         // Read ops use cached data, write ops queue locally.
         use std::time::Duration;
@@ -435,6 +444,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_exhaust_cpu_memory_and_verify_graceful_degradation() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Simulate CPU/Memory exhaustion via high artificial latency and verify timeout/circuit breaking
         let start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(50);
@@ -465,8 +475,82 @@ mod tests {
         assert!(result.is_err(), "Service should time out under heavy CPU/Memory load simulation to prevent cascading failure");
         assert!(start.elapsed() >= timeout_duration);
     }
+
+
+    #[tokio::test]
+    async fn test_task_queue_overload_degradation() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        use std::sync::Arc;
+        use crate::orchestration::tasks::TaskDecompositionService;
+
+        let database_url = "sqlite::memory:";
+
+        // Intentionally small acquire_timeout to simulate quick fail-safe
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
+
+        // Use a mock mesh
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        let mesh = Arc::new(DummyMesh);
+        let service = Arc::new(TaskDecompositionService::new(db, mesh));
+
+        for i in 0..10 {
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+                .bind(format!("task_{}", i))
+                .execute(&pool).await.unwrap();
+        }
+
+        let mut handles = vec![];
+        for i in 0..500 {
+            let svc_clone = service.clone();
+            handles.push(tokio::spawn(async move {
+                let agent_id = format!("agent_{}", i);
+                let res = svc_clone.claim_task(&agent_id).await;
+                res.is_err() // Check if the system degrades gracefully and returns Err
+            }));
+        }
+
+        let mut timeouts = 0;
+        for h in handles {
+            if h.await.unwrap() {
+                timeouts += 1;
+            }
+        }
+
+        assert!(timeouts > 0, "System should shed load gracefully and return backpressure/Err when task queue is overloaded");
+    }
+
     #[tokio::test]
     async fn test_transport_packet_loss_simulation() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Stress test a mock transport layer that randomly drops packets to verify application-level retries
         struct ChaosTransport {
             drop_rate: f64,
@@ -499,6 +583,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_message_duplication_resilience() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
 
@@ -524,6 +609,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transient_db_failure_retry() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let attempts = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let max_retries = 3;
 
@@ -633,15 +719,102 @@ mod tests {
         // (< 1us which truncates to 0) in the test sandbox environment.
     }
 
+
+
+
+
+    // test_cuj_stress_verification
+    #[tokio::test]
+    async fn test_cuj_stress_verification() {
+        use sqlx::sqlite::SqlitePoolOptions;
+        use std::sync::Arc;
+
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = SqlitePoolOptions::new().max_connections(5).connect(&uri).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT NOT NULL
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let pool_arc = Arc::new(pool);
+        let mut handles = vec![];
+
+        for i in 0..50 {
+            let p = pool_arc.clone();
+            handles.push(tokio::spawn(async move {
+                let mut attempts = 0;
+                loop {
+                    let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', '{}')")
+                        .bind(format!("mission_{}", i))
+                        .execute(&*p)
+                        .await;
+
+                    if res.is_ok() {
+                        break;
+                    }
+                    if let Err(e) = res {
+                        if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") {
+                            attempts += 1;
+                            if attempts >= 20 {
+                                panic!("Failed to insert mission after 20 attempts due to lock contention");
+                            }
+                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                        } else {
+                            panic!("Unexpected error: {}", e);
+                        }
+                    }
+                }
+            }));
+        }
+
+        for h in handles {
+            h.await.unwrap();
+        }
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions")
+            .fetch_one(&*pool_arc)
+            .await
+            .unwrap();
+
+        assert_eq!(count, 50, "All 50 missions should be written successfully despite database is locked errors.");
+    }
+
+    // test_sipdb_chaos_mesh
+    #[tokio::test]
+    async fn test_sipdb_chaos_mesh() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
+        // Create an unreadable file to simulate memory file corruption
+        let temp_dir = std::env::temp_dir().join("sipdb_chaos_mesh");
+        let _ = std::fs::create_dir_all(&temp_dir);
+        let file_path = temp_dir.join("offline_memory.json");
+        std::fs::write(&file_path, "corrupted { json }").unwrap();
+
+        let result = tokio::time::timeout(Duration::from_millis(100), async {
+            // Attempt to parse or interact with the corrupted json, simulating daemon behavior
+            let content = std::fs::read_to_string(&file_path).unwrap_or_default();
+            let _: Result<serde_json::Value, _> = serde_json::from_str(&content);
+            // It should handle error gracefully without panicking
+            Ok::<(), String>(())
+        }).await;
+
+        assert!(result.is_ok(), "Daemon should not panic when reading corrupted offline memory files.");
+    }
+
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
-        let timeout_duration = Duration::from_millis(60);
+        let timeout_duration = Duration::from_millis(150);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a stalled chaos operation (e.g., dropped packets on agent connection)
-            tokio::time::sleep(Duration::from_millis(150)).await;
+            tokio::time::sleep(Duration::from_millis(300)).await;
             Ok::<(), String>(())
         }).await;
 

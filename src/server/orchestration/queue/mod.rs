@@ -21,3 +21,6 @@ pub mod worker_pool;
 
 pub use ohc_universal_ledger::{OHCLedgerEntry, OHCUniversalLedger};
 pub use worker_pool::{WorkerPool, JobHandler};
+
+#[cfg(test)]
+mod pg_queue_test;

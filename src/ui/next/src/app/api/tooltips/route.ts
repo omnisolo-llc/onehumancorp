@@ -21,6 +21,8 @@ export async function GET() {
     "checkout-cancel-tooltip": "Go back to the previous screen without buying anything.",
     "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan.",
     "total-sales-tooltip": "Total revenue generated from your sales today.",
-    "visitors-tooltip": "Number of unique visitors who viewed your store today."
+    "visitors-tooltip": "Number of unique visitors who viewed your store today.",
+    "agents-tab-tooltip": "Hire and manage your AI assistants here.",
+    "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC."
   });
 }

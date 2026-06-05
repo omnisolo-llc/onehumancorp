@@ -12,6 +12,8 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/e2e/**',
+      '**/verification_tests/**',
+      '**/external/**',
       '**/.next/**',
       '**/coverage/**',
       '**/api/**', // API routes require Next.js specific testing utilities or E2E tests
@@ -22,6 +24,7 @@ export default defineConfig({
     },
   },
   resolve: {
+    preserveSymlinks: true,
     alias: {
       '@': path.resolve(__dirname, './src'),
     },

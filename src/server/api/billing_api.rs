@@ -16,12 +16,19 @@ pub struct MyPlanResponse {
 #[derive(serde::Serialize)]
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
+    #[serde(rename = "total")]
     pub total_costs: i64,
+    #[serde(rename = "llm")]
     pub llm_cost: i64,
+    #[serde(rename = "storage")]
     pub storage_cost: i64,
+    #[serde(rename = "payment_fees")]
     pub payment_fees: i64,
+    pub network_cost: i64,
+    pub bandwidth_savings: i64,
     pub period_start: String,
     pub period_end: String,
+    pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -68,12 +75,7 @@ pub async fn my_plan_handler(
     let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
-    let base_bill = match tier {
-        ::server_pricing::rate_limit::PlanTier::Free => 0.0,
-        ::server_pricing::rate_limit::PlanTier::Starter => 29.0,
-        ::server_pricing::rate_limit::PlanTier::Pro => 79.0,
-        ::server_pricing::rate_limit::PlanTier::Business => 299.0,
-    };
+    let base_bill = tier.base_price();
 
     let now = chrono::Utc::now();
     use chrono::Datelike;
@@ -112,7 +114,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![] })
     };
 
     let now = chrono::Utc::now();
@@ -132,7 +134,10 @@ pub async fn cost_dashboard_handler(
         (
             auditor.get_tenant_cost(&tenant_id_clone_2),
             auditor.get_tenant_revenue(&tenant_id_clone_2),
-            auditor.get_tenant_payment_fees(&tenant_id_clone_2)
+            auditor.get_tenant_payment_fees(&tenant_id_clone_2),
+            auditor.get_tenant_compute_cost(&tenant_id_clone_2),
+            auditor.get_tenant_network_cost(&tenant_id_clone_2),
+            auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2)
         )
     });
 
@@ -143,12 +148,15 @@ pub async fn cost_dashboard_handler(
     let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_f64, total_revenue_f64, payment_fees_f64) = auditor_res.unwrap_or((0.0, 0.0, 0.0));
+    let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
 
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
+    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
+
+    let pool = crate::db::get_pool();
+    let trend = crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &tenant_id).await;
 
     Json(CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
@@ -156,7 +164,10 @@ pub async fn cost_dashboard_handler(
         llm_cost: (llm_cost_f64 * 100.0).round() as i64,
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
+        network_cost: (network_cost_f64 * 100.0).round() as i64,
+        bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
         period_start,
         period_end,
+        trend,
     })
 }

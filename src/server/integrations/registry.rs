@@ -33,6 +33,7 @@ pub struct IntegrationsRegistry {
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
+    doordash_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::doordash::provider::DoorDashProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
@@ -74,6 +75,7 @@ impl IntegrationsRegistry {
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            doordash_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -133,6 +135,7 @@ impl IntegrationsRegistry {
                              let client = client.clone();
                              tokio::spawn(async move {
                                  if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                     ::server_telemetry::record_error_signal("Failed to send Twilio SMS");
                                      tracing::error!("Failed to send Twilio SMS: {}", e);
                                  }
                              });
@@ -152,6 +155,7 @@ impl IntegrationsRegistry {
                                  // Otherwise we default to whatsapp
                                  let platform = if to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
                                  if let Err(e) = client.send_message(platform, &to, &text).await {
+                                     ::server_telemetry::record_error_signal("Failed to send Meta message");
                                      tracing::error!("Failed to send Meta message: {}", e);
                                  }
                              });
@@ -264,6 +268,10 @@ impl IntegrationsRegistry {
         if integration_id == "listmonk" {
             let mut clients = self.listmonk_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "doordash" {
+            let mut clients = self.doordash_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::doordash::provider::DoorDashProvider::new(creds.api_token.clone())));
         }
         if integration_id == "easypost" {
             let mut clients = self.easypost_clients.write().unwrap();
@@ -427,6 +435,36 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client_zoom {
             return c.generate_meeting_for_booking(booking_id, topic).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn get_delivery_quote(&self, integration_id: &str, pickup_address: &str, dropoff_address: &str) -> Result<crate::integrations::doordash::client::DeliveryQuote, String> {
+        let client = {
+            if integration_id == "doordash" {
+                let clients = self.doordash_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.get_delivery_quote(pickup_address, dropoff_address).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn dispatch_delivery(&self, integration_id: &str, pickup_address: &str, dropoff_address: &str, order_id: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "doordash" {
+                let clients = self.doordash_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.dispatch_delivery(pickup_address, dropoff_address, order_id).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -807,6 +845,7 @@ async fn send_telegram_message(bot_token: String, chat_id: String, text: String)
         .await;
     
     if let Err(e) = res {
+        ::server_telemetry::record_error_signal("Failed to send Telegram message");
         tracing::error!("Failed to send Telegram message: {}", e);
     }
 }
@@ -822,6 +861,7 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
         .await;
 
     if let Err(e) = res {
+        ::server_telemetry::record_error_signal("Failed to send Discord webhook");
         tracing::error!("Failed to send Discord webhook: {}", e);
     }
 }

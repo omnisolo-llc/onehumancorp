@@ -29,6 +29,9 @@ vi.mock('../builder/components', () => ({
   )
 }));
 
+
+import { useWebsiteBuilderStore } from './store';
+
 describe('WebsiteBuilderPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
@@ -37,7 +40,30 @@ describe('WebsiteBuilderPage', () => {
     }));
     localStorage.clear();
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Reset zustand store state
+    useWebsiteBuilderStore.setState({
+      wizardStep: 0,
+      businessName: '',
+      businessType: '',
+      hasPhysicalProducts: false,
+      hasDigitalProducts: false,
+      productName: '',
+      productPrice: '',
+      paymentMethod: '',
+      userName: '',
+      userEmail: '',
+      userPassword: '',
+      template: '',
+      bio: '',
+      domainChoice: 'subdomain',
+      aiAgents: [],
+      aiAutoRespond: false,
+      blocks: [],
+      status: "idle",
+      liveUrl: ""
+    });
   });
+
 
   afterEach(() => {
     vi.resetAllMocks();
@@ -57,7 +83,7 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     // Step 0
-    fireEvent.click(screen.getByText('Start My Business Next'));
+    fireEvent.click(screen.getByText('Start My Business'));
 
     // Step 1
     fireEvent.click(screen.getByText('Online Store'));
@@ -111,22 +137,46 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('can follow the instant-build flow', async () => {
+    vi.useRealTimers();
+    // Mock the specific API call for instant build
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            business_name: 'Mock Bakery',
+            business_type: 'Online Store',
+            initial_products: [{ name: 'Cake', price: '20.00' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/state') {
+          return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve({})
+          })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({})
+      });
+    });
+
     render(<WebsiteBuilderPage />);
 
-    // Step 0
     fireEvent.click(screen.getByText('Instant Build'));
-
-    // Instant build step
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
     fireEvent.click(screen.getByText('Generate Storefront'));
 
-    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(2000);
+    // Status changes to 'generating', wait for it
+    await waitFor(() => {
+      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    await waitFor(() => {
+        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+    }, { timeout: 3500 });
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -135,8 +185,7 @@ describe('WebsiteBuilderPage', () => {
       { type: 'Catalog', props: { title: '2' } },
       { type: 'Booking', props: { title: '3' } }
     ];
-    localStorage.setItem('ohc_builder_blocks', JSON.stringify(initialBlocks));
-    localStorage.setItem('ohc_builder_status', 'draft');
+    useWebsiteBuilderStore.setState({ blocks: initialBlocks, status: 'draft' });
 
     render(<WebsiteBuilderPage />);
 
@@ -171,8 +220,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles launch from draft mode', async () => {
-    localStorage.setItem('ohc_builder_status', 'draft');
-    localStorage.setItem('ohc_builder_blocks', JSON.stringify([{ type: 'Hero', props: {} }]));
+    useWebsiteBuilderStore.setState({ status: 'draft', blocks: [{ type: 'Hero', props: {} }] });
 
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('publish_draft')) {

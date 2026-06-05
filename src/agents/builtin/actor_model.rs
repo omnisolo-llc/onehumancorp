@@ -5,8 +5,7 @@ use tokio::sync::Mutex;
 use tracing::{debug, error, info};
 
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolCall, ToolResult, Usage};
-use ohc_builtin_agent_tools::ToolExecutor;
+use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolCall, ToolResult};
 
 /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
 #[derive(Debug, Clone)]
@@ -280,11 +279,11 @@ mod tests {
     use super::*;
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage, ToolError};
     use crate::llm::LlmClient;
-    use ohc_builtin_agent_tools::Tool;
+    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
 
     struct MockLlm {
-        response_text: String,
-        calls: Arc<Mutex<usize>>,
+        pub response_text: String,
+        pub calls: Arc<Mutex<usize>>,
     }
 
     #[async_trait::async_trait]
@@ -397,6 +396,47 @@ mod tests {
             assert_eq!(reply.correlation_id, "tx-123");
         } else {
             panic!("Did not receive reply from Coordinator");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_actor_model_lifecycle() {
+        let system = Arc::new(ActorSystem::new());
+        let coord_llm = Arc::new(MockLlm {
+            response_text: "Final".to_string(),
+            calls: Arc::new(Mutex::new(0)),
+        });
+
+        let coord_agent = Arc::new(Agent::new(coord_llm, vec![]));
+
+        let coord_actor = AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: AgentRunConfig::default(),
+        };
+
+        let (coord_tx, coord_rx) = mpsc::channel(10);
+        system.register(coord_actor.name(), coord_tx).await;
+
+        coord_actor.start(coord_rx, system.clone());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        system.register("ProductionHarness".to_string(), test_tx).await;
+
+        system.send(ActorMessage {
+            sender: "ProductionHarness".to_string(),
+            recipient: "Coordinator".to_string(),
+            content: "Task".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-lifecycle".to_string(),
+            original_sender: "ProductionHarness".to_string(),
+        }).await.unwrap();
+
+        if let Some(reply) = test_rx.recv().await {
+            assert_eq!(reply.content, "Final");
+        } else {
+            panic!("Did not receive reply");
         }
     }
 }

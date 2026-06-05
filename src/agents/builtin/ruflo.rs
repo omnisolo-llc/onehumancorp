@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use ohc_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
 use futures::future::join_all;
@@ -100,7 +100,7 @@ impl SwarmAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::Usage;
+    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
 
     struct MockLlmClient {
         resp: String,

@@ -17,12 +17,15 @@ pub mod meta;
 pub mod google_calendar;
 pub use ::server_integrations_cal_com as cal_com;
 pub use ::server_integrations_sendgrid as sendgrid;
+pub mod lob;
 pub use ::server_integrations_shippo as shippo;
 pub use ::server_integrations_zoom as zoom;
 pub use ::server_integrations_calendly as calendly;
 pub use ::server_integrations_mailchimp as mailchimp;
+
 pub use ::server_integrations_ayrshare as ayrshare;
 pub use ::server_integrations_listmonk as listmonk;
+pub use ::server_integrations_doordash as doordash;
 pub use ::server_integrations_easypost as easypost;
 pub use ::server_integrations_jitsi as jitsi;
 pub mod alipay;

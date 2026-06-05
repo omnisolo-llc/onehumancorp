@@ -1,0 +1,15 @@
+[package]
+name = "server_integrations_daily"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+server_integrations_core = { path = "../core" }
+async-trait = "0.1.89"
+
+[lib]
+path = "mod.rs"

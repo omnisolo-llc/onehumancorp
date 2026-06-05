@@ -97,45 +97,67 @@ impl VisualVerifier for PlaywrightVisualVerifier {
 
 pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
+    pub model: String,
+    pub criteria: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 struct JudgeEvaluation {
     status: String,
     reason: String,
     confidence: f32,
+    missing_elements: Vec<String>,
+    suggested_fixes: Vec<String>,
 }
 
 #[async_trait::async_trait]
 impl InferentialSensor for LlmJudgeSensor {
+    /// Inferential/Sensors (feedback): a separate LLM-as-judge subagent evaluates the output.
+    /// Industry Standard: Returns structured critique to enable precise self-correction.
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
-        let system_prompt = "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.";
-        let user_prompt = format!("Task: {}\nOutput: {}", task, output);
+        let criteria = self.criteria.as_deref().unwrap_or("correctness, completeness, and adherence to constraints");
+        let system_prompt = format!(
+            "You are an expert Quality Assurance Judge. \
+             Your mission is to evaluate if the agent's output successfully completes the task based on the following criteria: {}. \
+             You must be critical and detail-oriented. If there are any ambiguities, errors, or missing requirements, you MUST REJECT. \
+             Provide your evaluation structured as JSON using the 'structured_output' tool.",
+            criteria
+        );
+        let user_prompt = format!("Task Objective: {}\n\nAgent Output to Evaluate:\n---\n{}\n---", task, output);
 
         let req = ChatRequest {
-            model: "judge-model".to_string(),
+            model: self.model.clone(),
             system: system_prompt.to_string(),
             messages: vec![Message::user(user_prompt)],
             tools: vec![],
-            max_tokens: 500,
+            max_tokens: 1000,
             temperature: 0.0,
         };
 
         struct ParserAdapter { llm: Arc<dyn LlmClient>, }
-#[async_trait::async_trait]
-impl LlmClientForParser for ParserAdapter {
-    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
-}
-let parser_client = Arc::new(ParserAdapter { llm: self.llm.clone() }) as Arc<dyn LlmClientForParser>;
+        #[async_trait::async_trait]
+        impl LlmClientForParser for ParserAdapter {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
+        }
+        let parser_client = Arc::new(ParserAdapter { llm: self.llm.clone() }) as Arc<dyn LlmClientForParser>;
+
         match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
             Ok(eval) => {
                 if eval.status.to_uppercase() == "REJECT" {
-                    Err(format!("Reason: {}. Confidence: {:.2}", eval.reason, eval.confidence))
+                    let mut err_msg = format!("LLM Judge REJECTED the output (Confidence: {:.2}).\nReason: {}", eval.confidence, eval.reason);
+                    if !eval.missing_elements.is_empty() {
+                        err_msg.push_str(&format!("\nMissing Elements: {}", eval.missing_elements.join(", ")));
+                    }
+                    if !eval.suggested_fixes.is_empty() {
+                        err_msg.push_str(&format!("\nSuggested Fixes:\n- {}", eval.suggested_fixes.join("\n- ")));
+                    }
+                    Err(err_msg)
                 } else {
+                    tracing::info!("LLM Judge APPROVED the output (Confidence: {:.2}).", eval.confidence);
                     Ok(())
                 }
             }
-            Err(e) => Err(format!("LLM Error: {}", e)),
+            Err(e) => Err(format!("LLM Judge Sensor Error during evaluation: {}", e)),
         }
     }
 }
@@ -194,10 +216,18 @@ mod tests {
             &self,
             _req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let tool_call = ohc_builtin_agent_core::types::ToolCall {
+                id: "call_1".to_string(),
+                name: "structured_output".to_string(),
+                arguments: serde_json::json!({
+                    "data": serde_json::from_str::<serde_json::Value>(&self.response_text).unwrap_or(serde_json::json!({}))
+                }),
+            };
+
             let msg = Message {
                 role: ohc_builtin_agent_core::types::Role::Assistant,
-                content: self.response_text.clone(),
-                tool_calls: vec![],
+                content: "".to_string(),
+                tool_calls: vec![tool_call],
                 tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
@@ -250,15 +280,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_verification_manager_inferential() {
+        let pass_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string()
+        });
+        let judge = Arc::new(LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None });
+
+        let mut manager = VerificationManager::new();
+        manager.add_inferential(judge);
+
+        assert!(manager.run_inferential_sensors("output", "task").await.is_ok());
+    }
+
+    #[tokio::test]
     async fn test_llm_judge_sensor() {
-        let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
-        let judge = LlmJudgeSensor { llm: pass_llm };
+        let pass_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string()
+        });
+        let judge = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None };
         assert!(judge.verify_inferential("output", "task").await.is_ok());
 
-        let fail_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8}"#.to_string() });
-        let judge_fail = LlmJudgeSensor { llm: fail_llm };
+        let fail_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8, "missing_elements": ["element1"], "suggested_fixes": ["fix1"]}"#.to_string()
+        });
+        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string(), criteria: None };
         let res = judge_fail.verify_inferential("output", "task").await;
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("Reason: Bad. Confidence: 0.80"));
+        let err = res.unwrap_err();
+        assert!(err.contains("LLM Judge REJECTED the output"));
+        assert!(err.contains("Reason: Bad"));
+        assert!(err.contains("Missing Elements: element1"));
+        assert!(err.contains("Suggested Fixes:\n- fix1"));
     }
 }

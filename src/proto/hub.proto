@@ -282,6 +282,15 @@ service HubService {
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc DownloadInvoice(DownloadInvoiceRequest) returns (DownloadInvoiceResponse);
+  rpc CreateTerminalConnectionToken(CreateTerminalTokenRequest) returns (CreateTerminalTokenResponse);
+}
+
+message CreateTerminalTokenRequest {
+}
+
+message CreateTerminalTokenResponse {
+  bool success = 1;
+  string token = 2;
 }
 
 message StartOnboardingRequest {
@@ -298,6 +307,7 @@ message StartOnboardingRequest {
   string admin_name = 11;
   string admin_password = 12;
   string price_type = 13;
+  string location = 14;
 }
 
 message StartOnboardingResponse {
@@ -798,6 +808,9 @@ message WaitlistResponse {
 }
 
 service GrowthService {
+  rpc SubmitReview(SubmitReviewRequest) returns (SubmitReviewResponse);
+  rpc GetReputation(GetReputationRequest) returns (GetReputationResponse);
+
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   
@@ -1649,6 +1662,8 @@ message CostDashboardResponse {
   int64 payment_fees = 5;
   string period_start = 6;
   string period_end = 7;
+  int64 bandwidth_savings = 8;
+  int64 network_cost = 9;
 }
 
 message SelectPlanRequest {
@@ -1714,4 +1729,23 @@ message GenerateMeetingForBookingRequest {
 
 message GenerateMeetingForBookingResponse {
   string link = 1;
+}
+
+message SubmitReviewRequest {
+  string customer_id = 1;
+  string order_id = 2;
+  int32 rating = 3;
+  string comment = 4;
+}
+
+message SubmitReviewResponse {
+  string review_id = 1;
+  string generated_referral_link = 2;
+}
+
+message GetReputationRequest {}
+
+message GetReputationResponse {
+  double average_rating = 1;
+  int32 total_reviews = 2;
 }

@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use crate::types::{ChatRequest, Message, Role, ToolCall};
+use crate::types::{ChatRequest, Message};
 use futures::future::join_all;
 
 #[async_trait::async_trait]
@@ -72,6 +71,40 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
             lead_agent_name: lead.to_string(),
             domain_experts: experts,
         }
+    }
+
+    /// Execute the full expert workflow applying all code-enforced quality gates.
+    pub async fn run_full_expert_workflow(&self, task: &str, trace: &mut SkillTrace, lead_llm: std::sync::Arc<dyn ExpertTeamLlmClient>) -> Result<String, String> {
+        // 1. Pre-flight Gate
+        QualityGates::pre_flight(self, task)?;
+
+        // 2. Parallel Execution
+        let summaries = self.execute_parallel_tasks(task, trace).await?;
+
+        // 3. Pre-merge Gate
+        QualityGates::pre_merge(&summaries)?;
+
+        // 4. Synthesis by Lead LLM
+        let combined = summaries.join("\n");
+        let synthesize_prompt = format!("Synthesize the following expert summaries into a final report of at least 20000 words. Include any required charts or analysis. Task: {}\nSummaries:\n{}", task, combined);
+
+        use crate::types::{ChatRequest, Message};
+        let req = ChatRequest {
+            model: "lead-model".to_string(),
+            system: "You are the Project Director. Synthesize the expert reports.".to_string(),
+            messages: vec![Message::user(synthesize_prompt)],
+            tools: vec![],
+            max_tokens: 4000,
+            temperature: 0.2,
+        };
+
+        let synth_res = lead_llm.chat(req).await.map_err(|e| format!("Lead LLM failed: {}", e))?;
+        let final_output = synth_res.message.content;
+
+        // 5. Pre-deliver Gate
+        QualityGates::pre_deliver(&final_output, trace)?;
+
+        Ok(final_output)
     }
 
     /// Execute the parallel tasks with the team of domain experts.
@@ -158,13 +191,19 @@ impl QualityGates {
         }
 
         // 75% similarity deduplication using Jaccard index on word tokens
-        for i in 0..summaries.len() {
-            for j in (i + 1)..summaries.len() {
-                let set_i: std::collections::HashSet<&str> = summaries[i].split_whitespace().collect();
-                let set_j: std::collections::HashSet<&str> = summaries[j].split_whitespace().collect();
+        let mut token_sets = Vec::with_capacity(summaries.len());
+        for summary in summaries {
+            let set: std::collections::HashSet<&str> = summary.split_whitespace().collect();
+            token_sets.push(set);
+        }
 
-                let intersection = set_i.intersection(&set_j).count() as f64;
-                let union = set_i.union(&set_j).count() as f64;
+        for i in 0..token_sets.len() {
+            for j in (i + 1)..token_sets.len() {
+                let set_i = &token_sets[i];
+                let set_j = &token_sets[j];
+
+                let intersection = set_i.intersection(set_j).count() as f64;
+                let union = set_i.union(set_j).count() as f64;
 
                 if union > 0.0 {
                     let jaccard_similarity = intersection / union;
@@ -252,28 +291,15 @@ mod tests {
         let manager = ExpertTeamManager::new("Project Director", experts);
 
         let task = "Analyze the new AI market trends for the upcoming quarter. Chart: Required. Analysis: Deep.";
-
-        // Gate 1: Pre-flight
-        assert!(QualityGates::pre_flight(&manager, task).is_ok());
-
         let mut trace = SkillTrace::new();
-
-        // Execution
-        let summaries = manager.execute_parallel_tasks(task, &mut trace).await.unwrap();
-        assert_eq!(summaries.len(), 5);
-        assert!(trace.has_required_skills());
-
-        // Gate 2: Pre-merge
-        assert!(QualityGates::pre_merge(&summaries).is_ok());
-
-        // Lead agent combines the summaries into final output
-        let mut final_output = format!("Combined Executive Summary:\n{}\n\nOverall Strategy:\nProceed with investment.\nWe include the Chart: Market Trends.", summaries.join("\n"));
-        // Pad to >= 20000 words
         let word_padding = "word ".repeat(20000);
-        final_output.push_str(&word_padding);
 
-        // Gate 3: Pre-deliver
-        assert!(QualityGates::pre_deliver(&final_output, &trace).is_ok());
+        let lead_llm = Arc::new(MockExpertLlm {
+            role_resp: format!("Combined Executive Summary:\n\nOverall Strategy:\nProceed with investment.\nWe include the Chart: Market Trends. {}", word_padding)
+        });
+
+        let result = manager.run_full_expert_workflow(task, &mut trace, lead_llm).await;
+        assert!(result.is_ok(), "Expert workflow failed: {:?}", result.err());
     }
 
     #[test]

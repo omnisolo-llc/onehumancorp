@@ -86,8 +86,7 @@ async fn execute_publish_site_job(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    // Use a unified pattern for the notify key, matching edge.rs without locale (since we want to invalidate all locales)
-    let cache_key = format!("ohc:cache:{}:storefront:{}", tenant_id, site_id);
+    let cache_key = format!("edge_site_{}_{}", tenant_id, site_id); // Keeping old var for notify to not break it
     sqlx::query("NOTIFY edge_cache_invalidation, $1")
         .bind(&cache_key)
         .execute(&mut *conn)

@@ -19,6 +19,12 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
@@ -42,6 +48,12 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.ohcCore.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
@@ -65,6 +77,12 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
@@ -88,12 +106,10 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage }}
-{{- if .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
-{{- end }}
+          averageUtilization: 80
 {{- end }}

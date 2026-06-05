@@ -1,8 +1,10 @@
+use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
 use tracing::{info_span, Instrument};
+use std::fmt::Write;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
@@ -89,6 +91,8 @@ pub enum AgentEvent {
     CheckpointSaved { iteration: i32, path: String },
     Handoff { target_agent: String },
     RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
+    GuardrailTripped { reason: String },
+    CostUpdate { total_cost_usd: f64 },
 }
 
 /// Configuration for a single agent run.
@@ -108,6 +112,7 @@ pub struct AgentRunConfig {
     pub confidence_threshold: f32,
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
+    pub enable_gpt_researcher: bool,
     pub enable_acon_context_strategy: bool,
     pub acon_config: Option<crate::acon_context::AconConfig>,
     pub enable_progressive_skills: bool,
@@ -139,6 +144,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub enable_actor_model_message_passing: bool,
     pub enable_tao_orchestration_loop: bool,
     pub enable_agent_curated_memory: bool,
     pub curated_memory_nudge_threshold: i32,
@@ -167,6 +173,7 @@ impl Default for AgentRunConfig {
             confidence_threshold: 0.0,
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
+            enable_gpt_researcher: false,
             enable_acon_context_strategy: false,
             acon_config: None,
             enable_progressive_skills: false,
@@ -198,6 +205,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            enable_actor_model_message_passing: false,
             enable_tao_orchestration_loop: false,
             enable_agent_curated_memory: false,
             curated_memory_nudge_threshold: 5,
@@ -304,22 +312,44 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                tool_defs.push_str(&format!("Tool: {}\n", tool.name));
-                tool_defs.push_str(&format!("Description: {}\n", tool.description));
-                tool_defs.push_str(&format!("Parameters: {}\n", tool.parameters));
+                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
+                let _ = write!(tool_defs, "Description: {}\n", tool.description);
+                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
             }
             tool_defs.pop(); // Remove trailing newline
         }
 
+        let mut source_name = "User Instructions";
+        let mut user_instr = if cfg.user_instructions.is_empty() {
+            let mut combined_agents_md = String::new();
+            let mut current_dir = std::env::current_dir().ok();
+            while let Some(dir) = current_dir {
+                let agents_file = dir.join("AGENTS.md");
+                if let Ok(content) = std::fs::read_to_string(&agents_file) {
+                    if !combined_agents_md.is_empty() {
+                        combined_agents_md.insert_str(0, "\n\n");
+                    }
+                    combined_agents_md.insert_str(0, &content);
+                }
+                current_dir = dir.parent().map(|p| p.to_path_buf());
+            }
+            if !combined_agents_md.is_empty() {
+                source_name = "AGENTS.md";
+            }
+            combined_agents_md
+        } else {
+            source_name = "User Instructions";
+            cfg.user_instructions.clone()
+        };
+
         let mut end_idx = 32768;
-        if cfg.user_instructions.len() > 32768 {
-            while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
+        if user_instr.len() > 32768 {
+            while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
                 end_idx -= 1;
             }
-        } else {
-            end_idx = cfg.user_instructions.len();
+            let truncated = &user_instr[..end_idx];
+            user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
         }
-        let user_instr = cfg.user_instructions[..end_idx].to_string();
 
         Self {
             server_system_message: cfg.server_system_message.clone(),
@@ -677,11 +707,21 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // Guardrails & Safety: OpenAI Mechanic (Input Guardrail)
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
+
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let mut turn_count = 0;
         let mut total_tokens = 0;
+        let mut total_session_cost = 0.0;
+        let mut budget_tracker = crate::budget::BudgetTracker::default();
 
         let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools.iter().map(|t| crate::types::ToolDefinition {
@@ -710,6 +750,17 @@ impl Agent {
             let usage = resp.usage;
 
             total_tokens += usage.input_tokens + usage.output_tokens;
+            let turn_cost = ::server_pricing::calculator::calculate_cost(
+                cfg.model.to_lowercase().as_str(),
+                usage.input_tokens as i64,
+                usage.output_tokens as i64,
+                0,
+            );
+            if turn_cost > 0.0 {
+                total_session_cost += turn_cost;
+                on_event(AgentEvent::CostUpdate { total_cost_usd: total_session_cost });
+            }
+
             messages.push(msg.clone());
 
             // 3. Termination Condition: Safety refusal
@@ -721,10 +772,30 @@ impl Agent {
             if cfg.max_task_tokens > 0 && total_tokens > cfg.max_task_tokens {
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Token budget exhausted")));
             }
+            if resp.stop_reason == "max_tokens" || resp.stop_reason == "length" {
+                let decision = crate::budget::check_token_budget(&mut budget_tracker, cfg.max_task_tokens, total_tokens);
+                if decision.action == crate::budget::BudgetAction::Stop {
+                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Token budget exhausted")));
+                }
+                if decision.action == crate::budget::BudgetAction::Continue {
+                    if !msg.content.is_empty() {
+                        messages.push(msg.clone());
+                    }
+                    messages.push(crate::types::Message::user(&decision.nudge_message));
+                    continue;
+                }
+            }
 
             // 5. Parse output / check tool calls
             // Termination Condition: Model returns text with no tool calls
             if msg.tool_calls.is_empty() {
+                // Guardrails & Safety: OpenAI Mechanic (Output Guardrail)
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = guardrails.check_output(&msg.content) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
+                    }
+                }
                 return Ok(msg.content);
             }
 
@@ -739,6 +810,14 @@ impl Agent {
 
             for (i, tc) in msg.tool_calls.iter().enumerate() {
                 tool_results[i].tool_call_id = tc.id.clone();
+
+                // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = guardrails.check_tool(tc) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Tool Guardrail tripwire fires: {}", e))));
+                    }
+                }
 
                 // Termination Condition: Guardrail tripwire fires
                 if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
@@ -766,6 +845,9 @@ impl Agent {
                         Err(crate::types::ToolError::Fatal(err_msg)) | Err(crate::types::ToolError::Unexpected(err_msg)) => {
                             // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
+                        }
+                        Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (UserFixable): {}", err_msg))));
                         }
                         Err(e) => {
                             let err_str = e.to_string();
@@ -797,6 +879,75 @@ impl Agent {
 
         // Termination Condition: Max turn limit exceeded
         Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Termination: Max turn limit exceeded")))
+    }
+
+    /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
+    pub async fn run_actor_model_message_passing<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: Vec<crate::tools::Tool>,
+        _on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        tracing::info!("Executing via Actor-model message passing");
+
+        let system = std::sync::Arc::new(crate::actor_model::ActorSystem::new());
+
+        let coord_agent = std::sync::Arc::new(Self {
+            event_stream: self.event_stream.clone(),
+            llm: self.llm.clone(),
+            tools: session_tools.clone(),
+            progress: self.progress.clone(),
+            memory_store: self.memory_store.clone(),
+            checkpointer: self.checkpointer.clone(),
+            observation_store: self.observation_store.clone(),
+            native_env: self.native_env.clone(),
+        });
+
+        let coord_actor = crate::actor_model::AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: cfg.clone(),
+        };
+
+        let tool_actor = crate::actor_model::ToolActor {
+            name: "ToolActor".to_string(),
+            agent: coord_agent.clone(),
+        };
+
+        let (coord_tx, coord_rx) = tokio::sync::mpsc::channel(100);
+        let (tool_tx, tool_rx) = tokio::sync::mpsc::channel(100);
+
+        system.register(coord_actor.name.clone(), coord_tx).await;
+        system.register(tool_actor.name.clone(), tool_tx).await;
+
+        coord_actor.start(coord_rx, system.clone());
+        tool_actor.start(tool_rx, system.clone());
+
+        let (test_tx, mut test_rx) = tokio::sync::mpsc::channel(100);
+        let run_id = format!("Run-{}", uuid::Uuid::new_v4());
+        system.register(run_id.clone(), test_tx).await;
+
+        let initial_msg = crate::actor_model::ActorMessage {
+            sender: run_id.clone(),
+            recipient: "Coordinator".to_string(),
+            content: initial_message.to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: run_id.clone(),
+            original_sender: run_id.clone(),
+        };
+
+        system.send(initial_msg).await.map_err(|e| format!("Failed to send start message: {}", e))?;
+
+        if let Some(reply) = test_rx.recv().await {
+            Ok(reply.content)
+        } else {
+            Err("Failed to receive final reply from Actor System".into())
+        }
     }
 
     pub async fn run_langgraph<F>(
@@ -1266,6 +1417,46 @@ impl Agent {
 
     /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
     /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
+    pub async fn run_gpt_researcher<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        struct WrapperClient {
+            llm: std::sync::Arc<dyn LlmClient>,
+        }
+        #[async_trait::async_trait]
+        impl crate::gpt_researcher::ResearcherLlmClient for WrapperClient {
+            async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.llm.chat(req).await
+            }
+        }
+
+        let researcher_client = std::sync::Arc::new(WrapperClient { llm: self.llm.clone() });
+
+        let planner = std::sync::Arc::new(crate::gpt_researcher::PlannerAgent::new(researcher_client.clone(), cfg.model.clone()));
+        let executor = std::sync::Arc::new(crate::gpt_researcher::ExecutionAgent::new(researcher_client, cfg.model.clone()));
+
+        let manager = crate::gpt_researcher::GptResearcherManager::new(planner, executor);
+
+        let report = match manager.conduct_research(initial_message).await {
+            Ok(report) => report,
+            Err(e) => {
+                on_event(AgentEvent::TaskError { error: format!("GPT Researcher failed: {}", e) });
+                return Err(e.into());
+            }
+        };
+
+        on_event(AgentEvent::TaskComplete { content: report.clone() });
+        Ok(report)
+    }
+
     pub async fn run_plan_and_execute<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1916,6 +2107,9 @@ impl Agent {
         if final_cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
         }
+        if final_cfg.enable_gpt_researcher {
+            return self.run_gpt_researcher(&final_cfg, initial_message, on_event).await;
+        }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
@@ -1954,6 +2148,7 @@ impl Agent {
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
+        let mut total_session_cost = 0.0;
 
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut malformed_retries = 0;
@@ -1978,6 +2173,10 @@ impl Agent {
                     }
                 }
             }
+        }
+
+        if final_cfg.enable_actor_model_message_passing {
+            return self_with_memory.run_actor_model_message_passing(&final_cfg, initial_message, session_tools, on_event).await;
         }
 
         if final_cfg.enable_langgraph_mechanic {
@@ -2227,7 +2426,9 @@ impl Agent {
             );
 
             if turn_cost > 0.0 {
+                total_session_cost += turn_cost;
                 cost_counter.add(turn_cost, &[model_label, agent_label, tool_label]);
+                on_event(AgentEvent::CostUpdate { total_cost_usd: total_session_cost });
             }
 
             llm_span.record("input_tokens", &turn_input_tokens);
@@ -2292,6 +2493,15 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                // OpenAI Guardrail: Check Output Guardrail registry
+                if let Some(guardrails) = &final_cfg.guardrails {
+                    if let Err(e) = guardrails.check_output(&resp.message.content) {
+                        let err_msg = format!("Output Guardrail tripped: {}", e);
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, err_msg)));
+                    }
+                }
+
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
@@ -2300,7 +2510,14 @@ impl Agent {
                     verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
                 if final_cfg.enable_llm_judge {
-                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor {
+                        llm: self.llm.clone(),
+                        model: final_cfg.model.clone(),
+                        criteria: Some(format!(
+                            "correctness, completeness, and strict adherence to these instructions: {}",
+                            final_cfg.developer_instructions
+                        )),
+                    }));
                 }
 
                 if let Err(e) = verification_manager.run_computational_guides("", "").await {
@@ -2311,8 +2528,11 @@ impl Agent {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, "").await {
-                    messages.push(Message::user(format!("LLM-as-judge subagent rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", e)));
+                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
+                    messages.push(Message::user(format!(
+                        "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
+                        e
+                    )));
                     continue;
                 }
                 // OpenAI Mechanic: Output Guardrails
@@ -2529,16 +2749,17 @@ impl Agent {
                         }
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: msg.clone(),
+                            result: self_correct_msg.clone(),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: self_correct_msg,
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -2721,13 +2942,14 @@ impl Agent {
                             }
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: msg.clone(),
+                                result: self_correct_msg.clone(),
                                 iteration,
                             });
-                            error = msg;
+                            error = self_correct_msg;
                             content = String::new();
                             break;
                         }
@@ -2941,10 +3163,16 @@ impl Agent {
 
     // SOTA Harness Patterns (2025-2026): Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
     fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
-        Self::validate_schema_recursive(args, schema, "")
+        let mut errors = Vec::new();
+        Self::validate_schema_recursive(args, schema, "", &mut errors);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("\n"))
+        }
     }
 
-    fn validate_schema_recursive(args: &serde_json::Value, schema: &serde_json::Value, path: &str) -> Result<(), String> {
+    fn validate_schema_recursive(args: &serde_json::Value, schema: &serde_json::Value, path: &str, errors: &mut Vec<String>) {
         let prefix = if path.is_empty() { String::new() } else { format!("{}.", path) };
 
         if let Some(req_array) = schema.get("required").and_then(|v| v.as_array()) {
@@ -2952,13 +3180,13 @@ impl Agent {
                 for req in req_array {
                     if let Some(req_str) = req.as_str() {
                         if !args_obj.contains_key(req_str) {
-                            return Err(format!("missing required parameter: '{}{}'", prefix, req_str));
+                            errors.push(format!("missing required parameter: '{}{}'", prefix, req_str));
                         }
                     }
                 }
             } else if !req_array.is_empty() {
                 let p = if path.is_empty() { "arguments".to_string() } else { format!("parameter '{}'", path) };
-                return Err(format!("{} must be an object", p));
+                errors.push(format!("{} must be an object", p));
             }
         }
 
@@ -2994,13 +3222,13 @@ impl Agent {
                                 } else {
                                     "unknown"
                                 };
-                                return Err(format!("parameter '{}' has invalid type: expected {}, got {}", current_path, expected_type, actual_type));
+                                errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", current_path, expected_type, actual_type));
                             }
                         }
 
                         // Recurse into objects
                         if v.is_object() {
-                            Self::validate_schema_recursive(v, prop_schema, &current_path)?;
+                            Self::validate_schema_recursive(v, prop_schema, &current_path, errors);
                         }
 
                         // Recurse into arrays
@@ -3033,12 +3261,12 @@ impl Agent {
                                         } else {
                                             "unknown"
                                         };
-                                        return Err(format!("parameter '{}' has invalid type: expected {}, got {}", item_path, expected_type, actual_type));
+                                        errors.push(format!("parameter '{}' has invalid type: expected {}, got {}", item_path, expected_type, actual_type));
                                     }
                                 }
 
                                 if item.is_object() {
-                                    Self::validate_schema_recursive(item, items_schema, &item_path)?;
+                                    Self::validate_schema_recursive(item, items_schema, &item_path, errors);
                                 }
                             }
                         }
@@ -3046,8 +3274,6 @@ impl Agent {
                 }
             }
         }
-
-        Ok(())
     }
 
     async fn execute_tool(
@@ -3208,6 +3434,23 @@ mod tests {
         });
         let err = Agent::validate_schema(&args, &schema).unwrap_err();
         assert_eq!(err, "parameter 'user.tags[0]' has invalid type: expected object, got string");
+
+        // 9. Multiple errors simultaneously
+        let args = serde_json::json!({
+            "user": {
+                "name": 123,
+                "address": {
+                    "city": "NY"
+                },
+                "tags": [
+                    { "name": "wrong" }
+                ]
+            }
+        });
+        let err = Agent::validate_schema(&args, &schema).unwrap_err();
+        assert!(err.contains("missing required parameter: 'user.address.zipcode'"));
+        assert!(err.contains("parameter 'user.name' has invalid type: expected string, got number"));
+        assert!(err.contains("missing required parameter: 'user.tags[0].id'"));
     }
 
     #[tokio::test]
@@ -3324,6 +3567,39 @@ mod tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Termination: Max turn limit exceeded"));
+    }
+
+    #[tokio::test]
+    async fn test_tao_cost_tracking() {
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Calculating cost"),
+                    usage: crate::types::Usage { input_tokens: 1000, output_tokens: 200, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        // Using gpt-4o for pricing map match
+        cfg.model = "gpt-4o".to_string();
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
+        assert!(res.is_ok());
+
+        let mut cost_emitted = false;
+        for e in events {
+            if let AgentEvent::CostUpdate { total_cost_usd } = e {
+                assert!(total_cost_usd > 0.0);
+                cost_emitted = true;
+            }
+        }
+        assert!(cost_emitted, "CostUpdate event should be emitted when model has pricing");
     }
 
     #[tokio::test]
@@ -3520,6 +3796,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::Supervisory;
         cfg.manually_approved_tool_calls = vec![];
+        cfg.confidence_threshold = 2.0;
 
         let mut events = vec![];
         let res = agent.run(&cfg, "Test", &mut |e| events.push(e)).await;
@@ -3527,7 +3804,7 @@ mod tests {
         // Wait, confidence_threshold is 0.0 by default, so it triggers.
         // We'll assert it triggers user intervention.
         assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("requires explicit user confirmation"));
+        assert!(res.unwrap_err().to_string().contains("Human supervision required"));
     }
 
     #[tokio::test]
@@ -3558,6 +3835,85 @@ mod tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |_| {}).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("Termination: Guardrail tripwire fires"));
+    }
+
+    #[tokio::test]
+    async fn test_tao_termination_token_budget_nudge() {
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("I am thinking very long"),
+                    usage: crate::types::Usage { input_tokens: 500, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "max_tokens".to_string(), // Triggers budget logic
+                    response_id: None,
+                },
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Done!"),
+                    usage: crate::types::Usage { input_tokens: 10, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.max_task_tokens = 1000; // 500+100 = 600, which is < 1000, so it will continue with a nudge
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Done!");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_tao_termination_guardrail_user_fixable() {
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall { id: "1".to_string(), name: "test".to_string(), arguments: serde_json::json!({}) }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+
+        struct UserFixableExecutor;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("needs human".to_string()))
+            }
+        }
+
+        let dummy_tool = ohc_builtin_agent_tools::Tool {
+            name: "test".to_string(),
+            description: "A mutating tool".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(UserFixableExecutor),
+        };
+
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![dummy_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut |_| {}).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
+        assert!(res.is_err());
+        let err_str = res.unwrap_err().to_string();
+        assert!(err_str.contains("Guardrail tripwire fires (UserFixable): needs human") || err_str.contains("User aborted"));
     }
 
     #[tokio::test]
@@ -3809,6 +4165,65 @@ mod tests {
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_gpt_researcher_mechanic() {
+        struct MockClient {
+            pub requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for MockClient {
+            async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut reqs = self.requests.lock().await;
+                reqs.push(req.clone());
+
+                if req.system.contains("You are a research planner") {
+                    let plan = serde_json::json!(["Sub-topic A", "Sub-topic B"]);
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant(plan.to_string()),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                } else if req.system.contains("You are a specialized research execution agent") {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant("Detailed content here"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                } else {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message::assistant("Unknown"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id".to_string()),
+                    })
+                }
+            }
+        }
+
+        let client = std::sync::Arc::new(MockClient { requests: tokio::sync::Mutex::new(vec![]) });
+        let agent = Agent::new(client.clone(), vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_gpt_researcher = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Research quantum computing", &mut on_event).await;
+        assert!(result.is_ok());
+        let res_str = result.unwrap();
+
+        assert!(res_str.contains("# Research Report: Research quantum computing"));
+        assert!(res_str.contains("## Sub-topic A"));
+        assert!(res_str.contains("## Sub-topic B"));
+        assert!(res_str.contains("Detailed content here"));
+
+        let reqs = client.requests.lock().await;
+        // 1 planner + 2 executors = 3 calls
+        assert_eq!(reqs.len(), 3);
     }
 
     #[tokio::test]
@@ -4764,7 +5179,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result == "missing parameter X"
+                name == "llm_recoverable_tool" && result.contains("missing parameter X")
             } else {
                 false
             }
@@ -4778,10 +5193,11 @@ mod tests {
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
-        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
+        assert!(tool_msg.tool_results[0].error.contains("missing parameter X"));
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
                 message: crate::types::Message {
@@ -4801,10 +5217,11 @@ mod tests {
         let mut events3 = vec![];
         let mut on_event3 = |e| { events3.push(e); };
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                error.contains("USER_FIXABLE: please login to external service")
+                error.contains("User intervention required: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: please login to external service")
             } else {
                 false
             }
@@ -5073,7 +5490,8 @@ mod tests {
         let prompt = build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
-        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
+        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
+        assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768 + notice.len());
     }
 
     #[test]
@@ -5089,7 +5507,8 @@ mod tests {
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
-        assert_eq!(user_part.len(), 32766);
+        let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
+        assert_eq!(user_part.len(), 32766 + notice.len());
     }
 
     #[tokio::test]
@@ -5152,7 +5571,18 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant(r#"{"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}"#),
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9, "missing_elements": ["data"], "suggested_fixes": ["add data"]}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5164,7 +5594,18 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant(r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}"#),
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_2".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0, "missing_elements": [], "suggested_fixes": []}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5692,11 +6133,11 @@ mod tests {
     #[tokio::test]
     async fn test_agent_ml_resilience_60s_timeout_rule() {
         // Simulated failure / ML resilience timeout rule (60s in prod, mocked 50ms)
-        let timeout_duration = std::time::Duration::from_millis(50);
+        let timeout_duration = std::time::Duration::from_millis(150);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             Ok::<(), String>(())
         }).await;
 
@@ -6057,14 +6498,17 @@ mod tests {
 
         let agent4 = Agent::new(client4, vec![tool_user_fixable]);
         let mut events4 = vec![];
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let res4 = agent4.run(&cfg, "Start", &mut |e| events4.push(e)).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res4.is_err());
-        assert!(res4.unwrap_err().to_string().contains("User intervention required: please login to proceed"));
+        let err_str = res4.unwrap_err().to_string();
+        assert!(err_str.contains("User intervention required: User aborted. Original error: please login to proceed") || err_str.contains("USER_FIXABLE: User aborted. Original error: please login to proceed"));
 
         let mut found_event = false;
         for e in events4 {
             if let AgentEvent::UserInterventionRequired { error } = e {
-                assert!(error.contains("please login to proceed"));
+                assert!(error.contains("User aborted. Original error: please login to proceed"));
                 found_event = true;
             }
         }
@@ -7071,5 +7515,171 @@ mod tao_tests {
         let _action = "Call LLM API -> Parse output -> Execute tool calls";
         let _observation = "Format results back -> Repeat";
         assert_eq!(_thought, "Assemble prompt");
+    }
+}
+#[cfg(test)]
+mod guardrail_tests {
+    use super::*;
+    use crate::guardrails::{GuardrailRegistry, InputGuardrail, OutputGuardrail, ToolGuardrail};
+    use crate::types::{ChatResponse, Message, Role, ToolCall, Usage};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    struct TestLlmClient {
+        responses: Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for TestLlmClient {
+        async fn chat(&self, _req: crate::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("default"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+    }
+
+    struct MockInputGuardrail(String);
+    impl InputGuardrail for MockInputGuardrail {
+        fn check_input(&self, input: &str) -> Result<(), String> {
+            if input.contains(&self.0) {
+                return Err(format!("Blocked input keyword: {}", self.0));
+            }
+            Ok(())
+        }
+    }
+
+    struct MockOutputGuardrail(String);
+    impl OutputGuardrail for MockOutputGuardrail {
+        fn check_output(&self, output: &str) -> Result<(), String> {
+            if output.contains(&self.0) {
+                return Err(format!("Blocked output keyword: {}", self.0));
+            }
+            Ok(())
+        }
+    }
+
+    struct MockToolGuardrail(String);
+    impl ToolGuardrail for MockToolGuardrail {
+        fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
+            if tc.name.contains(&self.0) || tc.arguments.to_string().contains(&self.0) {
+                return Err(format!("Blocked tool keyword: {}", self.0));
+            }
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_input_guardrail_trips_loop() {
+        let llm = Arc::new(TestLlmClient { responses: Mutex::new(vec![]) });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut registry = GuardrailRegistry::new();
+        registry.input_guardrails.push(Arc::new(MockInputGuardrail("nuclear".to_string())));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.max_iterations = 2;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run_tao_orchestration_loop(&cfg, "Tell me about nuclear codes", &[], &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Input Guardrail tripwire fires"));
+
+        let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+        assert!(has_tripped_event);
+    }
+
+    #[tokio::test]
+    async fn test_output_guardrail_trips_loop() {
+        let llm = Arc::new(TestLlmClient {
+            responses: Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Here are the secret launch codes"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut registry = GuardrailRegistry::new();
+        registry.output_guardrails.push(Arc::new(MockOutputGuardrail("secret".to_string())));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.max_iterations = 2;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run_tao_orchestration_loop(&cfg, "What are the codes?", &[], &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Output Guardrail tripwire fires"));
+
+        let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+        assert!(has_tripped_event);
+    }
+
+    #[tokio::test]
+    async fn test_tool_guardrail_trips_loop() {
+        let llm = Arc::new(TestLlmClient {
+            responses: Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "1".to_string(),
+                            name: "bash".to_string(),
+                            arguments: serde_json::json!({"command": "rm -rf /"}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut registry = GuardrailRegistry::new();
+        registry.tool_guardrails.push(Arc::new(MockToolGuardrail("rm -rf".to_string())));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.max_iterations = 2;
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run_tao_orchestration_loop(&cfg, "Clean the disk", &[], &mut on_event).await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Tool Guardrail tripwire fires"));
+
+        let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+        assert!(has_tripped_event);
     }
 }

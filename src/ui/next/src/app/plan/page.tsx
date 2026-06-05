@@ -20,8 +20,8 @@ export default function MyPlanPage() {
   useEffect(() => {
     async function fetchPlanData() {
       try {
-        const token = localStorage.getItem('token') || 'test-token';
-        const res = await fetch('/api/billing/my-plan', {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://127.0.0.1:18789/my-plan', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -31,26 +31,9 @@ export default function MyPlanPage() {
           setPlanData(data);
         } else {
             console.error("Failed to fetch plan data:", res.status);
-            // Fallback for UI if API is not wired perfectly in e2e
-            setPlanData({
-                current_plan: "Free",
-                ai_actions_used: 0,
-                ai_actions_limit: 100,
-                storage_used_bytes: 0,
-                storage_limit_bytes: 500 * 1024 * 1024,
-                next_bill_estimated: 0,
-            });
         }
       } catch (err) {
         console.error("Error fetching plan data", err);
-        setPlanData({
-            current_plan: "Free",
-            ai_actions_used: 0,
-            ai_actions_limit: 100,
-            storage_used_bytes: 0,
-            storage_limit_bytes: 500 * 1024 * 1024,
-            next_bill_estimated: 0,
-        });
       } finally {
         setLoading(false);
       }
@@ -71,7 +54,7 @@ export default function MyPlanPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>My Plan</h1>
         <div className="flex gap-2">
             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
@@ -83,18 +66,18 @@ export default function MyPlanPage() {
         </div>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
+      <main id="my-plan-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <h2 className="text-sm font-medium text-gray-500 mb-1">Current Plan</h2>
+                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded mt-2">Active</span>
                 </div>
                 <div>
-                    <h2 className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill</h2>
+                    <h2 id="my-plan-next-bill" className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill:</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
@@ -106,7 +89,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Usage Section */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Your Current Usage</h2>
 
             <div className="space-y-6">

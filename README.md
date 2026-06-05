@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
-## Getting Started (Day One Onboarding)
+## Getting Started (Day 1 Onboarding)
 
 To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
 
@@ -50,7 +50,7 @@ graph TD;
     LegacyWeb[Legacy Next.js Prototype] -.-> API;
     API --> Orchestration[Orchestration Hub];
     API --> Auth[JWT / OIDC Auth];
-    Orchestration --> Agents[AI Agents];
+    Orchestration --> Agents[AI Agents - Invisible No-Code SMB Managers];
     API --> Postgres[(Postgres)];
     API --> SQLite[(Local SQLite SIPDB)];
     API --> Integrations[Public Integrations\nGoogle Chat / Issue Trackers / MCP];

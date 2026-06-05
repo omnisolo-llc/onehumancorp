@@ -9,13 +9,17 @@ pub trait JobHandler: Send + Sync {
 }
 
 pub struct WorkerPool {
-    queue: Arc<OHCJobQueue>,
+    #[allow(dead_code)] queue: Arc<OHCJobQueue>,
     workers: Vec<JoinHandle<()>>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
 impl WorkerPool {
-    pub fn new(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
+    pub fn new(#[allow(dead_code)] queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
+        Self::new_with_timeout(queue, num_workers, job_types, handler, 60000)
+    }
+
+    pub fn new_with_timeout(#[allow(dead_code)] queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>, timeout_ms: u64) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         let mut workers = Vec::with_capacity(num_workers);
 
@@ -44,18 +48,39 @@ impl WorkerPool {
                                     let job_id = job.id.clone();
 
                                     // Process
-                                    let result = handler_clone.handle(job).await;
+                                    let mut join_handle = handler_clone.handle(job);
+                                    let result = tokio::time::timeout(Duration::from_millis(timeout_ms), &mut join_handle).await;
 
                                     match result {
-                                        Ok(_) => {
+                                        Ok(Ok(Ok(()))) => {
                                             if let Err(e) = queue_clone.complete(&job_id).await {
+                                                ::server_telemetry::record_error_signal("Failed to complete job ");
                                                 tracing::error!("Failed to complete job {}: {}", job_id, e);
                                             }
                                         }
-                                        Err(e) => {
-                                            tracing::error!("Job {} failed: {}", job_id, e);
+                                        Ok(Ok(Err(e))) => {
+                                            ::server_telemetry::record_error_signal("Job handler returned error for ");
+                                            tracing::error!("Job handler returned error for {}: {}", job_id, e);
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3).await {
+                                                ::server_telemetry::record_error_signal("Failed to register fail for job ");
                                                 tracing::error!("Failed to register fail for job {}: {}", job_id, fail_err);
+                                            }
+                                        }
+                                        Ok(Err(e)) => {
+                                            ::server_telemetry::record_error_signal("Job  panicked/join error");
+                                            tracing::error!("Job {} panicked/join error: {}", job_id, e);
+                                            if let Err(fail_err) = queue_clone.fail(&job_id, 3).await {
+                                                ::server_telemetry::record_error_signal("Failed to register fail for job ");
+                                                tracing::error!("Failed to register fail for job {}: {}", job_id, fail_err);
+                                            }
+                                        }
+                                        Err(_) => {
+                                            ::server_telemetry::record_error_signal("Job  timed out after  ms");
+                                            tracing::error!("Job {} timed out after {} ms", job_id, timeout_ms);
+                                            join_handle.abort();
+                                            if let Err(fail_err) = queue_clone.fail(&job_id, 3).await {
+                                                ::server_telemetry::record_error_signal("Failed to register fail for timed out job ");
+                                                tracing::error!("Failed to register fail for timed out job {}: {}", job_id, fail_err);
                                             }
                                         }
                                     }
@@ -64,6 +89,7 @@ impl WorkerPool {
                                     // No jobs, loop back and sleep
                                 }
                                 Err(e) => {
+                                    ::server_telemetry::record_error_signal("Worker  failed to dequeue");
                                     tracing::error!("Worker {} failed to dequeue: {}", i, e);
                                 }
                             }
