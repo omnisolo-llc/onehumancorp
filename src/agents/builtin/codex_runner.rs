@@ -19,8 +19,15 @@ impl CodexCore {
     }
 
     pub async fn execute(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let mut on_event = |_e| {};
-        self.agent.run(&self.runtime_config, message, &mut on_event).await
+        let mut total_cost = 0.0;
+        let mut on_event = |e: AgentEvent| {
+            if let AgentEvent::CostUpdate { total_cost_usd } = e {
+                total_cost = total_cost_usd;
+            }
+        };
+        let res = self.agent.run(&self.runtime_config, message, &mut on_event).await;
+        tracing::info!("Session Total Cost: ${:.6}", total_cost);
+        res
     }
 }
 
@@ -104,6 +111,8 @@ pub struct JsonRpcResponse {
     pub result: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<JsonRpcError>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -130,10 +139,16 @@ impl AppServer {
                     id: None,
                     result: None,
                     error: Some(JsonRpcError { code: -32700, message: "Parse error".to_string() }),
+                    meta: None,
                 };
                 return serde_json::to_string(&err_resp).unwrap();
             }
         };
+
+        // Helper to extract total_cost from run_async execution if needed
+        // Since we modified run_async (execute), we can extract cost through events if needed
+        // But AppServer calls `run_async` directly. Wait, `AppServer` uses `self.runner.run_async(&initial_message).await`.
+        // Let's modify `run_agent` to surface cost in the JSON RPC response.
 
         if req.method == "run_expert_team" {
             let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -164,7 +179,7 @@ impl AppServer {
 
             // Gate 1: Pre-flight
             if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(&manager, &initial_message) {
-                let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
+                let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
                 return serde_json::to_string(&resp).unwrap();
             }
 
@@ -173,7 +188,7 @@ impl AppServer {
                 Ok(summaries) => {
                     // Gate 2: Pre-merge
                     if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
+                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
                         return serde_json::to_string(&resp).unwrap();
                     }
 
@@ -181,7 +196,7 @@ impl AppServer {
 
                     // Gate 3: Pre-deliver
                     if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(&final_output, &trace) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
+                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
                         return serde_json::to_string(&resp).unwrap();
                     }
 
@@ -190,24 +205,34 @@ impl AppServer {
                         id: req.id,
                         result: Some(serde_json::json!({ "output": final_output })),
                         error: None,
+                        meta: None,
                     };
                     serde_json::to_string(&resp).unwrap()
                 }
                 Err(e) => {
-                    let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }) };
+                    let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
                     serde_json::to_string(&resp).unwrap()
                 }
             }
         } else if req.method == "run_agent" {
             let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
             let _cfg = AgentRunConfig::default();
-            match self.runner.run_async(&initial_message).await {
+
+            let mut total_cost = 0.0;
+            let mut on_event = |e: AgentEvent| {
+                if let AgentEvent::CostUpdate { total_cost_usd } = e {
+                    total_cost = total_cost_usd;
+                }
+            };
+
+            match self.runner.core.agent.run(&self.runner.core.runtime_config, &initial_message, &mut on_event).await {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
                         id: req.id,
                         result: Some(serde_json::json!({ "output": result })),
                         error: None,
+                        meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
                     serde_json::to_string(&resp).unwrap()
                 }
@@ -217,6 +242,7 @@ impl AppServer {
                         id: req.id,
                         result: None,
                         error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                        meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
                     serde_json::to_string(&resp).unwrap()
                 }
@@ -273,6 +299,7 @@ impl AppServer {
                         id: req.id,
                         result: Some(serde_json::json!({ "outputs": outputs })),
                         error: None,
+                        meta: None,
                     };
                     serde_json::to_string(&resp).unwrap()
                 }
@@ -282,6 +309,7 @@ impl AppServer {
                         id: req.id,
                         result: None,
                         error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                        meta: None,
                     };
                     serde_json::to_string(&resp).unwrap()
                 }
@@ -292,6 +320,7 @@ impl AppServer {
                 id: req.id,
                 result: None,
                 error: Some(JsonRpcError { code: -32601, message: "Method not found".to_string() }),
+                meta: None,
             };
             serde_json::to_string(&resp).unwrap()
         }
@@ -405,6 +434,7 @@ mod tests {
         assert_eq!(resp.id.unwrap(), serde_json::json!("1"));
         assert!(resp.error.is_none());
         assert_eq!(resp.result.unwrap().get("output").unwrap().as_str().unwrap(), "rpc success");
+        assert!(resp.meta.unwrap().get("total_cost_usd").is_some());
 
         // Test run_scalable_agents method
         let req_json_scalable = r#"{"jsonrpc": "2.0", "id": "2", "method": "run_scalable_agents", "params": {"message": "hello", "count": 2}}"#;

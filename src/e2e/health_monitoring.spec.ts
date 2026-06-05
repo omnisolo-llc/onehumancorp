@@ -9,7 +9,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
     await expect(screen).toBeVisible();
     await expect(screen).toContainText('API Server: healthy');
     await expect(screen).toContainText('Component Health');
-    await expect(screen).toContainText('Database component healthy');
+    await expect(screen).toContainText('Database: Healthy');
   });
 
   test('renders service health state', async ({ page }) => {
