@@ -20,6 +20,8 @@ interface CostDashboardData {
   payment_fees: number;
   network_cost: number;
   bandwidth_savings: number;
+  cache_hit_rate: number;
+  cost_per_1k_tokens: number;
   period_start: string;
   period_end: string;
   trend: DailyCost[];
@@ -92,7 +94,7 @@ export default function CostDashboardPage() {
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
@@ -101,7 +103,11 @@ export default function CostDashboardPage() {
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
                     <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
                 </div>
-
+                <div className="p-6 rounded-xl shadow-sm border border-green-200" style={{ background: 'rgba(240, 253, 244, 0.8)', backdropFilter: 'blur(10px)' }}>
+                    <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
+                    <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
+                    <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
+                </div>
             </div>
         </section>
 
@@ -127,7 +133,10 @@ export default function CostDashboardPage() {
                         <span className="font-medium text-gray-900">LLM Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
-                    <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
+                    <div className="text-right">
+                        <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900 block">{formatCurrency(data?.llm_cost || 0)}</span>
+                        <span className="text-xs text-gray-500 font-medium">Efficiency: {data?.cache_hit_rate}% cache hit rate, ${data?.cost_per_1k_tokens.toFixed(4)}/1k tokens</span>
+                    </div>
                 </div>
 
                 <div className="flex justify-between items-center p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
