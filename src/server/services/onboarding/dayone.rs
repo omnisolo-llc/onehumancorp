@@ -28,7 +28,7 @@ mod tests {
 
     #[test]
     fn test_run_day_one_setup_standalone() {
-        let _ = fs::remove_dir_all(".ohc-local-data");
+        if std::path::Path::new(".ohc-local-data").exists() { fs::remove_dir_all(".ohc-local-data").unwrap(); }
 
         let report = run_day_one_setup(false).unwrap();
         assert!(report.contains("PASSED"));
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn test_run_day_one_setup_cloud() {
-        let _ = fs::remove_dir_all(".ohc-cloud-data");
+        if std::path::Path::new(".ohc-cloud-data").exists() { fs::remove_dir_all(".ohc-cloud-data").unwrap(); }
 
         let num_cpus = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
         
@@ -53,6 +53,6 @@ mod tests {
             assert!(report.contains("Cloud-native"));
         }
 
-        let _ = fs::remove_dir_all(".ohc-cloud-data");
+        if std::path::Path::new(".ohc-cloud-data").exists() { fs::remove_dir_all(".ohc-cloud-data").unwrap(); }
     }
 }
