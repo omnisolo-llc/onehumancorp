@@ -15,7 +15,7 @@ test.describe('Diagnostics Page', () => {
     await expect(screen).toContainText('Database: Healthy');
     await expect(screen).toContainText('Redis: Healthy');
     await expect(screen).toContainText('Live diagnostics have not been loaded.');
->>>>>>> 41566399 (test: fix broken E2E tests)
+>>>>>>> 387b419a (test: fix broken E2E tests)
 
     // Diagnostic actions test removed because the UI was updated
   });

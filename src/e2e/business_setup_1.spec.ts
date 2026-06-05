@@ -34,7 +34,7 @@ test.describe('Business Setup Wizard', () => {
     await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
 =======
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Custom cookies and cakes');
->>>>>>> 41566399 (test: fix broken E2E tests)
+>>>>>>> 387b419a (test: fix broken E2E tests)
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
   });
@@ -50,7 +50,7 @@ test.describe('Business Setup Wizard', () => {
     await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cookies and cakes');
 =======
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill('Custom cookies and cakes');
->>>>>>> 41566399 (test: fix broken E2E tests)
+>>>>>>> 387b419a (test: fix broken E2E tests)
     await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
     await page.getByLabel(/Physical Products/).check();
     await page.locator('#step-4').getByRole('button', { name: /Next/ }).click();
