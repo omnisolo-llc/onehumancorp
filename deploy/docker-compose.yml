@@ -144,7 +144,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: ankane/pgvector:v0.5.1
+    image: postgres:16-alpine
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       LOG_LEVEL: "info"
