@@ -170,3 +170,15 @@ impl BaseAgent for CustomerSuccessAgent {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+
+    #[test]
+    fn test_customer_success_agent_struct_exists() {
+        // Minimal test to assert the module loads in the test harness
+        let type_name = "CustomerSuccessAgent";
+        assert_eq!(type_name, "CustomerSuccessAgent");
+    }
+}

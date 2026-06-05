@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 // OpenAPI spec for OHC backend
 const getSwaggerSpec = (origin: string) => ({
@@ -162,7 +163,7 @@ const getSwaggerSpec = (origin: string) => ({
 
 export default function ApiDocsPage() {
   const [mounted, setMounted] = useState(false);
-  const [spec, setSpec] = useState<any>(null);
+  const [spec, setSpec] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     setMounted(true);
