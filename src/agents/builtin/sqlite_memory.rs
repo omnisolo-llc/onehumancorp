@@ -23,16 +23,37 @@ impl SqliteMemoryStore {
             .connect(db_url)
             .await?;
 
-        // Initialize table
-        sqlx::query(
+        // Hermes Agent Unique Harness Innovations: FTS5 session search (End-to-End Migration/Schema)
+        // Initialize base table, FTS5 virtual table, and triggers for auto-updating the FTS index
+        let schemas = vec![
+            "CREATE TABLE IF NOT EXISTS agent_memory_base (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                tags TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );",
             "CREATE VIRTUAL TABLE IF NOT EXISTS agent_memory USING fts5(
                 content,
                 tags,
-                created_at UNINDEXED
-            )"
-        )
-        .execute(&pool)
-        .await?;
+                content='agent_memory_base',
+                content_rowid='id'
+            );",
+            "CREATE TRIGGER IF NOT EXISTS agent_memory_ai AFTER INSERT ON agent_memory_base BEGIN
+                INSERT INTO agent_memory(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;",
+            "CREATE TRIGGER IF NOT EXISTS agent_memory_ad AFTER DELETE ON agent_memory_base BEGIN
+                INSERT INTO agent_memory(agent_memory, rowid, content, tags) VALUES ('delete', old.id, old.content, old.tags);
+            END;",
+            "CREATE TRIGGER IF NOT EXISTS agent_memory_au AFTER UPDATE ON agent_memory_base BEGIN
+                INSERT INTO agent_memory(agent_memory, rowid, content, tags) VALUES ('delete', old.id, old.content, old.tags);
+                INSERT INTO agent_memory(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;"
+        ];
+
+        for stmt in schemas {
+            sqlx::query(stmt).execute(&pool).await?;
+        }
+
 
         Ok(Self { llm, pool })
     }
@@ -42,7 +63,8 @@ impl SqliteMemoryStore {
 impl LongTermMemory for SqliteMemoryStore {
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
-        sqlx::query("INSERT INTO agent_memory (content, tags) VALUES (?, ?)")
+        // Insert into the base table. The triggers will automatically update the FTS5 virtual table.
+        sqlx::query("INSERT INTO agent_memory_base (content, tags) VALUES (?, ?)")
             .bind(content)
             .bind(tags_json)
             .execute(&self.pool)
@@ -125,7 +147,7 @@ mod tests {
             }
         }
         let llm = Arc::new(MockLlm);
-        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.expect("Failed to create SqliteMemoryStore");
 
         store.store("The secret code is 42", vec!["secret".to_string()]).await.unwrap();
         store.store("The weather is sunny", vec!["weather".to_string()]).await.unwrap();
