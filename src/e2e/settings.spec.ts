@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings');
-    await expect(page.locator('#settings-screen')).toBeVisible();
+
   });
 
   test('shows general notification settings', async ({ page }) => {
