@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { HelpChat } from './HelpChat';
+import { TooltipProvider } from './TooltipRegistry';
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock the fetch call
@@ -13,15 +14,25 @@ describe('HelpChat Component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the floating button initially', () => {
-    render(<HelpChat />);
-    expect(screen.getByText('Ask anything')).toBeInTheDocument();
+  it('renders the floating button initially', async () => {
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({ ok: true, json: async () => ({}) }));
+    render(
+      <TooltipProvider>
+        <HelpChat />
+      </TooltipProvider>
+    );
+    expect(await screen.findByText('Ask anything')).toBeInTheDocument();
   });
 
-  it('opens the chat interface when floating button is clicked', () => {
-    render(<HelpChat />);
-    const button = screen.getByText('Ask anything').closest('button');
-    fireEvent.click(button!);
+  it('opens the chat interface when floating button is clicked', async () => {
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({ ok: true, json: async () => ({}) }));
+    render(
+      <TooltipProvider>
+        <HelpChat />
+      </TooltipProvider>
+    );
+    const button = await screen.findByText('Ask anything');
+    fireEvent.click(button.closest('button')!);
 
     expect(screen.getByText('Ask AI Help')).toBeInTheDocument();
     expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
@@ -29,6 +40,9 @@ describe('HelpChat Component', () => {
   });
 
   it('sends a message and displays user and agent reply', async () => {
+    // first mock is for TooltipProvider
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({ ok: true, json: async () => ({}) }));
+    // second mock is for Chat
     (global.fetch as any).mockImplementationOnce(() => Promise.resolve({
       ok: true,
       json: async () => ({
@@ -37,11 +51,15 @@ describe('HelpChat Component', () => {
       })
     }));
 
-    render(<HelpChat />);
+    render(
+      <TooltipProvider>
+        <HelpChat />
+      </TooltipProvider>
+    );
 
     // Open chat
-    const button = screen.getByText('Ask anything').closest('button');
-    fireEvent.click(button!);
+    const button = await screen.findByText('Ask anything');
+    fireEvent.click(button.closest('button')!);
 
     // Type message
     const input = screen.getByPlaceholderText('Ask me anything...');
@@ -64,12 +82,19 @@ describe('HelpChat Component', () => {
   });
 
   it('handles fetch errors gracefully', async () => {
+    // first mock is for TooltipProvider
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({ ok: true, json: async () => ({}) }));
+    // second mock is for Chat
     (global.fetch as any).mockImplementationOnce(() => Promise.reject(new Error('Network error')));
 
-    render(<HelpChat />);
+    render(
+      <TooltipProvider>
+        <HelpChat />
+      </TooltipProvider>
+    );
 
-    const button = screen.getByText('Ask anything').closest('button');
-    fireEvent.click(button!);
+    const button = await screen.findByText('Ask anything');
+    fireEvent.click(button.closest('button')!);
 
     const input = screen.getByPlaceholderText('Ask me anything...');
     fireEvent.change(input, { target: { value: 'Will this fail?' } });

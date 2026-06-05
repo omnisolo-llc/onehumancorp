@@ -198,9 +198,11 @@ export default function Dashboard() {
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setIsWalkthroughOpen(true)} className="app-button">
-          Start Tour
-        </button>
+        <WithTooltip id="walkthrough-btn-tooltip">
+          <button type="button" onClick={() => setIsWalkthroughOpen(true)} className="app-button">
+            Start Tour
+          </button>
+        </WithTooltip>
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
           {offlineQueueCount} payments pending sync
         </div>
