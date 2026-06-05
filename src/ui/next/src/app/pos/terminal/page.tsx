@@ -28,8 +28,26 @@ export default function TerminalPage() {
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
 
-  // Background sync
+  // Initial Fetch & Background sync
   useEffect(() => {
+    // Initial fetch to populate offline store with real data if online
+    const fetchStaff = async () => {
+      if (navigator.onLine) {
+        try {
+          const res = await fetch('/api/staff');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.length > 0) {
+              OfflineStore.setStaff(data);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch initial staff config", e);
+        }
+      }
+    };
+    fetchStaff();
+
     const syncInterval = setInterval(async () => {
       const events = OfflineStore.getEvents();
       if (events.length > 0 && navigator.onLine) {
@@ -115,14 +133,14 @@ export default function TerminalPage() {
   if (!activeStaff) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 font-inter">
-        <div className="w-[375px] h-[812px] bg-black text-white p-8 flex flex-col items-center relative overflow-hidden">
+        <div className="w-[375px] h-[812px] p-8 flex flex-col items-center relative overflow-hidden rounded-2xl" style={{ background: 'rgba(22, 22, 26, 0.7)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
            <div className="absolute top-8 right-8">
               <LocalizationToggle />
            </div>
 
-           <div className="mt-20 mb-12 text-center">
+           <div className="mt-20 mb-12 text-center text-[#F5F5F7]">
              <h1 className="text-2xl font-bold font-outfit mb-2">{t('Terminal Locked')}</h1>
-             <p className="text-gray-400">{t('Enter your PIN to unlock')}</p>
+             <p className="text-gray-400 font-inter">{t('Enter your PIN to unlock')}</p>
            </div>
 
            <div className="flex gap-4 mb-12">
@@ -163,14 +181,14 @@ export default function TerminalPage() {
   }
 
   return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+     <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter py-10">
+      <div className="w-[375px] h-[812px] rounded-2xl shadow-2xl overflow-hidden flex flex-col relative" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)' }}>
           <div>
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
-            <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
+            <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">{activeStaff.name}</h1>
+            <p className="text-[#0066FF] font-medium font-inter text-sm mt-1">{t(activeStaff.role)}</p>
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
@@ -181,32 +199,32 @@ export default function TerminalPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50">
+        <div className="flex-1 overflow-y-auto px-4 py-6 bg-transparent">
 
-           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
-             <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+           <div className="rounded-2xl p-6 shadow-sm mb-6 text-center" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+             <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-[#34C759]/20 text-[#34C759]' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
              </div>
-             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-1">
+             <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] mb-1">
                {clockedIn ? t('Clocked In') : t('Not Clocked In')}
              </h2>
-             <p className="text-sm text-gray-500 mb-6">
+             <p className="text-sm font-inter text-gray-500 mb-6">
                 {clockedIn ? t('Your time is being tracked locally.') : t('Clock in to start your shift.')}
              </p>
 
              {clockedIn ? (
                <button
                  onClick={() => handleClockAction('CLOCK_OUT')}
-                 className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
+                 className="w-full py-4 rounded-[8px] bg-[#FF3B30]/10 text-[#FF3B30] font-bold font-inter hover:bg-[#FF3B30]/20 transition-colors"
                >
                  {t('Clock Out')}
                </button>
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
-                 className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
+                 className="w-full py-4 rounded-[8px] bg-[#0066FF] text-[#F5F5F7] font-bold font-inter shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
                >
                  {t('Clock In')}
                </button>
@@ -214,40 +232,40 @@ export default function TerminalPage() {
            </div>
 
            {/* Role-based UI rendering */}
-           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Quick Actions')}</h3>
+           <h3 className="text-sm font-bold font-outfit text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Quick Actions')}</h3>
 
            <div className="grid grid-cols-2 gap-4">
              <button
                 onClick={handleNewOrder}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]"
+                className="p-4 rounded-[16px] shadow-sm text-left active:scale-[0.98]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}
              >
-               <div className="text-blue-500 mb-2">
+               <div className="text-[#0066FF] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                </div>
-               <span className="font-medium text-gray-900">{t('New Order')}</span>
+               <span className="font-medium font-inter text-[#1D1D1F]">{t('New Order')}</span>
              </button>
 
              {activeStaff.role === 'Manager' && (
-               <button className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
+               <button className="p-4 rounded-[16px] shadow-sm text-left active:scale-[0.98]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                  <div className="text-purple-500 mb-2">
                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                  </div>
-                 <span className="font-medium text-gray-900">{t('Reports')}</span>
+                 <span className="font-medium font-inter text-[#1D1D1F]">{t('Reports')}</span>
                </button>
              )}
 
-             <button className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
-               <div className="text-orange-500 mb-2">
+             <button className="p-4 rounded-[16px] shadow-sm text-left active:scale-[0.98]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+               <div className="text-[#FF9500] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </div>
-               <span className="font-medium text-gray-900">{t('Refunds')}</span>
+               <span className="font-medium font-inter text-[#1D1D1F]">{t('Refunds')}</span>
              </button>
            </div>
         </div>
 
-        {syncing && <div className="bg-blue-50 text-blue-600 text-xs text-center py-2 border-t border-blue-100">{t('Syncing offline events...')}</div>}
+        {syncing && <div className="bg-[#0066FF]/10 text-[#0066FF] font-inter text-xs text-center py-2" style={{ borderTop: '1px solid rgba(0, 102, 255, 0.2)' }}>{t('Syncing offline events...')}</div>}
         {offlineConversion && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-xs font-bold border border-amber-200 shadow-lg animate-bounce">
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-[#FF9500]/20 text-[#FF9500] px-4 py-2 rounded-[8px] text-xs font-bold shadow-lg animate-bounce" style={{ border: '1px solid rgba(255, 149, 0, 0.4)', backdropFilter: 'blur(10px)' }}>
             {t('Using cached rates - Syncing soon')}
           </div>
         )}
