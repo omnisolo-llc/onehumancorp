@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Promoter Social Content Generator CUJ', () => {
   test('Owner adds a new product and approves Promoter social calendar', async ({ page, request }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+    test.skip(process.env.OHC_API_ONLY_E2E === 'true', 'API-only E2E tests do not run frontend routes');
     // 1. Start from login
     await page.goto('http://localhost:3000/login');
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
