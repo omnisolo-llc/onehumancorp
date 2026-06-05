@@ -414,8 +414,13 @@ if [[ -z "$NEXT_APP_ROOT" ]]; then
 fi
 
 if [[ ! -d "$NEXT_APP_ROOT/node_modules" ]]; then
-  echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules"
-  exit 1
+  if [[ -d "$workspace_root/node_modules" ]]; then
+    rm -rf "$NEXT_APP_ROOT/node_modules" 2>/dev/null || true
+    ln -s "$workspace_root/node_modules" "$NEXT_APP_ROOT/node_modules"
+  else
+    echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules or $workspace_root/node_modules"
+    exit 1
+  fi
 fi
 
 NEXT_WORK_DIR="$WORK_DIR/src/ui/next"
@@ -427,7 +432,7 @@ tar -C "$NEXT_APP_ROOT" \
   --exclude='./out' \
   --exclude='./test-results' \
   -cf - . | tar -C "$NEXT_WORK_DIR" -xf -
-ln -s "$NEXT_APP_ROOT/node_modules" "$NEXT_WORK_DIR/node_modules"
+ln -s "$workspace_root/node_modules" "$NEXT_WORK_DIR/node_modules"
 
 NEXT_PORT="$(pick_free_port)"
 export BASE_URL="http://127.0.0.1:$NEXT_PORT"
