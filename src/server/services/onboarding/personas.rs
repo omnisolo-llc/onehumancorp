@@ -23,7 +23,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
 
     journeys.push(PersonaJourney {
         name: "Maya".to_string(),
-        business_type: "Home Baker".to_string(),
+        business_type: "Home Bakery".to_string(),
         initial_state: "Custom Orders".to_string(),
         friction_points: vec!["Connecting Stripe: Requires business details Maya might not have handy (EIN/SSN). The flow must allow deferred connection or use a \"receive money later\" model.".to_string(), "Connecting Instagram: OAuth flows on mobile web can sometimes drop context or fail to redirect back to the app smoothly.".to_string()],
         steps: {
@@ -79,7 +79,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
 
     journeys.push(PersonaJourney {
         name: "Carlos".to_string(),
-        business_type: "Handyman".to_string(),
+        business_type: "Freelance Handyman".to_string(),
         initial_state: "Services & Bookings".to_string(),
         friction_points: vec!["Calendar Sync: Syncing with personal Google/Outlook calendars can be confusing. If OHC double-books him with a personal event, trust is lost.".to_string(), "Pricing Estimation: Handyman jobs are often variable. Carlos might abandon onboarding if forced to set fixed prices. The system must support \"Starting at\" or \"Request Quote\" options.".to_string()],
         steps: {
@@ -135,7 +135,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
 
     journeys.push(PersonaJourney {
         name: "Priya".to_string(),
-        business_type: "Boutique Owner".to_string(),
+        business_type: "Boutique".to_string(),
         initial_state: "Omnichannel POS".to_string(),
         friction_points: vec!["Inventory Ingestion: If barcode scanning or CSV upload fails or requires strict formatting, Priya will give up. The AI must handle messy data gracefully.".to_string(), "Hardware Provisioning: Ordering and pairing physical POS hardware (Terminal) is traditionally a high-friction process requiring network configuration.".to_string()],
         steps: {
