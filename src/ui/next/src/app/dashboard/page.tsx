@@ -428,9 +428,13 @@ export default function Dashboard() {
                 </div>
                 <button
                   className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl text-sm shadow-sm hover:bg-indigo-700 transition-colors"
-                  onClick={() => {
+                  onClick={(e) => {
                     navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=your-tenant-id&theme=light" width="320" height="400" frameborder="0"></iframe>`);
-                    alert('Embed code copied!');
+                    const originalText = e.currentTarget.innerText;
+                    e.currentTarget.innerText = 'Copied!';
+                    setTimeout(() => {
+                      if (e.currentTarget) e.currentTarget.innerText = originalText;
+                    }, 2000);
                   }}
                 >
                   Copy to Clipboard
