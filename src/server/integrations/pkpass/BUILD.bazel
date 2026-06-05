@@ -6,11 +6,11 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/common:server_common",
-        "@crate_index//:tracing",
-        "@crate_index//:serde",
-        "@crate_index//:serde_json",
-        "@crate_index//:sha1",
-        "@crate_index//:zip",
+        "@crates//:tracing",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sha1",
+        "@crates//:zip",
     ],
 )
 
