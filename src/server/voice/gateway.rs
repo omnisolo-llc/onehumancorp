@@ -133,8 +133,14 @@ async fn handle_twilio_stream(mut socket: WebSocket, state: VoiceGatewayState) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::engine::VoiceAIEdgeEngine;
-    use super::super::router::VoiceContextRouter;
+    #[cfg(ohc_bazel)]
+    use crate::voice::engine::VoiceAIEdgeEngine;
+    #[cfg(not(ohc_bazel))]
+    use crate::engine::VoiceAIEdgeEngine;
+    #[cfg(ohc_bazel)]
+    use crate::voice::router::VoiceContextRouter;
+    #[cfg(not(ohc_bazel))]
+    use crate::router::VoiceContextRouter;
     use ::server_integrations_twilio::provider::TwilioProvider;
     use ::server_integrations_twilio::client::TwilioClientWrapper;
     use async_trait::async_trait;
