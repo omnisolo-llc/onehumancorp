@@ -362,6 +362,31 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "social_post" && (
+                    <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        Social Post Draft
+                      </div>
+
+                      {req.payload.image_url && (
+                        <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-200 border border-pink-200">
+                          <img
+                            src={req.payload.image_url.startsWith('http') ? req.payload.image_url : `/api/media/${req.payload.image_url}`}
+                            alt="Social Post Visual"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+
+                      <div className="bg-white p-3 rounded-lg border border-pink-100 text-sm text-gray-800 whitespace-pre-wrap">
+                        {req.payload.draft_copy}
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "social_calendar" && (
                     <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
