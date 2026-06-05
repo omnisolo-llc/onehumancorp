@@ -2283,6 +2283,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
 
+    let translation_worker = Arc::new(crate::workers::translation_worker::TranslationWorker::new(db.clone()));
+    translation_worker.start();
+
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
@@ -2596,6 +2599,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .route("/api/v1/localization/translate", axum::routing::post(api::localization::translate_text))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
