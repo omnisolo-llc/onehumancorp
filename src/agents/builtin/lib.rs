@@ -38,6 +38,8 @@ pub mod memory_store;
 pub mod prompt_construction;
 pub mod json_store;
 pub mod memory_exhaustive_tests;
+#[cfg(test)]
+mod masking_tests;
 pub mod autogen;
 pub mod ralph_loop;
 pub mod ruflo;

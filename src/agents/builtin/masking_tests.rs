@@ -1,8 +1,8 @@
-use ohc_builtin_agent::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent::tools::recall::recall_observation_tool;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
-use ohc_builtin_agent::llm::LlmClient;
-use ohc_builtin_agent::tools::Tool;
+use crate::agent::{Agent, AgentRunConfig};
+use crate::tools::recall::recall_observation_tool;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+use crate::llm::LlmClient;
+use crate::tools::Tool;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use dashmap::DashMap;
@@ -30,8 +30,8 @@ impl LlmClient for MockLlm {
 
 struct SimpleTool;
 #[async_trait::async_trait]
-impl ohc_builtin_agent::tools::ToolExecutor for SimpleTool {
-    async fn execute(&self, _args: serde_json::Value) -> Result<String, ohc_builtin_agent::types::ToolError> {
+impl crate::tools::ToolExecutor for SimpleTool {
+    async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
         Ok("This is a very long observation that should eventually be masked if it gets old enough and is large enough.".to_string())
     }
 }
@@ -177,8 +177,8 @@ async fn test_masking_logic_depth() {
 
     struct FixedTool;
     #[async_trait::async_trait]
-    impl ohc_builtin_agent::tools::ToolExecutor for FixedTool {
-        async fn execute(&self, _args: serde_json::Value) -> Result<String, ohc_builtin_agent::types::ToolError> {
+    impl crate::tools::ToolExecutor for FixedTool {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             Ok("Long output content here".to_string())
         }
     }
