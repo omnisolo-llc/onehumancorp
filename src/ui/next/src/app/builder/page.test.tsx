@@ -63,7 +63,7 @@ describe('BuilderPage V2', () => {
     fireEvent.click(screen.getByText('Next: Details'));
 
     // Step 3
-    fireEvent.change(screen.getByPlaceholderText(/e\.g\. I run a mobile dog grooming service/i), { target: { value: 'I bake amazing custom cakes.' } });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. I run a local bakery/i), { target: { value: 'I bake amazing custom cakes.' } });
 
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,

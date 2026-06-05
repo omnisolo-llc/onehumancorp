@@ -37,7 +37,7 @@ describe('StorefrontBuilderPage', () => {
   it('enables button with valid input and calls generate', async () => {
     render(<StorefrontBuilderPage />);
 
-    const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
+    const textarea = screen.getByPlaceholderText(/e.g. I run a local bakery/i);
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
 
     const button = screen.getByText('Build My Storefront');
@@ -67,7 +67,7 @@ describe('StorefrontBuilderPage', () => {
     render(<StorefrontBuilderPage />);
 
     // Setup state manually or go through flow
-    const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
+    const textarea = screen.getByPlaceholderText(/e.g. I run a local bakery/i);
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
 
     (global.fetch as any).mockResolvedValueOnce({
