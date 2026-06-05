@@ -121,7 +121,8 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         let _lock = match lock_result {
             Ok(guard) => guard,
             Err(_) => {
-                let pg_pool = crate::db::get_pool();
+                let db = crate::db::get_global_db();
+                let pg_pool = db.pool.clone();
                 let _ = crate::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
                 self.mu.lock().await
             }

@@ -68,7 +68,8 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .unwrap_or("unknown_tenant")
                         .to_string();
                     tokio::spawn(async move {
-                        let pool = crate::db::get_pool();
+                        let db = crate::db::get_global_db();
+                        let pool = db.pool.clone();
                         let _ = ::server_telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
                         let cost_cents = (cost_usd * 100.0).round() as i64;
                         let labels_cents = serde_json::json!({
@@ -105,7 +106,8 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .unwrap_or("unknown_tenant")
                         .to_string();
                     tokio::spawn(async move {
-                        let pool = crate::db::get_pool();
+                        let db = crate::db::get_global_db();
+                        let pool = db.pool.clone();
                         let _ = ::server_telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
                         let cost_cents = (cost_usd * 100.0).round() as i64;
                         let labels_cents = serde_json::json!({
@@ -158,7 +160,8 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
             _ => {
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
-                    let pool = crate::db::get_pool();
+                    let db = crate::db::get_global_db();
+                        let pool = db.pool.clone();
                     let _ = ::server_telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
                 }
                 // Ignore other metrics in cloud

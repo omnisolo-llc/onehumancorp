@@ -38,77 +38,132 @@ impl PosService for MyPosService {
         let mut synced_count = 0;
         let mut failed_ids = Vec::new();
 
-        let pool = crate::db::get_pool();
+        let db = crate::db::get_global_db();
         let mut futures = Vec::new();
 
         for tx in req.transactions {
-            let pool_clone = pool.clone();
+            let db_clone = db.clone();
             let tenant_id_clone = tenant_id.clone();
             let client_id_clone = client_id.clone();
             let tx_id = if tx.id.is_empty() { Uuid::new_v4().to_string() } else { tx.id.clone() };
 
             futures.push(tokio::spawn(async move {
-                let mut db_tx = match pool_clone.begin().await {
-                    Ok(t) => t,
-                    Err(e) => {
-                        tracing::error!("Failed to begin transaction: {}", e);
-                        return Err(tx.id);
+                match db_clone.store {
+                    crate::db::DbStore::Sqlite(ref sqlite_pool) => {
+                        let mut db_tx = match sqlite_pool.begin().await {
+                            Ok(t) => t,
+                            Err(e) => {
+                                tracing::error!("Failed to begin transaction: {}", e);
+                                return Err(tx.id);
+                            }
+                        };
+                        let insert_res = sqlx::query(
+                            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
+                             VALUES (?, ?, ?, ?, ?, ?, 'PENDING')"
+                        )
+                        .bind(&tx_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&client_id_clone)
+                        .bind(tx.amount_cents)
+                        .bind(&tx.currency)
+                        .bind(&tx.payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        if let Err(e) = insert_res {
+                            tracing::error!("Failed to insert offline transaction: {}", e);
+                            return Err(tx.id);
+                        }
+
+                        let job_id = Uuid::new_v4().to_string();
+                        let payload = serde_json::json!({
+                            "pos_transaction_id": tx_id,
+                            "client_id": client_id_clone,
+                            "amount_cents": tx.amount_cents,
+                            "currency": tx.currency,
+                            "payload": tx.payload,
+                        }).to_string();
+
+                        let job_res = sqlx::query(
+                            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                             VALUES (?, ?, 'pos_offline_sync', ?)"
+                        )
+                        .bind(&job_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        if let Err(e) = job_res {
+                            tracing::error!("Failed to enqueue job: {}", e);
+                            return Err(tx.id);
+                        }
+
+                        if let Err(e) = db_tx.commit().await {
+                            tracing::error!("Failed to commit transaction: {}", e);
+                            return Err(tx.id);
+                        }
+                    },
+                    crate::db::DbStore::Postgres => {
+                        let mut db_tx = match db_clone.pool.begin().await {
+                            Ok(t) => t,
+                            Err(e) => {
+                                tracing::error!("Failed to begin transaction: {}", e);
+                                return Err(tx.id);
+                            }
+                        };
+                        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id_clone).await {
+                            tracing::error!("Failed to set org context: {}", e);
+                            return Err(tx.id);
+                        }
+                        let insert_res = sqlx::query(
+                            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
+                             VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
+                        )
+                        .bind(&tx_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&client_id_clone)
+                        .bind(tx.amount_cents)
+                        .bind(&tx.currency)
+                        .bind(&tx.payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        if let Err(e) = insert_res {
+                            tracing::error!("Failed to insert offline transaction: {}", e);
+                            return Err(tx.id);
+                        }
+
+                        let job_id = Uuid::new_v4().to_string();
+                        let payload = serde_json::json!({
+                            "pos_transaction_id": tx_id,
+                            "client_id": client_id_clone,
+                            "amount_cents": tx.amount_cents,
+                            "currency": tx.currency,
+                            "payload": tx.payload,
+                        }).to_string();
+
+                        let job_res = sqlx::query(
+                            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                             VALUES ($1, $2, 'pos_offline_sync', $3::jsonb)"
+                        )
+                        .bind(&job_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        if let Err(e) = job_res {
+                            tracing::error!("Failed to enqueue job: {}", e);
+                            return Err(tx.id);
+                        }
+
+                        if let Err(e) = db_tx.commit().await {
+                            tracing::error!("Failed to commit transaction: {}", e);
+                            return Err(tx.id);
+                        }
                     }
-                };
-
-                if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id_clone).await {
-                    tracing::error!("Failed to set org context: {}", e);
-                    return Err(tx.id);
                 }
-
-                let insert_res = sqlx::query(
-                    "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-                     VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
-                )
-                .bind(&tx_id)
-                .bind(&tenant_id_clone)
-                .bind(&client_id_clone)
-                .bind(tx.amount_cents)
-                .bind(&tx.currency)
-                .bind(&tx.payload)
-                .execute(&mut *db_tx)
-                .await;
-
-                if let Err(e) = insert_res {
-                    tracing::error!("Failed to insert offline transaction: {}", e);
-                    return Err(tx.id);
-                }
-
-                // Queue job
-                let job_id = Uuid::new_v4().to_string();
-                let payload = serde_json::json!({
-                    "pos_transaction_id": tx_id,
-                    "client_id": client_id_clone,
-                    "amount_cents": tx.amount_cents,
-                    "currency": tx.currency,
-                    "payload": tx.payload,
-                }).to_string();
-
-                let job_res = sqlx::query(
-                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                     VALUES ($1, $2, 'pos_offline_sync', $3::jsonb)"
-                )
-                .bind(&job_id)
-                .bind(&tenant_id_clone)
-                .bind(&payload)
-                .execute(&mut *db_tx)
-                .await;
-
-                if let Err(e) = job_res {
-                    tracing::error!("Failed to enqueue job: {}", e);
-                    return Err(tx.id);
-                }
-
-                if let Err(e) = db_tx.commit().await {
-                    tracing::error!("Failed to commit transaction: {}", e);
-                    return Err(tx.id);
-                }
-
                 Ok(())
             }));
         }
@@ -149,10 +204,9 @@ mod tests {
             return;
         }
 
-        let db = Arc::new(crate::db::DB {
-            pool: crate::db::get_pool(),
-            store: DbStore::Postgres,
-        });
+        // DB initialization handled properly in actual test run by using global db
+        crate::db::set_global_db(Arc::new(crate::db::DB::new().await.unwrap()));
+        let db = crate::db::get_global_db();
 
         let service = MyPosService::new(db.clone());
 

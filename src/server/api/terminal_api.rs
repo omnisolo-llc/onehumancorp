@@ -47,7 +47,7 @@ pub async fn get_terminal_connection_token_handler(
     info!(tenant_id = %tenant_id, "Generating Stripe Terminal Connection Token");
 
     let _ = ::server_telemetry::record_api_call_cost(
-        &crate::db::get_pool(),
+        &crate::db::get_global_db().pool,
         &tenant_id,
         "stripe_terminal_connection_token",
         0.05
@@ -87,7 +87,7 @@ pub async fn create_payment_intent_handler(
     info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
 
     let _ = ::server_telemetry::record_api_call_cost(
-        &crate::db::get_pool(),
+        &crate::db::get_global_db().pool,
         &tenant_id,
         "stripe_terminal_payment_intent",
         0.05

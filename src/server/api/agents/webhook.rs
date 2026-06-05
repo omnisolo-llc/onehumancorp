@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use uuid::Uuid;
-use crate::db::get_pool;
+use crate::db::get_global_db;
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
@@ -115,26 +115,48 @@ async fn handle_webhook(
     // Save to inbox_messages
     let id = Uuid::new_v4().to_string();
     let status = "pending";
-    let pool = get_pool();
-    let mut tx = match pool.begin().await {
-        Ok(t) => t,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
-    };
-    if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+    let db = get_global_db();
+    match db.store {
+        crate::db::DbStore::Sqlite(ref sqlite_pool) => {
+            let mut tx = match sqlite_pool.begin().await {
+                Ok(t) => t,
+                Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+            };
+            let _ = sqlx::query(
+                "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, ?, ?)"
+            )
+            .bind(&id)
+            .bind(&payload.tenant_id)
+            .bind(&payload.source)
+            .bind(&payload.message)
+            .bind(&draft_reply)
+            .bind(&status)
+            .execute(&mut *tx)
+            .await;
+            let _ = tx.commit().await;
+        },
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(t) => t,
+                Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+            };
+            if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+            }
+            let _ = sqlx::query(
+                "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+            )
+            .bind(&id)
+            .bind(&payload.tenant_id)
+            .bind(&payload.source)
+            .bind(&payload.message)
+            .bind(&draft_reply)
+            .bind(&status)
+            .execute(&mut *tx)
+            .await;
+            let _ = tx.commit().await;
+        }
     }
-    let _ = sqlx::query(
-        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
-    )
-    .bind(&id)
-    .bind(&payload.tenant_id)
-    .bind(&payload.source)
-    .bind(&payload.message)
-    .bind(&draft_reply)
-    .bind(&status)
-    .execute(&mut *tx)
-    .await;
-    let _ = tx.commit().await;
 
     match orchestrator.execute_action(
         DepartmentType::CustomerSuccess,

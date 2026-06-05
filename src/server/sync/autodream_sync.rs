@@ -263,7 +263,7 @@ mod tests {
         .expect("Database URL or operation failed in test");
 
         let db = Arc::new(DB {
-            pool: crate::db::get_pool(), // Fake PG pool
+            pool: crate::db::get_global_db().pool.clone(), // Fake PG pool
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 

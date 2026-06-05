@@ -6,7 +6,8 @@ use serde_json::json;
 #[tokio::test]
 async fn test_config_sync_unauthenticated() {
     if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-    let pool = crate::db::get_pool();
+    crate::db::set_global_db(std::sync::Arc::new(crate::db::DB::new().await.unwrap()));
+    let pool = crate::db::get_global_db().pool.clone();
     let server = ConfigSyncServer::new(pool);
 
     let req = McpInvokeRequest {
@@ -25,7 +26,8 @@ async fn test_config_sync_unauthenticated() {
 #[tokio::test]
 async fn test_config_sync_invalid_tool_id() {
     if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-    let pool = crate::db::get_pool();
+    crate::db::set_global_db(std::sync::Arc::new(crate::db::DB::new().await.unwrap()));
+    let pool = crate::db::get_global_db().pool.clone();
     let server = ConfigSyncServer::new(pool);
 
     let req = McpInvokeRequest {
@@ -46,7 +48,8 @@ fn test_config_sync_push_too_large() {
     temp_env::with_vars(vec![("MAX_CONFIG_SIZE", Some("100"))], || {
         tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
             if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-            let pool = crate::db::get_pool();
+            crate::db::set_global_db(std::sync::Arc::new(crate::db::DB::new().await.unwrap()));
+    let pool = crate::db::get_global_db().pool.clone();
             let server = ConfigSyncServer::new(pool);
 
             let large_payload = "x".repeat(200);
@@ -74,7 +77,8 @@ fn test_config_sync_push_too_large() {
 #[tokio::test]
 async fn test_config_sync_push_and_get() {
     if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-    let pool = crate::db::get_pool();
+    crate::db::set_global_db(std::sync::Arc::new(crate::db::DB::new().await.unwrap()));
+    let pool = crate::db::get_global_db().pool.clone();
 
     // Migrate db to have the user_configs table
     sqlx::query(

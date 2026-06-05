@@ -24,7 +24,7 @@ async fn test_kv_get_set_list_delete_standalone() {
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(DB {
-            pool: crate::db::get_pool(), // dummy pg pool
+            pool: crate::db::get_global_db().pool.clone(), // dummy pg pool
             store: DbStore::Sqlite(pool),
         });
 
@@ -90,7 +90,7 @@ async fn test_kv_get_set_list_delete_standalone() {
 #[tokio::test]
 async fn test_tenant_id_parsing() {
     let db = Arc::new(DB {
-        pool: crate::db::get_pool(),
+        pool: crate::db::get_global_db().pool.clone(),
         store: DbStore::Postgres,
     });
     let server = KvMcpServer::new(db, None);
@@ -109,7 +109,7 @@ async fn test_tenant_id_parsing() {
 async fn test_redis_unconfigured() {
     with_var("OHC_STANDALONE_MODE", Some("false"), || async {
         let db = Arc::new(DB {
-            pool: crate::db::get_pool(),
+            pool: crate::db::get_global_db().pool.clone(),
             store: DbStore::Postgres,
         });
 

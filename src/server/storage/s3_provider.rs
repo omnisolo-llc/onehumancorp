@@ -96,7 +96,7 @@ impl Provider for S3Provider {
         }
 
         let _ = ::server_telemetry::record_storage_rw_cost(
-            &crate::db::get_pool(),
+            &crate::db::get_global_db().pool,
             t_id,
             "write",
             reported_size as i64

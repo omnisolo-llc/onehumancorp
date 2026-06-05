@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::db::get_pool;
+use crate::db::{get_global_db, DbStore};
 use sqlx::Row;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -107,104 +107,180 @@ impl BookingService {
     }
 
     pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-
-        let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
-
-        let services = rows.into_iter().map(|row| Service {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            title: row.get("title"),
-            description: row.get("description"),
-            price_cents: row.get("price_cents"),
-        }).collect();
+        let db = get_global_db();
+        let services = match db.store {
+            DbStore::Sqlite(ref sqlite_pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .map_err(|e: sqlx::Error| e.to_string())?;
+                rows.into_iter().map(|row: sqlx::sqlite::SqliteRow| Service {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    price_cents: row.get("price_cents"),
+                }).collect()
+            },
+            DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e: sqlx::Error| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e: sqlx::Error| e.to_string())?;
+                let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e: sqlx::Error| e.to_string())?;
+                tx.commit().await.map_err(|e: sqlx::Error| e.to_string())?;
+                rows.into_iter().map(|row: sqlx::postgres::PgRow| Service {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    title: row.get("title"),
+                    description: row.get("description"),
+                    price_cents: row.get("price_cents"),
+                }).collect()
+            }
+        };
 
         Ok(services)
     }
 
     pub async fn upsert_service(service: Service) -> Result<(), String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
+        let db = crate::db::get_global_db();
+        let metadata = "{}";
 
-        sqlx::query(
-            "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
-             VALUES ($1, $2, $3, $4, $5, 'booking') \
-             ON CONFLICT (id) DO UPDATE SET \
-             title = EXCLUDED.title, \
-             description = EXCLUDED.description, \
-             price_cents = EXCLUDED.price_cents, \
-             updated_at = CURRENT_TIMESTAMP"
-        )
-        .bind(&service.id)
-        .bind(&service.tenant_id)
-        .bind(&service.title)
-        .bind(&service.description)
-        .bind(service.price_cents)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+        match db.store {
+            crate::db::DbStore::Sqlite(ref sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
+                     VALUES (?, ?, ?, ?, ?, 'booking') \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents, \
+                     updated_at = CURRENT_TIMESTAMP"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
-        // Phase 1 Dual-Write to new unified schema (Offerings table)
-        let metadata = "{}"; // Empty JSONB for service
-        let _ = sqlx::query(
-            "INSERT INTO offerings (id, tenant_id, type, title, description, price_cents, metadata) \
-             VALUES ($1, $2, 'service', $3, $4, $5, $6) \
-             ON CONFLICT (id) DO UPDATE SET \
-             title = EXCLUDED.title, \
-             description = EXCLUDED.description, \
-             price_cents = EXCLUDED.price_cents, \
-             metadata = EXCLUDED.metadata"
-        )
-        .bind(&service.id)
-        .bind(&service.tenant_id)
-        .bind(&service.title)
-        .bind(&service.description)
-        .bind(service.price_cents)
-        .bind(metadata)
-        .execute(&mut *tx)
-        .await;
+                sqlx::query(
+                    "INSERT INTO offerings (id, tenant_id, type, title, description, price_cents, metadata) \
+                     VALUES (?, ?, 'service', ?, ?, ?, ?) \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents, \
+                     metadata = EXCLUDED.metadata"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .bind(metadata)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            },
+            crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
+                     VALUES ($1, $2, $3, $4, $5, 'booking') \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents, \
+                     updated_at = CURRENT_TIMESTAMP"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "INSERT INTO offerings (id, tenant_id, type, title, description, price_cents, metadata) \
+                     VALUES ($1, $2, 'service', $3, $4, $5, $6) \
+                     ON CONFLICT (id) DO UPDATE SET \
+                     title = EXCLUDED.title, \
+                     description = EXCLUDED.description, \
+                     price_cents = EXCLUDED.price_cents, \
+                     metadata = EXCLUDED.metadata"
+                )
+                .bind(&service.id)
+                .bind(&service.tenant_id)
+                .bind(&service.title)
+                .bind(&service.description)
+                .bind(service.price_cents)
+                .bind(metadata)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
         Ok(())
     }
 
     pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let db = crate::db::get_global_db();
 
-        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
-
-        let bookings = rows.into_iter().map(|row| BookingRecord {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            customer_id: row.get("customer_id"),
-            product_id: row.get("product_id"),
-            start_time: row.get("start_time"),
-            end_time: row.get("end_time"),
-            status: row.get("status"),
-        }).collect();
+        let bookings = match db.store {
+            crate::db::DbStore::Sqlite(ref sqlite_pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = ?")
+                    .bind(tenant_id)
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                rows.into_iter().map(|row| BookingRecord {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    customer_id: row.get("customer_id"),
+                    product_id: row.get("product_id"),
+                    start_time: row.get("start_time"),
+                    end_time: row.get("end_time"),
+                    status: row.get("status"),
+                }).collect()
+            },
+            crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+                rows.into_iter().map(|row| BookingRecord {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    customer_id: row.get("customer_id"),
+                    product_id: row.get("product_id"),
+                    start_time: row.get("start_time"),
+                    end_time: row.get("end_time"),
+                    status: row.get("status"),
+                }).collect()
+            }
+        };
 
         Ok(bookings)
     }
 
     pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
+        let db = crate::db::get_global_db();
 
         let now = chrono::Utc::now();
         if booking.start_time.signed_duration_since(now).num_hours() < 48 {
@@ -213,38 +289,80 @@ impl BookingService {
             });
         }
 
-        sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7)"
-        )
-        .bind(&booking.id)
-        .bind(&booking.tenant_id)
-        .bind(&booking.customer_id)
-        .bind(&booking.product_id)
-        .bind(booking.start_time)
-        .bind(booking.end_time)
-        .bind(&booking.status)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        // Phase 1 Dual-Write to new unified schema (Transaction table)
         let amount_cents = 0; // Default amount since it's not present in BookingRecord
-        let _ = sqlx::query(
-            "INSERT INTO transactions (id, tenant_id, offering_id, customer_id, type, status, amount_cents) \
-             VALUES ($1, $2, $3, $4, 'booking', $5, $6) \
-             ON CONFLICT (id) DO NOTHING"
-        )
-        .bind(&booking.id)
-        .bind(&booking.tenant_id)
-        .bind(&booking.product_id)
-        .bind(&booking.customer_id)
-        .bind(&booking.status)
-        .bind(amount_cents)
-        .execute(&mut *tx)
-        .await;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
+        match db.store {
+            crate::db::DbStore::Sqlite(ref sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.product_id)
+                .bind(booking.start_time)
+                .bind(booking.end_time)
+                .bind(&booking.status)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "INSERT INTO transactions (id, tenant_id, offering_id, customer_id, type, status, amount_cents) \
+                     VALUES (?, ?, ?, ?, 'booking', ?, ?) \
+                     ON CONFLICT (id) DO NOTHING"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.product_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.status)
+                .bind(amount_cents)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            },
+            crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.product_id)
+                .bind(booking.start_time)
+                .bind(booking.end_time)
+                .bind(&booking.status)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    "INSERT INTO transactions (id, tenant_id, offering_id, customer_id, type, status, amount_cents) \
+                     VALUES ($1, $2, $3, $4, 'booking', $5, $6) \
+                     ON CONFLICT (id) DO NOTHING"
+                )
+                .bind(&booking.id)
+                .bind(&booking.tenant_id)
+                .bind(&booking.product_id)
+                .bind(&booking.customer_id)
+                .bind(&booking.status)
+                .bind(amount_cents)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
         Ok(())
     }
 }
@@ -354,22 +472,27 @@ impl BookingEngineService for NativeBookingService {
         let _product_id = req.product_id;
         let date_str = req.date;
 
-        let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let db = get_global_db();
+        let mut tx = db.pool.begin().await.map_err(|e: sqlx::Error| Status::internal(e.to_string()))?;
         crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
             .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+            .map_err(|e: sqlx::Error| Status::internal(e.to_string()))?;
 
         // Simplified query: find bookings overlapping with this date
         // In reality, you'd check specific business hours. We'll return dummy slots filtered by DB.
-        let rows = sqlx::query(
+        let rows = match db.store {
+            DbStore::Sqlite(_) => sqlx::query(
+            "SELECT start_time, end_time FROM bookings WHERE tenant_id = ? AND date(start_time) = date(?)"
+            ),
+            DbStore::Postgres => sqlx::query(
             "SELECT start_time, end_time FROM bookings WHERE tenant_id = $1 AND start_time::date = $2::date"
-        )
+            ),
+        }
         .bind(&tenant_id)
         .bind(&date_str)
         .fetch_all(&mut *tx)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e: sqlx::Error| Status::internal(e.to_string()))?;
 
         let _ = tx.commit().await;
 
@@ -461,22 +584,34 @@ impl BookingEngineService for NativeBookingService {
         }
 
         // DB check inside transaction
-        let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let db = get_global_db();
+        let mut tx = db.pool.begin().await.map_err(|e: sqlx::Error| Status::internal(e.to_string()))?;
         crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
             .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+            .map_err(|e: sqlx::Error| Status::internal(e.to_string()))?;
 
         // Check overlaps
-        let overlap_count: i64 = sqlx::query_scalar(
+        let overlap_count: i64 = match db.store {
+            DbStore::Sqlite(_) => sqlx::query_scalar(
+            "SELECT COUNT(*) FROM bookings WHERE tenant_id = ? AND start_time < ? AND end_time > ?"
+            )
+            .bind(&tenant_id)
+            .bind(&end_time)
+            .bind(&start_time)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e: sqlx::Error| Status::internal(e.to_string()))?,
+
+            DbStore::Postgres => sqlx::query_scalar(
             "SELECT COUNT(*) FROM bookings WHERE tenant_id = $1 AND start_time < $3 AND end_time > $2"
-        )
-        .bind(&tenant_id)
-        .bind(&start_time)
-        .bind(&end_time)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+            )
+            .bind(&tenant_id)
+            .bind(&start_time)
+            .bind(&end_time)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e: sqlx::Error| Status::internal(e.to_string()))?,
+        };
 
         if overlap_count > 0 {
             let _ = tx.rollback().await;
@@ -485,10 +620,16 @@ impl BookingEngineService for NativeBookingService {
 
         let booking_id = Uuid::new_v4().to_string();
 
-        sqlx::query(
+        match db.store {
+            DbStore::Sqlite(_) => sqlx::query(
+            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+             VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+            ),
+            DbStore::Postgres => sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
-        )
+            ),
+        }
         .bind(&booking_id)
         .bind(&tenant_id)
         .bind(&customer_id)
@@ -497,9 +638,9 @@ impl BookingEngineService for NativeBookingService {
         .bind(end_time)
         .execute(&mut *tx)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e: sqlx::Error| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e: sqlx::Error| Status::internal(e.to_string()))?;
 
         // Generate dummy stripe link
         let deposit_stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", booking_id.replace("-", ""));

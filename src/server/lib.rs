@@ -2246,6 +2246,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
+    crate::db::set_global_db(db.clone());
     db.run_migrations().await?;
 
     let grpc_port = std::env::var("OHC_GRPC_PORT")
@@ -2608,9 +2609,9 @@ async fn generate_manychat_draft_handler() -> axum::response::Response {
 
 async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let pool = crate::db::get_pool();
+    let db = crate::db::get_global_db();
 
-    let mut tx = match pool.begin().await {
+    let mut tx = match db.pool.begin().await {
         Ok(t) => t,
         Err(e) => {
             ::server_telemetry::record_error_signal("Failed to begin transaction");
@@ -2632,7 +2633,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     {
         Ok(rows) => {
             let _ = tx.commit().await;
-            let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+            let messages: Vec<serde_json::Value> = rows.into_iter().map(|row: sqlx::postgres::PgRow| {
                 use sqlx::Row;
                 let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
                 let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();

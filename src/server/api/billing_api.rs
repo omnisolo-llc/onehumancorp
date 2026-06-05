@@ -151,7 +151,8 @@ pub async fn cost_dashboard_handler(
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
 
-    let pool = crate::db::get_pool();
+    let db = crate::db::get_global_db();
+    let pool = db.pool.clone();
     let trend = crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &tenant_id).await;
 
     Json(CostDashboardResponse {

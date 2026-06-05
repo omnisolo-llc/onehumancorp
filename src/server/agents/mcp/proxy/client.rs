@@ -91,7 +91,7 @@ impl LocalProxyClient {
                                             });
 
                                             let _ = ::server_telemetry::buffer_metric(
-                                                &crate::db::get_pool(),
+                                                &crate::db::get_global_db().pool,
                                                 "sandbox_violation_event",
                                                 "counter",
                                                 1.0,
