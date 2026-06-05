@@ -4,6 +4,8 @@ import { test, expect } from './fixtures';
 currentAppSmoke('onboarding');
 
 test('onboarding state resume works', async ({ page }) => {
+  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+
   // Mock localStorage for the wizard state to persist across page reloads
   await page.addInitScript(() => {
     window.localStorage.setItem('tenant_id', 'test-tenant-123');
