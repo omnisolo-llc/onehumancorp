@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import { useRouter } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -68,6 +69,7 @@ function statusTone(status?: string) {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
