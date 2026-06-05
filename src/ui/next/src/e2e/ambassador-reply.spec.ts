@@ -1,4 +1,4 @@
-import { test, expect } from '../../../../e2e/fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Ambassador Auto-Responder CUJ', () => {
   test('Owner connects Meta Graph API and approves Ambassador drafted reply', async ({ page, request }) => {
