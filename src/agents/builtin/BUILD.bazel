@@ -284,6 +284,9 @@ rust_test(
     }),
     deps = [
         ":ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "//src/agents/builtin/llm:llm",
+        "//src/agents/builtin/tools:tools",
         "@crates//:dashmap",
         "@crates//:serde_json",
         "@crates//:tokio",
