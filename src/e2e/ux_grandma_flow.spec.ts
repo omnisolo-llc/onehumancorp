@@ -14,7 +14,7 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
     await page.getByRole('button', { name: '?' }).click();
     await expect(page.locator('#quick-actions-hint')).toBeVisible();
     await page.getByText('Connect Tools').click();
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' })).toBeVisible();
   });
 
   test('login setup action opens the guided setup process', async ({ page }) => {
