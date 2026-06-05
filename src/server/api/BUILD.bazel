@@ -22,6 +22,8 @@ exports_files(
         "telemetry.rs",
         "catalog.rs",
         "local_seo.rs",
+        "translation.rs",
+        "translation_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -50,6 +52,8 @@ rust_library(
         "telemetry.rs",
         "catalog.rs",
         "local_seo.rs",
+        "translation.rs",
+        "translation_test.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
