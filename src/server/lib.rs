@@ -2281,11 +2281,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
-<<<<<<< HEAD
-=======
     let parse_intake_worker = crate::workers::department_workers::parse_intake_worker::ParseIntakeWorker::new(db.clone());
     parse_intake_worker.start();
->>>>>>> c79c8413 (feat: Implement Autonomous Client Intake Questionnaire Engine)
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
