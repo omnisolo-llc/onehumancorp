@@ -6,6 +6,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
+import { MilestoneAlert } from "../components/MilestoneAlert";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 
 type DashboardMetrics = {
@@ -213,6 +214,8 @@ export default function Dashboard() {
       <div className="mb-6">
         <OneTapReferral tenantId={tenantId()} source="dashboard" />
       </div>
+
+      <MilestoneAlert pendingOrders={metrics.pending_orders || 0} tenantId={tenantId()} />
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         <UnifiedAgentFeed />
