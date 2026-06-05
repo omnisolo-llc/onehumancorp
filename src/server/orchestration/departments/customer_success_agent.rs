@@ -43,6 +43,30 @@ impl Department for CustomerSuccessAgent {
             ActionRisk::DraftForReview
         };
 
+
+        if event.event_type == "tenant.order.fulfillment_ready" {
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
+
+            let description = format!("Send review request to {} for delivered order", customer_name);
+            let action_payload = serde_json::json!({
+                "feature_type": "review_request",
+                "order_id": order_id,
+                "customer_name": customer_name,
+                "message": format!("Hi {}, we hope you loved your recent order! Please consider leaving us a review.", customer_name)
+            });
+
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                description,
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                action_payload,
+            ).await.map(|_| ())?;
+
+            return Ok(());
+        }
+
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;
             let original = payload.get("original_payload");

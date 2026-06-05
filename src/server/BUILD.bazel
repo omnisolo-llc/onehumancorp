@@ -52,6 +52,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:staff_mesh.rs",
     "//src/server/api:telemetry.rs",
     "//src/server/api:catalog.rs",
+    "//src/server/api:local_seo.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",

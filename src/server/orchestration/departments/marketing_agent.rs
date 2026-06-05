@@ -25,12 +25,55 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.review.received".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
 
+
+
+        if event.event_type == "tenant.review.received" {
+            let reviewer_name = event.payload.get("reviewer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let review_id = event.payload.get("review_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let star_rating = event.payload.get("star_rating").and_then(|v| v.as_i64()).unwrap_or(5);
+            let comment = event.payload.get("comment").and_then(|v| v.as_str()).unwrap_or("");
+            let platform = event.payload.get("platform").and_then(|v| v.as_str()).unwrap_or("Google");
+
+            let prompt = format!("Draft a polite and professional reply to a {} star review from {} on {}. Review comment: '{}'. Keep it concise and under 3 sentences.", star_rating, reviewer_name, platform, comment);
+
+            let draft_reply = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
+                if provider == "minimax" {
+                    let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Thank you for the review, {}!", reviewer_name))
+                } else {
+                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Thank you for the review, {}!", reviewer_name))
+                }
+            } else {
+                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Thank you for the review, {}!", reviewer_name))
+            };
+
+            let payload = serde_json::json!({
+                "feature_type": "review_reply",
+                "review_id": review_id,
+                "reviewer_name": reviewer_name,
+                "star_rating": star_rating,
+                "draft_copy": draft_reply,
+                "comment": comment
+            });
+
+            if let Ok(pool) = sqlx::postgres::PgPoolOptions::new().connect(&std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string())).await {
+                let _ = sqlx::query("UPDATE ohc_local_reviews SET ai_draft_reply = $1 WHERE tenant_id = $2 AND review_id = $3")
+                    .bind(&draft_reply)
+                    .bind(&event.tenant_id)
+                    .bind(&review_id)
+                    .execute(&pool).await;
+            }
+
+            let description = format!("Draft reply for a {} star review from {}", star_rating, reviewer_name);
+            return self.orchestrator.execute_action(DepartmentType::Marketing, description, event.tenant_id.clone(), risk, payload).await.map(|_| ());
+        }
 
         if event.event_type == "tenant.product.created" {
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");
