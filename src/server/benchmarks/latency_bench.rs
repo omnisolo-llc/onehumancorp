@@ -666,26 +666,34 @@ pub async fn bench_advisory_insights_latency() {
     for _ in 0..iterations {
         let start = std::time::Instant::now();
 
+        let pool_1 = sqlite_pool.clone();
+        let tenant_id_1 = tenant_id.clone();
+        let pool_2 = sqlite_pool.clone();
+        let tenant_id_2 = tenant_id.clone();
+
         let (_org_res, _active_orders_res) = tokio::join!(
-            async {
+            tokio::spawn(async move {
                 sqlx::query_as::<_, (String, String)>(
                     "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
                 )
-                .bind(&tenant_id)
-                .fetch_optional(&sqlite_pool)
+                .bind(&tenant_id_1)
+                .fetch_optional(&pool_1)
                 .await
                 .unwrap()
-            },
-            async {
+            }),
+            tokio::spawn(async move {
                 sqlx::query_scalar::<_, i64>(
                     "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
                 )
-                .bind(&tenant_id)
-                .fetch_one(&sqlite_pool)
+                .bind(&tenant_id_2)
+                .fetch_one(&pool_2)
                 .await
                 .unwrap()
-            }
+            })
         );
+
+        let _org_res = _org_res.unwrap();
+        let _active_orders_res = _active_orders_res.unwrap();
 
         fetch_times_sqlite.push(start.elapsed().as_micros());
     }
