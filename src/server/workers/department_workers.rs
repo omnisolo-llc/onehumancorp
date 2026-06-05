@@ -91,7 +91,11 @@ pub mod pos_sync_worker {
                         .execute(&mut *tx)
                         .await;
 
+<<<<<<< HEAD
+                    let _ = tx.commit().await;
+=======
                     if let Err(e) = tx.commit().await { tracing::error!("Failed to commit tx: {}", e); }
+>>>>>>> c79c8413 (feat: Implement Autonomous Client Intake Questionnaire Engine)
 
                     // Process the job
                     let result = Self::process_job(&pool, &tenant_id, &payload).await;
@@ -134,7 +138,11 @@ pub mod pos_sync_worker {
                         }
                     }
 
+<<<<<<< HEAD
+                    let _ = tx.commit().await;
+=======
                     if let Err(e) = tx.commit().await { tracing::error!("Failed to commit tx: {}", e); }
+>>>>>>> c79c8413 (feat: Implement Autonomous Client Intake Questionnaire Engine)
                 }
             });
         }
@@ -1410,6 +1418,8 @@ mod tests {
         } // end of test_customer_success_worker_draft_reply
     } // end of mod tests
 }
+<<<<<<< HEAD
+=======
 pub mod parse_intake_worker {
     use std::sync::Arc;
     use crate::db::DB;
@@ -1502,7 +1512,7 @@ pub mod parse_intake_worker {
                             answers_raw = "100 sqft, Oak".to_string(); // fallback if db is empty for some reason
                         }
 
-                        let extracted = crate::agents::llm::invoke_llm("Extract requirements", answers_raw).await.unwrap_or_else(|_| serde_json::json!({
+                        let extracted = crate::agents::builtin::llm::invoke_llm("Extract requirements", answers_raw).await.unwrap_or_else(|_| serde_json::json!({
                             "summary": "Customer needs custom wood flooring install (fallback).",
                             "dimensions": "100 sqft",
                             "material_preferences": "Oak",
@@ -1538,3 +1548,4 @@ pub mod parse_intake_worker {
         }
     }
 }
+>>>>>>> c79c8413 (feat: Implement Autonomous Client Intake Questionnaire Engine)

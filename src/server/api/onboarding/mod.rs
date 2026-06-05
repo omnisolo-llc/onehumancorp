@@ -10,8 +10,8 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
-
-        .route("/intake/questions", get(get_intake_questions)).route("/intake", post(process_intake_handler))
+        .route("/intake/questions", get(get_intake_questions))
+        .route("/intake", post(process_intake_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
