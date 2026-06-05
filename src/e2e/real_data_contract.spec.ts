@@ -62,7 +62,7 @@ function patternsForFile(file: string) {
 
 test.describe('real data contract', () => {
   test.skip(
-    !fs.existsSync(path.join(repoRoot, 'src/server/lib.rs')),
+    process.env.OHC_API_ONLY_E2E === 'true' || !fs.existsSync(path.join(repoRoot, 'src/server/lib.rs')),
     'Production source files are not available in this Bazel Playwright runfiles tree.',
   );
 
