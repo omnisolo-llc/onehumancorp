@@ -1,4 +1,65 @@
 
+use std::sync::Arc;
+use crate::db::DB;
+
+pub struct PosSyncWorker {
+    db: Arc<DB>,
+}
+
+impl PosSyncWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self { db }
+    }
+
+    pub async fn handle(&self, job: crate::queue::Job) -> Result<Result<(), String>, String> {
+        let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
+        let transaction_id = payload["transaction_id"].as_str().unwrap();
+
+        let mut tx = match self.db.pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                tracing::error!("Failed to begin transaction: {}", e);
+                return Err("Failed to begin db transaction".into());
+            }
+        };
+
+        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &job.tenant_id).await {
+            tracing::error!("Failed to set org context: {}", e);
+            return Err("Failed to set org context".into());
+        }
+
+        sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED' WHERE id = $1")
+            .bind(transaction_id)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+        if let Some(mutation) = payload.get("mutation") {
+            let product_id = mutation["product_id"].as_str().unwrap();
+            let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
+
+            sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
+                .bind(quantity_deducted)
+                .bind(product_id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+        }
+
+        sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")
+            .bind(&job.tenant_id)
+            .bind(&job.payload)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+        tx.commit().await.unwrap();
+
+        Ok(Ok(()))
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -33,16 +94,19 @@ mod tests {
             }
         });
 
-        let job = OHCJob {
+        let job = crate::queue::Job {
             id: "job-1".to_string(),
             tenant_id: "tenant-worker-test".to_string(),
             job_type: "offline_pos_sync".to_string(),
             payload: job_payload.to_string(),
             status: "PROCESSING".to_string(),
             retry_count: 0,
+            max_retries: 3,
             next_retry_at: Utc::now(),
+            locked_until: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            parent_task_id: "".to_string(),
         };
 
         let handle = worker.handle(job);
