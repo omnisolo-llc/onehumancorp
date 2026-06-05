@@ -432,7 +432,7 @@ export default function OnboardingWizard() {
 
                   {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}</p>}
+                    {validationError}}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
@@ -497,7 +497,7 @@ export default function OnboardingWizard() {
 
                   {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}</p>}
+                    {validationError}}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
@@ -565,7 +565,7 @@ export default function OnboardingWizard() {
 
                   {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}</p>}
+                    {validationError}}</p>}
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
@@ -634,7 +634,7 @@ export default function OnboardingWizard() {
                   />
                   {validationErrors.businessName && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.businessName}</p>}
+                      {validationErrors.businessName}}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
@@ -653,7 +653,7 @@ export default function OnboardingWizard() {
                   />
                   {validationErrors.businessType && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.businessType}</p>}
+                      {validationErrors.businessType}}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
@@ -694,14 +694,14 @@ export default function OnboardingWizard() {
                       />
                       {validationErrors.firstProductPrice && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.firstProductPrice}</p>}
+                      {validationErrors.firstProductPrice}}</p>}
                    </div>
                 </div>
               </div>
 
               {validationError && <p className="text-[#FF3B30] text-sm font-medium mb-4 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    {validationError}</p>}
+                    {validationError}}</p>}
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => {
@@ -795,7 +795,7 @@ export default function OnboardingWizard() {
                       />
                       {validationErrors.adminName && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.adminName}</p>}
+                      {validationErrors.adminName}}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
@@ -808,7 +808,7 @@ export default function OnboardingWizard() {
                       />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.adminEmail}</p>}
+                      {validationErrors.adminEmail}}</p>}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
@@ -821,7 +821,7 @@ export default function OnboardingWizard() {
                       />
                       {validationErrors.adminPassword && <p className="text-[#FF3B30] text-sm font-medium mt-2 animate-fade-in bg-[#FF3B30]/10 p-3 rounded-[8px] flex items-center gap-2">
                       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      {validationErrors.adminPassword}</p>}
+                      {validationErrors.adminPassword}}</p>}
                     </div>
                   </div>
                 </div>

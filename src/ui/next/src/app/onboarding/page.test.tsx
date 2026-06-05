@@ -36,7 +36,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     expect(screen.getByText("Welcome to OHC")).toBeInTheDocument();
-    const button = await screen.findByText(/Start Onboarding/i);
+    const button = await screen.findByRole('button', { name: /Start Onboarding/i });
     expect(button).not.toBeDisabled();
   });
 
@@ -59,8 +59,11 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    useOnboardingStore.setState({ step: 1, chatStep: 1, businessName: 'Maya Bakery' });
     render(<OnboardingWizard />);
+
+    // Step 0 -> Step 1
+    const startBtn = await screen.findByText(/Start Onboarding/i);
+    await user.click(startBtn);
 
     // Chat Step 1 - Use Enter Key
     const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
@@ -84,12 +87,14 @@ describe('OnboardingWizard', () => {
   it('Handles validation failures when fields are empty', async () => {
     const user = userEvent.setup({ delay: null });
 
-    useOnboardingStore.setState({ step: 1, chatStep: 1, businessName: 'Maya Bakery' });
     render(<OnboardingWizard />);
+
+    // Step 0 -> Step 1
+    const startBtn = await screen.findByText(/Start Onboarding/i);
+    await user.click(startBtn);
 
     // Chat Step 1 - Enter Key with short name
     const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.clear(nameInput);
     await user.type(nameInput, 'Ma{Enter}');
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
 
@@ -153,8 +158,11 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    useOnboardingStore.setState({ step: 1, chatStep: 1, businessName: 'Maya Bakery' });
     render(<OnboardingWizard />);
+
+    // Step 0 -> Step 1
+    const startBtn = await screen.findByText(/Start Onboarding/i);
+    await user.click(startBtn);
 
     // Chat Step 1
     const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
@@ -241,8 +249,11 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    useOnboardingStore.setState({ step: 1, chatStep: 1, businessName: 'Maya Bakery' });
     render(<OnboardingWizard />);
+
+    // Step 0 -> Step 1
+    const startBtn = await screen.findByText(/Start Onboarding/i);
+    await user.click(startBtn);
 
     // Chat Step 1
     const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
@@ -280,6 +291,10 @@ describe('OnboardingWizard', () => {
     const user = userEvent.setup({ delay: null });
 
     // Set initial state to Step 3 to test start API directly
+    act(() => {
+      useOnboardingStore.setState({ step: 3 });
+    });
+
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
@@ -289,6 +304,7 @@ describe('OnboardingWizard', () => {
     });
 
     useOnboardingStore.setState({ step: 3, chatStep: 3, businessName: 'Maya Bakery', businessType: 'Bakery', categories: ['food'], firstProductName: 'Cake', firstProductPrice: '20' });
+
     render(<OnboardingWizard />);
     const launchButton = await screen.findByRole('button', { name: /Launch Store/i }, { timeout: 3000 });
 
@@ -319,14 +335,13 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    useOnboardingStore.setState({ step: 1, chatStep: 1, businessName: 'Maya Bakery' });
     render(<OnboardingWizard />);
 
-    const nextButton = await screen.findByRole('button', { name: /Next/i });
+    // Step 0 -> Step 1
+    const startBtn = await screen.findByText(/Start Onboarding/i);
+    await user.click(startBtn);
 
-    const nameInput = await screen.findByPlaceholderText(/Maya's Custom Cakes/i);
-    await user.clear(nameInput);
-    await user.type(nameInput, 'A');
+    const nextButton = await screen.findByRole('button', { name: /Next/i });
 
     await user.click(nextButton);
 
@@ -348,15 +363,16 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    useOnboardingStore.setState({ step: 2, chatStep: 3, businessName: 'Maya Bakery', businessType: 'Bakery', categories: ['food'], firstProductName: 'Cake', firstProductPrice: '20' });
     render(<OnboardingWizard />);
+
+    const startBtn = await screen.findByText(/Start Onboarding/i);
+    await user.click(startBtn);
 
     const continueButton = await screen.findByRole('button', { name: /Continue/i }, { timeout: 3000 });
     expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
 
-    const priceInput = await screen.findByDisplayValue('20', {}, { timeout: 3000 });
-    await user.clear(priceInput);
-    await user.type(priceInput, 'abc');
+    const priceInput = screen.getByDisplayValue('abc');
+    await user.type(priceInput, 'd'); // Type 'd' to trigger the onChange validation.
 
     await user.click(continueButton);
 
@@ -386,8 +402,10 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    useOnboardingStore.setState({ step: 2, chatStep: 3, businessName: 'Maya Bakery', businessType: 'Bakery', categories: ['food'], firstProductName: 'Cake', firstProductPrice: '20' });
     render(<OnboardingWizard />);
+
+    const startBtn = await screen.findByText(/Start Onboarding/i);
+    await user.click(startBtn);
 
     const continueButton = await screen.findByRole('button', { name: /Continue/i }, { timeout: 3000 });
 
