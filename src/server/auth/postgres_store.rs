@@ -20,7 +20,6 @@ use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
-
 #[allow(dead_code)]
 pub struct PgUserRepository {
     pool: PgPool,
