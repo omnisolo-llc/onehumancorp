@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom'
-import { vi, beforeAll, afterAll } from 'vitest'
+import { vi } from 'vitest'
 
 // Mock next/navigation
 vi.mock('next/navigation', () => {
@@ -157,58 +157,3 @@ global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
     }
     return originalFetch2(url, init);
 };
-
-// Mock console.error to silence expected errors during tests
-const originalConsoleError = console.error;
-beforeAll(() => {
-  vi.spyOn(console, 'error').mockImplementation((...args) => {
-    // Stringify all arguments to catch errors passed as objects
-    const errorStr = args.map(arg => {
-        if (arg instanceof Error) return arg.message + ' ' + arg.stack;
-        if (typeof arg === 'object') return JSON.stringify(arg);
-        return String(arg);
-    }).join(' ');
-
-    if (
-      errorStr.includes('Error generating referral link') ||
-      errorStr.includes('Backend returned an error') ||
-      errorStr.includes('Error recording referral conversion') ||
-      errorStr.includes('Error recording referral click') ||
-      errorStr.includes('Failed to fetch videos from backend') ||
-      errorStr.includes('Error generating team invite') ||
-      errorStr.includes('Error generating the discount share link') ||
-      errorStr.includes('Error generating discount share link: Error: Network error') ||
-      errorStr.includes('Error generating discount share link') ||
-      errorStr.includes('Failed to generate discount share link') ||
-      errorStr.includes('Error generating abandoned cart message') ||
-      errorStr.includes('Error generating customer referral campaign message') ||
-      errorStr.includes('Error generating review campaign message') ||
-      errorStr.includes('Error checking milestones') ||
-      errorStr.includes('Error joining waitlist') ||
-      errorStr.includes('Error generating promotion') ||
-      errorStr.includes('Error generating social proof snippet') ||
-      errorStr.includes('Failed to record referral click') ||
-      errorStr.includes('Failed to record referral conversion') ||
-      errorStr.includes('Failed to generate referral link') ||
-      errorStr.includes('Error generating the discount share link: Error: Network error') ||
-      errorStr.includes('Product create backend unavailable') ||
-      errorStr.includes('Auto-catalog service unavailable') ||
-      errorStr.includes('Error fetching milestone card') ||
-      errorStr.includes('Network error') ||
-      errorStr.includes('fetch failed')
-    ) {
-      return; // Suppress expected network errors in tests
-    }
-
-    // Also suppress React act() warnings if they appear
-    if (typeof args[0] === 'string' && args[0].includes('Warning: A component is changing an uncontrolled input')) {
-        return;
-    }
-
-    originalConsoleError(...args);
-  });
-});
-
-afterAll(() => {
-  vi.restoreAllMocks();
-});

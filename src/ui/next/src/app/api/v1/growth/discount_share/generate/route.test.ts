@@ -66,7 +66,6 @@ describe('POST /api/v1/growth/discount_share/generate', () => {
 
     it('should handle fetch errors gracefully', async () => {
         (global.fetch as import("vitest").Mock).mockRejectedValueOnce(new Error('Network error'));
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         const req = new Request('http://localhost/api/v1/growth/discount_share/generate', {
             method: 'POST',
