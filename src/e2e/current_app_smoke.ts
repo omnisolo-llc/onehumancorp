@@ -32,5 +32,5 @@ export function currentAppSmoke(label: string) {
     const ogCard = await request.get('http://localhost:3005/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
   });
-}
   });
+}
