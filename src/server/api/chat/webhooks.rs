@@ -10,7 +10,7 @@ use crate::domain::chat::channel::ChannelType;
 use crate::services::chat::ingestion::IngestionService;
 use crate::services::chat::auto_reply::AutoReplyEngine;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct IncomingWebhookPayload {
     pub channel_identifier: String,
     pub content: String,
@@ -26,7 +26,7 @@ pub struct WebhookResponse {
 
 pub fn chat_routes() -> Router {
     Router::new()
-        .route("/webhooks/chat/:org_id/:channel_type", post(handle_incoming_chat))
+        .route("/webhooks/chat/{org_id}/{channel_type}", post(handle_incoming_chat))
 }
 
 async fn handle_incoming_chat(

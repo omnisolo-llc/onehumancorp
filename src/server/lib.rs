@@ -3629,6 +3629,7 @@ async fn create_ui_bom_item_handler(
         }))
         .merge(webhook_router)
         .merge(meta_webhook_router)
+        .merge(api::chat::webhooks::chat_routes())
         .merge(health_router)
         .fallback(api_not_found_handler);
 
