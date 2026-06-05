@@ -67,4 +67,23 @@ test.describe('Help Center and Contextual Help', () => {
      // Ensure page loaded
      await expect(page.locator('h1', { hasText: 'KAIROS Orchestration' })).toBeVisible();
   });
+
+  test('Persona: Business Owner plays a video tutorial', async ({ page }) => {
+    await page.goto('/help');
+
+    // Search for a video (assuming "How to set up" exists from api)
+    // Actually, just click the first video in the video section
+    await page.waitForSelector('text=Video Tutorials');
+    const firstVideo = page.locator('div.aspect-\\[9\\/16\\]').first();
+    await expect(firstVideo).toBeVisible();
+    await firstVideo.click();
+
+    // Verify video modal opens
+    const closeBtn = page.locator('button[aria-label="Close video"]');
+    await expect(closeBtn).toBeVisible();
+
+    // Close video modal
+    await closeBtn.click();
+    await expect(closeBtn).not.toBeVisible();
+  });
 });

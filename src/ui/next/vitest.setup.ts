@@ -157,3 +157,19 @@ global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
     }
     return originalFetch2(url, init);
 };
+
+
+// Mock console.error to suppress specific known errors during tests
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const msg = typeof args[0] === 'string' ? args[0] : '';
+  if (
+    msg.includes('Error recording referral') ||
+    msg.includes('Error generating') ||
+    msg.includes('Backend returned an error') ||
+    msg.includes('Failed to fetch videos from backend')
+  ) {
+    return;
+  }
+  originalConsoleError(...args);
+};
