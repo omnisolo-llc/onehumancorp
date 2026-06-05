@@ -1,0 +1,30 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "translation",
+    srcs = [
+        "translation_api.go",
+        "translation_mesh_service.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/services/translation",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+        "//src/proto:translation_go_proto",
+    ],
+)
+
+go_test(
+    name = "translation_test",
+    srcs = [
+        "translation_api_test.go",
+        "translation_mesh_service_test.go",
+    ],
+    embed = [":translation"],
+    deps = [
+        "//src/proto:translation_go_proto",
+    ],
+)

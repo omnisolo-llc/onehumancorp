@@ -1,4 +1,5 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_go//proto:def.bzl", "go_proto_library")
 load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 
@@ -249,5 +250,26 @@ proto_rust_library(
     name = "delivery",
     proto = ":delivery_proto",
     use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "translation_mesh_proto",
+    srcs = ["translation_mesh.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "translation_mesh",
+    proto = ":translation_mesh_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "translation_go_proto",
+    compilers = ["@rules_go//proto:go_grpc"],
+    importpath = "github.com/onehumancorp/mono/src/proto/translation",
+    proto = ":translation_mesh_proto",
     visibility = ["//visibility:public"],
 )
