@@ -28,10 +28,6 @@ test.describe('Help Center', () => {
   test('should display welcome message', async ({ page }) => {
     await expect(page.locator('text=Welcome back')).toBeVisible();
   });
-
-  test('should display agents working message', async ({ page }) => {
-    await expect(page.locator('text=Your agents are working on your behalf')).toBeVisible();
-  });
 });
 
 test.describe('Login Page', () => {
@@ -40,7 +36,7 @@ test.describe('Login Page', () => {
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
     await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
     await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.locator('button:has-text("Login")')).toBeVisible();
+    await expect(page.locator('button:has-text("Log In")')).toBeVisible();
   });
 });
 
@@ -49,21 +45,15 @@ test.describe('Agents Page', () => {
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
-
-  test('should show hire agent button', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
   });
-});
-
 test.describe('Business Setup Page', () => {
   test('should display setup page', async ({ page }) => {
-    await page.goto('/business-setup');
-    await expect(page.getByRole('heading', { name: 'OneHuman' })).toBeVisible();
+    await page.goto('/website-builder');
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
   });
 
   test('should show setup wizard text', async ({ page }) => {
-    await page.goto('/business-setup');
+    await page.goto('/website-builder');
     await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
   });
 });

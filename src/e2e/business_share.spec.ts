@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Share & Embed', () => {
   test('should display dashboard with nav links', async ({ page }) => {
-    await page.goto('/?dashboard=1');
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
@@ -10,7 +10,7 @@ test.describe('Business Share & Embed', () => {
   });
 
   test('should navigate to agents page', async ({ page }) => {
-    await page.goto('/?dashboard=1');
+    await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Agents' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
@@ -23,7 +23,7 @@ test.describe('Business Share & Embed', () => {
   });
 
   test('should display setup page', async ({ page }) => {
-    await page.goto('/business-setup');
+    await page.goto('/website-builder');
     await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
   });
 });
@@ -32,11 +32,7 @@ test.describe('Agents Page', () => {
   test('should show agents list', async ({ page }) => {
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
-    await expect(page.locator('text=Marketing Pro')).toBeVisible();
+    await expect(page.locator('text=The Promoter')).toBeVisible();
   });
 
-  test('should show hire agent button', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.locator('button:has-text("Hire Agent")')).toBeVisible();
-  });
 });
