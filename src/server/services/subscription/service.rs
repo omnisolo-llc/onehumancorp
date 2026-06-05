@@ -1,4 +1,4 @@
-use ::server_domain::subscription::{SubscriptionPlan, Subscription, SubscriptionStatus};
+use ::server_domain::subscription::{SubscriptionPlan, Subscriber, SubscriptionStatus};
 use sqlx::PgPool as DbPool;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -17,13 +17,13 @@ impl SubscriptionService {
         let plan = SubscriptionPlan {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.to_string(),
-            product_id: product_id.to_string(),
+            name: product_id.to_string(),
+            description: "".to_string(),
+            amount: 0,
+            currency: "usd".to_string(),
             interval: interval.to_string(),
-            interval_count,
-            status: "active".to_string(),
-            discount_percentage,
+            active: true,
             created_at: Utc::now().timestamp(),
-            updated_at: Utc::now().timestamp(),
         };
 
         let db = self.db.clone();
@@ -34,11 +34,11 @@ impl SubscriptionService {
         ")
         .bind(&plan.id)
         .bind(&plan.tenant_id)
-        .bind(&plan.product_id)
+        .bind(product_id)
         .bind(&plan.interval)
-        .bind(plan.interval_count)
-        .bind(&plan.status)
-        .bind(plan.discount_percentage)
+        .bind(interval_count)
+        .bind("active")
+        .bind(discount_percentage)
         .execute(&*db)
         .await
         .map_err(|e| e.to_string())?;
@@ -46,19 +46,16 @@ impl SubscriptionService {
         Ok(plan)
     }
 
-    pub async fn subscribe_customer(&self, tenant_id: &str, plan_id: &str, customer_id: &str) -> Result<Subscription, String> {
-        let subscription = Subscription {
+    pub async fn subscribe_customer(&self, tenant_id: &str, plan_id: &str, customer_id: &str) -> Result<Subscriber, String> {
+        let subscription = Subscriber {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.to_string(),
             plan_id: plan_id.to_string(),
             customer_id: customer_id.to_string(),
+            stripe_subscription_id: "".to_string(),
             status: SubscriptionStatus::Active,
-            current_period_start: Utc::now().timestamp(),
             current_period_end: Utc::now().timestamp() + 30 * 24 * 60 * 60, // 30 days
-            cancel_at_period_end: false,
-            canceled_at: None,
             created_at: Utc::now().timestamp(),
-            updated_at: Utc::now().timestamp(),
         };
 
         let db = self.db.clone();
@@ -67,7 +64,7 @@ impl SubscriptionService {
             SubscriptionStatus::Active => "active",
             SubscriptionStatus::Canceled => "canceled",
             SubscriptionStatus::PastDue => "past_due",
-            SubscriptionStatus::Paused => "paused",
+            _ => "active",
         };
 
         sqlx::query("
@@ -79,9 +76,9 @@ impl SubscriptionService {
         .bind(&subscription.customer_id)
         .bind(&subscription.plan_id)
         .bind(status_str)
-        .bind(subscription.current_period_start as f64)
+        .bind(Utc::now().timestamp() as f64)
         .bind(subscription.current_period_end as f64)
-        .bind(subscription.cancel_at_period_end)
+        .bind(false)
         .execute(&*db)
         .await
         .map_err(|e| e.to_string())?;
@@ -103,9 +100,6 @@ impl SubscriptionService {
             .execute(&*db)
             .await
             .map_err(|e| e.to_string())?;
-
-        // In a real application, this would trigger an event or queue a job
-        // to send an SMS via CRM agent.
 
         Ok(())
     }
