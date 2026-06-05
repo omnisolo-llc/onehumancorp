@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use ohc_builtin_agent::agent::{Agent, AgentRunConfig, AgentEvent};
-    use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage, ToolError};
-    use ohc_builtin_agent::llm::LlmClient;
-    use ohc_builtin_agent::tools::{Tool, ToolExecutor};
+    use crate::agent::{Agent, AgentRunConfig, AgentEvent};
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage, ToolError};
+    use crate::llm::LlmClient;
+    use crate::tools::{Tool, ToolExecutor};
     use std::sync::Arc;
 
     struct CompactionMockLlmClient {
@@ -221,7 +221,7 @@ mod tests {
         msg_with_tool_result.role = Role::Tool;
         msg_with_tool_result.tool_results = vec![ToolResult {
             tool_call_id: "test_call_id".to_string(),
-            content: "THIS IS RAW REDUNDANT OUTPUT THAT SHOULD BE DISCARDED".to_string(),
+            content: "A".repeat(1000),
             error: "".to_string(),
         }];
 
@@ -246,8 +246,8 @@ mod tests {
         let compaction_req = &requests[1];
 
         let prompt = &compaction_req.messages[0].content;
-        assert!(prompt.contains("Success (raw output discarded during compaction)"));
-        assert!(!prompt.contains("THIS IS RAW REDUNDANT OUTPUT THAT SHOULD BE DISCARDED"));
+        assert!(prompt.contains("[Observation Masked")); // Actually we apply masker
+        assert!(!prompt.contains(&"A".repeat(1000)));
     }
 
     #[tokio::test]

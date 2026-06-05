@@ -20,8 +20,14 @@ pub async fn compact_context(
     let middle_end = messages.len() - 3;
 
     if middle_end > middle_start {
+
+        // 1. Mask raw tool outputs using JetBrains Observation Masking before sending to the LLM
+        // so it doesn't blow up the context window while compacting.
+        let mut middle_messages = messages[middle_start..middle_end].to_vec();
+        crate::observation_masking::apply_observation_masking(&mut middle_messages, 0, 512);
+
         let mut middle_text = String::new();
-        for m in &messages[middle_start..middle_end] {
+        for m in &middle_messages {
             middle_text.push_str(&format!("[Role: {}]\n", m.role));
             if !m.content.is_empty() {
                 middle_text.push_str(&m.content);
@@ -36,9 +42,13 @@ pub async fn compact_context(
             if !m.tool_results.is_empty() {
                 middle_text.push_str("Tool Results:\n");
                 for tr in &m.tool_results {
-                    // Discard redundant/raw tool outputs, but preserve errors if any
+                    // Use the masked content directly
                     let status = if tr.error.is_empty() {
-                        "Success (raw output discarded during compaction)"
+                        if tr.content.is_empty() {
+                            "Success (no output)"
+                        } else {
+                            &tr.content
+                        }
                     } else {
                         &tr.error
                     };

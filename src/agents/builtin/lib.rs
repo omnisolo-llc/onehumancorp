@@ -28,6 +28,10 @@ pub mod observation_masking;
 pub mod observability;
 pub mod verification_loops;
 pub mod agent;
+pub mod compaction;
+#[cfg(test)]
+mod compaction_tests;
+
 pub mod tools_gating;
 pub mod human_in_loop;
 
