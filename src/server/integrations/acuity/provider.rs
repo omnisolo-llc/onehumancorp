@@ -36,7 +36,7 @@ impl AcuityProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::integrations::acuity::provider::AcuityProvider;
+    use crate::provider::AcuityProvider;
 
     #[test]
     fn test_acuity_provider_metadata() {

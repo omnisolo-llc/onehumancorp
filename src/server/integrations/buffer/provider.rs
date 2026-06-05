@@ -36,7 +36,7 @@ impl BufferProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::integrations::buffer::provider::BufferProvider;
+    use crate::provider::BufferProvider;
 
     #[test]
     fn test_buffer_provider_metadata() {
