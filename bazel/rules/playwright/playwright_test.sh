@@ -414,8 +414,13 @@ if [[ -z "$NEXT_APP_ROOT" ]]; then
 fi
 
 if [[ ! -d "$NEXT_APP_ROOT/node_modules" ]]; then
-  echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules"
-  exit 1
+  if [[ -d "$workspace_root/node_modules" ]]; then
+    echo "[playwright] Next node_modules not found in $NEXT_APP_ROOT/node_modules, falling back to $workspace_root/node_modules"
+    ln -s "$workspace_root/node_modules" "$NEXT_APP_ROOT/node_modules" || true
+  else
+    echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules and fallback failed"
+    exit 1
+  fi
 fi
 
 NEXT_WORK_DIR="$WORK_DIR/src/ui/next"
