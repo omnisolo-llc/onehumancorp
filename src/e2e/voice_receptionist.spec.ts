@@ -10,9 +10,6 @@ test.describe('Voice Receptionist E2E', () => {
         // Connect to WebSocket via page
         await page.goto('about:blank');
 
-        // This is a unit-test-like Playwright test because the UI for this might not exist yet
-        // and the requirement specifies simulating an inbound WS connection.
-
         const result = await page.evaluate(async () => {
             return new Promise((resolve, reject) => {
                 const ws = new WebSocket('ws://localhost:8000/api/v1/voice/twilio-stream');
