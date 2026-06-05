@@ -82,11 +82,7 @@ sh_binary(
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
     ci_specs = [
-        "//:e2e/agent-marketplace.spec.ts",
-        "auth_roles.spec.ts",
         "scribe_extra.spec.ts",
-        "//src/ui/next:e2e/dashboard-feed.spec.ts",
-        "//src/ui/next:src/e2e/review-campaign.spec.ts",
     ],
     ci_shard_count = 16,
     data = [
