@@ -13,7 +13,7 @@ test.describe('Grandmother UX Fixes E2E tests', () => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/integrations');
 
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Social Media Accounts' })).toBeVisible();
     await expect(page.getByText('Manage all your social media messages and posts in one place.')).toBeVisible();
   });

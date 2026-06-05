@@ -14,7 +14,7 @@ test.describe('Unified Agent Feed', () => {
     await page.goto('/dashboard');
 
     // Verify we are on dashboard and the Unified Agent Feed is present
-    await expect(page.locator('button', { hasText: 'Proposals' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agent Proposals' })).toBeVisible();
 
     // We expect seeded approvals to show up because of our seed data updates
     await expect(page.getByText('Draft email for review')).toBeVisible();
