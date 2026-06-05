@@ -96,6 +96,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     }
   });
 
+
   test('Customer requests a service and Owner approves AI quote draft from Unified Agent Feed', async ({ page }) => {
     // Navigate to dashboard directly assuming cookie is mocked or we can intercept login check
     await page.goto('/dashboard');
@@ -133,7 +134,8 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
 
     // Verify the booking inquiry card appears
     await expect(page.getByText('Booking Inquiry: @Customer')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('I need help fixing a leaky pipe in my kitchen sink.')).toBeVisible();
+    // Using a more specific locator for the inquiry
+    await expect(page.locator('div.italic', { hasText: 'I need help fixing a leaky pipe in my kitchen sink.' })).toBeVisible();
     await expect(page.getByText('Hi there! I can certainly help with that.')).toBeVisible();
     await expect(page.getByText('Friday 9:00 AM')).toBeVisible();
 
@@ -143,4 +145,5 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     // Validate empty state or removal (optimistic update)
     await expect(page.getByText('Booking Inquiry: @Customer')).toBeHidden();
   });
+
 });
