@@ -531,6 +531,8 @@ export default function ApprovalInbox({
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
+                        : req.payload?.feature_type === "social_calendar"
+                        ? "Schedule"
                         : "Approve"}
                     </button>
                   </div>
