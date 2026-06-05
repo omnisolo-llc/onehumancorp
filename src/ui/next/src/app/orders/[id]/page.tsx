@@ -126,7 +126,7 @@ export default function OrderDetailsPage() {
               <span>$45.00</span>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+            <div className=\"mt-6 pt-4 border-t border-gray-100 flex justify-end\">
               <button
                 onClick={sendReceipt}
                 disabled={sendingReceipt || receiptSent}
@@ -288,8 +288,8 @@ export default function OrderDetailsPage() {
         </div>
       </main>
 
-      <div className="mt-8 text-center pb-8">
-        <a href="https://ohc.store/join?ref=my-store" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity">⚡ Powered by OHC - Start your business today</a>
+      <div className=\"mt-8 text-center pb-8\">
+        <a href=\"https://ohc.store/join?ref=my-store\" target=\"_blank\" rel=\"noopener noreferrer\" className=\"text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity\">⚡ Powered by OHC - Start your business today</a>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `

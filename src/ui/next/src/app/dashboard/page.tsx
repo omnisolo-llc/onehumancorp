@@ -275,7 +275,7 @@ export default function Dashboard() {
               <button
                 onClick={() => {
                   if (window.confirm('Upgrade to Pro to access Advanced AI Insights?')) {
-                    window.location.href = '/pricing';
+                    router.push('/pricing');
                   }
                 }}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
