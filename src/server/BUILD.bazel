@@ -301,6 +301,7 @@ rust_library(
         "//src/server/common:server_common",
         "//src/server/config:server_config",
         "//src/server/harness:server_harness",
+        "@crates//:urlencoding",
         "//src/server/integrations/ayrshare:server_integrations_ayrshare",
         "//src/server/integrations/cal_com:server_integrations_cal_com",
         "//src/server/integrations/calendly:server_integrations_calendly",
