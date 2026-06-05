@@ -129,9 +129,34 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/viral-metrics", get(handle_viral_metrics))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ViralMetricsResponse {
+    pub invites_sent: f64,
+    pub invites_accepted: f64,
+    pub k_factor: f64,
+}
+
+async fn handle_viral_metrics(
+    Extension(state): Extension<GrowthState>,
+) -> Result<Json<ViralMetricsResponse>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    let invites_sent = tracker.get_total_invites_count().await.unwrap_or(0) as f64;
+    let invites_accepted = tracker.get_total_accepted_invites_count().await.unwrap_or(0) as f64;
+    let k_factor = if invites_sent > 0.0 { invites_accepted / invites_sent } else { 0.0 };
+
+    Ok(Json(ViralMetricsResponse {
+        invites_sent,
+        invites_accepted,
+        k_factor,
+    }))
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
@@ -846,6 +871,52 @@ async fn handle_create_team_invite(
 mod tests {
     use super::*;
     use axum::extract::Extension;
+    use axum::response::IntoResponse;
+
+    #[tokio::test]
+    async fn test_viral_metrics_endpoint() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub };
+
+        // Instead of testing a mock tracker, test the DB directly
+        let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(pool.clone()));
+        let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+        // Delete any existing data to start clean
+        let _ = sqlx::query("DELETE FROM team_invites").execute(&pool).await;
+
+        let res = handle_viral_metrics(Extension(state.clone())).await;
+        assert!(res.is_ok());
+        let res_json = res.unwrap().0;
+        assert_eq!(res_json.k_factor, 0.0);
+
+        // Record a sent invite
+        let _ = tracker.record_invite("test-team", "user1", "user2").await;
+
+        let res2 = handle_viral_metrics(Extension(state.clone())).await;
+        let res_json2 = res2.unwrap().0;
+        assert_eq!(res_json2.invites_sent, 1.0);
+        assert_eq!(res_json2.k_factor, 0.0);
+
+        // Let's find the ID
+        let row = sqlx::query("SELECT id FROM team_invites LIMIT 1").fetch_one(&pool).await.unwrap();
+        let id: String = sqlx::Row::get(&row, "id");
+
+        // Accept the invite
+        let _ = tracker.accept_invite(&id).await;
+
+        let res3 = handle_viral_metrics(Extension(state.clone())).await;
+        let res_json3 = res3.unwrap().0;
+        assert_eq!(res_json3.invites_accepted, 1.0);
+        assert_eq!(res_json3.k_factor, 1.0);
+    }
     use axum::Json;
     use axum::extract::Query;
     use sqlx::PgPool;
@@ -871,7 +942,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub, };
 
         let req = CreateTeamInviteRequest {
             team_id: "team-test-direct".to_string(),
@@ -940,7 +1012,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), };
 
         // Insert dummy referral
         let ref_id = "ref-code-123";
@@ -990,7 +1063,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), };
 
         // Insert dummy referral
         let ref_id = "test-ref-123";
@@ -1031,7 +1105,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://ohc.app/test".to_string(),
@@ -1056,7 +1131,8 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), };
 
         let req = GenerateCustomerReferralRequest { store_name: Some("Maya Cakes".to_string()) };
         let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
@@ -1073,7 +1149,8 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), };
 
         let req = GenerateCartRequest { customer_name: Some("Bob".to_string()), cart_value: Some("$100.00".to_string()) };
         let res = handle_generate_cart(Extension(state.clone()), Json(req)).await;
@@ -1095,7 +1172,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), };
 
         // Insert dummy invite
         let invite_id = "test-invite-123";
@@ -1130,7 +1208,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let _ = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), };
 
         sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")
             .bind("funnel-1").bind("user1").bind("step1")

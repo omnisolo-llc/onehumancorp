@@ -15,6 +15,9 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await expect(page.getByRole('heading', { name: 'Grow Your Team' })).toBeVisible();
     await expect(page.getByText('Bridge your local sovereignty with cloud-native collaboration.')).toBeVisible();
 
+    // Select an asset to share to trigger the bridge hook
+    await page.locator('#asset-select').selectOption('market_audit');
+
     // Click the invite button
     await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
 
@@ -22,8 +25,8 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).toBeVisible();
     await expect(page.getByText('Share this link to provision a temporary multi-tenant context')).toBeVisible();
 
-    // Verify loading spinner (optional) and then the generated link
-    await expect(page.locator('#cloud-bridge-invite-link')).toHaveValue(/https:\/\/ohc\.app\/invite\/.*/);
+    // Verify the generated link contains the asset parameter
+    await expect(page.locator('#cloud-bridge-invite-link')).toHaveValue(/https:\/\/ohc\.app\/invite\/.*\?asset=market_audit/);
 
     // Test copy button interaction
     await page.getByRole('button', { name: 'Copy Link' }).click();

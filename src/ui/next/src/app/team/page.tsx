@@ -33,6 +33,8 @@ export default function TeamPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://ohc.app/invite/team-default');
   const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState('none');
+  const [viralMetrics, setViralMetrics] = useState<{ k_factor: number, invites_sent: number, invites_accepted: number } | null>(null);
 
   const handleGenerateInvite = async () => {
     setIsGeneratingInvite(true);
@@ -51,13 +53,30 @@ export default function TeamPage() {
       });
 
       if (res.ok) {
-        setInviteLink(`https://ohc.app/invite/${encodeURIComponent(tenantId)}`);
+        let finalLink = `https://ohc.app/invite/${encodeURIComponent(tenantId)}`;
+        if (selectedAsset !== 'none') {
+            finalLink += `?asset=${encodeURIComponent(selectedAsset)}`;
+        }
+        setInviteLink(finalLink);
+        fetchViralMetrics();
       }
     } catch (e) {
       console.error("Failed to generate trackable team invite", e);
     } finally {
       setIsGeneratingInvite(false);
       setShowInviteModal(true);
+    }
+  };
+
+  const fetchViralMetrics = async () => {
+    try {
+      const response = await fetch('/api/v1/growth/viral-metrics');
+      if (response.ok) {
+        const data = await response.json();
+        setViralMetrics(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch viral metrics", error);
     }
   };
 
@@ -77,6 +96,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     fetchApprovals();
+    fetchViralMetrics();
 
     if (typeof window !== 'undefined' && window.localStorage) {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'team-default';
@@ -157,6 +177,22 @@ export default function TeamPage() {
             <div className="relative z-10">
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Grow Your Team</h2>
               <p className="text-sm text-gray-600 mt-1 mb-3">Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space.</p>
+
+              <div className="mb-3">
+                <label htmlFor="asset-select" className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">Asset to Share (The Hook)</label>
+                <select
+                  id="asset-select"
+                  value={selectedAsset}
+                  onChange={(e) => setSelectedAsset(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="none">None (General Invite)</option>
+                  <option value="market_audit">Market Research Audit</option>
+                  <option value="prd">Product Requirements Document</option>
+                  <option value="financial_projections">Financial Projections</option>
+                </select>
+              </div>
+
               <button
                 onClick={handleGenerateInvite}
                 disabled={isGeneratingInvite}
@@ -164,6 +200,13 @@ export default function TeamPage() {
               >
                 {isGeneratingInvite ? 'Generating...' : 'Invite to Cloud Team'}
               </button>
+
+              {viralMetrics && (
+                  <div className="mt-3 text-xs flex justify-between items-center text-gray-500 bg-white/50 px-3 py-2 rounded-lg border border-gray-100">
+                      <span><strong>Viral Metrics:</strong> K-Factor <span className="font-mono text-blue-600 font-bold">{viralMetrics.k_factor.toFixed(2)}</span></span>
+                      <span>Sent: {viralMetrics.invites_sent}</span>
+                  </div>
+              )}
             </div>
           </div>
 
