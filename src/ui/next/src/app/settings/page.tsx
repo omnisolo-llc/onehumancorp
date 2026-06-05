@@ -271,6 +271,22 @@ export default function SettingsPage() {
 
         <section className="app-panel">
           <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Payments</div>
+              <div className="app-list-subtitle">Configure your payment gateways.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+             <WalkthroughTarget id="stripe-setup-btn">
+               <button className="app-button primary w-fit" type="button" onClick={() => alert('Connect Stripe dialog would appear here.')}>
+                 Connect Stripe
+               </button>
+             </WalkthroughTarget>
+          </div>
+        </section>
+
+        <section className="app-panel">
+          <div className="app-panel-header">
             <div className="app-panel-title">Security</div>
           </div>
           <div className="app-panel-body grid gap-3">

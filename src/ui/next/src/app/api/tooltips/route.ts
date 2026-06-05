@@ -24,6 +24,9 @@ export async function GET() {
     "visitors-tooltip": "Number of unique visitors who viewed your store today.",
     "agents-tab-tooltip": "Hire and manage your AI assistants here.",
     "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC.",
-    "api-docs-tooltip": "Direct API access is only for custom integrations."
+    "api-docs-tooltip": "Direct API access is only for custom integrations.",
+    "view-orders-btn-tooltip": "View and manage all your customer orders.",
+    "open-inbox-btn-tooltip": "Read and reply to messages from your customers.",
+    "help-back-btn-tooltip": "Return to the main Help Center page."
   });
 }

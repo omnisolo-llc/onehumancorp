@@ -293,7 +293,9 @@ export default function Dashboard() {
                 <div className="app-panel-title">Operations Map</div>
                 <div className="app-list-subtitle">Live database state across the store workflow.</div>
               </div>
-              <Link href="/orders" className="app-button">Open Orders</Link>
+              <WithTooltip id="view-orders-btn-tooltip" defaultText="View and manage all your customer orders.">
+                <Link href="/orders" className="app-button">Open Orders</Link>
+              </WithTooltip>
             </div>
             <div className="app-panel-body">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -393,7 +395,9 @@ export default function Dashboard() {
           <div className="app-panel">
             <div className="app-panel-header">
               <div className="app-panel-title">Inbox Activity</div>
-              <Link href="/inbox" className="app-button">Open Inbox</Link>
+              <WithTooltip id="open-inbox-btn-tooltip" defaultText="Read and reply to messages from your customers.">
+                <Link href="/inbox" className="app-button">Open Inbox</Link>
+              </WithTooltip>
             </div>
             <div className="app-list">
               {messages.length === 0 ? (

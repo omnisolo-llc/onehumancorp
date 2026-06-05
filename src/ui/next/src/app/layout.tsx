@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   description: 'Automated storefront builder',
 };
 
+// TODO: Migrate Help Center and Walkthrough features to Tauri app (src/ui/tauri) as per OHC Architecture.
 export default function RootLayout({
   children,
 }: {
