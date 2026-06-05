@@ -10,9 +10,7 @@ static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = Once
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
-static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOnboardingStateResponse>> = OnceLock::new();
 
-#[derive(Clone)]
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
@@ -31,12 +29,7 @@ impl MyDashboardService {
             return Ok(agents);
         }
 
-        let mut agents = self.hub.get_agents().await.to_vec();
-        if mobile_optimized {
-            for agent in agents.iter_mut() {
-                agent.name = String::new();
-            }
-        }
+        let agents = self.hub.get_agents().await.to_vec();
         cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
         Ok(agents)
     }
@@ -273,28 +266,21 @@ impl DashboardService for MyDashboardService {
         let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
-        let self_clone1 = self.clone();
-        let self_clone2 = self.clone();
-        let self_clone3 = self.clone();
-        let self_clone4 = self.clone();
-        let self_clone5 = self.clone();
-        let self_clone6 = self.clone();
-
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::spawn(async move { self_clone1.fetch_agents(org_id_agents, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone2.fetch_meetings().await }),
-            tokio::spawn(async move { self_clone3.fetch_cost_summary(org_id4).await }),
-            tokio::spawn(async move { self_clone4.fetch_products(org_id1, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone5.fetch_orders(org_id2, mobile_optimized).await }),
-            tokio::spawn(async move { self_clone6.fetch_org(org_id3, mobile_optimized).await })
+            self.fetch_agents(org_id_agents, mobile_optimized),
+            self.fetch_meetings(),
+            self.fetch_cost_summary(org_id4),
+            self.fetch_products(org_id1, mobile_optimized),
+            self.fetch_orders(org_id2, mobile_optimized),
+            self.fetch_org(org_id3, mobile_optimized)
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
 
 
@@ -484,12 +470,6 @@ impl DashboardService for MyDashboardService {
             ));
         }
 
-        let cache_key = format!("onboarding_state_{}", org_id);
-        let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-        if let Some(cached) = cache.get(&cache_key).await {
-            return Ok(Response::new(cached));
-        }
-
         use sqlx::Row;
         let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
             .bind(&org_id)
@@ -501,17 +481,14 @@ impl DashboardService for MyDashboardService {
             let state_json: serde_json::Value = row
                 .try_get("state_json")
                 .unwrap_or_else(|_| serde_json::json!({}));
-
-            let response = GetOnboardingStateResponse {
+            Ok(Response::new(GetOnboardingStateResponse {
                 state: Some(OnboardingState {
                     organization_id: org_id,
                     user_id: row.try_get("user_id").unwrap_or_default(),
                     current_step: row.try_get("current_step").unwrap_or_default(),
                     state_json: state_json.to_string(),
                 }),
-            };
-            cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
-            Ok(Response::new(response))
+            }))
         } else {
             Err(Status::not_found("Onboarding state not found"))
         }
@@ -580,23 +557,15 @@ impl DashboardService for MyDashboardService {
         }).await;
 
         match update_res {
-            Ok(Ok(_)) => {
-                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
-            },
+            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse { success: true })),
             Ok(Err(e)) => {
                 tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
-                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
             Err(_) => {
                 tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
-                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
         }

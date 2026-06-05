@@ -847,11 +847,6 @@ impl AgentService for AgentServiceImpl {
                         content,
                         ..Default::default()
                     },
-                    AgentEvent::CostUpdate { total_cost_usd } => RunTaskEvent {
-                        r#type: EventType::TextChunk as i32,
-                        content: format!("[Cost Updated] Session Cost: ${:.6}\n", total_cost_usd),
-                        ..Default::default()
-                    },
                     AgentEvent::ToolCall {
                         name,
                         args_json,

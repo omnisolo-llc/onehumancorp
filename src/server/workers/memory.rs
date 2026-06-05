@@ -159,7 +159,7 @@ mod tests {
                 tenant_id TEXT NOT NULL,
                 agent_id TEXT,
                 content TEXT NOT NULL,
-                embedding TEXT,
+                embedding VECTOR(1536),
                 source_type TEXT NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

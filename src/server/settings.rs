@@ -28,9 +28,6 @@ pub struct AppSettings {
     pub sms_alert_urgent_booking: bool,
     pub sms_alert_failed_payment: bool,
     pub sms_alert_new_order: bool,
-    pub delivery_enabled: bool,
-    pub delivery_radius: Option<f64>,
-    pub delivery_fee: Option<f64>,
 }
 
 #[allow(dead_code)]
@@ -49,9 +46,6 @@ impl AppSettings {
             sms_alert_urgent_booking: false,
             sms_alert_failed_payment: false,
             sms_alert_new_order: false,
-            delivery_enabled: false,
-            delivery_radius: Some(5.0),
-            delivery_fee: Some(8.50),
         }
     }
 }
@@ -124,15 +118,6 @@ impl Store {
         data.sms_alert_urgent_booking = urgent_booking;
         data.sms_alert_failed_payment = failed_payment;
         data.sms_alert_new_order = new_order;
-        drop(data);
-        self.save()
-    }
-
-    pub fn set_delivery_settings(&self, enabled: bool, radius: Option<f64>, fee: Option<f64>) -> Result<(), String> {
-        let mut data = self.data.write().unwrap();
-        data.delivery_enabled = enabled;
-        data.delivery_radius = radius;
-        data.delivery_fee = fee;
         drop(data);
         self.save()
     }
