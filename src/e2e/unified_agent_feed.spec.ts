@@ -1,7 +1,19 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Unified Agent Feed', () => {
+<<<<<<< HEAD
+  test('should display agent feed and allow interaction', async ({ page }) => {
+
+    // Ensure we are using the seeded e2e tenant explicitly to fetch the seed data
+    await page.addInitScript(() => {
+      localStorage.setItem('tenant_id', 'e2e-tenant');
+      localStorage.setItem('user_id', 'e2e-admin-user');
+    });
+
+    // Go to dashboard
+=======
   test('navigates to unified agent feed from dashboard', async ({ page }) => {
+>>>>>>> 097f2d4a (Resolves #23879)
     await page.goto('/dashboard');
 
     // Check that the link is present on the dashboard
@@ -16,6 +28,14 @@ test.describe('Unified Agent Feed', () => {
     await expect(page.getByRole('heading', { name: 'Unified Agent Feed' })).toBeVisible();
   });
 
+<<<<<<< HEAD
+    // Verify we are on dashboard and the Unified Agent Feed is present
+    await expect(page.locator('button', { hasText: 'Proposals' }).first()).toBeVisible();
+
+    await expect(page.getByText(/All caught up!|Requires Review|Loading Agent Proposals/).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Activity Feed' }).click();
+    await expect(page.getByRole('button', { name: 'Activity Feed' })).toBeVisible();
+=======
   test('displays proposals fetched from the API', async ({ page }) => {
     await page.goto('/unified-agent-feed');
 
@@ -53,5 +73,6 @@ test.describe('Unified Agent Feed', () => {
     await expect(page.getByTestId('loading-state')).not.toBeVisible({ timeout: 10000 });
     const ignoreButton = page.getByRole('button', { name: 'Ignore for now' });
     await expect(ignoreButton).toBeVisible();
+>>>>>>> 097f2d4a (Resolves #23879)
   });
 });
