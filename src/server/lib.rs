@@ -2597,9 +2597,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
 
+    let localization_router = axum::Router::new()
+        .route("/api/v1/localization/translate", axum::routing::post(api::localization::translate_text))
+        .with_state(Arc::new(db.pool.clone()));
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
-        .route("/api/v1/localization/translate", axum::routing::post(api::localization::translate_text))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
@@ -3639,6 +3642,7 @@ async fn create_ui_bom_item_handler(
         }))
         .merge(webhook_router)
         .merge(meta_webhook_router)
+        .merge(localization_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 

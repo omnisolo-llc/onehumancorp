@@ -5,7 +5,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
-use crate::common::auth::Claims;
+use axum::Extension;
+use ::server_common::Claims;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct I18nString {
@@ -21,18 +22,19 @@ pub struct FxRateResponse {
 }
 
 pub async fn get_translations(
-    claims: Claims,
+    Extension(claims): Extension<Claims>,
     State(pool): State<Arc<PgPool>>,
     Path(locale): Path<String>,
 ) -> Result<Json<Vec<I18nString>>, String> {
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-    ::server_common::auth_utils::set_org_context(&mut *tx, &claims.organization_id).await.map_err(|e| e.to_string())?;
+    let org_id = claims.organization_id.clone().unwrap_or_else(|| "SYSTEM".to_string());
+    ::server_common::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
 
     let rows = sqlx::query(
         "SELECT key, value FROM ohc_i18n_strings
          WHERE (tenant_id = $1 OR tenant_id = 'SYSTEM') AND locale = $2"
     )
-    .bind(&claims.organization_id)
+    .bind(&org_id)
     .bind(locale)
     .fetch_all(&mut *tx)
     .await
@@ -91,19 +93,20 @@ pub struct TranslateTextResponse {
 }
 
 pub async fn translate_text(
-    claims: Claims,
+    Extension(claims): Extension<Claims>,
     State(pool): State<Arc<PgPool>>,
     Json(payload): Json<TranslateTextRequest>,
 ) -> Result<Json<TranslateTextResponse>, String> {
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-    crate::common::auth_utils::set_org_context(&mut *tx, &claims.organization_id).await.map_err(|e| e.to_string())?;
+    let org_id = claims.organization_id.clone().unwrap_or_else(|| "SYSTEM".to_string());
+    crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
 
     // Check if the translation is in the cache
     let row = sqlx::query(
         "SELECT translated_text FROM ohc_translation_cache
          WHERE tenant_id = $1 AND text_hash = $2 AND target_locale = $3"
     )
-    .bind(&claims.organization_id)
+    .bind(&org_id)
     .bind(&payload.text_hash)
     .bind(&payload.target_locale)
     .fetch_optional(&mut *tx)
@@ -134,7 +137,7 @@ pub async fn translate_text(
          VALUES ($1, $2, $3, 'QUEUED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
     )
     .bind(&job_id)
-    .bind(&claims.organization_id)
+    .bind(&org_id)
     .bind(&payload_json)
     .execute(&mut *tx)
     .await
