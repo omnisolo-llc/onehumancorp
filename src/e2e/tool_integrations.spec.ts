@@ -8,7 +8,6 @@ function integrationCard(page: import('@playwright/test').Page, name: string) {
 
 test.describe('Tool Integrations UI', () => {
   test.beforeEach(async ({ page }) => {
-    if (process.env.CI === 'true') return;
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
   });

@@ -117,15 +117,25 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
             return Ok(None);
         }
 
+        let lock_result = self.mu.try_lock();
+        let _lock = match lock_result {
+            Ok(guard) => guard,
+            Err(_) => {
+                let pg_pool = crate::db::get_pool();
+                let _ = crate::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
+                self.mu.lock().await
+            }
+        };
+
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP
-             WHERE id = (
-                 SELECT id FROM ohc_job_queue
-                 WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ({})
-                 ORDER BY next_retry_at ASC, created_at ASC
-                 LIMIT 1
-             ) RETURNING id, parent_task_id, job_type, payload, status, retry_count, max_retries, next_retry_at, locked_until, created_at, updated_at, tenant_id",
+            "SELECT id, parent_task_id, job_type, payload, status, retry_count, max_retries, next_retry_at, locked_until, created_at, updated_at, tenant_id
+             FROM ohc_job_queue
+             WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ({})
+             ORDER BY next_retry_at ASC, created_at ASC
+             LIMIT 1",
             role_placeholders
         );
 
@@ -135,7 +145,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         }
 
         let start_poll = std::time::Instant::now();
-        let job_opt: Option<sqlx::sqlite::SqliteRow> = query.fetch_optional(&*self.pool).await.map_err(|e| e.to_string())?;
+        let job_opt: Option<sqlx::sqlite::SqliteRow> = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
             ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
@@ -162,8 +172,17 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 tenant_id: row.try_get("tenant_id").unwrap_or_default(),
             };
 
+            sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                .bind(&job.id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            tx.commit().await.map_err(|e| e.to_string())?;
             return Ok(Some(job));
         }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(None)
     }
 

@@ -2,7 +2,6 @@ import { test, expect } from './fixtures';
 
 test.describe('Canvas: Telemetry Sync UI Tests', () => {
   test.beforeEach(async ({ page }) => {
-    if (process.env.CI === 'true') return;
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });

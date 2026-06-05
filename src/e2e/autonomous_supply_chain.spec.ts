@@ -2,7 +2,6 @@ import { test, expect } from './fixtures';
 
 test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   test.beforeEach(async ({ page }) => {
-    if (process.env.CI === 'true') return;
     // Navigate to dashboard
     await page.goto('/dashboard');
     await expect(page).toHaveTitle(/OHC Builder/);
