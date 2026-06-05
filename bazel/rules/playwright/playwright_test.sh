@@ -105,8 +105,6 @@ cp "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
 cp "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
 if [[ -d "$workspace_root/node_modules" ]]; then
   ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
-elif [[ -d "$workspace_root/src/ui/next/node_modules" ]]; then
-  ln -s "$workspace_root/src/ui/next/node_modules" "$WORK_DIR/node_modules"
 else
   NODE_MODULES_SRC="$(find -L "$workspace_root" -type d -name "node_modules" -not -path "*/\.next/*" -not -path "*/out/*" | head -n 1 || true)"
   if [[ -n "$NODE_MODULES_SRC" && -d "$NODE_MODULES_SRC" ]]; then
