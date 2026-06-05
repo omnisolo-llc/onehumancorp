@@ -813,28 +813,33 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
+    let db_org = db.clone();
+    let db_orders = db.clone();
+    let tenant_id_org = tenant_id.clone();
+    let tenant_id_orders = tenant_id.clone();
+
     let (org_res, active_orders_res) = tokio::join!(
-        async {
-            let cache_key = format!("advisory:org:{}", tenant_id);
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:org:{}", tenant_id_org);
             let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
 
-            let result = match &db.store {
+            let result = match &db_org.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
-                    .fetch_optional(&db.pool)
+                    .bind(&tenant_id_org)
+                    .fetch_optional(&db_org.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id_org)
                     .fetch_optional(pool)
                     .await
                 }
@@ -844,28 +849,28 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
             }
             result
-        },
-        async {
-            let cache_key = format!("advisory:orders:{}", tenant_id);
+        }),
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:orders:{}", tenant_id_orders);
             let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
 
-            let result = match &db.store {
+            let result = match &db_orders.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool)
+                    .bind(&tenant_id_orders)
+                    .fetch_one(&db_orders.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id_orders)
                     .fetch_one(pool)
                     .await
                 }
@@ -875,11 +880,11 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
             }
             result
-        }
+        })
     );
 
-    let org_data = org_res;
-    let orders_data = active_orders_res;
+    let org_data = org_res.unwrap_or(Ok(None));
+    let orders_data = active_orders_res.unwrap_or(Ok(0));
 
     let (business_name, industry) = org_data
         .unwrap_or(None)
@@ -2877,19 +2882,11 @@ async fn list_ui_supply_handler(
 
     let (vendors, raw_materials, bom_items) = match &db.store {
         crate::db::DbStore::Postgres => {
-            let (v_res, rm_res, bi_res) = tokio::join!(
-                sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
-                    .bind(&tenant_id)
-                    .fetch_all(&db.pool),
-                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
-                    .bind(&tenant_id)
-                    .fetch_all(&db.pool),
-                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
-                    .bind(&tenant_id)
-                    .fetch_all(&db.pool)
-            );
-
-            let vendors = v_res.unwrap_or_default()
+            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await
+                .unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2897,8 +2894,11 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-
-            let raw_materials = rm_res.unwrap_or_default()
+            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await
+                .unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2907,8 +2907,11 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-
-            let bom_items = bi_res.unwrap_or_default()
+            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await
+                .unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2917,23 +2920,14 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
-
             (vendors, raw_materials, bom_items)
         }
         crate::db::DbStore::Sqlite(pool) => {
-            let (v_res, rm_res, bi_res) = tokio::join!(
-                sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
-                    .bind(&tenant_id)
-                    .fetch_all(pool),
-                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
-                    .bind(&tenant_id)
-                    .fetch_all(pool),
-                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
-                    .bind(&tenant_id)
-                    .fetch_all(pool)
-            );
-
-            let vendors = v_res.unwrap_or_default()
+            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await
+                .unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2941,8 +2935,11 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-
-            let raw_materials = rm_res.unwrap_or_default()
+            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await
+                .unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2951,8 +2948,11 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-
-            let bom_items = bi_res.unwrap_or_default()
+            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await
+                .unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2961,7 +2961,6 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
-
             (vendors, raw_materials, bom_items)
         }
     };
