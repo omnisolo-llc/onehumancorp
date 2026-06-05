@@ -103,12 +103,14 @@ mkdir -p "$WORK_DIR/src/server"
 cp "$workspace_root/package.json" "$WORK_DIR/package.json"
 cp "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
 cp "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
-if [[ ! -d "$workspace_root/node_modules" ]]; then
-  echo "[playwright] Error: node_modules not found in Bazel runfiles at $workspace_root/node_modules"
-  echo "[playwright] Ensure //:node_modules is included in the Playwright test data."
+if [[ -d "$workspace_root/node_modules" ]]; then
+  ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
+elif [[ -d "$workspace_root/src/ui/next/node_modules" ]]; then
+  ln -s "$workspace_root/src/ui/next/node_modules" "$WORK_DIR/node_modules"
+else
+  echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $workspace_root/src/ui/next/node_modules"
   exit 1
 fi
-ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"
 
 PLAYWRIGHT_SPEC_ARGS=()
