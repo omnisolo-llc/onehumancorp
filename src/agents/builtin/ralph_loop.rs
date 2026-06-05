@@ -350,7 +350,6 @@ mod tests {
         let result1 = ralph.run("Build a reliable feature").await;
         assert!(result1.is_ok());
 
-        // Do not assert anything intermediate that could be flaky. Just run it again.
         let result2 = ralph.run("Build a reliable feature").await;
         assert!(result2.is_ok());
 
