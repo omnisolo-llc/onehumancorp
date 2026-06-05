@@ -1,5 +1,6 @@
 "use client";
 
+// Pricing Page Implementation
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
