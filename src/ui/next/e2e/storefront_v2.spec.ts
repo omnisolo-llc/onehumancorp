@@ -39,7 +39,7 @@ test('Maya the baker journey storefront v2', async ({ page }) => {
   await page.click('text=Friendly');
   await page.click('text=Next: Details');
 
-  await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('I bake custom cakes for weddings and parties.');
+  await page.getByPlaceholder('e.g. I run a local bakery').fill('I bake custom cakes for weddings and parties.');
   await page.click('id=generate-btn');
 
   // Screen 2: Generating

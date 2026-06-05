@@ -16,7 +16,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByRole('button', { name: /Start My Business/ }).click();
-    await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('I run a modern art shop online');
+    await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a modern art shop online');
     await page.getByRole('button', { name: /Generate Storefront/ }).click();
 
     await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 10000 });
@@ -32,7 +32,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
     await expect(generateBtn).toBeDisabled();
 
-    await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('A');
+    await page.getByPlaceholder('e.g. I run a local bakery').fill('A');
     await expect(generateBtn).toBeEnabled();
   });
 });

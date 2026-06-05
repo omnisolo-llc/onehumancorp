@@ -394,7 +394,7 @@ export default function BuilderPage() {
                     style={{ borderRadius: '8px' }}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    placeholder="e.g. I run a mobile dog grooming service in Portland"
+                    placeholder="e.g. I run a local bakery"
                     rows={6}
                   />
                 </WithTooltip>

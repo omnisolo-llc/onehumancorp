@@ -224,7 +224,7 @@ export default function StorefrontBuilderPage() {
                       }
                     }
                   }}
-                  placeholder="e.g. I run a mobile dog grooming service in Portland"
+                  placeholder="e.g. I run a local bakery"
                   rows={6}
                 />
               </WithTooltip>

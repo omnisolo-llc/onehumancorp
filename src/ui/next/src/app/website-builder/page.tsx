@@ -331,7 +331,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 1 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Tell us about your business</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] mac-glass-container p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
