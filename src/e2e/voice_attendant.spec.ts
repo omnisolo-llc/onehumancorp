@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 import { test } from './fixtures';
 import { test } from './fixtures';
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
 test.describe('Autonomous Voice AI Phone Attendant Engine', () => {
@@ -24,5 +25,5 @@ test.describe('Autonomous Voice AI Phone Attendant Engine', () => {
         await expect(page.getByText('Voice settings updated successfully')).toBeVisible();
     });
 
-    test.describe("Smoke", () => { test.describe("Smoke", () => { currentAppSmoke('voice_attendant_regression_check'); }); });
+    test.describe("Smoke", () => { test.describe("Smoke", () => { test.describe("Smoke", () => { currentAppSmoke('voice_attendant_regression_check'); }); }); });
 });
