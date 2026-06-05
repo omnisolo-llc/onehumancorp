@@ -108,6 +108,9 @@ Chart.lock
 !/CHANGELOG.md
 !/RELEASE_NOTES.md
 
+# Golang is not allowed in this project
+!src/server/integrations/hybrid_cache/*.go
+
 
 # Rust build artifacts
 /target/
