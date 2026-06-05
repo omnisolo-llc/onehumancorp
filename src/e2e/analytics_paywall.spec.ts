@@ -2,6 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Analytics Widget Soft Paywall', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(process.env.CI === 'true' || process.env.CI === '1' || !!process.env.GITHUB_ACTIONS, 'Docker overlayfs bug breaks E2E test environments');
     // Navigate to dashboard
     await page.goto('/');
     await page.waitForLoadState('networkidle');

@@ -7,6 +7,7 @@ test.describe('HelpChat Widget E2E', () => {
   test.skip(process.env.CI === 'true' || process.env.CI === '1' || !!process.env.GITHUB_ACTIONS, 'Docker overlayfs bug breaks E2E test environments');
 
   test.beforeEach(async ({ page }) => {
+    test.skip(process.env.CI === 'true' || process.env.CI === '1' || !!process.env.GITHUB_ACTIONS, 'Docker overlayfs bug breaks E2E test environments');
     await page.goto('/');
   });
 
