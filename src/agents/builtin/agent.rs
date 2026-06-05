@@ -3144,6 +3144,106 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_llm_recoverable_tool_messages_agent_loop() {
+        use crate::tools::ToolExecutor;
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
+
+        struct MockLlmClientLlmRecoverable {
+            call_count: tokio::sync::Mutex<i32>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientLlmRecoverable {
+            async fn chat(&self, _req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut c = self.call_count.lock().await;
+                *c += 1;
+
+                if *c == 1 {
+                    Ok(crate::types::ChatResponse {
+                        message: crate::types::Message {
+                            role: crate::types::Role::Assistant,
+                            content: String::new(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_1".to_string(),
+                                name: "failing_tool".to_string(),
+                                arguments: serde_json::json!({}),
+                            }],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: None,
+                    })
+                } else {
+                    // Check if the prompt contains the recoverable error
+                    let last_msg = _req.messages.last().unwrap();
+                    let has_error = last_msg.tool_results.iter().any(|r| r.content.contains("LLM-Recoverable Error") || r.error.contains("LLM-Recoverable Error: Failing for test. Please analyze this error, correct your tool arguments, and try again."));
+
+                    if has_error {
+                        Ok(crate::types::ChatResponse {
+                            message: crate::types::Message::assistant("I fixed the error"),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: None,
+                        })
+                    } else {
+                        Ok(crate::types::ChatResponse {
+                            message: crate::types::Message::assistant("I didn't see the error"),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: None,
+                        })
+                    }
+                }
+            }
+        }
+
+        struct FailingToolExecutor;
+
+        #[async_trait::async_trait]
+        impl ToolExecutor for FailingToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::LlmRecoverable("Failing for test".to_string()))
+            }
+        }
+
+        let tools = vec![
+            crate::tools::Tool {
+                name: "failing_tool".to_string(),
+                description: "test".to_string(),
+                is_read_only: false,
+                parameters: serde_json::Value::Null,
+                execute: std::sync::Arc::new(FailingToolExecutor),
+            },
+        ];
+
+        let client = std::sync::Arc::new(MockLlmClientLlmRecoverable { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(client, tools);
+
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Start", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "I fixed the error");
+
+        // Verify the ToolCall event has the LlmRecoverable message
+        let has_recoverable_event = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                result.contains("LLM-Recoverable Error: Failing for test. Please analyze this error, correct your tool arguments, and try again.")
+            } else {
+                false
+            }
+        });
+        assert!(has_recoverable_event);
+    }
+
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct MyStructuredOutput {
         city: String,
