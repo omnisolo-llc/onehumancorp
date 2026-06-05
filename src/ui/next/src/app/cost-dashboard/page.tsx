@@ -113,7 +113,7 @@ export default function CostDashboardPage() {
                 <div className="flex flex-col p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
                     <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
                     <ul id="cost-dashboard-trend" className="space-y-2">
-                        {data?.trend?.map((daily, index) => (
+                        {(data?.trend?.length ? data.trend : [{ date: 'No trend data yet', total_cost: 0 } as DailyCost]).map((daily, index) => (
                             <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
                                 <span className="text-sm text-gray-700">{daily.date}</span>
                                 <span className="text-sm font-medium text-gray-900">{formatCurrency(daily.total_cost)}</span>

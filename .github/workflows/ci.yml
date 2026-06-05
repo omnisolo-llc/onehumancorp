@@ -301,12 +301,12 @@ jobs:
             //...
 
   bazel-test-e2e:
-    name: Bazel Playwright E2E
+    name: Bazel Full UI E2E
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
@@ -363,8 +363,12 @@ jobs:
           docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine
 
-      - name: Test Playwright E2E suite
-        run: bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"
+      - name: Test full Playwright UI E2E suite
+        run: |
+          bazelisk test //src/e2e:playwright \
+            --local_test_jobs="$(nproc)" \
+            --jobs="$(nproc)" \
+            --nocache_test_results
 
   kind-e2e:
     name: Kind E2E

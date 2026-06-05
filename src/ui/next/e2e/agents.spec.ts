@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('AI Agent Department Architecture', () => {
   test('should display approval inbox and activity feed', async ({ page }) => {
     // Navigate to agents page
-    await page.goto('http://localhost:3000/agents');
+    await page.goto('/agents');
 
     // Ensure "My Team" tab is visible
     await expect(page.locator('text=My Team')).toBeVisible();
@@ -20,7 +20,7 @@ test.describe('AI Agent Department Architecture', () => {
 
   test('should show soft paywall for Pro Mode when not pro, and allow trial extension via share', async ({ page }) => {
     // Navigate to the agents page
-    await page.goto('http://localhost:3000/agents');
+    await page.goto('/agents');
 
     // Make sure we don't have pro
     await page.evaluate(() => {

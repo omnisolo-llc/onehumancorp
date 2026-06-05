@@ -49,7 +49,7 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
     }
-    if (id === 'zoom' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com' || id === 'front') {
+    if (id === 'zoom' || id === 'whereby' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com' || id === 'front') {
       alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration

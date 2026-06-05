@@ -3,6 +3,34 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 npm_link_all_packages(name = "node_modules")
 
+exports_files(glob([
+    "package.json",
+    "e2e/*.spec.ts",
+    "src/e2e/*.spec.ts",
+    "src/e2e/fixtures/*",
+]))
+
+filegroup(
+    name = "next_app_e2e_data",
+    srcs = glob(
+        [
+            "src/**",
+            "*.mjs",
+            "*.json",
+            "*.ts",
+            "*.png",
+        ],
+        exclude = [
+            "src/e2e/**",
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ) + [
+        ":node_modules",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 sh_test(
     name = "next_vitest",
     size = "large",

@@ -10,7 +10,7 @@ test.describe('Checkout Flow', () => {
   });
 
   test('completes payment successfully', async ({ page }) => {
-    await page.goto('http://localhost:3000/checkout');
+    await page.goto('/checkout');
     await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
 
     // Test the Pay Now button

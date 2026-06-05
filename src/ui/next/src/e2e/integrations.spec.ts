@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Integrations Loop', () => {
     test('Integrations loop connects Mercado Pago and Zoom', async ({ page }) => {
-        await page.goto('http://localhost:3000/integrations');
+        await page.goto('/integrations');
 
         // Verify all 10 integrations exist with their respective names and descriptions
         await expect(page.locator('h3:has-text("Ayrshare")')).toBeVisible();
@@ -39,13 +39,13 @@ test.describe('Integrations Loop', () => {
     });
 
     test('Checkout page displays Mercado Pago', async ({ page }) => {
-        await page.goto('http://localhost:3000/checkout');
+        await page.goto('/checkout');
         const mercadoPagoButton = page.locator('button:has-text("Pay with Mercado Pago")');
         await expect(mercadoPagoButton).toBeVisible();
     });
 
     test('Calendar page displays Join Meeting for appointments with link', async ({ page }) => {
-        await page.goto('http://localhost:3000/calendar');
+        await page.goto('/calendar');
         const joinMeetingButton = page.locator('a:has-text("Join Meeting")');
         await expect(joinMeetingButton).toBeVisible();
     });

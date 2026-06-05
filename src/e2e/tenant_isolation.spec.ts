@@ -6,14 +6,13 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
     // This is handled by using the 'page' fixture which signs in via UI in global setup
 
     test('verifies UI does not expose technical terminology and navigates correctly', async ({ page }) => {
-      test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
         // E2E Mandatory 2: Navigate the entire feature flow by clicking UI links/buttons exactly as a real user would
 
         await page.goto('/dashboard');
         await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
         // E2E Mandatory 3: Proceed through every step until the process finishes and result is visible
-        await page.getByRole('button', { name: 'Settings' }).click();
+        await page.getByRole('link', { name: 'Settings' }).click();
 
         // E2E Mandatory 4: Assert that the final product matches the design and research docs.
         // We make sure the UI works and the technical settings are tucked away in advanced mode
@@ -25,38 +24,35 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
     });
 
     test('verifies mobile viewport responsiveness on dashboard', async ({ page }) => {
-      test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
         await page.setViewportSize({ width: 375, height: 812 });
         await page.goto('/dashboard');
 
         // Ensure the layout adjusted for touch targets
         await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-        await expect(page.locator('#mobile-bottom-nav')).toBeVisible();
+        await expect(page.locator('.app-sidebar')).toBeVisible();
+        await expect(page.locator('.app-nav-link.is-active').first()).toBeVisible();
     });
 
     test('verifies navigation between different product dashboard sections', async ({ page }) => {
-      test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
         await page.goto('/dashboard');
 
-        await page.getByRole('button', { name: 'Manage AI Assistants' }).click();
-        await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+        await page.getByRole('link', { name: 'Agents' }).click();
+        await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
     });
 
     test('verifies creation of a business respects data flow', async ({ page }) => {
-      test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
         await page.goto('/dashboard');
 
         // Fake clicking a settings gear and saving a profile setting
-        await page.getByRole('button', { name: 'Launch Site' }).click();
+        await page.getByRole('link', { name: 'New Product' }).click();
 
-        await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Add Product' })).toBeVisible();
     });
 
     test('verifies agent history panel does not expose raw embeddings', async ({ page }) => {
-      test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
         await page.goto('/dashboard');
 
-        await page.getByRole('button', { name: 'Manage AI Assistants' }).click();
+        await page.getByRole('link', { name: 'Agents' }).click();
 
         // Check for natural language instead of embeddings
         await expect(page.getByText('vector', { exact: false })).not.toBeVisible();

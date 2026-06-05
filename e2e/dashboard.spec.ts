@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard CUJ', () => {
 
-  test('Persona: Business Owner sees dashboard title and Business Snapshot', async ({ page }) => {
+  test('Persona: Business Owner sees dashboard title and analytics', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder(/Email/i).fill('test@example.com');
     await page.getByPlaceholder(/Password/i).fill('password123');
@@ -10,7 +10,7 @@ test.describe('Dashboard CUJ', () => {
     await page.goto('/dashboard');
 
     await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Business Snapshot/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Business Analytics/i })).toBeVisible();
   });
 
   test('Persona: Business Owner can view sales and customer metrics', async ({ page }) => {
@@ -20,8 +20,8 @@ test.describe('Dashboard CUJ', () => {
     await page.getByRole('button', { name: /Log In/i }).click();
     await page.goto('/dashboard');
 
-    await expect(page.getByText(/Today's Sales/i)).toBeVisible();
-    await expect(page.getByText(/Active Customers/i)).toBeVisible();
+    await expect(page.getByText(/Total Sales/i)).toBeVisible();
+    await expect(page.getByText('Customers', { exact: true })).toBeVisible();
   });
 
   test('Persona: Business Owner can view the X share button', async ({ page }) => {
@@ -31,7 +31,7 @@ test.describe('Dashboard CUJ', () => {
     await page.getByRole('button', { name: /Log In/i }).click();
     await page.goto('/dashboard');
 
-    const shareButton = page.getByRole('button', { name: /Share on X to get 7 Days Free/i });
+    const shareButton = page.getByRole('link', { name: /WhatsApp/i });
     await expect(shareButton).toBeVisible();
   });
 
