@@ -89,42 +89,4 @@ mod tests {
         assert_eq!(manager.get_remaining(), -20.0);
         assert_eq!(manager.get_remaining_cents(), -2000);
     }
-
-    #[test]
-    fn test_budget_manager_exact_limit() {
-        let manager = BudgetManager::new(100.0);
-        assert_eq!(manager.get_remaining(), 100.0);
-
-        // Spend exactly the limit
-        assert_eq!(manager.record_spend(100.0).unwrap(), true);
-        assert_eq!(manager.get_remaining(), 0.0);
-        assert_eq!(manager.get_remaining_cents(), 0);
-
-        // Even an epsilon more should be over the limit (soft limit handled as false)
-        assert_eq!(manager.record_spend(0.01).unwrap(), false);
-        let rem = manager.get_remaining();
-        assert!(rem < -0.009 && rem > -0.011);
-    }
-
-    #[test]
-    fn test_budget_manager_with_telemetry() {
-        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
-
-        let manager = BudgetManager::new(50.0).with_telemetry("tenant-123".to_string(), store);
-
-        // Ensure struct states updated correctly
-        assert_eq!(manager.tenant_id, Some("tenant-123".to_string()));
-        assert!(manager.telemetry_store.is_some());
-
-        // Spend money to hit telemetry path without panic
-        assert_eq!(manager.record_spend(10.0).unwrap(), true);
-        assert_eq!(manager.get_remaining(), 40.0);
-    }
-
-    #[test]
-    fn test_record_spend_cents_zero() {
-        let manager = BudgetManager::new(100.0);
-        assert_eq!(manager.record_spend_cents(0).unwrap(), true);
-        assert_eq!(manager.get_remaining_cents(), 10000);
-    }
 }

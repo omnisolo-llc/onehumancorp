@@ -9,10 +9,12 @@ CREATE TABLE IF NOT EXISTS pos_offline_transactions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE INDEX IF NOT EXISTS idx_pos_offline_transactions_tenant
 ON pos_offline_transactions(tenant_id, status);
+
 ALTER TABLE pos_offline_transactions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_pos_offline_transactions ON pos_offline_transactions;
 CREATE POLICY tenant_isolation_pos_offline_transactions
 ON pos_offline_transactions
-USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+USING (tenant_id = current_setting('app.current_tenant', true));

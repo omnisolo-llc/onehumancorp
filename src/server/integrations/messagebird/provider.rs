@@ -36,7 +36,7 @@ impl MessageBirdProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::provider::MessageBirdProvider;
+    use crate::integrations::messagebird::provider::MessageBirdProvider;
 
     #[test]
     fn test_messagebird_provider_metadata() {

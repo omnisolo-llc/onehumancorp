@@ -36,7 +36,7 @@ impl NylasProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::provider::NylasProvider;
+    use crate::integrations::nylas::provider::NylasProvider;
 
     #[test]
     fn test_nylas_provider_metadata() {

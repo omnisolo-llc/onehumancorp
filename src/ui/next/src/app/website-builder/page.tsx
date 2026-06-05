@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useWebsiteBuilderStore } from "./store";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function WebsiteBuilderPage() {
-  const router = useRouter();
 
   const {
     wizardStep, setWizardStep,
@@ -27,7 +25,7 @@ export default function WebsiteBuilderPage() {
     domainChoice, setDomainChoice,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
-    blocks, setBlocks, moveBlock,
+    blocks, setBlocks,
     status, setStatus,
     liveUrl, setLiveUrl
   } = useWebsiteBuilderStore();
@@ -195,8 +193,17 @@ export default function WebsiteBuilderPage() {
     }
   };
 
-  const handleMoveBlock = (fromIndex: number, toIndex: number) => {
-    moveBlock(fromIndex, toIndex);
+  const moveBlock = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
+
+    setBlocks(prev => {
+      const newBlocks = [...prev];
+      const [moved] = newBlocks.splice(fromIndex, 1);
+      newBlocks.splice(toIndex, 0, moved);
+      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      return newBlocks;
+    });
+
     if (selectedBlockIndex === fromIndex) {
       setSelectedBlockIndex(toIndex);
     } else if (selectedBlockIndex === toIndex) {
@@ -592,51 +599,18 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full mac-glass-container p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                      style={{ borderRadius: '8px' }}
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
                     <button
-                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
-                      disabled={!bio.trim()}
-                      onClick={async () => {
-                        if (!bio.trim()) return;
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      onClick={() => {
                         setStatus('generating');
-                        try {
-                          const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                          const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
-                          const res = await fetch('/api/onboarding/intake', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'X-Tenant-ID': tenantIdStr,
-                              'X-User-ID': userIdStr,
-                            },
-                            body: JSON.stringify({ description: bio })
-                          });
-
-                          const data = await res.json();
-                          if (res.ok) {
-                            setBusinessName(data.business_name || 'My Business');
-                            setBusinessType(data.business_type || 'Online Store');
-                            setProductName(data.initial_products?.[0]?.name || 'First Product');
-                            setProductPrice(data.initial_products?.[0]?.price || '10.00');
-
-                            // Let the debounce save it
-                            setTimeout(() => setStatus('live'), 2000);
-                          } else {
-                            console.error('Failed to generate storefront:', data);
-                            setStatus('idle');
-                            alert('Failed to generate storefront. Please try again.');
-                          }
-                        } catch (err) {
-                          console.error(err);
-                          setStatus('idle');
-                          alert('Failed to generate storefront. Please try again.');
-                        }
+                        setTimeout(() => {
+                           setStatus('live');
+                        }, 2000);
                       }}
                     >
                       Generate Storefront
@@ -680,8 +654,8 @@ export default function WebsiteBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5] rounded-[8px]"
-            onClick={() => router.push('/dashboard')}
+            className="w-full bg-[#0071E3] text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-[#005bb5]"
+            style={{ borderRadius: '8px' }}
           >
             View Welcome Checklist
           </button>
@@ -719,13 +693,13 @@ export default function WebsiteBuilderPage() {
               }}
               onDragEnter={() => {
                 if (draggedIndex !== null && draggedIndex !== i) {
-                  handleMoveBlock(draggedIndex, i);
+                  moveBlock(draggedIndex, i);
                   setDraggedIndex(i);
                 }
               }}
               onDragEnd={() => setDraggedIndex(null)}
-              onMoveUp={i > 0 ? () => handleMoveBlock(i, i - 1) : undefined}
-              onMoveDown={i < blocks.length - 1 ? () => handleMoveBlock(i, i + 1) : undefined}
+              onMoveUp={i > 0 ? () => moveBlock(i, i - 1) : undefined}
+              onMoveDown={i < blocks.length - 1 ? () => moveBlock(i, i + 1) : undefined}
             >
               <SmartBlock {...b} />
             </DraggableBlock>
@@ -734,11 +708,12 @@ export default function WebsiteBuilderPage() {
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
+        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[8px]"
+              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              style={{ borderRadius: '8px' }}
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
@@ -747,22 +722,6 @@ export default function WebsiteBuilderPage() {
           </WithTooltip>
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-slide-up { animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1); }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
-        @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); }
-        }
-      `}} />
     </div>
   );
 }

@@ -64,7 +64,6 @@ impl HandoffManager {
                                             .execute(&db_clone.pool)
                                             .await
                                         {
-                                            ::server_telemetry::record_error_signal("Failed to save state handoff (agent_memories) to Postgres: error=");
                                             tracing::error!("Failed to save state handoff (agent_memories) to Postgres: error={}", e);
                                         }
                                     }
@@ -77,7 +76,6 @@ impl HandoffManager {
                                             .execute(sqlite_pool)
                                             .await
                                         {
-                                            ::server_telemetry::record_error_signal("Failed to save state handoff (agent_memories) to Sqlite: error=");
                                             tracing::error!("Failed to save state handoff (agent_memories) to Sqlite: error={}", e);
                                         }
                                     }
@@ -100,7 +98,6 @@ impl HandoffManager {
                                             .execute(&db_clone.pool)
                                             .await
                                         {
-                                            ::server_telemetry::record_error_signal("Failed to save state handoff (shared_tasks) to Postgres: error=");
                                             tracing::error!("Failed to save state handoff (shared_tasks) to Postgres: error={}", e);
                                         }
                                     }
@@ -113,7 +110,6 @@ impl HandoffManager {
                                             .execute(sqlite_pool)
                                             .await
                                         {
-                                            ::server_telemetry::record_error_signal("Failed to save state handoff (shared_tasks) to Sqlite: error=");
                                             tracing::error!("Failed to save state handoff (shared_tasks) to Sqlite: error={}", e);
                                         }
                                     }

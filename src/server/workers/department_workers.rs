@@ -242,7 +242,6 @@ impl OperationsWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            ::server_telemetry::record_error_signal("OperationsWorker error");
                             tracing::error!("OperationsWorker error: {}", e);
                             break;
                         }
@@ -708,7 +707,6 @@ impl CustomerSuccessWorker {
                         Ok(true) => continue, // keep polling until queue is empty
                         Ok(false) => break,
                         Err(e) => {
-                            ::server_telemetry::record_error_signal("CustomerSuccessWorker error");
                             tracing::error!("CustomerSuccessWorker error: {}", e);
                             break;
                         }
