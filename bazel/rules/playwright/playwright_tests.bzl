@@ -59,7 +59,6 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
         "//src/e2e:ai-judge.ts",
         "//src/e2e:global-setup.ts",
         "//src/e2e:e2e-seed.sql",
-        "//src/agents/builtin:ohc-builtin-agent",
         "//deploy:docker-compose.e2e.yml",
         "//:playwright.config.ts",
         "//:package.json",

@@ -14,10 +14,7 @@ exports_files([
 # Package backend binary
 pkg_tar(
     name = "backend_pkg",
-    srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
-    ],
+    srcs = ["//src/server"],
     package_dir = "/usr/local/bin",
 )
 

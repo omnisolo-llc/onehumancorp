@@ -3,11 +3,6 @@ import WebsiteBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() })
-}));
-
-
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>
@@ -63,9 +58,6 @@ describe('WebsiteBuilderPage', () => {
       domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: false,
-      blocks: [],
-      status: "idle",
-      liveUrl: ""
     });
   });
 
@@ -91,14 +83,15 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Start My Business'));
 
     // Step 1
-    fireEvent.click(screen.getByText('Online Store'));
+    fireEvent.change(screen.getByPlaceholderText('e.g., Coffee Shop, Marketing Agency, Bakery'), { target: { value: 'Online Store' } });
+    fireEvent.click(screen.getByText('Next'));
 
     // Step 2
-    fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
+    fireEvent.change(screen.getByPlaceholderText('Enter your business name'), { target: { value: 'My Shop' } });
     fireEvent.click(screen.getByText('Next'));
 
     // Step 3
-    fireEvent.click(screen.getByLabelText('Physical Products'));
+    fireEvent.click(screen.getByText('Physical Products'));
     fireEvent.click(screen.getByText('Next'));
 
     // Step 4
@@ -142,46 +135,22 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('can follow the instant-build flow', async () => {
-    vi.useRealTimers();
-    // Mock the specific API call for instant build
-    const originalFetch = global.fetch;
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/onboarding/intake') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            business_name: 'Mock Bakery',
-            business_type: 'Online Store',
-            initial_products: [{ name: 'Cake', price: '20.00' }]
-          })
-        });
-      }
-      if (url === '/api/onboarding/state') {
-          return Promise.resolve({
-              ok: true,
-              json: () => Promise.resolve({})
-          })
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({})
-      });
-    });
-
     render(<WebsiteBuilderPage />);
 
+    // Step 0
     fireEvent.click(screen.getByText('Instant Build'));
+
+    // Instant build step
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
     fireEvent.click(screen.getByText('Generate Storefront'));
 
-    // Status changes to 'generating', wait for it
-    await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
     });
 
-    await waitFor(() => {
-        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
-    }, { timeout: 3500 });
+    expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
@@ -190,7 +159,8 @@ describe('WebsiteBuilderPage', () => {
       { type: 'Catalog', props: { title: '2' } },
       { type: 'Booking', props: { title: '3' } }
     ];
-    useWebsiteBuilderStore.setState({ blocks: initialBlocks, status: 'draft' });
+    localStorage.setItem('ohc_builder_blocks', JSON.stringify(initialBlocks));
+    localStorage.setItem('ohc_builder_status', 'draft');
 
     render(<WebsiteBuilderPage />);
 
@@ -225,7 +195,8 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles launch from draft mode', async () => {
-    useWebsiteBuilderStore.setState({ status: 'draft', blocks: [{ type: 'Hero', props: {} }] });
+    localStorage.setItem('ohc_builder_status', 'draft');
+    localStorage.setItem('ohc_builder_blocks', JSON.stringify([{ type: 'Hero', props: {} }]));
 
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('publish_draft')) {

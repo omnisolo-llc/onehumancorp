@@ -6,7 +6,6 @@
     "@bufbuild/protoc-gen-es": "^2.11.0",
     "@bufbuild/protoplugin": "^2.11.0",
     "@modelcontextprotocol/server-github": "^0.6.2",
-    "@stripe/terminal-js": "^0.26.0",
     "@types/pg": "^8.20.0",
     "@types/swagger-ui-react": "^5.18.0",
     "google-protobuf": "^3.21.4",

@@ -279,7 +279,7 @@ mod tests {
     use super::*;
     use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage, ToolError};
     use crate::llm::LlmClient;
-    use crate::tools::{Tool, ToolExecutor};
+    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
 
     struct MockLlm {
         pub response_text: String,

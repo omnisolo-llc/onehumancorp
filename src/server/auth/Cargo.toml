@@ -3,27 +3,5 @@ name = "server_auth"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-async-trait = "0.1"
-axum = { version = "0.8.1", features = ["ws"] }
-bcrypt = "0.16.0"
-chrono = { workspace = true }
-hex = "0.4"
-hmac = "0.12"
-jsonwebtoken = "9"
-rand = "0.8"
-redis = { version = "0.27.6", features = ["tokio-comp"] }
-serde = { workspace = true }
-serde_json = { workspace = true }
-server_common = { path = "../common" }
-server_config = { path = "../config" }
-server_ohc = { path = "../ohc" }
-server_oidc = { path = "../oidc" }
-sha2 = "0.10"
-sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
-tokio = { workspace = true }
-tonic = { workspace = true, features = ["transport"] }
-tracing = "0.1"
-
 [lib]
 path = "mod.rs"

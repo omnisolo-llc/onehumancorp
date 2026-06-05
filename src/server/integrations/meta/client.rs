@@ -47,6 +47,12 @@ impl MetaClientWrapper for RealMetaClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
+                    let _ = ::server_telemetry::record_api_call_cost(
+                        &crate::db::get_pool(),
+                        "unknown", // tenant context
+                        &format!("{}_send_message", platform),
+                        0.01 // nominal meta cost
+                    ).await;
                     Ok(())
                 } else {
                     Err(format!("Meta API error: {}", resp.status()))

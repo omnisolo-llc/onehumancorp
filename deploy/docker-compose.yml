@@ -65,13 +65,7 @@ services:
       CHATWOOT_ADMIN_EMAIL: admin@ohc.local
       CHATWOOT_ADMIN_PASSWORD: changeme
       CHATWOOT_ENABLED: ${CHATWOOT_ENABLED:-false}
-      MINIMAX_API_KEY: ${MINIMAX_API_KEY:?Set MINIMAX_API_KEY in .env or the shell before starting Docker Compose}
-      OHC_LLM_PROVIDER: ${OHC_LLM_PROVIDER:-minimax}
-      OHC_LLM_MODEL: ${OHC_LLM_MODEL:-MiniMax-M3}
-      MINIMAX_MODEL: ${MINIMAX_MODEL:-MiniMax-M3}
-      OHC_AGENT_TASK_TIMEOUT_SECS: ${OHC_AGENT_TASK_TIMEOUT_SECS:-240}
-      OHC_LLM_TIMEOUT_SECS: ${OHC_LLM_TIMEOUT_SECS:-180}
-      OHC_BUILTIN_AGENT_BINARY: ${OHC_BUILTIN_AGENT_BINARY:-/usr/local/bin/ohc-builtin-agent}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
       # Multi-tenant mode is disabled by default in single-docker deployment.
       # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
       OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
