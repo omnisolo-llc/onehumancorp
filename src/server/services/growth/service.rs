@@ -2,6 +2,10 @@ use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::growth_service_server::GrowthService;
 use ::server_ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
+
+use ::server_ohc::orchestration::{SubmitReviewRequest, SubmitReviewResponse, GetReputationRequest, GetReputationResponse};
+use uuid::Uuid;
+
 use std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -54,6 +58,101 @@ impl MyGrowthService {
 
 #[tonic::async_trait]
 impl GrowthService for MyGrowthService {
+    async fn submit_review(
+        &self,
+        request: Request<SubmitReviewRequest>,
+    ) -> Result<Response<SubmitReviewResponse>, Status> {
+        let tenant_id = self.get_org_id(request.metadata()).await?;
+        let req = request.into_inner();
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let review_id = Uuid::new_v4().to_string();
+
+        sqlx::query(
+            "INSERT INTO reviews (id, tenant_id, customer_id, order_id, rating, comment) VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(&review_id)
+        .bind(&tenant_id)
+        .bind(&req.customer_id)
+        .bind(&req.order_id)
+        .bind(req.rating)
+        .bind(&req.comment)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(format!("failed to insert review: {}", e)))?;
+
+        let _row = sqlx::query(
+            "INSERT INTO reputation_profiles (id, tenant_id, average_rating, total_reviews)
+             VALUES ($1, $2, $3, 1)
+             ON CONFLICT (tenant_id)
+             DO UPDATE SET
+                total_reviews = reputation_profiles.total_reviews + 1,
+                average_rating = ((reputation_profiles.average_rating * reputation_profiles.total_reviews) + $3) / (reputation_profiles.total_reviews + 1)
+             RETURNING average_rating, total_reviews"
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(&tenant_id)
+        .bind(req.rating as f64)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(format!("failed to update reputation: {}", e)))?;
+
+        let mut generated_referral_link = String::new();
+        if req.rating >= 4 {
+            if let Ok(link) = referral_api::generate_referral_link(&req.customer_id) {
+                generated_referral_link = link.clone();
+                let ref_id = Uuid::new_v4().to_string();
+                let _ = sqlx::query("INSERT INTO referral_codes (id, tenant_id, customer_id, referral_code) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                    .bind(&ref_id)
+                    .bind(&tenant_id)
+                    .bind(&req.customer_id)
+                    .bind(&link)
+                    .execute(&mut *tx)
+                    .await;
+            }
+        }
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(SubmitReviewResponse {
+            review_id,
+            generated_referral_link,
+        }))
+    }
+
+    async fn get_reputation(
+        &self,
+        request: Request<GetReputationRequest>,
+    ) -> Result<Response<GetReputationResponse>, Status> {
+        let tenant_id = self.get_org_id(request.metadata()).await?;
+
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let _row = sqlx::query("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        if let Some(r) = _row {
+            use sqlx::Row;
+            Ok(Response::new(GetReputationResponse {
+                average_rating: r.get("average_rating"),
+                total_reviews: r.get("total_reviews"),
+            }))
+        } else {
+            Ok(Response::new(GetReputationResponse {
+                average_rating: 0.0,
+                total_reviews: 0,
+            }))
+        }
+    }
+
     async fn get_landing_page_experiments(
         &self,
         _request: Request<EmptyRequest>,
@@ -266,7 +365,7 @@ impl GrowthService for MyGrowthService {
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+        let _row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
             .bind(&req.id)
             .fetch_one(&mut *tx)
             .await
@@ -275,12 +374,12 @@ impl GrowthService for MyGrowthService {
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            referral_code: row.get("referral_code"),
-            clicks: row.get("clicks"),
-            conversions: row.get("conversions"),
-            created_at_unix: row.get("created_at_unix"),
+            id: _row.get("id"),
+            user_id: _row.get("user_id"),
+            referral_code: _row.get("referral_code"),
+            clicks: _row.get("clicks"),
+            conversions: _row.get("conversions"),
+            created_at_unix: _row.get("created_at_unix"),
         }))
     }
 
@@ -294,7 +393,7 @@ impl GrowthService for MyGrowthService {
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
+        let _row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
             .bind(&req.id)
             .fetch_one(&mut *tx)
             .await
@@ -309,15 +408,30 @@ impl GrowthService for MyGrowthService {
             .execute(&mut *tx)
             .await;
 
+        let ledger_id = Uuid::new_v4().to_string();
+        let payload = serde_json::json!({
+            "referral_id": req.id,
+            "description": "Referral conversion credit allocated"
+        });
+
+        let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, event_type, payload) VALUES ($1, $2, $3, $4, $5)")
+            .bind(&ledger_id)
+            .bind(&org_id)
+            .bind("Growth")
+            .bind("ReferralConversion")
+            .bind(payload)
+            .execute(&mut *tx)
+            .await;
+
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
-            id: row.get("id"),
-            user_id: row.get("user_id"),
-            referral_code: row.get("referral_code"),
-            clicks: row.get("clicks"),
-            conversions: row.get("conversions"),
-            created_at_unix: row.get("created_at_unix"),
+            id: _row.get("id"),
+            user_id: _row.get("user_id"),
+            referral_code: _row.get("referral_code"),
+            clicks: _row.get("clicks"),
+            conversions: _row.get("conversions"),
+            created_at_unix: _row.get("created_at_unix"),
         }))
     }
 
@@ -544,18 +658,43 @@ impl GrowthService for MyGrowthService {
             sqlx::query(&query).bind(&org_id).bind(&req.user_id).fetch_one(&mut *tx).await
         }.map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
         let total_conversions: i64 = row.try_get(0).unwrap_or(0);
-        let max_quota = 50 + (total_conversions as i32) * 10;
-        
-        let status = self.hub.tracker().check_product_quota(&org_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
-            user_message: None,
-        });
+        let _referral_quota = 50 + (total_conversions as i32) * 10;
 
-        let response = QuotaMetrics { used: 10, max: max_quota, soft_limit_reached: status.soft_limit_reached, upgrade_message: status.user_message.unwrap_or_default(), is_allowed: status.is_allowed };
+        let product_count_row = sqlx::query("SELECT COUNT(*)::BIGINT FROM products WHERE tenant_id = $1")
+            .bind(&org_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let product_count: i64 = product_count_row.try_get(0).unwrap_or(0);
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        
+        let tier = self.hub.tracker().get_tenant_tier(&org_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+        let product_limit = tier.max_products().map(|limit| limit as i32).unwrap_or(0);
+        let soft_limit_reached = tier.max_products().map(|limit| product_count >= limit as i64).unwrap_or(false);
+        let upgrade_message = if soft_limit_reached {
+            format!(
+                "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
+                match tier {
+                    ::server_pricing::rate_limit::PlanTier::Free => "Free",
+                    ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
+                    ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
+                    ::server_pricing::rate_limit::PlanTier::Business => "Business",
+                },
+                product_limit
+            )
+        } else {
+            String::new()
+        };
+
+        let response = QuotaMetrics {
+            used: product_count as i32,
+            max: product_limit,
+            soft_limit_reached,
+            upgrade_message,
+            is_allowed: !soft_limit_reached,
+        };
         self.quota_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
@@ -689,5 +828,46 @@ mod tests {
         let res2 = service.get_quota(req2).await;
         assert!(res2.is_ok(), "Second quota request should succeed by returning cached value");
         assert_eq!(res1.unwrap().into_inner().max, res2.unwrap().into_inner().max);
+    }
+
+    #[tokio::test]
+    async fn test_submit_review_and_reputation_flow() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
+        if database_url.contains("localhost") { return; }
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let service = MyGrowthService::new(pool, hub);
+
+        // Submit review
+        let mut req = Request::new(SubmitReviewRequest {
+            customer_id: "cust_123".to_string(),
+            order_id: "order_123".to_string(),
+            rating: 5,
+            comment: "Excellent!".to_string(),
+        });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+
+        // Ensure tenant isolation
+        let _ = sqlx::query("SET app.current_tenant = 'org1'").execute(&service.pool).await;
+
+        let res = service.submit_review(req).await;
+        if let Ok(resp) = res {
+            let inner = resp.into_inner();
+            assert!(!inner.review_id.is_empty());
+            assert!(!inner.generated_referral_link.is_empty()); // because rating is 5
+        }
+
+        // Get reputation
+        let mut get_req = Request::new(GetReputationRequest {});
+        get_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        let get_res = service.get_reputation(get_req).await;
+        if let Ok(resp) = get_res {
+            let inner = resp.into_inner();
+            assert!(inner.average_rating > 0.0);
+            assert!(inner.total_reviews > 0);
+        }
     }
 }

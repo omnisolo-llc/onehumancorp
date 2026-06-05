@@ -7,15 +7,8 @@ test.describe('Diagnostics Page', () => {
     const screen = page.locator('#diagnostics-screen');
 
     await expect(screen).toBeVisible();
-<<<<<<< HEAD
     await expect(screen).toContainText('Response time latency: 42 ms');
     await expect(screen).toContainText('Request throughput: 24 rps');
-=======
-    await expect(screen).toContainText('System Status: All systems operational');
-    await expect(screen).toContainText('Database: Healthy');
-    await expect(screen).toContainText('Redis: Healthy');
-    await expect(screen).toContainText('Live diagnostics have not been loaded.');
->>>>>>> 387b419a (test: fix broken E2E tests)
 
     // Diagnostic actions test removed because the UI was updated
   });
