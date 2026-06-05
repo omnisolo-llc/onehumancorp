@@ -275,7 +275,7 @@ export default function Dashboard() {
               <button
                 onClick={() => {
                   if (window.confirm('Upgrade to Pro to access Advanced AI Insights?')) {
-                    router.push('/pricing');
+                    window.location.href = '/pricing';
                   }
                 }}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
@@ -474,11 +474,11 @@ export default function Dashboard() {
 
             <Link href="/link-in-bio-generator" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
-                <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Link</div>
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Link in Bio</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create a beautiful Link in Bio for your social media profiles.</p>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Create Link-in-Bio Page</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
             </Link>
           </div>
         </section>

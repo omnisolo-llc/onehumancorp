@@ -2,8 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
-import { AppShell } from '../components/AppShell';
-
 type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
 
 function SetupIcon({ name }: { name: SetupIconName }) {
@@ -118,11 +116,16 @@ export default function OnboardingWizard() {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-    fetch('/api/onboarding/state', {
-      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
-    })
-    .then(res => res.json())
-    .then(data => {
+    Promise.all([
+      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null),
+      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+    ])
+    .then(([draftData, stateData]) => {
+      const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
         if (data.wizardState.step) setStep(data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
@@ -240,13 +243,13 @@ export default function OnboardingWizard() {
     }
     if (!adminEmail.trim()) {
       errors.adminEmail = 'Admin Email is required';
-    } else if (!/^\S+@\S+\.\S+$/.test(adminEmail)) {
-      errors.adminEmail = 'Invalid email format';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
+      errors.adminEmail = 'Please enter a valid email address';
     }
     if (!adminPassword.trim()) {
       errors.adminPassword = 'Password is required';
-    } else if (adminPassword.length < 8) {
-      errors.adminPassword = 'Password must be at least 8 characters';
+    } else if (adminPassword.length < 8 || !/\d/.test(adminPassword)) {
+      errors.adminPassword = 'Password must be at least 8 characters and contain a number';
     }
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -327,17 +330,8 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <AppShell
-      title="Setup"
-      subtitle="Guided business setup in the same operations-console layout."
-      statusItems={[
-        { label: "Step", value: `${step}/5`, tone: "neutral" },
-        { label: "Progress", value: `${Math.round(getProgress())}%`, tone: step === 5 ? "good" : "warn" },
-      ]}
-      actions={[{ label: "Dashboard", href: "/dashboard" }]}
-    >
-      <div className="app-grid two">
-        <div id="setup-screen" className="app-panel w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] mac-glass-container">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] flex items-center justify-center p-4">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[24px] mac-glass-container border border-white/20 shadow-2xl">
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
@@ -919,31 +913,6 @@ export default function OnboardingWizard() {
           )}
         </div>
       </div>
-        <aside className="app-panel">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Setup Progress</div>
-              <div className="app-list-subtitle">This panel now lives in the same side-menu application frame.</div>
-            </div>
-          </div>
-          <div className="app-list">
-            {[
-              ['Business intake', step > 1],
-              ['Review details', step > 2],
-              ['Style and team', step > 3],
-              ['Launch', step > 4],
-            ].map(([label, complete]) => (
-              <div key={String(label)} className="app-list-item">
-                <div>
-                  <div className="app-list-title">{label}</div>
-                  <div className="app-list-subtitle">{complete ? 'Complete' : 'Pending'}</div>
-                </div>
-                <span className={`app-badge ${complete ? 'good' : ''}`}>{complete ? 'Done' : 'Open'}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
-      </div>
-    </AppShell>
+    </div>
   );
 }
