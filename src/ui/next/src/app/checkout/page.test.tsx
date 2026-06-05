@@ -13,6 +13,10 @@ vi.mock('../../components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('../pos/terminal/StripeTerminalClient', () => ({
+  default: () => <div data-testid="stripe-terminal-client" />
+}));
+
 describe('CheckoutPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
