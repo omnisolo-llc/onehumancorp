@@ -3,20 +3,12 @@ import { test, expect } from '@playwright/test';
 test.describe('KDS Offline & Multilingual', () => {
 
   test('KDS Order Sync & Multilingual Display', async ({ page }) => {
-<<<<<<< HEAD
     await page.goto('/pos/kds');
-=======
-    await page.goto('http://localhost:3000/pos/kds');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Wait for mock data to load
     await expect(page.locator('text=Active Orders')).toBeVisible();
     await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
-<<<<<<< HEAD
     await expect(page.getByText('Chicken Over Rice', { exact: true })).toBeVisible();
-=======
-    await expect(page.locator('text=Chicken Over Rice')).toBeVisible();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Toggle language
     await page.getByTestId('lang-toggle').click();
@@ -31,11 +23,7 @@ test.describe('KDS Offline & Multilingual', () => {
   });
 
   test('KDS Offline Actions & Background Sync', async ({ page, context }) => {
-<<<<<<< HEAD
     await page.goto('/pos/kds');
-=======
-    await page.goto('http://localhost:3000/pos/kds');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
 
     // Set network to offline

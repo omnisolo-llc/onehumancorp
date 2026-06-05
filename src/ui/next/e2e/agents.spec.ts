@@ -3,11 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('AI Agent Department Architecture', () => {
   test('should display approval inbox and activity feed', async ({ page }) => {
     // Navigate to agents page
-<<<<<<< HEAD
     await page.goto('/agents');
-=======
-    await page.goto('http://localhost:3000/agents');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Ensure "My Team" tab is visible
     await expect(page.locator('text=My Team')).toBeVisible();
@@ -24,11 +20,7 @@ test.describe('AI Agent Department Architecture', () => {
 
   test('should show soft paywall for Pro Mode when not pro, and allow trial extension via share', async ({ page }) => {
     // Navigate to the agents page
-<<<<<<< HEAD
     await page.goto('/agents');
-=======
-    await page.goto('http://localhost:3000/agents');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Make sure we don't have pro
     await page.evaluate(() => {

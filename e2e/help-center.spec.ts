@@ -3,11 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Help Center and Contextual Help', () => {
   test('Persona: Business Owner uses help center and chat', async ({ page }) => {
     // Navigate to dashboard
-<<<<<<< HEAD
     await page.goto('/dashboard?test_chat=true');
-=======
-    await page.goto('/dashboard');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Wait for page to load fully
     await page.waitForLoadState('networkidle');
@@ -37,19 +33,11 @@ test.describe('Help Center and Contextual Help', () => {
     await page.click('text=Getting Started');
     await expect(page).toHaveURL(/.*\/help\/getting-started/);
     await expect(page.locator('text=Getting Started with Your Store').first()).toBeVisible();
-<<<<<<< HEAD
     await expect(page.getByRole('heading', { name: '1. Set up your basic info' })).toBeVisible();
 
     await page.goto('/help');
 
     await page.fill('input[placeholder="Search for help articles and videos..."]', 'paid');
-=======
-    await expect(page.locator('text=Step 1: Tell us about your business').first()).toBeVisible();
-
-    await page.click('text=Back to Help Center');
-
-    await page.fill('input[placeholder="Search for help articles..."]', 'payments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.locator('text=Getting Paid').first()).toBeVisible();
   });
 
@@ -77,10 +65,6 @@ test.describe('Help Center and Contextual Help', () => {
   test('Persona: Business Owner navigates to KAIROS page', async ({ page }) => {
      await page.goto('/kairos');
      // Ensure page loaded
-<<<<<<< HEAD
      await expect(page.getByRole('heading', { name: 'Kairos' })).toBeVisible();
-=======
-     await expect(page.locator('h1', { hasText: 'KAIROS Orchestration' })).toBeVisible();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   });
 });

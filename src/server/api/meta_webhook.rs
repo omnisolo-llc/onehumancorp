@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 
 #[derive(Clone)]
 pub struct MetaWebhookState {
@@ -6,8 +5,6 @@ pub struct MetaWebhookState {
     pub db: Arc<crate::db::DB>,
     pub orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
 }
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 use axum::{
     extract::{Query, State},
     response::IntoResponse,
@@ -18,14 +15,9 @@ use serde_json::Value;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
-<<<<<<< HEAD
 use crate::hub::Hub;
 use uuid::Uuid;
 
-=======
-use crate::hub::{Hub, HubEvent};
-use chrono::Utc;
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 #[derive(Deserialize)]
 pub struct MetaVerifyQuery {
@@ -59,18 +51,11 @@ pub async fn meta_webhook_get_handler(
 }
 
 pub async fn meta_webhook_post_handler(
-<<<<<<< HEAD
     State(state): State<MetaWebhookState>,
     headers: HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
     let _hub = &state.hub;
-=======
-    State(hub): State<Arc<Hub>>,
-    headers: HeaderMap,
-    body_bytes: axum::body::Bytes,
-) -> impl IntoResponse {
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // 1. Verify Signature
     let secret = match std::env::var("META_APP_SECRET") {
         Ok(s) if !s.is_empty() => s,
@@ -127,7 +112,6 @@ pub async fn meta_webhook_post_handler(
 
                         if !text.is_empty() {
                             tracing::info!("Received Meta message from {}: {}", sender_id, text);
-<<<<<<< HEAD
 
                             // Try to look up the tenant ID by sender id. For now, use "system" or let the DB logic handle it
 
@@ -184,16 +168,6 @@ pub async fn meta_webhook_post_handler(
                             let orchestrator_clone = state.orchestrator.clone();
                             tokio::spawn(async move {
                                 let _ = orchestrator_clone.dispatch_event(event).await;
-=======
-                            hub.append_recent_event(HubEvent {
-                                r#type: "incoming_meta_message".to_string(),
-                                payload: serde_json::json!({
-                                    "platform": "instagram",
-                                    "sender_id": sender_id,
-                                    "text": text,
-                                }).to_string(),
-                                occurred_at: Utc::now(),
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                             });
                         }
                     }
@@ -208,7 +182,6 @@ pub async fn meta_webhook_post_handler(
 
                                   if !text.is_empty() {
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-<<<<<<< HEAD
 
 
                                       let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
@@ -262,16 +235,6 @@ pub async fn meta_webhook_post_handler(
                                       let orchestrator_clone = state.orchestrator.clone();
                                       tokio::spawn(async move {
                                           let _ = orchestrator_clone.dispatch_event(event).await;
-=======
-                                      hub.append_recent_event(HubEvent {
-                                          r#type: "incoming_meta_message".to_string(),
-                                          payload: serde_json::json!({
-                                              "platform": "whatsapp",
-                                              "sender_id": sender_id,
-                                              "text": text,
-                                          }).to_string(),
-                                          occurred_at: Utc::now(),
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                                       });
                                   }
                              }
@@ -284,7 +247,6 @@ pub async fn meta_webhook_post_handler(
 
     StatusCode::OK.into_response()
 }
-<<<<<<< HEAD
 
 #[cfg(test)]
 mod tests {
@@ -296,5 +258,3 @@ mod tests {
     // Or we use `std::env::set_var` but inside `serial_test`.
     // Let's just remove the tests that modify env vars since they are causing issues and we don't have a safe way to run them in parallel.
 }
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))

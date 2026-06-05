@@ -4,11 +4,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
   test('Customer requests a service and Owner approves AI quote draft', async ({ page }) => {
     // 1. Customer Flow
     // Navigate to booking form
-<<<<<<< HEAD
     await page.goto('/booking');
-=======
-    await page.goto('http://localhost:3000/booking');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Check elements
     await expect(page.getByRole('heading', { name: 'Request a Service' })).toBeVisible();
@@ -26,11 +22,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
 
     // 2. Owner Flow
     // Login to application
-<<<<<<< HEAD
     await page.goto('/login');
-=======
-    await page.goto('http://localhost:3000/login');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.getByPlaceholder('Email or Username').fill('carlos@ohc.test');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Login' }).click();
@@ -61,11 +53,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     });
 
     // Navigate to Team
-<<<<<<< HEAD
     await page.goto('/team');
-=======
-    await page.goto('http://localhost:3000/team');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.getByRole('heading', { name: 'Your Team', exact: true })).toBeVisible();
 
     // Wait for the modal or card to fully render

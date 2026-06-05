@@ -21,7 +21,6 @@ async fn test_edge_offload_mcp_server_local_route_sensitive() {
 }
 
 #[tokio::test]
-<<<<<<< HEAD
 async fn test_edge_offload_mcp_server_unknown_tool() {
     let server = EdgeOffloadMcpServer::new();
 
@@ -39,8 +38,6 @@ async fn test_edge_offload_mcp_server_unknown_tool() {
 }
 
 #[tokio::test]
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 async fn test_edge_offload_mcp_server_local_route_low_complexity() {
     let server = EdgeOffloadMcpServer::new();
 

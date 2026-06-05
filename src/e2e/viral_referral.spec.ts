@@ -5,10 +5,6 @@ currentAppSmoke('viral_referral');
 
 test.describe('Viral Referral Loop', () => {
   test('should display referral page with steps and copy-link functionality', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/referrals');
 
     // Check header

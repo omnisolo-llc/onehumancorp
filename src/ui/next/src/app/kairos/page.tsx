@@ -1,16 +1,9 @@
 "use client";
 
-<<<<<<< HEAD
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough } from "../../components/Walkthrough";
-=======
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { AppShell } from "../components/AppShell";
-import { useWalkthrough } from "../../components/help";
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 type KairosTask = {
   id: string;
@@ -27,7 +20,6 @@ type MeshNode = {
   load?: string | number;
 };
 
-<<<<<<< HEAD
 const kairosWalkthroughSteps = [
   {
     targetId: "kairos-brain",
@@ -49,8 +41,6 @@ const kairosWalkthroughSteps = [
   },
 ];
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
   if (["online", "completed", "healthy", "ready"].includes(normalized)) return "good";
@@ -69,17 +59,12 @@ export default function KairosDashboard() {
 
 function KairosContent() {
   const searchParams = useSearchParams();
-<<<<<<< HEAD
   const walkthroughStarted = useRef(false);
-=======
-  const { startWalkthrough } = useWalkthrough();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   const [tasks, setTasks] = useState<KairosTask[]>([]);
   const [meshNodes, setMeshNodes] = useState<MeshNode[]>([]);
   const [memoryStats, setMemoryStats] = useState<Record<string, string | number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-<<<<<<< HEAD
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
@@ -95,18 +80,6 @@ function KairosContent() {
       return () => window.clearTimeout(timeoutId);
     }
   }, [searchParams]);
-=======
-
-  useEffect(() => {
-    if (searchParams.get("walkthrough") === "true") {
-      startWalkthrough([
-        { targetId: "kairos-brain", message: "Shared tasks appear here when the orchestration backend returns active work." },
-        { targetId: "kairos-nerves", message: "Mesh nodes appear here when live mesh status is available." },
-        { targetId: "kairos-memory", message: "AutoDream memory statistics appear here when the backend exposes them." },
-      ]);
-    }
-  }, [searchParams, startWalkthrough]);
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
   useEffect(() => {
     async function loadKairos() {
@@ -153,15 +126,12 @@ function KairosContent() {
         { label: "Memory", value: Object.keys(memoryStats).length > 0 ? "Available" : "No data", tone: Object.keys(memoryStats).length > 0 ? "good" : "neutral" },
       ]}
     >
-<<<<<<< HEAD
       <InteractiveWalkthrough
         steps={kairosWalkthroughSteps}
         isOpen={isWalkthroughOpen}
         onClose={() => setIsWalkthroughOpen(false)}
       />
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
       {error && <div className="mb-4 app-badge bad">{error}</div>}
 
       <div className="app-grid two">

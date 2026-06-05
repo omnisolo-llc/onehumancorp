@@ -218,7 +218,6 @@ export default function Dashboard() {
         <UnifiedAgentFeed />
 
         <section>
-<<<<<<< HEAD
           <div className="mb-6 mac-glass-container p-6 rounded-[16px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -234,15 +233,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
               <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
             </div>
           </div>
-<<<<<<< HEAD
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
             <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
@@ -286,30 +282,6 @@ export default function Dashboard() {
               >
                 Upgrade to Pro
               </button>
-=======
-          <div className="app-grid metrics">
-            <WalkthroughTarget id="sales-card-target" className="app-card">
-              <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
-                <div className="app-metric-label">Total Sales</div>
-              </WithTooltip>
-              <div className="app-metric-value">{money(metrics.total_sales)}</div>
-              <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
-            </WalkthroughTarget>
-            <div className="app-card">
-              <div className="app-metric-label">Customers</div>
-              <div className="app-metric-value">{metrics.active_customers}</div>
-              <div className="app-metric-note">Database customer records</div>
-            </div>
-            <div className="app-card">
-              <div className="app-metric-label">Pending Orders</div>
-              <div className="app-metric-value">{metrics.pending_orders}</div>
-              <div className="app-metric-note">Open fulfillment workload</div>
-            </div>
-            <div className="app-card">
-              <div className="app-metric-label">Low Stock</div>
-              <div className="app-metric-value">{lowStockCount}</div>
-              <div className="app-metric-note">Materials below threshold</div>
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             </div>
           </div>
         </section>
@@ -446,11 +418,7 @@ export default function Dashboard() {
               <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
             </div>
           </div>
-<<<<<<< HEAD
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-=======
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             <Link href="/referrals" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
@@ -477,7 +445,6 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Social Share Cards</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
             </Link>
-<<<<<<< HEAD
 
             <Link href="/storefront-widget" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
@@ -505,8 +472,6 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Create Link-in-Bio Page</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
             </Link>
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
           </div>
         </section>
       </main>

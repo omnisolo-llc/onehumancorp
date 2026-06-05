@@ -62,10 +62,7 @@ function patternsForFile(file: string) {
 
 test.describe('real data contract', () => {
   test('Rust server does not own browser application pages', async () => {
-<<<<<<< HEAD
     expect(fs.existsSync(path.join(repoRoot, 'src/server/lib.rs')), 'Production source files are not available in this Bazel Playwright runfiles tree.').toBeTruthy();
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     const serverLib = fs.readFileSync(path.join(repoRoot, 'src/server/lib.rs'), 'utf8');
     const forbiddenPatterns = [
       /async\s+fn\s+ui_handler\b/,

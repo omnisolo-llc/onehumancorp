@@ -1,7 +1,6 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
-<<<<<<< HEAD
 _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
     "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
@@ -57,8 +56,6 @@ _ROOT_UI_E2E_SPECS = [
     "//:e2e/subscription-box.spec.ts",
 ]
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 # Shell script wrapper for running ALL playwright tests via docker compose
 # (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
 sh_binary(
@@ -85,14 +82,9 @@ sh_binary(
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
     ci_shard_count = 16,
-<<<<<<< HEAD
     data = [
         "//src/ui/next:next_app_e2e_data",
     ],
     server = "//src/server:server",
     specs = glob(["*.spec.ts"]) + _NEXT_UI_E2E_SPECS + _ROOT_UI_E2E_SPECS,
-=======
-    server = "//src/server:server",
-    specs = glob(["*.spec.ts"]),
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 )

@@ -5,10 +5,6 @@ currentAppSmoke('dashboard_ux');
 
 test.describe('Dashboard UX', () => {
   test('should display Growth & Virality section with Share Cards link', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/dashboard');
 
     // Verify Growth & Virality section
@@ -21,10 +17,6 @@ test.describe('Dashboard UX', () => {
   });
 
   test('should have 3 columns in Growth & Virality grid', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/dashboard');
 
     const shareCardsLink = page.locator('a[href="/share-cards"]');
@@ -35,10 +27,6 @@ test.describe('Dashboard UX', () => {
   });
 
   test('should verify Social Share Cards card description', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/dashboard');
 
     const shareCardsLink = page.locator('a[href="/share-cards"]');
@@ -46,10 +34,6 @@ test.describe('Dashboard UX', () => {
   });
 
   test('should verify Social Share Cards badge icon and label', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/dashboard');
 
     const shareCardsLink = page.locator('a[href="/share-cards"]');
@@ -58,10 +42,6 @@ test.describe('Dashboard UX', () => {
   });
 
   test('should verify all links in Growth & Virality section are present', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await page.goto('/dashboard');
 
     await expect(page.locator('a[href="/referrals"]')).toBeVisible();

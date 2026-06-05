@@ -49,13 +49,8 @@ function specialistProcessesFor(commands: string, agentName: string): string[] {
 test.describe('real MiniMax hire-agent flow', () => {
   test('hiring an agent starts a real M3 business swarm with specialist agents', async ({ request }) => {
     test.setTimeout(360_000);
-<<<<<<< HEAD
 
     expect(process.env.MINIMAX_API_KEY, 'requires a real MINIMAX_API_KEY in the environment or .env').toBeTruthy();
-=======
-    test.skip(!process.env.MINIMAX_API_KEY, 'requires a real MINIMAX_API_KEY in the environment or .env');
-
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     expect(process.env.OHC_LLM_PROVIDER || 'minimax').toBe('minimax');
     expect(process.env.OHC_LLM_MODEL || process.env.MINIMAX_MODEL || 'MiniMax-M3').toBe('MiniMax-M3');
 

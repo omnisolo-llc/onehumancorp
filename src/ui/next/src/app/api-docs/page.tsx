@@ -3,10 +3,7 @@
 import React, { useEffect, useState } from "react";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
-<<<<<<< HEAD
 import { WithTooltip } from "../../components/TooltipRegistry";
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 // OpenAPI spec for OHC backend
 const getSwaggerSpec = (origin: string) => ({
@@ -166,11 +163,7 @@ const getSwaggerSpec = (origin: string) => ({
 
 export default function ApiDocsPage() {
   const [mounted, setMounted] = useState(false);
-<<<<<<< HEAD
   const [spec, setSpec] = useState<Record<string, unknown> | null>(null);
-=======
-  const [spec, setSpec] = useState<any>(null);
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
   useEffect(() => {
     setMounted(true);
@@ -180,17 +173,11 @@ export default function ApiDocsPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[20px] saturate-200 font-inter">
       <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
-<<<<<<< HEAD
         <div className="text-yellow-700 text-sm">
           <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
             <span className="font-outfit cursor-help font-bold">Advanced:</span>
           </WithTooltip>{" "}This section is for developers directly integrating with our APIs. Not required for normal use.
         </div>
-=======
-        <p className="text-yellow-700 text-sm">
-          <strong className="font-outfit">Advanced:</strong> This section is for developers directly integrating with our APIs. Not required for normal use.
-        </p>
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
       </div>
       {mounted && spec && <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40"><SwaggerUI spec={spec} /></div>}
     </div>

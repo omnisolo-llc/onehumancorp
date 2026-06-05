@@ -11,18 +11,9 @@ import { test, expect } from '@playwright/test';
  *      6. Verifies cached rates are used and UI shows feedback.
  */
 
-<<<<<<< HEAD
 test('Global Offline-First Localization & Currency Toggle', async ({ page, context }) => {
   // Seed staff data for offline login simulation
   await page.addInitScript(() => {
-=======
-test('Global Offline-First Localization & Currency Toggle', async ({ page }) => {
-  // 1. Navigate to POS Terminal
-  await page.goto('/pos/terminal');
-
-  // Seed staff data for offline login simulation
-  await page.evaluate(() => {
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     localStorage.setItem('ohc_offline_staff', JSON.stringify([{
       id: 'fatima-1',
       name: 'Fatima',
@@ -47,12 +38,9 @@ test('Global Offline-First Localization & Currency Toggle', async ({ page }) => 
     }));
   });
 
-<<<<<<< HEAD
   // 1. Navigate to POS Terminal
   await page.goto('/pos/terminal');
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   // 2. Unlock Terminal
   await page.click('button:has-text("1")');
   await page.click('button:has-text("2")');
@@ -73,16 +61,12 @@ test('Global Offline-First Localization & Currency Toggle', async ({ page }) => 
   await page.click('button:has-text("EUR")');
 
   // 5. Simulate Offline and Process Order
-<<<<<<< HEAD
   await context.setOffline(true);
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'onLine', { value: false });
     window.dispatchEvent(new Event('offline'));
   });
 
-<<<<<<< HEAD
   let dialogMessage = '';
   page.once('dialog', async dialog => {
     dialogMessage = dialog.message();
@@ -96,17 +80,4 @@ test('Global Offline-First Localization & Currency Toggle', async ({ page }) => 
 
   // 6. Verify Offline Feedback
   await expect(page.locator('text=Using cached rates - Syncing soon')).toBeVisible();
-=======
-  // Click "New Order"
-  await page.click('text=New Order');
-
-  // 6. Verify Offline Feedback
-  await expect(page.locator('text=Using cached rates - Syncing soon')).toBeVisible();
-
-  // Verify Alert/Dialog contains converted amount (50 USD * 0.92 = 46 EUR)
-  page.on('dialog', async dialog => {
-    expect(dialog.message()).toContain('46 EUR');
-    await dialog.accept();
-  });
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 });

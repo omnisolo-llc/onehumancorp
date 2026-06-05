@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { test, expect } from '@playwright/test';
 
 test.describe('Cross Device Onboarding CUJ', () => {
@@ -7,24 +6,6 @@ test.describe('Cross Device Onboarding CUJ', () => {
     await page.goto('/onboarding');
     await expect(page.getByText('Welcome')).toBeVisible();
     await page.getByText('Start Onboarding').click();
-=======
-// NOTE: E2E test runs for this flow are skipped locally/in sandbox due to a Docker/PGVector permission issue.
-// They will be run manually in CI or when the sandbox issue is resolved.
-
-import { test, expect } from '@playwright/test';
-
-test.describe('Cross Device Onboarding CUJ', () => {
-  test('Persona: Business Owner can save draft and resume cross device', async ({ page, context }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    // 1. Owner starts from the home page
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-
-    await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Verify it landed on the Onboarding page
     await expect(page.getByText('Tell us about your business')).toBeVisible();

@@ -748,10 +748,7 @@ mod tests {
             let p = pool_arc.clone();
             handles.push(tokio::spawn(async move {
                 let mut attempts = 0;
-<<<<<<< HEAD
                 let mut backoff = std::time::Duration::from_millis(10);
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', '{}')")
                         .bind(format!("mission_{}", i))
@@ -767,12 +764,8 @@ mod tests {
                             if attempts >= 20 {
                                 panic!("Failed to insert mission after 20 attempts due to lock contention");
                             }
-<<<<<<< HEAD
                             tokio::time::sleep(backoff).await;
                             backoff *= 2;
-=======
-                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                         } else {
                             panic!("Unexpected error: {}", e);
                         }

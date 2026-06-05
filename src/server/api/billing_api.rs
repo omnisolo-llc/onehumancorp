@@ -27,11 +27,7 @@ pub struct CostDashboardResponse {
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
 }
 
-<<<<<<< HEAD
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
-=======
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))

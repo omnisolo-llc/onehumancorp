@@ -9,11 +9,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 def _playwright_target_name(spec):
     """Convert a spec filename to a valid Bazel target name."""
-<<<<<<< HEAD
     return "playwright_" + spec.replace("/", "_").replace(":", "_").replace(".", "_").replace("-", "_")
-=======
-    return "playwright_" + spec.replace("/", "_").replace(".", "_").replace("-", "_")
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 def _playwright_shard_target_name(index, total):
     return "playwright_shard_{}_of_{}".format(index + 1, total)
@@ -34,10 +30,6 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
     ]
     if manual:
         tags.append("manual")
-<<<<<<< HEAD
-=======
-
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     attrs = {
         "name": name,
         "srcs": ["//bazel/rules/playwright:playwright_test.sh"],
@@ -45,10 +37,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "data": spec_args + common_data,
         "env": {
             "BASE_URL": "http://localhost:18789",
-<<<<<<< HEAD
             "NEXT_APP_PACKAGE_JSON": "$(rootpath //src/ui/next:package.json)",
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
             "PLAYWRIGHT_RETRIES": "0",
         },
@@ -70,11 +59,8 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
         "//src/e2e:ai-judge.ts",
         "//src/e2e:global-setup.ts",
         "//src/e2e:e2e-seed.sql",
-<<<<<<< HEAD
         "//src/ui/next:package.json",
         "//src/ui/next:src/e2e/fixtures/test_img.png",
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         "//src/agents/builtin:ohc-builtin-agent",
         "//deploy:docker-compose.e2e.yml",
         "//:playwright.config.ts",

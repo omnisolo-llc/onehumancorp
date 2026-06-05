@@ -10,11 +10,7 @@ test.describe('Checkout Flow', () => {
   });
 
   test('completes payment successfully', async ({ page }) => {
-<<<<<<< HEAD
     await page.goto('/checkout');
-=======
-    await page.goto('http://localhost:3000/checkout');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
 
     // Test the Pay Now button

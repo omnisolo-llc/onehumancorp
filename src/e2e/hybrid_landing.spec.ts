@@ -2,12 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Hybrid Landing Page', () => {
   test('should display Local-First and Cloud options', async ({ page }) => {
-<<<<<<< HEAD
     await page.goto('/dashboard');
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await page.goto('/');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     await expect(page.getByRole('heading', { name: 'OneHumanCorp' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /Hybrid Agentic OS/ })).toBeVisible();

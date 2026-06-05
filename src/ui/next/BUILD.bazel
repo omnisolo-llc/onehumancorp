@@ -3,7 +3,6 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 npm_link_all_packages(name = "node_modules")
 
-<<<<<<< HEAD
 exports_files(glob([
     "package.json",
     "e2e/*.spec.ts",
@@ -32,8 +31,6 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 sh_test(
     name = "next_vitest",
     size = "large",

@@ -7,10 +7,6 @@ test.describe('Cost Dashboard', () => {
     await page.goto('/cost-dashboard');
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
     const trendList = page.locator('#cost-dashboard-trend');
-<<<<<<< HEAD
-=======
-    await expect(trendList).toBeVisible();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(trendList.locator('li').first()).toBeVisible({ timeout: 10000 });
   });
 

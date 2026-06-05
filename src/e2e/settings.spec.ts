@@ -7,10 +7,6 @@ test.describe('Settings Page', () => {
   });
 
   test('shows general notification settings', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
     await expect(page.getByText('Enable Email Notifications')).toBeVisible();
     await expect(page.getByText('Enable Push Notifications')).toBeVisible();
@@ -18,7 +14,6 @@ test.describe('Settings Page', () => {
     await expect(page.getByText('Language', { exact: true })).toBeVisible();
   });
 
-<<<<<<< HEAD
   test('toggles delivery settings', async ({ page }) => {
     await page.getByLabel('Enable Email Notifications').check();
     await page.getByLabel('Enable Push Notifications').check();
@@ -42,25 +37,5 @@ test.describe('Settings Page', () => {
     await expect(page.getByText('Enable Local Delivery')).toBeVisible();
     await expect(page.getByText('Delivery Radius (miles)')).toBeVisible();
     await expect(page.getByText('Flat Delivery Fee ($)')).toBeVisible();
-=======
-  test('toggles settings and returns to dashboard on save', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await page.getByLabel('Enable Email Notifications').check();
-    await page.getByLabel('Enable Push Notifications').check();
-    await page.getByRole('button', { name: 'Save' }).click();
-
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  });
-
-  test('shows profile and security fields', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
-    await expect(page.getByPlaceholder('Display Name')).toBeVisible();
-    await expect(page.getByPlaceholder('Bio')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible();
-    await expect(page.getByPlaceholder('Current Password')).toBeVisible();
-    await expect(page.getByPlaceholder('New Password')).toBeVisible();
-    await expect(page.getByPlaceholder('Confirm Password')).toBeVisible();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   });
 });

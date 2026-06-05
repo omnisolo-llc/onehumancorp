@@ -2,10 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   test('updates storefront and validates cache invalidation at the edge', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     const tenantId = "test-tenant-uuid";
     const siteId = "test-site-uuid";
 
@@ -70,10 +66,6 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   });
 
   test('generates edge storefront with premium styling and seo', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     const tenantId = "test-tenant-uuid";
     const siteId = "test-site-uuid";
 
@@ -111,10 +103,6 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   });
 
   test('handles edge cache miss dynamically', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     const tenantId = "test-tenant-uuid";
     const siteId = "test-site-uuid";
 
@@ -140,10 +128,6 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   });
 
   test('isolates tenant data', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     const tenantId1 = "test-tenant-uuid-1";
     const tenantId2 = "test-tenant-uuid-2";
     const siteId = "test-site-uuid";
@@ -162,10 +146,6 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   });
 
   test('validates cache regeneration after offline sync', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
      // A business owner updates an item price while offline. Upon network connection, the app syncs the change to the cloud.
      // The Operations Agent intelligently invalidates the specific edge caches.
      // A customer on the other side of the world loads the updated product page instantly from the edge.

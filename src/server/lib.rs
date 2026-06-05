@@ -813,52 +813,28 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-<<<<<<< HEAD
     let (org_res, active_orders_res) = tokio::join!(
         async {
             let cache_key = format!("advisory:org:{}", tenant_id);
-=======
-    let db_org = db.clone();
-    let db_orders = db.clone();
-    let tenant_id_org = tenant_id.clone();
-    let tenant_id_orders = tenant_id.clone();
-
-    let (org_res, active_orders_res) = tokio::join!(
-        tokio::spawn(async move {
-            let cache_key = format!("advisory:org:{}", tenant_id_org);
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
 
-<<<<<<< HEAD
             let result = match &db.store {
-=======
-            let result = match &db_org.store {
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-<<<<<<< HEAD
                     .bind(&tenant_id)
                     .fetch_optional(&db.pool)
-=======
-                    .bind(&tenant_id_org)
-                    .fetch_optional(&db_org.pool)
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-<<<<<<< HEAD
                     .bind(&tenant_id)
-=======
-                    .bind(&tenant_id_org)
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                     .fetch_optional(pool)
                     .await
                 }
@@ -868,47 +844,28 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
             }
             result
-<<<<<<< HEAD
         },
         async {
             let cache_key = format!("advisory:orders:{}", tenant_id);
-=======
-        }),
-        tokio::spawn(async move {
-            let cache_key = format!("advisory:orders:{}", tenant_id_orders);
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
 
-<<<<<<< HEAD
             let result = match &db.store {
-=======
-            let result = match &db_orders.store {
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 crate::db::DbStore::Postgres => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-<<<<<<< HEAD
                     .bind(&tenant_id)
                     .fetch_one(&db.pool)
-=======
-                    .bind(&tenant_id_orders)
-                    .fetch_one(&db_orders.pool)
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-<<<<<<< HEAD
                     .bind(&tenant_id)
-=======
-                    .bind(&tenant_id_orders)
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                     .fetch_one(pool)
                     .await
                 }
@@ -918,19 +875,11 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
             }
             result
-<<<<<<< HEAD
         }
     );
 
     let org_data = org_res;
     let orders_data = active_orders_res;
-=======
-        })
-    );
-
-    let org_data = org_res.unwrap_or(Ok(None));
-    let orders_data = active_orders_res.unwrap_or(Ok(0));
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     let (business_name, industry) = org_data
         .unwrap_or(None)
@@ -2327,6 +2276,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    let parse_intake_worker = crate::workers::department_workers::parse_intake_worker::ParseIntakeWorker::new(db.clone());
+    parse_intake_worker.start();
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
@@ -2635,7 +2586,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
-<<<<<<< HEAD
     let meta_webhook_state = api::meta_webhook::MetaWebhookState {
         hub: hub.clone(),
         db: db.clone(),
@@ -2645,12 +2595,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
-=======
-    let meta_webhook_router = axum::Router::new()
-        .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
-        .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
-        .with_state(hub.clone());
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
@@ -2935,7 +2879,6 @@ async fn list_ui_supply_handler(
 
     let (vendors, raw_materials, bom_items) = match &db.store {
         crate::db::DbStore::Postgres => {
-<<<<<<< HEAD
             let (v_res, rm_res, bi_res) = tokio::join!(
                 sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
                     .bind(&tenant_id)
@@ -2949,13 +2892,6 @@ async fn list_ui_supply_handler(
             );
 
             let vendors = v_res.unwrap_or_default()
-=======
-            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2963,16 +2899,8 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-<<<<<<< HEAD
 
             let raw_materials = rm_res.unwrap_or_default()
-=======
-            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2981,16 +2909,8 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-<<<<<<< HEAD
 
             let bom_items = bi_res.unwrap_or_default()
-=======
-            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2999,7 +2919,6 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
-<<<<<<< HEAD
 
             (vendors, raw_materials, bom_items)
         }
@@ -3017,16 +2936,6 @@ async fn list_ui_supply_handler(
             );
 
             let vendors = v_res.unwrap_or_default()
-=======
-            (vendors, raw_materials, bom_items)
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -3034,16 +2943,8 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-<<<<<<< HEAD
 
             let raw_materials = rm_res.unwrap_or_default()
-=======
-            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -3052,16 +2953,8 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-<<<<<<< HEAD
 
             let bom_items = bi_res.unwrap_or_default()
-=======
-            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -3070,10 +2963,7 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
-<<<<<<< HEAD
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             (vendors, raw_materials, bom_items)
         }
     };
@@ -3648,11 +3538,7 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-<<<<<<< HEAD
         .nest("/api/billing", api::billing_api::router(hub.clone()))
-=======
-        .nest("/api/billing", api::billing_api::router(hub.clone()).with_state(mesh_transport.clone()))
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -3880,6 +3766,7 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
+        .add_service(crate::ohc::orchestration::questionnaire_service_server::QuestionnaireServiceServer::with_interceptor(crate::services::questionnaire::service::MyQuestionnaireService::new(hub.clone()), spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;

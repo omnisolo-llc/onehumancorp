@@ -39,11 +39,7 @@ test('Verify onboarding UI', async ({ page }) => {
     });
   });
 
-<<<<<<< HEAD
   await page.goto('/onboarding');
-=======
-  await page.goto('http://localhost:3000/onboarding');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   await page.waitForTimeout(1000);
   await page.screenshot({ path: 'onboarding-step1.png' });
 

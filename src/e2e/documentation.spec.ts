@@ -2,10 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Documentation Feature E2E', () => {
   test('should display and navigate the help center properly', async ({ page }) => {
-<<<<<<< HEAD
-=======
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     // Navigate to homepage or dashboard
     await page.goto('/dashboard');
 

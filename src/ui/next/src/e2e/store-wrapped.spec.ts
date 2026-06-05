@@ -3,11 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Store Wrapped Growth Loop', () => {
     test('dashboard shows the Store Wrapped section and navigates to the wrapped page', async ({ page }) => {
         // First log in
-<<<<<<< HEAD
         await page.goto('/login');
-=======
-        await page.goto('http://localhost:3000/login');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
         // Enter credentials and click login
         const emailInput = page.getByPlaceholder('name@example.com', { exact: false });
@@ -21,11 +17,7 @@ test.describe('Store Wrapped Growth Loop', () => {
         await page.locator('button:has-text("Sign in"), button:has-text("Login")').first().click();
 
         // Go to dashboard
-<<<<<<< HEAD
         await page.goto('/dashboard');
-=======
-        await page.goto('http://localhost:3000/dashboard');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
         // Look for the "Store Wrapped" section in the growth loops
         const sectionHeader = page.locator('h2:has-text("2024 Store Wrapped")');

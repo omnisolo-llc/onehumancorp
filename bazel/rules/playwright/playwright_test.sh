@@ -30,7 +30,6 @@ for spec_file in "$@"; do
   ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
 done
 
-<<<<<<< HEAD
 playwright_spec_workspace_name() {
   local spec_file="$1"
   local rel="$spec_file"
@@ -54,8 +53,6 @@ copy_spec_fixtures() {
   fi
 }
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 # Resolve the Bazel-provided Playwright browser repository to an absolute path.
 # Every shard gets the same runfiles-backed browser directory instead of a
 # per-shard install under the temporary Playwright workspace.
@@ -141,7 +138,6 @@ PLAYWRIGHT_SPEC_ARGS=()
 if (( ${#ABS_SPEC_FILES[@]} > 0 )); then
   for abs_spec_file in "${ABS_SPEC_FILES[@]}"; do
     abs_spec_file="$(realpath "$abs_spec_file")"
-<<<<<<< HEAD
     spec_workspace_name="$(playwright_spec_workspace_name "$abs_spec_file")"
     cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_workspace_name"
     copy_spec_fixtures "$abs_spec_file"
@@ -159,19 +155,6 @@ else
       -path '*/.next/*' -prune -o \
       -path '*/e2e/*.spec.ts' -type f -print0
   )
-=======
-    spec_base="$(basename "$abs_spec_file")"
-    cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_base"
-    PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_base")
-  done
-else
-  for spec_dir in "$RUNFILES_ROOT/src/e2e" "$workspace_root/src/e2e"; do
-    if compgen -G "$spec_dir/*.spec.ts" >/dev/null; then
-      cp "$spec_dir"/*.spec.ts "$WORK_DIR/src/e2e/"
-      break
-    fi
-  done
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 fi
 
 for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
@@ -181,10 +164,7 @@ for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts
     cp "$RUNFILES_ROOT/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
   fi
 done
-<<<<<<< HEAD
 
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
 
 cd "$WORK_DIR"
@@ -226,13 +206,10 @@ PY
 
 cleanup() {
   local exit_code=$?
-<<<<<<< HEAD
   if [[ -n "${NEXT_PID:-}" ]]; then
     kill "$NEXT_PID" >/dev/null 2>&1 || true
     wait "$NEXT_PID" >/dev/null 2>&1 || true
   fi
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   if [[ -n "${SERVER_PID:-}" ]]; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
@@ -331,11 +308,7 @@ export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
 export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
-<<<<<<< HEAD
 export API_BASE_URL="http://127.0.0.1:$OHC_SERVER_PORT"
-=======
-export BASE_URL="http://localhost:$OHC_SERVER_PORT"
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
@@ -379,7 +352,6 @@ else
   exit 1
 fi
 
-<<<<<<< HEAD
 NEXT_APP_ROOT=""
 if [[ -n "${NEXT_APP_PACKAGE_JSON:-}" ]]; then
   NEXT_APP_PACKAGE_JSON_CANDIDATES=(
@@ -490,9 +462,6 @@ for i in $(seq 1 120); do
 done
 
 export CI=false
-=======
-export CI=true
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 export PLAYWRIGHT_LIST_REPORTER="${PLAYWRIGHT_LIST_REPORTER:-1}"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 

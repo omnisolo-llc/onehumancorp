@@ -5,11 +5,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Cost Dashboard Loop', () => {
   test('Cost dashboard loads and displays data', async ({ page }) => {
     // Navigate to the dashboard page
-<<<<<<< HEAD
     await page.goto('/cost-dashboard');
-=======
-    await page.goto('http://localhost:3000/cost-dashboard');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Wait for the main heading to appear, indicating successful load
     await expect(page.locator('h1', { hasText: 'Business Advisory Dashboard' })).toBeVisible({ timeout: 10000 });
@@ -33,10 +29,6 @@ test.describe('Cost Dashboard Loop', () => {
 
     // Check navigation works
     await page.locator('button', { hasText: 'Back to My Plan' }).click();
-<<<<<<< HEAD
     await expect(page).toHaveURL('/plan');
-=======
-    await expect(page).toHaveURL('http://localhost:3000/plan');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
   });
 });

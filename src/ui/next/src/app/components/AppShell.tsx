@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-<<<<<<< HEAD
 import { WithTooltip } from "../../components/TooltipRegistry";
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
 type StatusItem = {
   label: string;
@@ -98,17 +95,12 @@ function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname();
   const active = pathname === item.href || (pathname || "").startsWith(`${item.href}/`);
 
-<<<<<<< HEAD
   const link = (
-=======
-  return (
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     <Link className={`app-nav-link ${active ? "is-active" : ""}`} href={item.href}>
       <span className="app-nav-marker"><ShellIcon name={item.icon} /></span>
       <span>{item.label}</span>
     </Link>
   );
-<<<<<<< HEAD
 
   if (item.href === "/kairos") {
     return (
@@ -119,8 +111,6 @@ function NavLink({ item }: { item: NavItem }) {
   }
 
   return link;
-=======
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 }
 
 export function AppShell({

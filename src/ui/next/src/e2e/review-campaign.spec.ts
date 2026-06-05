@@ -8,11 +8,7 @@ test.describe('Automated Review Campaign Growth Loop', () => {
             product_name: 'Super Gadget'
         };
 
-<<<<<<< HEAD
         const response = await request.post('/api/v1/growth/campaign/generate-review', {
-=======
-        const response = await request.post('http://localhost:3000/api/v1/growth/campaign/generate-review', {
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             data: payload
         });
 
@@ -32,11 +28,7 @@ test.describe('Automated Review Campaign Growth Loop', () => {
     });
 
     test('generate review endpoint returns generic fallback if payload is empty', async ({ request }) => {
-<<<<<<< HEAD
         const response = await request.post('/api/v1/growth/campaign/generate-review', {
-=======
-        const response = await request.post('http://localhost:3000/api/v1/growth/campaign/generate-review', {
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
             data: {}
         });
 

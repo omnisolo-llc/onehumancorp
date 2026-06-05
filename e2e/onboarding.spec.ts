@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-<<<<<<< HEAD
 
 test.describe('Onboarding Wizard CUJ', () => {
   test.beforeEach(async ({ page }) => {
@@ -42,27 +41,6 @@ test.describe('Onboarding Wizard CUJ', () => {
   // Test 1: Persona navigates from home, starts onboarding
   test('Persona: Business Owner completes initial setup successfully', async ({ page }) => {
     await startOnboarding(page);
-=======
-// NOTE: We rely on the seeded test environment, doing our best to perform an unmocked E2E operation
-
-test.describe('Onboarding Wizard CUJ', () => {
-
-  // Test 1: Persona navigates from home, starts onboarding
-  test('Persona: Business Owner completes initial setup successfully', async ({ page }) => {
-    // 1. Owner starts from the home page after user login via the UI
-    await page.goto('/login');
-    // We assume the test framework has setup or we just login
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-
-    // Now on home page, click to start onboarding
-    await expect(page.getByRole('heading', { name: /Welcome/i })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
-
-    // Verify it landed on the Onboarding page
-    await expect(page.getByText('Tell us about your business')).toBeVisible();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // 2. Owner enters business name
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
@@ -90,14 +68,10 @@ test.describe('Onboarding Wizard CUJ', () => {
     await expect(page.getByText('Style & Team')).toBeVisible();
 
     // 7. Owner launches store
-<<<<<<< HEAD
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Maya Smith');
     await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
     await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
     await page.getByRole('button', { name: /Launch Store/i }).click({ force: true });
-=======
-    await page.getByRole('button', { name: /Launch Store/i }).click();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // 8. Verify it transitions to Live Screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
@@ -106,15 +80,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
   // Test 2: Ensure validation fails on small name
   test('Persona: Business Owner fails validation on short business name', async ({ page }) => {
-<<<<<<< HEAD
     await startOnboarding(page);
-=======
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     // Owner enters short business name
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
@@ -127,15 +93,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
   // Test 3: Validate missing location blocks progression
   test('Persona: Business Owner cannot progress without location', async ({ page }) => {
-<<<<<<< HEAD
     await startOnboarding(page);
-=======
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
     await nameInput.fill('Maya Bakery');
@@ -152,15 +110,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
   // Test 4: Navigating Back works
   test('Persona: Business Owner can navigate back from sell step', async ({ page }) => {
-<<<<<<< HEAD
     await startOnboarding(page);
-=======
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
     await nameInput.fill('Maya Bakery');
@@ -174,15 +124,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
   // Test 5: Can cancel from Style & Team
   test('Persona: Business Owner can toggle Auto Respond on Style & Team step', async ({ page }) => {
-<<<<<<< HEAD
     await startOnboarding(page);
-=======
-    await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill('test@example.com');
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
-    await page.getByRole('link', { name: /Start Onboarding/i }).click();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
     await page.getByPlaceholder(/e.g. Maya's Custom Cakes/i).fill('Maya Bakery');
     await page.getByRole('button', { name: /Next/i }).click();
@@ -199,11 +141,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     // Toggle auto-respond
     const autoRespondToggle = page.getByRole('checkbox', { name: /Allow AI to Auto-Respond/i });
     await expect(autoRespondToggle).toBeChecked();
-<<<<<<< HEAD
     await page.getByText('Allow AI to Auto-Respond').click();
-=======
-    await autoRespondToggle.uncheck();
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
     await expect(autoRespondToggle).not.toBeChecked();
   });
 });

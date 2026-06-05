@@ -10,11 +10,7 @@ test('builder flow completes successfully', async ({ page }) => {
     json: { domain: 'test' }
   }));
 
-<<<<<<< HEAD
   await page.goto('/builder');
-=======
-  await page.goto('http://localhost:3000/builder');
->>>>>>> 95ce9988 (Autonomous Client Intake Questionnaire Engine Research Report (#23948))
 
   await expect(page.getByText(/What are you building today/i)).toBeVisible();
   await page.getByText('Selling Products').click();
