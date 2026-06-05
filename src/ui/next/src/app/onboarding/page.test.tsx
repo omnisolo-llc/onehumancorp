@@ -454,6 +454,40 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('loads draft state correctly on mount', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            wizardState: {
+              step: 1,
+              chatStep: 2,
+              businessName: 'Draft Business Name',
+              whatYouSell: 'Draft Products'
+            }
+          })
+        });
+      }
+      if (url === '/api/onboarding/state') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ wizardState: {} })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Wait for the mock fetch to resolve and state to update
+    await waitFor(() => {
+      expect(screen.getByText('What do you sell?')).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue('Draft Products')).toBeInTheDocument();
+  });
+
   it('Save Draft button triggers draft API and shows success message', async () => {
     const user = userEvent.setup({ delay: null });
 
