@@ -481,6 +481,7 @@ ln -s "$NEXT_APP_ROOT/node_modules" "$NEXT_WORK_DIR/node_modules"
 
 NEXT_PORT="$(pick_free_port)"
 export BASE_URL="http://127.0.0.1:$NEXT_PORT"
+export CI=false
 echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
 (
   cd "$NEXT_WORK_DIR"
@@ -494,7 +495,7 @@ NEXT_PID=$!
 
 echo "[playwright] Waiting for Next UI on port $NEXT_PORT..."
 for i in $(seq 1 120); do
-  if curl -fsS "$BASE_URL" >/dev/null 2>&1; then
+  if curl -sS -o /dev/null "$BASE_URL/login" >/dev/null 2>&1; then
     echo "[playwright] Next UI is ready."
     break
   fi
@@ -511,7 +512,6 @@ for i in $(seq 1 120); do
   sleep 1
 done
 
-export CI=false
 export PLAYWRIGHT_LIST_REPORTER="${PLAYWRIGHT_LIST_REPORTER:-1}"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
