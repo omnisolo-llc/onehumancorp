@@ -2,7 +2,7 @@
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|arg| arg == "--task" || arg == "--agent" || arg == "agent") {
-        if server_lib::is_standalone_runtime() {
+        if ::server_utils::runtime::is_standalone_runtime() {
             ohc_builtin_agent::run_agent().await
         } else {
             let message =

@@ -13,6 +13,7 @@ rust_library(
         "mod.rs",
         "slug.rs",
         "tier_middleware.rs",
+        "runtime.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",

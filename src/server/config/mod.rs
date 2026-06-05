@@ -126,7 +126,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
         let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
         let env_standalone =
-            std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+            ::server_utils::runtime::is_standalone_runtime();
         let is_standalone = env_standalone
             || cfg.standalone
             || (!is_test && cfg.database_url.is_none());
