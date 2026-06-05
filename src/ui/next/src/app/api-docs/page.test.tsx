@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ApiDocsPage from './page';
 import { TooltipProvider } from '../../components/TooltipRegistry';
 
@@ -13,7 +13,26 @@ vi.mock('swagger-ui-react', () => {
 });
 
 describe('ApiDocsPage', () => {
-  it('renders the advanced warning and swagger ui mock', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/docs/spec') {
+        return Promise.resolve({
+          json: () => Promise.resolve({
+            openapi: "3.0.0",
+            info: { title: "Test API" },
+            servers: [{ url: "http://localhost:8080" }]
+          })
+        });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({}) });
+    }) as any;
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders the advanced warning and swagger ui mock after fetching data', async () => {
     render(
       <TooltipProvider>
         <ApiDocsPage />
@@ -21,7 +40,11 @@ describe('ApiDocsPage', () => {
     );
 
     expect(screen.getByText('Advanced:')).toBeInTheDocument();
-    expect(screen.getByText('This section is for developers directly integrating with our APIs. Not required for normal use.')).toBeInTheDocument();
-    expect(screen.getByTestId('swagger-ui-mock')).toBeInTheDocument();
+    expect(screen.getByText(/This section is for developers directly integrating with our APIs/)).toBeInTheDocument();
+
+    // Wait for the swagger UI mock to appear after data load
+    await waitFor(() => {
+      expect(screen.getByTestId('swagger-ui-mock')).toBeInTheDocument();
+    });
   });
 });

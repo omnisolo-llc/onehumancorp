@@ -63,6 +63,38 @@ describe('HelpChat Component', () => {
     });
   });
 
+  it('sends a message and displays agent reply with a link', async () => {
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({
+      ok: true,
+      json: async () => ({
+        reply: "You can find more info here.",
+        link: { url: "/help/my-store", title: "Read the full article →" }
+      })
+    }));
+
+    render(<HelpChat />);
+
+    // Open chat
+    const button = screen.getByText('Ask anything').closest('button');
+    fireEvent.click(button!);
+
+    // Type message
+    const input = screen.getByPlaceholderText('Ask me anything...');
+    fireEvent.change(input, { target: { value: 'store' } });
+
+    // Submit
+    const submitBtn = input.closest('form')!.querySelector('button[type="submit"]');
+    fireEvent.click(submitBtn!);
+
+    // Wait for agent reply
+    await waitFor(() => {
+      expect(screen.getByText('You can find more info here.')).toBeInTheDocument();
+      const link = screen.getByText('Read the full article →');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', '/help/my-store');
+    });
+  });
+
   it('handles fetch errors gracefully', async () => {
     (global.fetch as any).mockImplementationOnce(() => Promise.reject(new Error('Network error')));
 
