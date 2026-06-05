@@ -494,7 +494,7 @@ NEXT_PID=$!
 
 echo "[playwright] Waiting for Next UI on port $NEXT_PORT..."
 for i in $(seq 1 120); do
-  if curl -fsS "$BASE_URL" >/dev/null 2>&1; then
+  if curl -sS -o /dev/null "$BASE_URL/login" >/dev/null 2>&1; then
     echo "[playwright] Next UI is ready."
     break
   fi
