@@ -56,5 +56,6 @@ test.describe('Cost Dashboard', () => {
     expect(data).toHaveProperty('llm_cost');
     expect(data).toHaveProperty('storage_cost');
     expect(data).toHaveProperty('payment_fees');
+    expect(data).toHaveProperty('bandwidth_savings');
   });
 });
