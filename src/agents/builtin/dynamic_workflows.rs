@@ -10,7 +10,13 @@ use tokio::sync::{mpsc, Semaphore};
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
+<<<<<<< HEAD
+    #[allow(dead_code)]
+    script: String,
+
+=======
     _script: String,
+>>>>>>> 630b9d56 (Fix unused variable compiler warnings causing test failures)
     max_concurrent: usize,
     max_total_agents: usize,
 }

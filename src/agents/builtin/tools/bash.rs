@@ -36,8 +36,26 @@ impl PydanticToolExecutor<BashArgs> for BashExecutor {
             .map_err(|_| ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
             .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let mut stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let mut stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+        let max_len = 30000;
+        if stdout.len() > max_len {
+            let mut end_idx = max_len;
+            while end_idx > 0 && !stdout.is_char_boundary(end_idx) {
+                end_idx -= 1;
+            }
+            stdout.truncate(end_idx);
+            stdout.push_str("\n... [STDOUT TRUNCATED TO 30,000 CHARS]");
+        }
+        if stderr.len() > max_len {
+            let mut end_idx = max_len;
+            while end_idx > 0 && !stderr.is_char_boundary(end_idx) {
+                end_idx -= 1;
+            }
+            stderr.truncate(end_idx);
+            stderr.push_str("\n... [STDERR TRUNCATED TO 30,000 CHARS]");
+        }
 
         let mut result = String::new();
         if !stdout.is_empty() {
@@ -159,5 +177,30 @@ mod tests {
             ToolError::LlmRecoverable(msg) => assert!(msg.contains("timed out")),
             _ => panic!("Expected LlmRecoverable timeout error"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_bash_executor_truncation() {
+        let runner = Arc::new(MockCommandRunner::new());
+        // generate a huge string, including multi-byte chars to cross boundaries
+        let huge_stdout = "A".repeat(29999) + "🚀" + &"A".repeat(20000);
+        let huge_stderr = "B".repeat(29999) + "🚀" + &"B".repeat(20000);
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, &huge_stdout, &huge_stderr)));
+
+        let executor = BashExecutor {
+            working_dir: None,
+            runner,
+        };
+
+        let args = BashArgs {
+            command: "echo 'huge'".to_string(),
+            timeout: 120.0,
+        };
+
+        let result = executor.execute_typed(args).await.unwrap();
+
+        assert!(result.contains("... [STDOUT TRUNCATED TO 30,000 CHARS]"));
+        assert!(result.contains("... [STDERR TRUNCATED TO 30,000 CHARS]"));
+        assert!(result.len() <= 70000); // 30k + 30k + padding/notes
     }
 }

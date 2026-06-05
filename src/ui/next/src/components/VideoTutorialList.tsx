@@ -11,6 +11,7 @@ type VideoTutorial = {
 export function VideoTutorialList() {
   const [videos, setVideos] = useState<VideoTutorial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeVideo, setActiveVideo] = useState<VideoTutorial | null>(null);
 
   useEffect(() => {
     fetch('/api/videos')
@@ -27,7 +28,7 @@ export function VideoTutorialList() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
+      <div className="flex justify-center items-center py-12 backdrop-filter backdrop-blur-xl bg-white/30">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -46,7 +47,7 @@ export function VideoTutorialList() {
       <h2 className="text-2xl font-extrabold font-outfit text-gray-900 mb-6 text-center sm:text-left">Video Tutorials</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {videos.map(video => (
-          <div key={video.id} className="bg-white/80 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all cursor-pointer flex flex-col">
+          <div key={video.id} onClick={() => setActiveVideo(video)} className="bg-white/80 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all cursor-pointer flex flex-col">
             {/* Mock video player area (portrait optimized 9:16 approx for mobile shorts feel, or standard 16:9) */}
             <div className="w-full aspect-[9/16] sm:aspect-video bg-gray-900 relative flex items-center justify-center">
               {/* Play button overlay */}
@@ -71,6 +72,32 @@ export function VideoTutorialList() {
           </div>
         ))}
       </div>
+      {/* Video Player Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[20px] saturate-200 p-4 animate-fade-in">
+          <div className="bg-black backdrop-blur-[30px] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in">
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
+              <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{activeVideo.title}</h3>
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Real Video Player area */}
+            <div className="flex-1 flex items-center justify-center relative bg-black">
+               <video
+                 controls
+                 className="w-full h-full object-contain"
+                 src={`/videos/${activeVideo.id}.mp4`}
+                 autoPlay
+               >
+                 Your browser does not support the video tag.
+               </video>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
