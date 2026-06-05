@@ -48,4 +48,13 @@ test.describe('Dashboard UX', () => {
     await expect(page.locator('a[href="/milestones"]')).toBeVisible();
     await expect(page.locator('a[href="/share-cards"]')).toBeVisible();
   });
+
+  test('should display My Plan link in the secondary navigation', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Verify My Plan link in sidebar
+    const myPlanLink = page.locator('nav[aria-label="System"] a[href="/plan"]');
+    await expect(myPlanLink).toBeVisible();
+    await expect(myPlanLink).toContainText('My Plan');
+  });
 });

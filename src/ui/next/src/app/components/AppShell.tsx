@@ -28,6 +28,7 @@ type IconName =
   | "integrations"
   | "inventory"
   | "orders"
+  | "plan"
   | "plus"
   | "settings"
   | "setup"
@@ -54,6 +55,7 @@ const primaryNav: NavItem[] = [
 const secondaryNav: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: "calendar" },
   { label: "Integrations", href: "/integrations", icon: "integrations" },
+  { label: "My Plan", href: "/plan", icon: "plan" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
 ];
@@ -70,6 +72,7 @@ function ShellIcon({ name }: { name: IconName }) {
     integrations: ["M8 7h8", "M8 17h8", "M7 7a3 3 0 1 1-3-3 3 3 0 0 1 3 3z", "M20 17a3 3 0 1 1-3-3 3 3 0 0 1 3 3z"],
     inventory: ["M4 7 12 3l8 4-8 4-8-4z", "M4 12l8 4 8-4", "M4 17l8 4 8-4"],
     orders: ["M7 4h10l2 4v16H5V8l2-4z", "M9 12h6", "M9 16h6"],
+    plan: ["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", "M14 2v6h6", "M16 13H8", "M16 17H8", "M10 9H8"],
     plus: ["M12 5v14", "M5 12h14"],
     settings: ["M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", "M19.4 15a1.8 1.8 0 0 0 .36 2l.04.04a2 2 0 1 1-2.83 2.83l-.04-.04a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.65V21a2 2 0 1 1-4 0v-.06a1.8 1.8 0 0 0-1.1-1.65 1.8 1.8 0 0 0-2 .36l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04a1.8 1.8 0 0 0 .36-2 1.8 1.8 0 0 0-1.65-1.1H3a2 2 0 1 1 0-4h.06a1.8 1.8 0 0 0 1.65-1.1 1.8 1.8 0 0 0-.36-2l-.04-.04A2 2 0 1 1 7.14 3.7l.04.04a1.8 1.8 0 0 0 2 .36 1.8 1.8 0 0 0 1.1-1.65V3a2 2 0 1 1 4 0v.06a1.8 1.8 0 0 0 1.1 1.65 1.8 1.8 0 0 0 2-.36l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04a1.8 1.8 0 0 0-.36 2c.29.67.93 1.1 1.65 1.1H21a2 2 0 1 1 0 4h-.06a1.8 1.8 0 0 0-1.54 1z"],
     setup: ["M4 7h16", "M4 12h10", "M4 17h7", "M17 14v6", "M14 17h6"],
