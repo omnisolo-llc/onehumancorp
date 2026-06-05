@@ -1457,13 +1457,6 @@ impl OnboardingAgent {
                 ("Shopify Store Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Shopify Store Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
-            "Boutique" => vec![
-                ("Premium Boutique Package", "Comprehensive service for your needs", 19999, "booking"),
-                ("Basic Boutique Service", "Essential services to get you started", 9999, "booking"),
-                ("Boutique Consultation", "Expert advice and planning", 4999, "booking"),
-                ("Boutique Assessment", "Initial evaluation and report", 7500, "booking"),
-                ("Boutique Starter Kit", "Everything you need in one bundle", 12000, "physical"),
-            ],
             "Thrift Store" => vec![
                 ("Premium Thrift Store Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Thrift Store Service", "Essential services to get you started", 9999, "booking"),

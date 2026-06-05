@@ -109,6 +109,12 @@ if [[ ! -d "$workspace_root/node_modules" ]]; then
   exit 1
 fi
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
+
+if [[ -d "$workspace_root/src/ui/next/node_modules" ]]; then
+  mkdir -p "$WORK_DIR/src/ui/next"
+  ln -s "$workspace_root/src/ui/next/node_modules" "$WORK_DIR/src/ui/next/node_modules"
+fi
+
 mkdir -p "$WORK_DIR/src/e2e"
 
 PLAYWRIGHT_SPEC_ARGS=()
