@@ -22,7 +22,8 @@ test.describe('API Documentation', () => {
 
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('.swagger-ui')).toBeVisible();
+    // Wait up to 10s for the dynamic fetch of /api/docs/spec to render the spec
+    await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 10000 });
 
     await expect(page.locator('text=OHC Advanced API Reference').first()).toBeVisible();
 
