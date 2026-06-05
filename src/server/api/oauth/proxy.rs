@@ -27,6 +27,17 @@ pub async fn handle_oauth_callback(
         let parts: Vec<&str> = state.splitn(3, '_').collect();
         if parts.len() == 3 {
             let tunnel_id = parts[1];
+
+            // Strictly validate tunnel_id to prevent Open Redirect/SSRF
+            // It should only contain alphanumeric characters and hyphens.
+            if !tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    "Invalid tunnel_id format.",
+                )
+                    .into_response();
+            }
+
             let actual_state = parts[2];
 
             // Redirect to the standalone instance via the tunnel proxy
@@ -49,4 +60,62 @@ pub async fn handle_oauth_callback(
 pub fn router() -> Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     Router::new()
         .route("/callback", get(handle_oauth_callback))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::extract::Query;
+    use std::collections::HashMap;
+
+    #[tokio::test]
+    async fn test_valid_tunnel_id() {
+        let mut extra = HashMap::new();
+        extra.insert("foo".to_string(), "bar".to_string());
+
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_valid-tunnel-id-123_actualState123".to_string(),
+            extra,
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::TEMPORARY_REDIRECT);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_path_traversal() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_../etc/passwd_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_url() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_http://malicious.com_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_spaces() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_my tunnel id_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
 }
