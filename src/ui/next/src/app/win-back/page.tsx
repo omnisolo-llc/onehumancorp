@@ -1,8 +1,8 @@
+import { Footer } from '../../components/Footer';
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Footer } from '../../components/Footer';
 
 export default function WinBackCampaignPage() {
   const router = useRouter();
@@ -20,14 +20,8 @@ export default function WinBackCampaignPage() {
     }
   }, []);
 
-  const handleGenerate = () => {
-    if (!hasPro) {
-      setShowSoftPaywall(true);
-      return;
-    }
-
+  const generateDraft = () => {
     setIsGenerating(true);
-    // Simulate AI generation
     setTimeout(() => {
       const storeName = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Our Store' : 'Our Store';
       const draft = `Subject: We miss you! Here's ${discountOffer}% off your next order 🎁\n\nHi there,\n\nIt's been a while since we last saw you at ${storeName}. We noticed you loved our products, and we wanted to welcome you back with something special.\n\nUse code WINBACK${discountOffer} to get ${discountOffer}% off your next purchase${productName ? ` of our ${productName}` : ''}!\n\nShop now: https://${storeName.toLowerCase().replace(/[^a-z0-9]/g, '')}.ohc.store\n\nBest,\nThe ${storeName} Team\n\n⚡ Powered by OHC`;
@@ -35,6 +29,15 @@ export default function WinBackCampaignPage() {
       setIsGenerating(false);
       setIsSent(false);
     }, 1500);
+  };
+
+  const handleGenerate = () => {
+    if (!hasPro) {
+      setShowSoftPaywall(true);
+      return;
+    }
+
+    generateDraft();
   };
 
   const claimTrialExtension = () => {
@@ -47,7 +50,7 @@ export default function WinBackCampaignPage() {
     setShowSoftPaywall(false);
     setTimeout(() => {
       alert('Your 7-day Pro trial has been activated.');
-      handleGenerate();
+      generateDraft();
     }, 500);
   };
 
@@ -153,7 +156,7 @@ export default function WinBackCampaignPage() {
           </section>
         </div>
 
-
+<Footer theme="light" />
       </main>
 
       {/* Soft Paywall Modal */}

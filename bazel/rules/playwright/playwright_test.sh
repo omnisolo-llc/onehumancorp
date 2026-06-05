@@ -30,6 +30,29 @@ for spec_file in "$@"; do
   ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
 done
 
+playwright_spec_workspace_name() {
+  local spec_file="$1"
+  local rel="$spec_file"
+  for root in "$workspace_root" "$RUNFILES_ROOT"; do
+    if [[ -n "$root" && "$rel" == "$root/"* ]]; then
+      rel="${rel#$root/}"
+      break
+    fi
+  done
+  rel="${rel#./}"
+  echo "$rel" | sed -E 's#[^A-Za-z0-9._-]+#__#g'
+}
+
+copy_spec_fixtures() {
+  local spec_file="$1"
+  local fixture_dir
+  fixture_dir="$(dirname "$spec_file")/fixtures"
+  if [[ -d "$fixture_dir" ]]; then
+    mkdir -p "$WORK_DIR/e2e/fixtures"
+    cp -R "$fixture_dir/." "$WORK_DIR/e2e/fixtures/"
+  fi
+}
+
 # Resolve the Bazel-provided Playwright browser repository to an absolute path.
 # Every shard gets the same runfiles-backed browser directory instead of a
 # per-shard install under the temporary Playwright workspace.
@@ -115,17 +138,23 @@ PLAYWRIGHT_SPEC_ARGS=()
 if (( ${#ABS_SPEC_FILES[@]} > 0 )); then
   for abs_spec_file in "${ABS_SPEC_FILES[@]}"; do
     abs_spec_file="$(realpath "$abs_spec_file")"
-    spec_base="$(basename "$abs_spec_file")"
-    cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_base"
-    PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_base")
+    spec_workspace_name="$(playwright_spec_workspace_name "$abs_spec_file")"
+    cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_workspace_name"
+    copy_spec_fixtures "$abs_spec_file"
+    PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_workspace_name")
   done
 else
-  for spec_dir in "$RUNFILES_ROOT/src/e2e" "$workspace_root/src/e2e"; do
-    if compgen -G "$spec_dir/*.spec.ts" >/dev/null; then
-      cp "$spec_dir"/*.spec.ts "$WORK_DIR/src/e2e/"
-      break
-    fi
-  done
+  while IFS= read -r -d '' spec_file; do
+    spec_file="$(realpath "$spec_file")"
+    spec_workspace_name="$(playwright_spec_workspace_name "$spec_file")"
+    cp "$spec_file" "$WORK_DIR/src/e2e/$spec_workspace_name"
+    copy_spec_fixtures "$spec_file"
+  done < <(
+    find "$workspace_root" \
+      -path '*/node_modules/*' -prune -o \
+      -path '*/.next/*' -prune -o \
+      -path '*/e2e/*.spec.ts' -type f -print0
+  )
 fi
 
 for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
@@ -135,6 +164,7 @@ for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts
     cp "$RUNFILES_ROOT/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
   fi
 done
+
 ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
 
 cd "$WORK_DIR"
@@ -176,6 +206,10 @@ PY
 
 cleanup() {
   local exit_code=$?
+  if [[ -n "${NEXT_PID:-}" ]]; then
+    kill "$NEXT_PID" >/dev/null 2>&1 || true
+    wait "$NEXT_PID" >/dev/null 2>&1 || true
+  fi
   if [[ -n "${SERVER_PID:-}" ]]; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" >/dev/null 2>&1 || true
@@ -274,7 +308,7 @@ export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
 export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
-export BASE_URL="http://localhost:$OHC_SERVER_PORT"
+export API_BASE_URL="http://127.0.0.1:$OHC_SERVER_PORT"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
@@ -318,7 +352,116 @@ else
   exit 1
 fi
 
-export CI=true
+NEXT_APP_ROOT=""
+if [[ -n "${NEXT_APP_PACKAGE_JSON:-}" ]]; then
+  NEXT_APP_PACKAGE_JSON_CANDIDATES=(
+    "$NEXT_APP_PACKAGE_JSON"
+    "$RUNFILES_ROOT/$NEXT_APP_PACKAGE_JSON"
+    "$workspace_root/$NEXT_APP_PACKAGE_JSON"
+  )
+  if [[ -n "${TEST_SRCDIR:-}" ]]; then
+    NEXT_APP_PACKAGE_JSON_CANDIDATES+=(
+      "$TEST_SRCDIR/$NEXT_APP_PACKAGE_JSON"
+    )
+  fi
+  if [[ -n "${TEST_WORKSPACE:-}" && -n "${TEST_SRCDIR:-}" ]]; then
+    NEXT_APP_PACKAGE_JSON_CANDIDATES+=(
+      "$TEST_SRCDIR/$TEST_WORKSPACE/$NEXT_APP_PACKAGE_JSON"
+    )
+  fi
+
+  for candidate in "${NEXT_APP_PACKAGE_JSON_CANDIDATES[@]}"; do
+    if [[ -f "$candidate" ]]; then
+      NEXT_APP_ROOT="$(dirname "$(realpath "$candidate")")"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$NEXT_APP_ROOT" ]]; then
+  for package_json in $(find "$workspace_root" -path '*/node_modules/*' -prune -o -name package.json -print); do
+    candidate="$(dirname "$package_json")"
+    if [[ -d "$candidate/src/app" ]]; then
+      NEXT_APP_ROOT="$(realpath "$candidate")"
+      break
+    fi
+  done
+fi
+
+if [[ -n "$NEXT_APP_ROOT" && ! -d "$NEXT_APP_ROOT/src/app" ]]; then
+  NEXT_APP_ROOT=""
+fi
+
+if [[ -z "$NEXT_APP_ROOT" ]]; then
+  for package_json in $(find "$RUNFILES_ROOT" -path '*/node_modules/*' -prune -o -name package.json -print); do
+    candidate="$(dirname "$package_json")"
+    if [[ -d "$candidate/src/app" ]]; then
+      NEXT_APP_ROOT="$(realpath "$candidate")"
+      break
+    fi
+  done
+fi
+
+if [[ -n "$NEXT_APP_ROOT" ]]; then
+  if [[ ! -f "$NEXT_APP_ROOT/package.json" || ! -d "$NEXT_APP_ROOT/src/app" ]]; then
+    NEXT_APP_ROOT=""
+  fi
+fi
+
+if [[ -z "$NEXT_APP_ROOT" ]]; then
+  echo "[playwright] Error: Next UI app not found in Bazel runfiles."
+  exit 1
+fi
+
+if [[ ! -d "$NEXT_APP_ROOT/node_modules" ]]; then
+  echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules"
+  exit 1
+fi
+
+NEXT_WORK_DIR="$WORK_DIR/src/ui/next"
+mkdir -p "$WORK_DIR/src/ui"
+mkdir -p "$NEXT_WORK_DIR"
+tar -C "$NEXT_APP_ROOT" \
+  --exclude='./node_modules' \
+  --exclude='./.next' \
+  --exclude='./out' \
+  --exclude='./test-results' \
+  -cf - . | tar -C "$NEXT_WORK_DIR" -xf -
+ln -s "$NEXT_APP_ROOT/node_modules" "$NEXT_WORK_DIR/node_modules"
+
+NEXT_PORT="$(pick_free_port)"
+export BASE_URL="http://127.0.0.1:$NEXT_PORT"
+echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
+(
+  cd "$NEXT_WORK_DIR"
+  BACKEND_URL="$API_BASE_URL" \
+  OHC_BACKEND_URL="$API_BASE_URL" \
+  OHC_API_URL="$API_BASE_URL" \
+  NEXT_PUBLIC_E2E=true \
+  node ./node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port "$NEXT_PORT"
+) >"$TEST_TMPDIR/next.log" 2>&1 &
+NEXT_PID=$!
+
+echo "[playwright] Waiting for Next UI on port $NEXT_PORT..."
+for i in $(seq 1 120); do
+  if curl -fsS "$BASE_URL" >/dev/null 2>&1; then
+    echo "[playwright] Next UI is ready."
+    break
+  fi
+  if ! kill -0 "$NEXT_PID" 2>/dev/null; then
+    echo "[playwright] Next UI process died."
+    tail -50 "$TEST_TMPDIR/next.log"
+    exit 1
+  fi
+  if (( i == 120 )); then
+    echo "[playwright] Error: Next UI failed to become ready after 120 seconds."
+    tail -80 "$TEST_TMPDIR/next.log"
+    exit 1
+  fi
+  sleep 1
+done
+
+export CI=false
 export PLAYWRIGHT_LIST_REPORTER="${PLAYWRIGHT_LIST_REPORTER:-1}"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 

@@ -1,9 +1,9 @@
+import { Footer } from '../../components/Footer';
 "use client";
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
-import { Footer } from '../../components/Footer';
 
 export default function CheckoutPage() {
   const router = useRouter();

@@ -1,8 +1,8 @@
+import { Footer } from '../../components/Footer';
 "use client";
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Footer } from '../../components/Footer';
 
 export default function MilestonesPage() {
   const router = useRouter();
@@ -150,8 +150,6 @@ export default function MilestonesPage() {
                 )}
              </div>
         </section>
-
-
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

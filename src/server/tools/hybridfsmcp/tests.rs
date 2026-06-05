@@ -66,6 +66,9 @@ async fn test_hybrid_fs_mcp_server() {
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(payload["status"], "success");
 
+    // Important: Wait for the file system to actually sync before reading it back
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
     // Test fs_read_file tool
     let req = McpInvokeRequest {
         tool_id: "fs_hybrid_read".to_string(),

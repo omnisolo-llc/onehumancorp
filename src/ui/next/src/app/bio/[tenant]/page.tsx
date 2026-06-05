@@ -1,8 +1,8 @@
+import { Footer } from '../../../components/Footer';
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Footer } from '../../../components/Footer';
 
 export default function LinkInBioPublicPage() {
     const params = useParams();
@@ -97,7 +97,9 @@ export default function LinkInBioPublicPage() {
                          ))}
                      </div>
 
-                     <Footer theme={theme as any} tenantId={tenantId} />
+                     <div className="mt-auto pt-12 pb-6 w-full flex justify-center">
+                         <Footer theme={theme as any} tenantId={tenantId} />
+                     </div>
                  </div>
              </div>
              <style dangerouslySetInnerHTML={{__html: `

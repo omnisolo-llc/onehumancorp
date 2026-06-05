@@ -1,8 +1,8 @@
+import { Footer } from '../../components/Footer';
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Footer } from '../../components/Footer';
 
 export default function SocialProofNudgePage() {
   const router = useRouter();
@@ -195,8 +195,6 @@ export default function SocialProofNudgePage() {
                  )}
              </div>
         </section>
-
-
       </main>
 
       {/* Soft Paywall Modal */}

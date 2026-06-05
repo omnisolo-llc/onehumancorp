@@ -1,8 +1,8 @@
+import { Footer } from '../../components/Footer';
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Footer } from '../../components/Footer';
 
 export default function ShareCardsPage() {
   const router = useRouter();
@@ -169,8 +169,6 @@ export default function ShareCardsPage() {
                  This is how your card will appear when shared on social platforms like Twitter, Facebook, and LinkedIn.
              </p>
         </section>
-
-
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

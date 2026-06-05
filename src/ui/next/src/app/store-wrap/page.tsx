@@ -1,8 +1,8 @@
+import { Footer } from '../../components/Footer';
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Footer } from '../../components/Footer';
 
 export default function StoreWrapPage() {
   const router = useRouter();
@@ -169,8 +169,6 @@ export default function StoreWrapPage() {
         {/* Navigation Overlays */}
         <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={prevSlide} />
         <div className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer" onClick={nextSlide} />
-
-
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

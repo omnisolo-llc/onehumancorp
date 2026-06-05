@@ -1,7 +1,7 @@
+import { Footer } from '../../components/Footer';
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Footer } from '../../components/Footer';
 
 export default function Wrapped() {
   const router = useRouter();
@@ -121,7 +121,7 @@ export default function Wrapped() {
              <div className="mt-auto pt-6 border-t border-white/20 flex flex-col items-center gap-1 z-10">
                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Join my journey</span>
                  <span className="text-xs font-medium">{shareLink.replace('https://', '')}</span>
-                 <Footer theme="gradient" tenantId={typeof localStorage !== "undefined" ? localStorage.getItem("tenant") || "my-store" : "my-store"} />
+                 <Footer theme="gradient" tenantId={tenant} />
              </div>
           </div>
 
