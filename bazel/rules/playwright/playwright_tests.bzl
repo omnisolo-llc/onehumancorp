@@ -1,9 +1,8 @@
 # playwright_tests.bzl - Generates Playwright Bazel test targets.
 #
-# The sharded aggregate target is included in `bazel test //...` and runs every
-# Playwright spec. Per-spec targets are manual so they remain available for
-# direct debugging without making wildcard CI start one Docker/server stack per
-# spec file.
+# The sharded aggregate target runs the configured CI Playwright spec set.
+# Per-spec targets are manual so they remain available for direct debugging
+# without making wildcard CI start one Docker/server stack per spec file.
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -40,6 +39,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
             "NEXT_APP_PACKAGE_JSON": "$(rootpath //src/ui/next:package.json)",
             "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
             "PLAYWRIGHT_RETRIES": "0",
+            "PLAYWRIGHT_TEST_TIMEOUT": "180000",
         },
         "size": "large",
         "timeout": timeout,
@@ -97,11 +97,14 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
 
     shard_targets = []
     for index in range(ci_shard_count):
+        shard_specs = _shard_specs(ci_specs, index, ci_shard_count)
+        if not shard_specs:
+            continue
         shard_name = _playwright_shard_target_name(index, ci_shard_count)
         shard_targets.append(":" + shard_name)
         _playwright_sh_test(
             name = shard_name,
-            spec_args = _shard_specs(ci_specs, index, ci_shard_count),
+            spec_args = shard_specs,
             common_data = common_data,
             manual = True,
         )
