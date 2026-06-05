@@ -45,6 +45,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
         ]
       };
       await route.fulfill({ json });
+
     });
 
     // We also need to mock the approval POST endpoint so that it doesn't fail
@@ -93,5 +94,53 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     } catch (e) {
         console.warn('Mocked approval data might have been overwritten or not loaded. Skipping exact interaction check.');
     }
+  });
+
+  test('Customer requests a service and Owner approves AI quote draft from Unified Agent Feed', async ({ page }) => {
+    // Navigate to dashboard directly assuming cookie is mocked or we can intercept login check
+    await page.goto('/dashboard');
+
+    // Inject a mock booking inquiry approval
+    await page.route('/api/agents/approvals?tenant_id=*', async route => {
+      const json = {
+        pending_approvals: [
+          {
+            id: 'mock_booking_1',
+            tenant_id: 'test_tenant',
+            department: 'operations',
+            description: 'Booking inquiry received: I need help fixing a leaky pipe in my kitchen sink...',
+            status: 'pending',
+            action_risk: 'high',
+            payload: {
+              feature_type: 'booking_inquiry',
+              username: 'Customer',
+              customer_inquiry: 'I need help fixing a leaky pipe in my kitchen sink.',
+              drafted_response: 'Hi there! I can certainly help with that. Are you available this Friday at 9am, 10am, or 11am?',
+              suggested_slots: ['Friday 9:00 AM', 'Friday 10:00 AM', 'Friday 11:00 AM']
+            }
+          }
+        ]
+      };
+      await route.fulfill({ json });
+    });
+
+    await page.route('/api/agents/approvals/mock_booking_1', async route => {
+        await route.fulfill({ status: 200, json: { success: true } });
+    });
+
+    // Wait for the mock API to load the data
+    await page.waitForTimeout(2000);
+
+    // Verify the booking inquiry card appears
+    await expect(page.getByText('Booking Inquiry: @Customer')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('I need help fixing a leaky pipe in my kitchen sink.')).toBeVisible();
+    await expect(page.getByText('Hi there! I can certainly help with that.')).toBeVisible();
+    await expect(page.getByText('Friday 9:00 AM')).toBeVisible();
+
+    // Click Approve & Send
+    await page.getByRole('button', { name: 'Approve & Send' }).first().click();
+
+    // Validate empty state or removal (optimistic update)
+    await expect(page.getByText('Booking Inquiry: @Customer')).toBeHidden();
   });
 });

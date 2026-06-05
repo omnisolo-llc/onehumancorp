@@ -197,6 +197,36 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
+
+                  {approval.payload?.feature_type === "booking_inquiry" && (
+                    <div className="mb-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Booking Inquiry: @{approval.payload.username || "Customer"}
+                      </div>
+                      <div className="text-xs text-gray-700 italic border-l-2 border-blue-200 pl-2">
+                        "{approval.payload.customer_inquiry}"
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-blue-100 relative mt-2 shadow-sm">
+                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">Drafted Response</div>
+                        <p className="text-sm text-gray-800 mb-3">{approval.payload.drafted_response}</p>
+
+                        {approval.payload.suggested_slots && approval.payload.suggested_slots.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {approval.payload.suggested_slots.map((slot: string, i: number) => (
+                              <span key={i} className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-md">
+                                {slot}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {approval.payload?.context && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {approval.payload.context.abandoned_carts_count !== undefined && (
@@ -223,7 +253,7 @@ export function UnifiedAgentFeed() {
                     className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
                     aria-label="Approve proposal"
                   >
-                    Approve
+                    {approval.payload?.feature_type === "booking_inquiry" ? "Approve & Send" : "Approve"}
                   </button>
                   <div className="flex gap-3 w-full">
                     <button
