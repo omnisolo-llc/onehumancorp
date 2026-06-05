@@ -4,7 +4,7 @@ test.describe('Milestones Page UI', () => {
   // We navigate naturally through the frontend to reach the page.
   test.beforeEach(async ({ page }) => {
     // Navigate to root to start the flow
-    await page.goto('/');
+    await page.goto('/dashboard');
 
     // Provide the expected logged in storage data to emulate the frontend state
     await page.evaluate(() => {

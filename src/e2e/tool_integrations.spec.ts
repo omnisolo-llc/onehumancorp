@@ -1,98 +1,89 @@
 import { test, expect } from './fixtures';
 
-test.describe('Tool Integrations UI Premium Dashbaord', () => {
+function integrationCard(page: import('@playwright/test').Page, name: string) {
+  return page
+    .getByRole('heading', { name })
+    .locator('xpath=ancestor::div[contains(@class, "rounded")][1]');
+}
+
+test.describe('Tool Integrations UI', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/integrations');
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
   });
 
   test('shows premium integrations dashboard header and copy', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
     await expect(page.getByText('Supercharge your workflow by connecting your favorite tools.')).toBeVisible();
   });
 
   test('displays social media integration card', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Meta Graph API' })).toBeVisible();
-    await expect(page.getByText('Central Instagram and Facebook Inbox.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
+    const card = integrationCard(page, 'Meta Graph API');
+    await expect(card).toBeVisible();
+    await expect(card.getByText('Central Instagram and Facebook Inbox.')).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Connect' })).toBeVisible();
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
-    await expect(page.getByText('Zero-Config Booking & Calendar Sync.')).toBeVisible();
+    const card = integrationCard(page, 'Cal.com');
+    await expect(card).toBeVisible();
+    await expect(card.getByText('Zero-Config Booking & Calendar Sync.')).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
-    await expect(page.getByText('Painless Shipping Labels & Tracking.')).toBeVisible();
-    await expect(page.getByText('Accept credit cards and local payment methods in Latin America.')).toBeVisible();
+    await expect(integrationCard(page, 'Shippo')).toContainText('Painless Shipping Labels & Tracking.');
+    await expect(integrationCard(page, 'Mercado Pago')).toContainText('Accept credit cards and local payment methods in Latin America.');
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Whereby' })).toBeVisible();
-    await expect(page.getByText('Transactional and Marketing Emails.')).toBeVisible();
-    await expect(page.getByText('Zero-Setup Online Lessons and video conferencing.')).toBeVisible();
+    await expect(integrationCard(page, 'Resend')).toContainText('Transactional and Marketing Emails.');
+    await expect(integrationCard(page, 'Whereby')).toContainText('Zero-Setup Online Lessons and video conferencing.');
   });
 
   test('displays global sms notifications card', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Twilio Conversations' })).toBeVisible();
-    await expect(page.getByText('Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat.')).toBeVisible();
+    await expect(integrationCard(page, 'Twilio Conversations')).toContainText('Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat.');
   });
 
   test('displays front omnichannel inbox card', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Front' })).toBeVisible();
-    await expect(page.getByText('Central omnichannel inbox aggregating messages across all channels.')).toBeVisible();
+    await expect(integrationCard(page, 'Front')).toContainText('Central omnichannel inbox aggregating messages across all channels.');
   });
 
-  test('can connect Social Media Accounts', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const connectButton = page.locator('div').filter({ hasText: 'Meta Graph API' }).getByRole('button', { name: 'Connect' }).first();
-
-    // Check that we show an alert correctly
+  test('can connect Ayrshare', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
-    await connectButton.click();
+    await integrationCard(page, 'Ayrshare').getByRole('button', { name: 'Connect' }).click();
+    await expect(page).toHaveURL(/\/inbox$/);
   });
 
-  test('can enable Autonomous Booking Agent', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const connectButton = page.locator('div').filter({ hasText: 'Cal.com' }).getByRole('button', { name: 'Connect' }).first();
+  test('can connect Cal.com', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
-    await connectButton.click();
+    await integrationCard(page, 'Cal.com').getByRole('button', { name: 'Connect' }).click();
+    await expect(integrationCard(page, 'Cal.com').getByText('connected')).toBeVisible();
   });
 
-  test('can connect Customer Emails and Local Payments', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const emailBtn = page.locator('div').filter({ hasText: 'Resend' }).getByRole('button', { name: 'Connect' }).first();
+  test('can connect Resend and Mercado Pago', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
-    await emailBtn.click();
+    await integrationCard(page, 'Resend').getByRole('button', { name: 'Connect' }).click();
+    await expect(integrationCard(page, 'Resend').getByText('connected')).toBeVisible();
 
-    const paymentBtn = page.locator('div').filter({ hasText: 'Mercado Pago' }).getByRole('button', { name: 'Connect' }).first();
-    await paymentBtn.click();
+    await integrationCard(page, 'Mercado Pago').getByRole('button', { name: 'Connect' }).click();
+    await expect(integrationCard(page, 'Mercado Pago').getByText('connected')).toBeVisible();
   });
 
-  test('can connect Shipping, Text Notifications, and Online Meetings', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const shippingBtn = page.locator('div').filter({ hasText: 'Shippo' }).getByRole('button', { name: 'Connect' }).first();
+  test('can connect Twilio Conversations and Whereby', async ({ page }) => {
+    await integrationCard(page, 'Twilio Conversations').getByRole('button', { name: 'Connect' }).click();
+    await expect(page.getByRole('heading', { name: 'Connect Twilio Conversations' })).toBeVisible();
+    await page.getByRole('button', { name: 'Save & Connect' }).click();
+    await expect(page).toHaveURL(/\/inbox$/);
+
+    await page.goto('/integrations');
     page.on('dialog', dialog => dialog.accept());
-    await shippingBtn.click();
-    const smsBtn = page.locator('div').filter({ hasText: 'Twilio Conversations' }).getByRole('button', { name: 'Connect' }).first();
-    await smsBtn.click();
-    const meetingBtn = page.locator('div').filter({ hasText: 'Whereby' }).getByRole('button', { name: 'Connect' }).first();
-    await meetingBtn.click();
+    await integrationCard(page, 'Whereby').getByRole('button', { name: 'Connect' }).click();
+    await expect(integrationCard(page, 'Whereby').getByText('connected')).toBeVisible();
   });
 
   test('can connect Front', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    const connectButton = page.locator('div').filter({ hasText: 'Front' }).getByRole('button', { name: 'Connect' }).first();
-    await connectButton.click();
+    page.on('dialog', dialog => dialog.accept());
+    await integrationCard(page, 'Front').getByRole('button', { name: 'Connect' }).click();
+    await expect(integrationCard(page, 'Front').getByText('connected')).toBeVisible();
   });
 });

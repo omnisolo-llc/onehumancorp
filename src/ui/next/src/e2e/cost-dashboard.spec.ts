@@ -4,9 +4,8 @@ import { test, expect } from '@playwright/test';
 // due to pgvector pull permissions in the Bazel test sandbox environment.
 test.describe('Cost Dashboard Loop', () => {
   test('Cost dashboard loads and displays data', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // Navigate to the dashboard page
-    await page.goto('http://localhost:3000/cost-dashboard');
+    await page.goto('/cost-dashboard');
 
     // Wait for the main heading to appear, indicating successful load
     await expect(page.locator('h1', { hasText: 'Business Advisory Dashboard' })).toBeVisible({ timeout: 10000 });
@@ -30,6 +29,6 @@ test.describe('Cost Dashboard Loop', () => {
 
     // Check navigation works
     await page.locator('button', { hasText: 'Back to My Plan' }).click();
-    await expect(page).toHaveURL('http://localhost:3000/plan');
+    await expect(page).toHaveURL('/plan');
   });
 });

@@ -3,12 +3,11 @@ import { test, expect } from './fixtures';
 test.describe('Business Analytics Widget Soft Paywall', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/');
+    await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
   });
 
   test('should display the analytics widget with basic metrics', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     const dashboard = page.locator('#dashboard-screen');
     await expect(dashboard).toBeVisible();
 
@@ -18,7 +17,6 @@ test.describe('Business Analytics Widget Soft Paywall', () => {
   });
 
   test('should display locked advanced AI insights with upgrade CTA', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     const dashboard = page.locator('#dashboard-screen');
     await expect(dashboard).toBeVisible();
 
