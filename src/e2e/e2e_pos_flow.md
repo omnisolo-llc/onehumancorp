@@ -7,11 +7,11 @@
 
 ## Test Case 1: End-to-End In-Person Payment Flow
 1. **Login:** Log in as Carlos (or Priya) on the OHC app.
-2. **Navigate:** Go to the "Operations" dashboard -> "POS / In-Person" tab.
+2. **Navigate:** Go to the "Checkout" page or POS tab.
 3. **Select Product:** Add a product/service to the cart (e.g., "Plumbing Fix" - $50.00).
-4. **Initiate Payment:** Click the "Charge $50.00" button.
-5. **Verify Request:** Ensure the UI calls `/api/v1/payments/terminal/token` to get a connection token.
+4. **Initiate Payment:** Click the "Tap to Pay (Stripe Terminal)" button.
+5. **Verify Request:** Ensure the UI calls `/api/terminal/connection_token` (mapped to backend `/api/v1/payments/terminal/token`) to get a connection token.
 6. **Mock Reader Flow:** Simulate a Stripe Terminal tap (since we mock Stripe SDKs, we verify the `create_payment_intent` call).
-7. **Complete Intent:** Confirm `/api/v1/payments/terminal/intent` is called with correct `amount_cents: 5000` and `currency: usd`.
-8. **Final State:** Assert the UI shows a "Payment Successful" screen.
+7. **Complete Intent:** Confirm `/api/terminal/create_payment_intent` is called with correct `amount_cents: 5000` and `currency: usd` and successfully processed.
+8. **Final State:** Assert the UI transitions to a referral/success screen.
 9. **Dashboard Verification:** Navigate to "Finance & Payments" -> verify the $50 transaction appears in the daily report.

@@ -38,8 +38,6 @@ impl StripeClient {
     }
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
-
-        // Use PaymentRouter to optimize method
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
 
         match pm {
@@ -50,7 +48,6 @@ impl StripeClient {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
             },
             PaymentMethod::Razorpay => {
-                // Return razorpay checkout dummy link here since routing was updated
                 Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string())
             },
             PaymentMethod::MercadoPago => {
@@ -64,14 +61,73 @@ impl StripeClient {
         }
     }
 
-    pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+    pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
+        let res = reqwest::Client::new().post("https://api.stripe.com/v1/terminal/connection_tokens")
+            .basic_auth(&self.api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API request failed: {}", e))?;
 
-        // In a real implementation, this would make an HTTP POST to Stripe's /v1/terminal/connection_tokens
-        // endpoint. Since we're mocking external APIs, we return a mock token string here.
-        // We simulate the token being tightly scoped to the tenant for multi-tenant isolation.
-        let mock_token = format!("tss_mock_token_for_{}", tenant_id);
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
 
-        Ok(mock_token)
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let secret = json["secret"].as_str().ok_or_else(|| "Missing secret in response".to_string())?;
+
+        Ok(secret.to_string())
+    }
+
+    pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
+        let mut form = std::collections::HashMap::new();
+        form.insert("amount".to_string(), amount_cents.to_string());
+        form.insert("currency".to_string(), currency.to_string());
+        form.insert("payment_method_types[]".to_string(), "card_present".to_string());
+        // For in-person Stripe Terminal, capture_method="manual" is required by default SDK integration,
+        // but it means the frontend or backend MUST capture it explicitly later.
+        form.insert("capture_method".to_string(), "manual".to_string());
+        form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
+        form.insert("metadata[pos_checkout]".to_string(), "true".to_string());
+
+        // Generate idempotency key
+        let idempotency_key = format!("pi_{}_{}_{}", tenant_id, amount_cents, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
+
+        let res = reqwest::Client::new().post("https://api.stripe.com/v1/payment_intents")
+            .basic_auth(&self.api_key, Some(""))
+            .header("Idempotency-Key", idempotency_key)
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let secret = json["client_secret"].as_str().ok_or_else(|| "Missing client_secret in response".to_string())?;
+
+        Ok(secret.to_string())
+    }
+
+    pub async fn capture_terminal_payment_intent(&self, intent_id: &str) -> Result<(), String> {
+        let res = reqwest::Client::new().post(&format!("https://api.stripe.com/v1/payment_intents/{}/capture", intent_id))
+            .basic_auth(&self.api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        Ok(())
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
@@ -100,9 +156,7 @@ impl StripeClient {
             current_period_end: 1714560000,
         })
     }
-}
 
-impl StripeClient {
     /// Dispatches a batch payout check. If batched amount > threshold, actually performs payout.
     pub async fn process_payout_with_batching(
         &self,
@@ -112,54 +166,10 @@ impl StripeClient {
     ) -> Result<Option<String>, String> {
         let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
         if let Some(total_cents) = payout_amount {
-
             // Execute real payout call here...
             Ok(Some(format!("po_test_{}", total_cents)))
         } else {
             Ok(None)
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_create_terminal_connection_token() {
-        let client = StripeClient::new("sk_test_123".to_string());
-        let result = client.create_terminal_connection_token("test_tenant").await;
-        assert!(result.is_ok());
-        let token = result.unwrap();
-        assert_eq!(token, "tss_mock_token_for_test_tenant");
-    }
-}
-
-impl StripeClient {
-    pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
-        let mut form = std::collections::HashMap::new();
-        form.insert("amount".to_string(), amount_cents.to_string());
-        form.insert("currency".to_string(), currency.to_string());
-        form.insert("payment_method_types[]".to_string(), "card_present".to_string());
-        form.insert("capture_method".to_string(), "manual".to_string());
-        form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
-
-        let res = reqwest::Client::new().post("https://api.stripe.com/v1/payment_intents")
-            .basic_auth(&self.api_key, Some(""))
-            .form(&form)
-            .send()
-            .await
-            .map_err(|e| format!("Stripe API request failed: {}", e))?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let text = res.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error ({}): {}", status, text));
-        }
-
-        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        let secret = json["client_secret"].as_str().ok_or_else(|| "Missing client_secret in response".to_string())?;
-
-        Ok(secret.to_string())
     }
 }

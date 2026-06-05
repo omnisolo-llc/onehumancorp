@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import StripeTerminalClient from '../pos/terminal/StripeTerminalClient';
 import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function CheckoutPage() {
@@ -43,6 +44,7 @@ export default function CheckoutPage() {
   };
 
   const [isSubscription, setIsSubscription] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
 
   const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
@@ -88,6 +90,11 @@ export default function CheckoutPage() {
               onChange={(e) => setDeliveryAddress(e.target.value)}
               className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             />
+            <div className="mt-4 flex justify-between items-center text-lg font-bold">
+              <span>Total:</span>
+              <span>${deliveryFee ? ((5000 + deliveryFee)/100).toFixed(2) : '50.00'}</span>
+            </div>
+
             <button
               onClick={checkDeliveryEligibility}
               disabled={isCheckingDelivery || !deliveryAddress}
@@ -143,38 +150,26 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
 
-          <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
-            <button
-              onClick={() => {
-                const amount = prompt("Enter amount to charge:");
-                if (!amount) return;
-
-                if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
-                  router.push('/dashboard');
-                } else {
-                  let queue = [];
-                  try {
-                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                  } catch (e) {}
-
-                  queue.push({
-                    id: 'txn_' + Date.now(),
-                    amount: parseFloat(amount),
-                    timestamp: new Date().toISOString(),
-                    type: 'tap_to_pay',
-                    idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
-                  });
-                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
-                  router.push('/dashboard');
-                }
-              }}
-              className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
-            >
-              Tap to Pay (Stripe Terminal)
-            </button>
-          </WithTooltip>
+          {showTerminal ? (
+            <div className="w-full mt-4">
+              <StripeTerminalClient amount={deliveryFee ? 5000 + deliveryFee : 5000} onPaymentSuccess={() => {
+                setShowTerminal(false);
+                setShowSuccessModal(true);
+                setReferralLink("https://ohc.page.link/" + Math.random().toString(36).substring(7));
+              }} onCancel={() => setShowTerminal(false)} />
+            </div>
+          ) : (
+            <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
+              <button
+                onClick={() => {
+                  setShowTerminal(true);
+                }}
+                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
+              >
+                Tap to Pay (Stripe Terminal)
+              </button>
+            </WithTooltip>
+          )}
 
           <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
             <button

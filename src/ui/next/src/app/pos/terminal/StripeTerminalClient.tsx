@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
 
-export default function StripeTerminalClient({ amount }: { amount: number }) {
+export default function StripeTerminalClient({ amount, onPaymentSuccess, onCancel }: { amount: number, onPaymentSuccess?: () => void, onCancel?: () => void }) {
   const [terminal, setTerminal] = useState<any>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
@@ -82,6 +82,9 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
         setStatus('Payment processing failed: ' + processResult.error.message);
       } else {
         setStatus('Payment successful!');
+        if (onPaymentSuccess) {
+          onPaymentSuccess();
+        }
       }
     } catch (e: any) {
       setStatus('Error: ' + e.message);
@@ -115,6 +118,13 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
         <div>
           <button onClick={processPayment} className="bg-indigo-600 text-white px-4 py-2 rounded w-full">
             Charge ${(amount / 100).toFixed(2)}
+          </button>
+        </div>
+      )}
+      {onCancel && (
+        <div className="mt-4">
+          <button onClick={onCancel} className="bg-gray-200 text-gray-800 px-4 py-2 rounded w-full">
+            Cancel
           </button>
         </div>
       )}
