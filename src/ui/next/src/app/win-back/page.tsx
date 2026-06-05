@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Footer } from '../../components/Footer';
 
 export default function WinBackCampaignPage() {
   const router = useRouter();
@@ -151,6 +152,8 @@ export default function WinBackCampaignPage() {
             )}
           </section>
         </div>
+
+
       </main>
 
       {/* Soft Paywall Modal */}

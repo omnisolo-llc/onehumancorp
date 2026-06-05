@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+import { Footer } from '../../components/Footer';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -197,6 +198,8 @@ export default function CheckoutPage() {
             </button>
           </WithTooltip>
         </div>
+
+<Footer theme="light" />
       </main>
 
       {/* Post-Purchase Referral Modal */}

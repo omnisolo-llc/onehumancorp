@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Footer } from '../../components/Footer';
 
 export default function ShareCardsPage() {
   const router = useRouter();
@@ -160,7 +161,7 @@ export default function ShareCardsPage() {
                  </div>
 
                  <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center opacity-80">
-                     <span className="text-sm font-semibold tracking-wider uppercase">Powered by OHC</span>
+                     <Footer theme={theme as any} tenantId={shareLink.split("=")[1] || "my-store"} />
                      <span className="text-sm font-medium">{shareLink.replace('https://', '')}</span>
                  </div>
              </div>
@@ -168,6 +169,8 @@ export default function ShareCardsPage() {
                  This is how your card will appear when shared on social platforms like Twitter, Facebook, and LinkedIn.
              </p>
         </section>
+
+
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

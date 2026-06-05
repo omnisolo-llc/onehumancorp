@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Footer } from '../../components/Footer';
 
 export default function MilestonesPage() {
   const router = useRouter();
@@ -113,7 +114,7 @@ export default function MilestonesPage() {
                                 </div>
 
                                 <div className="absolute bottom-6 flex flex-col items-center gap-1 opacity-90">
-                                    <span className="text-xs uppercase font-bold tracking-widest">Powered by OHC</span>
+                                    <Footer theme="light" />
                                 </div>
                             </div>
 
@@ -149,6 +150,8 @@ export default function MilestonesPage() {
                 )}
              </div>
         </section>
+
+
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

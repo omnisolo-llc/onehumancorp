@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Footer } from '../../components/Footer';
 
 export default function SocialProofNudgePage() {
   const router = useRouter();
@@ -189,13 +190,13 @@ export default function SocialProofNudgePage() {
 
                  {!hasPro && (
                      <div className="absolute bottom-2 left-6 z-10">
-                         <a href="#" className="text-[10px] font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity drop-shadow-sm" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>
-                             ⚡ Powered by OHC
-                         </a>
+                         <Footer theme={theme as any} />
                      </div>
                  )}
              </div>
         </section>
+
+
       </main>
 
       {/* Soft Paywall Modal */}
