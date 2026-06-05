@@ -123,8 +123,7 @@ impl DB {
                 #[cfg(unix)]
                 {
                     use std::fs::OpenOptions;
-                    #[allow(unused_imports)]
-                            use std::os::unix::fs::OpenOptionsExt;
+                    use std::os::unix::fs::OpenOptionsExt;
                     use std::os::unix::fs::PermissionsExt;
 
                     if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
@@ -195,8 +194,7 @@ impl DB {
                     #[cfg(unix)]
                     {
                         use std::io::Write;
-                        #[allow(unused_imports)]
-                            use std::os::unix::fs::OpenOptionsExt;
+                        use std::os::unix::fs::OpenOptionsExt;
                         if let Ok(mut file) = std::fs::OpenOptions::new()
                             .write(true)
                             .create_new(true)
@@ -1523,7 +1521,16 @@ mod security_tests_final {
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-                        let _ = std::fs::File::create(&db_path);
+                        #[cfg(unix)]
+                        {
+                            #[allow(unused_imports)]
+                            use std::os::unix::fs::OpenOptionsExt;
+                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = std::fs::File::create(&db_path);
+                        }
 
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
@@ -1535,7 +1542,6 @@ mod security_tests_final {
                         #[cfg(unix)]
                         {
                             use std::fs::OpenOptions;
-                            #[allow(unused_imports)]
                             use std::os::unix::fs::OpenOptionsExt;
                             use std::os::unix::fs::PermissionsExt;
                             let file = OpenOptions::new()
@@ -1554,7 +1560,7 @@ mod security_tests_final {
                         }
                         #[cfg(not(unix))]
                         {
-                            let _ = std::fs::File::create(&db_path);
+                            let _ = fs::File::create(&db_path);
                         }
 
                         let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
