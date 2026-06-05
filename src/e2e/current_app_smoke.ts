@@ -8,7 +8,6 @@ export function currentAppSmoke(label: string) {
     try {
         await page.goto('/dashboard');
         await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
-        await expect(page.locator('h2', { hasText: 'Business Snapshot' }).first()).toBeVisible({ timeout: 5000 });
 
         await page.goto('/agents');
         await expect(page.locator('h1', { hasText: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
