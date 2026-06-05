@@ -363,6 +363,52 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+
+                  {req.payload?.feature_type === "social_post" && (
+                    <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                          />
+                        </svg>
+                        Social Media Post Drafted
+                      </div>
+                      <div className="text-xs text-pink-700">
+                        Based on your new product:{" "}
+                        {req.payload.product_name}
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-pink-100 overflow-hidden shadow-sm">
+                        {req.payload.image_url && (
+                          <div className="w-full h-40 bg-gray-100 relative">
+                            <img
+                              src={req.payload.image_url}
+                              alt="Product photo"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">
+                            Generated Caption
+                          </div>
+                          <p className="text-xs text-gray-700 italic">
+                            "{req.payload.draft_copy}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "case_study" && (
                     <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
