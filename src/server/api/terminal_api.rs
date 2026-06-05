@@ -2,7 +2,6 @@ use axum::{extract::State, Json};
 use std::sync::Arc;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
-use tracing::info;
 
 #[derive(serde::Serialize)]
 pub struct TerminalTokenResponse {
@@ -45,7 +44,7 @@ pub async fn get_terminal_connection_token_handler(
         None => return Json(Err("Unauthenticated".to_string()))
     };
 
-    info!(tenant_id = %tenant_id, "Generating Stripe Terminal Connection Token");
+    tracing::info!(tenant_id = %tenant_id, "Generating Stripe Terminal Connection Token");
 
     let _ = ::server_telemetry::record_api_call_cost(
         &crate::db::get_pool(),
@@ -85,7 +84,7 @@ pub async fn create_payment_intent_handler(
         None => return Json(Err("Unauthenticated".to_string()))
     };
 
-    info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
+    tracing::info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
 
     let _ = ::server_telemetry::record_api_call_cost(
         &crate::db::get_pool(),
@@ -111,7 +110,7 @@ pub async fn terminal_webhook_handler(
     State(_hub): State<Arc<Hub>>,
     payload: axum::extract::Json<serde_json::Value>,
 ) -> axum::response::Result<axum::http::StatusCode> {
-    info!("Received Stripe webhook");
+    tracing::info!("Received Stripe webhook");
 
     // Extract Stripe signature header for verification
     let sig_header = _headers.get("Stripe-Signature").and_then(|h| h.to_str().ok()).unwrap_or("");
@@ -136,7 +135,7 @@ pub async fn terminal_webhook_handler(
 
                 if event_type == "payment_intent.amount_capturable_updated" {
                     // Stripe Terminal requires explicit capture after card present tap
-                    info!(tenant_id = %tenant_id, amount = amount, intent_id = %intent_id, "Terminal payment amount capturable updated. Capturing intent.");
+                    tracing::info!(tenant_id = %tenant_id, amount = amount, intent_id = %intent_id, "Terminal payment amount capturable updated. Capturing intent.");
 
                     let stripe_key = match std::env::var("STRIPE_API_KEY") {
                         Ok(k) => k,
@@ -149,7 +148,7 @@ pub async fn terminal_webhook_handler(
                     }
                 } else if event_type == "payment_intent.succeeded" {
                     // Sync ledger
-                    info!(tenant_id = %tenant_id, amount = amount, intent_id = %intent_id, "Terminal payment succeeded. Syncing ledger and inventory.");
+                    tracing::info!(tenant_id = %tenant_id, amount = amount, intent_id = %intent_id, "Terminal payment succeeded. Syncing ledger and inventory.");
 
                     let pool = crate::db::get_pool();
                     match sqlx::query(
