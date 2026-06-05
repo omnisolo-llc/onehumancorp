@@ -3,13 +3,13 @@ import { test, expect } from './fixtures';
 test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/integrations');
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
   });
 
   test('shows premium integrations dashboard header and copy', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
-    await expect(page.getByText('Supercharge your workflow by connecting your favorite tools.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' }).first()).toBeVisible();
+    await expect(page.getByText('Seamlessly connect your favorite apps to streamline your business operations.')).toBeVisible();
   });
 
   test('displays social media integration card', async ({ page }) => {
