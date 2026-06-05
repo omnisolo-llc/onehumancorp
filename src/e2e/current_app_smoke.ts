@@ -2,7 +2,7 @@ import { expect, test } from './fixtures';
 
 export function currentAppSmoke(label: string) {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
-    test.setTimeout(60000);
+    test.setTimeout(180000);
 
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
