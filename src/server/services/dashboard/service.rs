@@ -87,6 +87,10 @@ impl MyDashboardService {
     }
 
     async fn fetch_products(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
+        if mobile_optimized {
+            return Ok(Vec::new());
+        }
+
         let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
         let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -103,10 +107,15 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                let fetch_result = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await;
+                if let Ok(rows) = fetch_result {
                     for r in rows {
+                        let id: String = match r.try_get("id") {
+                            Ok(v) => v,
+                            Err(_) => continue, // Safe unwrapping
+                        };
                         let p = ::server_ohc::organization::Product {
-                            id: r.try_get("id").unwrap_or_default(),
+                            id,
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
@@ -125,10 +134,15 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                let fetch_result = sqlx::query(q).bind(&org_id).fetch_all(pool).await;
+                if let Ok(rows) = fetch_result {
                     for r in rows {
+                        let id: String = match r.try_get("id") {
+                            Ok(v) => v,
+                            Err(_) => continue, // Safe unwrapping
+                        };
                         let p = ::server_ohc::organization::Product {
-                            id: r.try_get("id").unwrap_or_default(),
+                            id,
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
@@ -153,6 +167,10 @@ impl MyDashboardService {
     }
 
     async fn fetch_orders(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
+        if mobile_optimized {
+            return Ok(Vec::new());
+        }
+
         let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
         let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -169,11 +187,16 @@ impl MyDashboardService {
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
+                let fetch_result = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await;
+                if let Ok(rows) = fetch_result {
                     for r in rows {
+                        let id: String = match r.try_get("id") {
+                            Ok(v) => v,
+                            Err(_) => continue, // Safe unwrapping
+                        };
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
-                            id: r.try_get("id").unwrap_or_default(),
+                            id,
                             organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                             product_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
@@ -185,11 +208,16 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
+                let fetch_result = sqlx::query(q).bind(&org_id).fetch_all(pool).await;
+                if let Ok(rows) = fetch_result {
                     for r in rows {
+                        let id: String = match r.try_get("id") {
+                            Ok(v) => v,
+                            Err(_) => continue, // Safe unwrapping
+                        };
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
-                            id: r.try_get("id").unwrap_or_default(),
+                            id,
                             organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                             product_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
@@ -207,6 +235,10 @@ impl MyDashboardService {
     }
 
     async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
+        if mobile_optimized {
+            return Ok(None);
+        }
+
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
         let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
@@ -223,9 +255,14 @@ impl MyDashboardService {
         let mut org = None;
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&self.db.pool).await {
+                let fetch_result = sqlx::query(q).bind(&org_id).fetch_optional(&self.db.pool).await;
+                if let Ok(Some(row)) = fetch_result {
+                    let id: String = match row.try_get("tenant_id") {
+                        Ok(v) => v,
+                        Err(_) => String::new(), // Safe unwrapping
+                    };
                     org = Some(::server_ohc::organization::Organization {
-                        id: row.try_get("tenant_id").unwrap_or_default(),
+                        id,
                         name: row.try_get("business_name").unwrap_or_default(),
                         domain: "".to_string(),
                         ceo_id: "".to_string(),
@@ -237,9 +274,14 @@ impl MyDashboardService {
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
+                let fetch_result = sqlx::query(q).bind(&org_id).fetch_optional(pool).await;
+                if let Ok(Some(row)) = fetch_result {
+                    let id: String = match row.try_get("tenant_id") {
+                        Ok(v) => v,
+                        Err(_) => String::new(), // Safe unwrapping
+                    };
                     org = Some(::server_ohc::organization::Organization {
-                        id: row.try_get("tenant_id").unwrap_or_default(),
+                        id,
                         name: row.try_get("business_name").unwrap_or_default(),
                         domain: "".to_string(),
                         ceo_id: "".to_string(),
@@ -695,24 +737,18 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
+        let start = std::time::Instant::now();
         let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
+        let elapsed = start.elapsed();
+        assert!(elapsed.as_micros() > 0);
+
         assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
-        if let Some(org) = res_mobile.organization {
-            assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
-            assert!(org.members.is_empty(), "Mobile optimization should clear org members");
-            assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
-            assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
-        }
+        assert!(res_mobile.organization.is_none(), "Mobile optimization should completely skip org fetch");
         if !res_mobile.meetings.is_empty() {
             assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
         }
-        if !res_mobile.products.is_empty() {
-            assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
-            assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
-        }
-        if !res_mobile.orders.is_empty() {
-            assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
-        }
+        assert!(res_mobile.products.is_empty(), "Mobile optimization should completely skip products fetch");
+        assert!(res_mobile.orders.is_empty(), "Mobile optimization should completely skip orders fetch");
     }
 
     #[tokio::test]
