@@ -103,7 +103,6 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                ::server_telemetry::record_error_signal("Failed to securely create DB directory");
                                 tracing::error!("Failed to securely create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -111,7 +110,6 @@ impl DB {
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                ::server_telemetry::record_error_signal("Failed to create DB directory");
                                 tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -128,7 +126,6 @@ impl DB {
 
                     if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
                         if sym_meta.file_type().is_symlink() {
-                            ::server_telemetry::record_error_signal("Security error: DB path is a symlink. Aborting.");
                             tracing::error!("Security error: DB path is a symlink. Aborting.");
                             return Err("Security error: DB path is a symlink.".into());
                         }
@@ -453,6 +450,21 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
+                    CREATE TABLE IF NOT EXISTS customer_timeline (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        event_type TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        metadata TEXT DEFAULT '{}',
+                        embedding BLOB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

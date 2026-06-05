@@ -3,25 +3,5 @@ name = "server_harness"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-server_common = { path = "../common" }
-server_telemetry = { path = "../telemetry" }
-async-trait = "0.1"
-opentelemetry = "0.27"
-opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
-tracing = "0.1"
-tracing-opentelemetry = "0.28"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-tokio = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
-chrono = { workspace = true }
-tree-sitter = "0.26.8"
-tree-sitter-bash = "0.25.1"
-regex = "1"
-uuid = { version = "1", features = ["v4", "serde"] }
-
 [lib]
 path = "mod.rs"

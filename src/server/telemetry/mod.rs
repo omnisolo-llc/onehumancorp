@@ -1003,28 +1003,7 @@ pub async fn buffer_metric_i64(
     value: i64,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
-
-    if !is_telemetry_enabled {
-        return Ok(());
-    }
-
-    let redacted_labels = redact_interface_pii(labels);
-    let labels_json = serde_json::to_string(&redacted_labels)?;
-
-    query(
-        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-         VALUES ($1, $2, $3, $4, $5, 'pending')"
-    )
-    .bind(metric_name)
-    .bind(metric_type)
-    .bind(value as f64)
-    .bind(labels_json)
-    .bind(Utc::now())
-    .execute(pool)
-    .await?;
-
-    Ok(())
+    buffer_metric(pool, metric_name, metric_type, value as f32, labels).await
 }
 
 pub async fn buffer_metric(
@@ -1106,11 +1085,6 @@ pub fn is_pii_value_pattern(s: &str) -> bool {
 
 pub fn is_sensitive_key(key: &str) -> bool {
     let k = key.to_lowercase();
-    // Exclude tenant_id and organization_id from being redacted
-    if k == "tenant_id" || k == "organization_id" {
-        return false;
-    }
-
     k.contains("password")
         || k.contains("secret")
         || k.contains("key")

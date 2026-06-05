@@ -247,38 +247,6 @@ impl AppServer {
                     serde_json::to_string(&resp).unwrap()
                 }
             }
-        } else if req.method == "run_ralph_loop" {
-            let task = req.params.get("task").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let progress_file = req.params.get("progress_file").and_then(|v| v.as_str()).unwrap_or(".ralph_progress.json").to_string();
-
-            let ralph = crate::ralph_loop::RalphLoop::new(
-                self.runner.core.agent.clone(),
-                self.runner.core.runtime_config.clone(),
-                &progress_file,
-            );
-
-            match ralph.run(&task).await {
-                Ok(_) => {
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: Some(serde_json::json!({ "status": "success" })),
-                        error: None,
-                        meta: None,
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-                Err(e) => {
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: None,
-                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
-                        meta: None,
-                    };
-                    serde_json::to_string(&resp).unwrap()
-                }
-            }
         } else if req.method == "run_scalable_agents" {
             let count = req.params.get("count").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
             let message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -478,18 +446,8 @@ mod tests {
         assert_eq!(outputs[0].as_str().unwrap(), "default output");
         assert_eq!(outputs[1].as_str().unwrap(), "default output");
 
-        // Test run_ralph_loop method
-        let req_json_ralph = r#"{"jsonrpc": "2.0", "id": "3", "method": "run_ralph_loop", "params": {"task": "test task", "progress_file": ".test_ralph_progress.json"}}"#;
-        let resp_json_ralph = app_server.handle_request(req_json_ralph).await;
-        let resp_ralph: JsonRpcResponse = serde_json::from_str(&resp_json_ralph).unwrap();
-        assert!(resp_ralph.error.is_none());
-        assert_eq!(resp_ralph.result.unwrap().get("status").unwrap().as_str().unwrap(), "success");
-
-        // Clean up test file if it exists
-        let _ = std::fs::remove_file(".test_ralph_progress.json");
-
         // Test unknown method
-        let req_json_bad = r#"{"jsonrpc": "2.0", "id": "4", "method": "unknown", "params": {}}"#;
+        let req_json_bad = r#"{"jsonrpc": "2.0", "id": "3", "method": "unknown", "params": {}}"#;
         let resp_json_bad = app_server.handle_request(req_json_bad).await;
         let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
         assert_eq!(resp_bad.error.unwrap().code, -32601);

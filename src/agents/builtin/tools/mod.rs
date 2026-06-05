@@ -108,7 +108,7 @@ pub fn all_tools(
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
     let mut tools = vec![
-        repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
+        aider_repo_map::aider_repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
@@ -117,6 +117,7 @@ pub fn all_tools(
         edit::edit_tool(working_dir.clone(), runner.clone()),
         glob::glob_tool(working_dir.clone()),
         grep::grep_tool(working_dir.clone()),
+        repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::path::PathBuf::from("."))),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
         booking::booking_get_services_tool(booking_store.clone()),
@@ -162,5 +163,5 @@ pub fn all_tools(
 
     tools
 }
-
+pub mod aider_repo_map;
 pub mod native_state;

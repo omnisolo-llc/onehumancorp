@@ -90,7 +90,7 @@ async fn setup_db() -> Arc<DB> {
         r#"
         CREATE TABLE swarm_tasks (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL DEFAULT 'test_org',
+            tenant_id TEXT NOT NULL DEFAULT 'system',
             mission_id TEXT NOT NULL,
             parent_plan_id TEXT,
             dependencies TEXT NOT NULL DEFAULT '[]',
@@ -114,7 +114,7 @@ async fn setup_db() -> Arc<DB> {
         r#"
         CREATE TABLE state_machine_transitions (
             id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL DEFAULT 'test_org',
+            tenant_id TEXT NOT NULL DEFAULT 'system',
             entity_id TEXT NOT NULL,
             entity_type TEXT NOT NULL,
             from_state TEXT NOT NULL,
@@ -172,7 +172,7 @@ async fn test_single_agent_flow() {
     let result = state_manager
         .transition_state(
             &task_id,
-            "test_org",
+            "system",
             "PENDING",
             "IN_PROGRESS",
             Some("agent_1"),
@@ -228,7 +228,7 @@ async fn test_dag_workflow() {
     state_manager
         .transition_state(
             &parent_id,
-            "test_org",
+            "system",
             "IN_PROGRESS",
             "COMPLETED",
             Some("agent_1"),

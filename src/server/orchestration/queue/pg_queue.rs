@@ -15,12 +15,23 @@ impl PgTaskQueue {
 
 #[async_trait]
 impl TaskQueue for PgTaskQueue {
-async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
+
+        let mut query_str = String::from("INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) VALUES ");
+        let mut values = Vec::new();
+
+        for i in 0..jobs.len() {
+            let base = i * 6;
+            values.push(format!("(${}, ${}, ${}, ${}, 'PENDING', ${}, ${})", base + 1, base + 2, base + 3, base + 4, base + 5, base + 6));
+        }
+        query_str.push_str(&values.join(", "));
+
+        let mut query = sqlx::query(&query_str);
 
         let mut unique_tenants = std::collections::HashSet::new();
         for job in &jobs {
@@ -43,43 +54,27 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         }
 
         let bursts_threshold = 10;
+        for job in jobs {
+            let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
 
-        // Chunk jobs to avoid Postgres parameter limits (65535 parameters max)
-        // We have 6 parameters per insert, so safe max is ~10,000. We use 5,000 for safety.
-        for chunk in jobs.chunks(5000) {
-            let mut query_builder = sqlx::QueryBuilder::new("INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) ");
-            query_builder.push_values(chunk, |mut b, job| {
-                let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
-                let mut next_retry_at = job.next_retry_at;
-                if depth > bursts_threshold {
-                    let delay_seconds = (depth - bursts_threshold) * 5;
-                    next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
-                }
-
-                // Note: Rust doesn't allow mutation here easily due to ownership,
-                // but depth is only an estimate anyway so it's acceptable.
-                // We could collect all modified next_retry_ats prior to this step if exact counting was crucial.
-
-                let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
-
-                b.push_bind(job.id.clone())
-                 .push_bind(job.parent_task_id.clone())
-                 .push_bind(job.job_type.clone())
-                 .push_bind(payload_json)
-                 .push_bind("PENDING")
-                 .push_bind(next_retry_at)
-                 .push_bind(job.tenant_id.clone());
-            });
-
-            let query = query_builder.build();
-            query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
-            // Update depths for subsequent chunks
-            for job in chunk {
-                *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
+            let mut next_retry_at = job.next_retry_at;
+            if depth > bursts_threshold {
+                let delay_seconds = (depth - bursts_threshold) * 5;
+                next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
             }
+            *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
+
+            let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
+            query = query
+                .bind(job.id)
+                .bind(job.parent_task_id)
+                .bind(job.job_type)
+                .bind(payload_json)
+                .bind(next_retry_at)
+                .bind(job.tenant_id);
         }
 
+        query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
@@ -225,7 +220,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_next_retry_at = (chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64)).to_rfc3339();
+                let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
                 sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_attempt)
                     .bind(new_next_retry_at)

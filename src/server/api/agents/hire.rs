@@ -25,7 +25,6 @@ pub struct HireAgentResponse {
     pub id: String,
     pub status: String,
     pub agent_id: String,
-    pub workflow_id: String,
     pub message: String,
 }
 
@@ -55,13 +54,13 @@ async fn hire_handler(
 
     let payload: HireAgentRequest = match axum::extract::Json::<HireAgentRequest>::from_request(req2, &()).await {
         Ok(Json(payload)) => payload,
-        Err(_) => return (StatusCode::BAD_REQUEST, Json(HireAgentResponse { id: "".to_string(), status: "error".to_string(), agent_id: "".to_string(), workflow_id: "".to_string(), message: "Invalid payload".to_string() })).into_response(),
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(HireAgentResponse { id: "".to_string(), status: "error".to_string(), agent_id: "".to_string(), message: "Invalid payload".to_string() })).into_response(),
     };
 
     let now = chrono::Utc::now().timestamp();
-    let agent_id = format!("agent-{}-{}", now, uuid::Uuid::new_v4().simple());
+    let agent_id = format!("agent-{}", now);
     let provider_type = if payload.provider_type.is_empty() {
-        "builtin".to_string()
+        payload.model.clone()
     } else {
         payload.provider_type.clone()
     };
@@ -71,49 +70,17 @@ async fn hire_handler(
         name: payload.name.clone(),
         role: payload.role.clone(),
         organization_id: tenant_id,
-        status: "RUNNING".to_string(),
+        status: "IDLE".to_string(),
         provider_type,
     };
 
     hub.register_agent(agent);
-    let model = if payload.model.trim().is_empty() {
-        std::env::var("OHC_LLM_MODEL")
-            .or_else(|_| std::env::var("MINIMAX_MODEL"))
-            .unwrap_or_else(|_| "MiniMax-M3".to_string())
-    } else {
-        payload.model.clone()
-    };
-    let workflow_task = format!(
-        "A newly hired OHC agent named '{}' with role '{}' should start improving the business now. \
-         Run a practical business operating swarm for this company, identify the highest leverage work, \
-         and assign concrete next actions to specialist agents. Use model {}.",
-        payload.name, payload.role, model
-    );
-    let workflow_id = uuid::Uuid::new_v4().to_string();
-    let binary = crate::workflow_agent_binary();
-    let agent_task = crate::workflow_agent_task("ohc_business_swarm", &workflow_task);
-    let record = crate::WorkflowRecord {
-        id: workflow_id.clone(),
-        name: format!("{} business swarm", payload.name),
-        workflow: "ohc_business_swarm".to_string(),
-        task: workflow_task,
-        status: "running".to_string(),
-        command: format!("{} --task {}", binary, serde_json::to_string(&agent_task).unwrap_or_default()),
-        created_at: chrono::Utc::now().to_rfc3339(),
-        output: None,
-        error: None,
-    };
-    if let Ok(mut workflows) = crate::get_workflow_registry().write() {
-        workflows.insert(0, record.clone());
-    }
-    crate::dispatch_workflow(record);
 
     let response = HireAgentResponse {
         id: agent_id.clone(),
-        status: "running".to_string(),
+        status: "success".to_string(),
         agent_id,
-        workflow_id,
-        message: format!("Hired {} as {} and started a real MiniMax business swarm", payload.name, payload.role),
+        message: format!("Successfully hired {} as {}", payload.name, payload.role),
     };
 
     (StatusCode::CREATED, Json(response)).into_response()

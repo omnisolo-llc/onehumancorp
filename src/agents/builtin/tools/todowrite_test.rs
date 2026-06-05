@@ -1,7 +1,4 @@
-#[cfg(ohc_bazel)]
 use ohc_builtin_agent_tools::todowrite::{todoread_tool, todowrite_tool};
-#[cfg(not(ohc_bazel))]
-use crate::todowrite::{todoread_tool, todowrite_tool};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

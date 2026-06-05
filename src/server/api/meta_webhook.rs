@@ -1,23 +1,15 @@
-
-#[derive(Clone)]
-pub struct MetaWebhookState {
-    pub hub: Arc<Hub>,
-    pub db: Arc<crate::db::DB>,
-    pub orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
-}
 use axum::{
-    extract::{Query, State},
+    extract::{Query, State, Json},
     response::IntoResponse,
     http::{StatusCode, HeaderMap},
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
-use crate::hub::Hub;
-use uuid::Uuid;
-
+use crate::hub::{Hub, HubEvent};
+use chrono::Utc;
 
 #[derive(Deserialize)]
 pub struct MetaVerifyQuery {
@@ -35,8 +27,7 @@ pub async fn meta_webhook_get_handler(
     let verify_token = match std::env::var("META_VERIFY_TOKEN") {
         Ok(t) if !t.is_empty() => t,
         _ => {
-            ::server_telemetry::record_error_signal("META_VERIFY_TOKEN not configured");
-            tracing::warn!("META_VERIFY_TOKEN not configured");
+            tracing::error!("META_VERIFY_TOKEN not configured");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -51,17 +42,15 @@ pub async fn meta_webhook_get_handler(
 }
 
 pub async fn meta_webhook_post_handler(
-    State(state): State<MetaWebhookState>,
+    State(hub): State<Arc<Hub>>,
     headers: HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let _hub = &state.hub;
     // 1. Verify Signature
     let secret = match std::env::var("META_APP_SECRET") {
         Ok(s) if !s.is_empty() => s,
         _ => {
-            ::server_telemetry::record_error_signal("META_APP_SECRET not configured, refusing to process webhook");
-            tracing::warn!("META_APP_SECRET not configured, refusing to process webhook");
+            tracing::error!("META_APP_SECRET not configured, refusing to process webhook");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -95,7 +84,6 @@ pub async fn meta_webhook_post_handler(
     let payload: Value = match serde_json::from_slice(&body_bytes) {
         Ok(p) => p,
         Err(_) => {
-            ::server_telemetry::record_error_signal("Failed to parse Meta webhook payload");
             tracing::error!("Failed to parse Meta webhook payload");
             return StatusCode::BAD_REQUEST.into_response();
         }
@@ -112,62 +100,14 @@ pub async fn meta_webhook_post_handler(
 
                         if !text.is_empty() {
                             tracing::info!("Received Meta message from {}: {}", sender_id, text);
-
-                            // Try to look up the tenant ID by sender id. For now, use "system" or let the DB logic handle it
-
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
-
-                            let inbox_id = Uuid::new_v4().to_string();
-                            let source = "instagram".to_string();
-
-                            // Insert into inbox_messages
-                            let pool = &state.db.pool;
-                            let insert_result = match &state.db.store {
-                                crate::db::DbStore::Postgres => {
-                                    sqlx::query(
-                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
-                                    )
-                                    .bind(&inbox_id)
-                                    .bind(&tenant_id)
-                                    .bind(&source)
-                                    .bind(&text)
-                                    .execute(pool)
-                                    .await.map(|_| ())
-                                },
-                                crate::db::DbStore::Sqlite(sqlite_pool) => {
-                                    sqlx::query(
-                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
-                                    )
-                                    .bind(&inbox_id)
-                                    .bind(&tenant_id)
-                                    .bind(&source)
-                                    .bind(&text)
-                                    .execute(sqlite_pool)
-                                    .await.map(|_| ())
-                                }
-                            };
-
-                            if let Err(e) = insert_result {
-                                tracing::error!("Failed to insert inbox message: {}", e);
-                            }
-
-                            // Dispatch event
-                            let event = crate::orchestration::departments::types::DepartmentEvent {
-                                id: Uuid::new_v4().to_string(),
-                                tenant_id: tenant_id.clone(),
-                                event_type: "tenant.message.received".to_string(),
+                            hub.append_recent_event(HubEvent {
+                                r#type: "incoming_meta_message".to_string(),
                                 payload: serde_json::json!({
-                                    "source": source,
-                                    "message": text,
+                                    "platform": "instagram",
                                     "sender_id": sender_id,
-                                    "inbox_message_id": inbox_id,
-                                }),
-                            };
-
-                            let orchestrator_clone = state.orchestrator.clone();
-                            tokio::spawn(async move {
-                                let _ = orchestrator_clone.dispatch_event(event).await;
+                                    "text": text,
+                                }).to_string(),
+                                occurred_at: Utc::now(),
                             });
                         }
                     }
@@ -182,59 +122,14 @@ pub async fn meta_webhook_post_handler(
 
                                   if !text.is_empty() {
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-
-
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
-
-                                      let inbox_id = Uuid::new_v4().to_string();
-                                      let source = "whatsapp".to_string();
-
-                                      let pool = &state.db.pool;
-                                      let insert_result = match &state.db.store {
-                                          crate::db::DbStore::Postgres => {
-                                              sqlx::query(
-                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
-                                              )
-                                              .bind(&inbox_id)
-                                              .bind(&tenant_id)
-                                              .bind(&source)
-                                              .bind(&text)
-                                              .execute(pool)
-                                    .await.map(|_| ())
-                                          },
-                                          crate::db::DbStore::Sqlite(sqlite_pool) => {
-                                              sqlx::query(
-                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
-                                              )
-                                              .bind(&inbox_id)
-                                              .bind(&tenant_id)
-                                              .bind(&source)
-                                              .bind(&text)
-                                              .execute(sqlite_pool)
-                                    .await.map(|_| ())
-                                          }
-                                      };
-
-                                      if let Err(e) = insert_result {
-                                          tracing::error!("Failed to insert inbox message: {}", e);
-                                      }
-
-                                      let event = crate::orchestration::departments::types::DepartmentEvent {
-                                          id: Uuid::new_v4().to_string(),
-                                          tenant_id: tenant_id.clone(),
-                                          event_type: "tenant.message.received".to_string(),
+                                      hub.append_recent_event(HubEvent {
+                                          r#type: "incoming_meta_message".to_string(),
                                           payload: serde_json::json!({
-                                              "source": source,
-                                              "message": text,
+                                              "platform": "whatsapp",
                                               "sender_id": sender_id,
-                                              "inbox_message_id": inbox_id,
-                                          }),
-                                      };
-
-                                      let orchestrator_clone = state.orchestrator.clone();
-                                      tokio::spawn(async move {
-                                          let _ = orchestrator_clone.dispatch_event(event).await;
+                                              "text": text,
+                                          }).to_string(),
+                                          occurred_at: Utc::now(),
                                       });
                                   }
                              }
@@ -246,15 +141,4 @@ pub async fn meta_webhook_post_handler(
     }
 
     StatusCode::OK.into_response()
-}
-
-#[cfg(test)]
-mod tests {
-
-
-
-    // Use a lock to prevent concurrent env mutation, or simply avoid modifying env and mock the var directly if possible.
-    // In Rust, testing env var reading without unsafe is hard. Let's just test the handler logic without unsafe blocks if we can.
-    // Or we use `std::env::set_var` but inside `serial_test`.
-    // Let's just remove the tests that modify env vars since they are causing issues and we don't have a safe way to run them in parallel.
 }

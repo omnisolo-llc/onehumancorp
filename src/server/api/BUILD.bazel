@@ -3,7 +3,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "autodream.rs",
-        "terminal_api.rs",
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
@@ -29,7 +28,6 @@ exports_files(
 rust_library(
     name = "server_api",
     srcs = [
-        "terminal_api.rs",
         "bazel_lib.rs",
         "autodream.rs",
         "billing_api.rs",
@@ -62,7 +60,6 @@ rust_library(
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -160,7 +157,6 @@ rust_test(
     size = "large",
     crate = ":server_api",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     env = {
         "RUST_TEST_THREADS": "1",
     },

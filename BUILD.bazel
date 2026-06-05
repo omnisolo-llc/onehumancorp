@@ -25,7 +25,7 @@ exports_files([
     "playwright.config.ts",
     "package.json",
     "package-lock.json",
-] + glob(["e2e/*.spec.ts"]))
+])
 
 config_setting(
     name = "linux",

@@ -15,29 +15,18 @@ export default function AutoCatalogPage() {
     subscriptionDiscount?: string;
   } | null>(null);
   const [published, setPublished] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setLoading(true);
-      setError(null);
       try {
-        const formData = new FormData();
-        formData.append('image', e.target.files[0]);
-
         const response = await fetch('/api/auto-catalog', {
           method: 'POST',
-          body: formData,
         });
         const data = await response.json();
-        if (!response.ok) {
-          setError(data.message || 'Auto-catalog is unavailable.');
-          return;
-        }
         setProductData(data);
       } catch (error) {
         console.error('Error auto-cataloging:', error);
-        setError('Auto-catalog is unavailable.');
       } finally {
         setLoading(false);
       }
@@ -48,7 +37,6 @@ export default function AutoCatalogPage() {
     if (!productData) return;
 
     setLoading(true);
-    setError(null);
     try {
       const response = await fetch('/api/product', {
         method: 'POST',
@@ -63,16 +51,12 @@ export default function AutoCatalogPage() {
           subscription_discount: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined
         })
       });
-      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
         setPublished(true);
-      } else {
-        setError(data.message || 'Product could not be published.');
       }
     } catch (error) {
       console.error('Error publishing product:', error);
-      setError('Product could not be published because the catalog backend is unavailable.');
     } finally {
       setLoading(false);
     }
@@ -97,12 +81,6 @@ export default function AutoCatalogPage() {
         <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Product</h1>
       </div>
-
-      {error && (
-        <div className="mb-4 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-          {error}
-        </div>
-      )}
 
       {!loading && !productData && (
         <div className="flex-1 flex flex-col items-center justify-center">

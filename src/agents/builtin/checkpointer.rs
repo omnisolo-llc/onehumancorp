@@ -42,7 +42,6 @@ pub trait CheckpointSaver: Send + Sync {
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
     #[allow(unused_variables)]
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> { Ok(()) }
-    fn storage_prefix(&self) -> &'static str { "db" }
 }
 
 pub struct PgCheckpointer {
@@ -124,11 +123,6 @@ impl CheckpointSaver for GitCheckpointer {
 
         Ok(Some(cp))
     }
-
-    fn storage_prefix(&self) -> &'static str {
-        "git"
-    }
-
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
         let file_path = self.progress_file_path(&checkpoint.thread_id);
         let scratchpad_path = self.scratchpad_file_path(&checkpoint.thread_id);

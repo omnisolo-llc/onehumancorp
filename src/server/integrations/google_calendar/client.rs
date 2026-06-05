@@ -41,6 +41,12 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
+                    let _ = ::server_telemetry::record_api_call_cost(
+                        &crate::db::get_pool(),
+                        "unknown",
+                        "google_calendar_get_free_busy",
+                        0.01
+                    ).await;
                     Ok("{}".to_string()) // In a real app we'd return parsed free/busy data
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
@@ -68,6 +74,12 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
+                    let _ = ::server_telemetry::record_api_call_cost(
+                        &crate::db::get_pool(),
+                        "unknown",
+                        "google_calendar_create_event",
+                        0.01
+                    ).await;
                     Ok("event_id".to_string()) // Returning mock event id
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))

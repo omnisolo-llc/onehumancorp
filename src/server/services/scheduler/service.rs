@@ -3,9 +3,6 @@ use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::scheduler_service_server::SchedulerService;
 use std::sync::Arc;
 use crate::hub::Hub;
-#[cfg(ohc_bazel_package)]
-use ::server_lib::scheduler::{Task, Schedule, ScheduleType, TaskStatus};
-#[cfg(not(ohc_bazel_package))]
 use crate::scheduler::{Task, Schedule, ScheduleType, TaskStatus};
 use chrono::{Utc, TimeZone};
 
