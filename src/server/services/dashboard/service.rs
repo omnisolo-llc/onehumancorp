@@ -159,6 +159,7 @@ impl MyDashboardService {
         }
 
         {
+            let locks = PRODUCTS_LOCKS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
             let mut map = locks.lock().unwrap();
             map.remove(&cache_key);
         }
@@ -216,11 +217,7 @@ impl MyDashboardService {
             }
         }
 
-        {
-            let mut map = locks.lock().unwrap();
-            map.remove(&cache_key);
-        }
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
+        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(15)).await;
         Ok(results)
     }
 
