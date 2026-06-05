@@ -2347,6 +2347,7 @@ impl Agent {
                             "correctness, completeness, and strict adherence to these instructions: {}",
                             final_cfg.developer_instructions
                         )),
+                        confidence_threshold: final_cfg.confidence_threshold,
                     }));
                 }
 
