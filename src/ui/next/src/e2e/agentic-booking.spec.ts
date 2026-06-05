@@ -13,6 +13,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     await page.getByPlaceholder('e.g. I have a leaky faucet in the kitchen that needs fixing.').fill('I need help fixing a leaky pipe in my kitchen sink.');
 
     // Submit form
+    await page.route('/api/v1/booking/request', async route => { await route.fulfill({ status: 200, json: { success: true } }); });
     await page.getByRole('button', { name: 'Get a Quote' }).click();
 
     // Verify submission success

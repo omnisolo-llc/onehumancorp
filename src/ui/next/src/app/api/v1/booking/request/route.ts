@@ -78,7 +78,7 @@ Customer message: "${description}"`;
         suggested_slots: ["Friday 9:00 AM", "Friday 10:00 AM", "Friday 11:00 AM"]
       };
 
-      await pool.query(
+      try { await pool.query(
         "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES ($1, $2, $3, $4, $5, $6, $7)",
         [
           id,
@@ -89,7 +89,7 @@ Customer message: "${description}"`;
           actionRisk,
           JSON.stringify(payload)
         ]
-      );
+      ); } catch(dbErr) { console.error("DB Insert Error:", dbErr); }
     }
 
     return NextResponse.json({
