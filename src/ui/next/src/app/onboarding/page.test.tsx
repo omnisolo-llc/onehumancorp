@@ -447,6 +447,33 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('Transitions trigger draft API save automatically', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock draft API success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Chat Step 1 -> 2
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await user.type(nameInput, 'Maya Bakery');
+
+    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextBtn1);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
+        method: 'POST'
+      }));
+    }, { timeout: 2000 }); // Wait for 1s debounce timer
+  });
+
   it('Save Draft button triggers draft API and shows success message', async () => {
     const user = userEvent.setup({ delay: null });
 

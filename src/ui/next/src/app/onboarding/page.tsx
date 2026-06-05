@@ -180,6 +180,12 @@ export default function OnboardingWizard() {
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
       }).catch(err => console.error('Failed to sync onboarding state', err));
+
+      fetch('/api/onboarding/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ wizardState })
+      }).catch(err => console.error('Failed to sync onboarding draft', err));
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);
