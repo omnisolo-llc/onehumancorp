@@ -8,7 +8,6 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
   });
 
   test('should display the win-back campaign page and handle soft paywall', async ({ page, context }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Customer Win-back Campaign 💌' })).toBeVisible();
 
@@ -65,12 +64,8 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     await expect(page.locator('pre')).toContainText('⚡ Powered by OHC');
 
     // 8. Test sending the campaign
-    // Use an evaluate click to bypass any weird z-index issues lingering
-    await page.evaluate(() => {
-        const btns = Array.from(document.querySelectorAll('button'));
-        const sendBtn = btns.find(b => b.textContent && b.textContent.includes('Send to 34'));
-        if (sendBtn) sendBtn.click();
-    });
+    // Instead of evaluate, we click via Playwright to ensure React events fire
+    await page.getByRole('button', { name: /Send to 34/i }).click({ force: true });
 
     // Verify success message
     await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 15000 });

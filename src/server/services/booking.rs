@@ -335,8 +335,22 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: Request<CheckAvailabilityRequest>,
     ) -> Result<Response<CheckAvailabilityResponse>, Status> {
-        let req = request.into_inner();
-        let tenant_id = req.tenant_id;
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
+
         let _product_id = req.product_id;
         let date_str = req.date;
 
@@ -399,8 +413,21 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: Request<ReserveTimeSlotRequest>,
     ) -> Result<Response<ReserveTimeSlotResponse>, Status> {
-        let req = request.into_inner();
-        let tenant_id = req.tenant_id;
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
         let customer_id = req.customer_id;
         let product_id = req.product_id;
         let start_time_str = req.start_time;
@@ -487,7 +514,22 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: Request<CreateConversationalCheckoutRequest>,
     ) -> Result<Response<ConversationalCheckoutSession>, Status> {
-        let req = request.into_inner();
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
+
         let session_id = Uuid::new_v4().to_string();
         let expires_at = Utc::now() + chrono::Duration::minutes(15);
 
@@ -532,13 +574,19 @@ mod native_booking_tests {
     #[tokio::test]
     async fn test_native_booking_invalid_timeslot_format() {
         let svc = NativeBookingService { redis_client: None };
-        let req = Request::new(ReserveTimeSlotRequest {
+        let mut req = Request::new(ReserveTimeSlotRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
             product_id: "p1".to_string(),
             start_time: "invalid_time".to_string(),
             end_time: "invalid_time".to_string(),
         });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t1".to_string(),
+            agent_id: "test".to_string(),
+        });
+
         let res = svc.reserve_time_slot(req).await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().code(), tonic::Code::InvalidArgument);
@@ -547,11 +595,17 @@ mod native_booking_tests {
     #[tokio::test]
     async fn test_native_check_availability_invalid_date() {
         let svc = NativeBookingService { redis_client: None };
-        let req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
+        let mut req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
             tenant_id: "t1".to_string(),
             product_id: "p1".to_string(),
             date: "invalid-date".to_string(),
         });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t1".to_string(),
+            agent_id: "test".to_string(),
+        });
+
         let res = svc.check_availability(req).await;
         assert!(res.is_err());
     }
@@ -559,12 +613,18 @@ mod native_booking_tests {
     #[tokio::test]
     async fn test_native_create_conversational_checkout() {
         let svc = NativeBookingService { redis_client: None };
-        let req = Request::new(CreateConversationalCheckoutRequest {
+        let mut req = Request::new(CreateConversationalCheckoutRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
             amount_cents: 1000,
             product_id: "p1".to_string(),
         });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t1".to_string(),
+            agent_id: "test".to_string(),
+        });
+
         let res = svc.create_conversational_checkout(req).await;
         assert!(res.is_ok());
         let session = res.unwrap().into_inner();

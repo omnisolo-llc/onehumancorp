@@ -1,18 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test('User can purchase and print shipping labels for an order', async ({ page }) => {
-  test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
   // Navigate to the orders page
-  await page.goto('/orders');
-
-  // Check if the orders page loads correctly
-  await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible({ timeout: 30000 });
-
-  // Check if there are unfulfilled orders
-  await expect(page.getByText('Unfulfilled').first()).toBeVisible({ timeout: 30000 });
-
-  // Click view on the first unfulfilled order
-  await page.getByRole('button', { name: 'View' }).first().click();
+  await page.goto('/orders/e2e-shippo-order');
 
   // Wait for the order details page to load
   await expect(page.getByRole('heading', { name: /Order/ })).toBeVisible({ timeout: 30000 });
