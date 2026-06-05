@@ -19,7 +19,7 @@ impl ArchIngester {
 
         sqlx::query(
             "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, metadata)
-             VALUES ($1, COALESCE(current_setting('app.current_tenant', true), 'default'), 'system', $2, $3::vector, 'architecture', '{\"type\": \"consolidation\"}')"
+             VALUES ($1, 'default', 'system', $2, $3::vector, 'architecture', '{\"type\": \"consolidation\"}')"
         )
         .bind(&id)
         .bind(content)

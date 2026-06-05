@@ -67,7 +67,6 @@ async fn handle_create_product(
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to acquire DB connection");
             tracing::error!("Failed to acquire DB connection: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -93,7 +92,6 @@ async fn handle_create_product(
     .await;
 
     if let Err(e) = insert_product {
-        ::server_telemetry::record_error_signal("Failed to insert product");
         tracing::error!("Failed to insert product: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -121,7 +119,6 @@ async fn handle_create_product(
         .await;
 
         if let Err(e) = insert_plan {
-            ::server_telemetry::record_error_signal("Failed to insert subscription plan");
             tracing::error!("Failed to insert subscription plan: {}", e);
             // Non-fatal, just log it. The product was created.
         }

@@ -26,7 +26,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'test_org',
+                organization_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at TIMESTAMP,
@@ -43,7 +43,7 @@ mod tests {
             .bind("dummy_mission_1")
             .bind("pending")
             .bind("{}")
-            .bind("test_org")
+            .bind("system")
             .bind("pending")
             .execute(&pool)
             .await
@@ -91,7 +91,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'test_org',
+                organization_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -144,7 +144,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'test_org',
+                organization_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -217,7 +217,7 @@ mod tests {
                     "id": "cloud_mission_1",
                     "status": "COMPLETED",
                     "payload": "{\"data\":\"cloud\"}",
-                    "organization_id": "test_org",
+                    "organization_id": "system",
                     "updated_at": chrono::Utc::now().to_rfc3339(),
                     "version": 2
                 }]).to_string();
@@ -273,7 +273,7 @@ mod tests {
             .bind("local_mission_1")
             .bind("pending")
             .bind("{\"data\":\"local\"}")
-            .bind("test_org")
+            .bind("system")
             .bind("pending")
             .execute(&pool)
             .await

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const articles: Record<string, { title: string, contentHtml: string }> = {
-  "getting-started-1": {
+  "getting-started": {
     title: "Getting Started with Your Store",
     contentHtml: `
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">

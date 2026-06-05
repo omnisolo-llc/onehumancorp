@@ -93,39 +93,14 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<ReferralStatsResponse>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
 
-        let org_id_clone1 = org_id.clone();
-        let org_id_clone2 = org_id.clone();
-        let pool1 = self.pool.clone();
-        let pool2 = self.pool.clone();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let (rows_res, business_name_res) = tokio::join!(
-            async {
-                let mut tx = pool1.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone1).await.map_err(|e| Status::internal(e.to_string()))?;
-                let rows = sqlx::query("SELECT clicks, conversions FROM referrals WHERE organization_id = $1")
-                    .bind(&org_id_clone1)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
-                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-                Ok::<_, Status>(rows)
-            },
-            async {
-                let mut tx = pool2.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone2).await.map_err(|e| Status::internal(e.to_string()))?;
-                let name: String = sqlx::query_scalar("SELECT business_name FROM tenants WHERE tenant_id = $1::uuid")
-                    .bind(&org_id_clone2)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .unwrap_or(None)
-                    .unwrap_or_else(|| "My Awesome Store".to_string());
-                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-                Ok::<_, Status>(name)
-            }
-        );
-
-        let rows = rows_res?;
-        let business_name = business_name_res?;
+        let rows = sqlx::query("SELECT clicks, conversions FROM referrals WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let total_referrals = rows.len() as i32;
         let mut click_count = 0;
@@ -153,8 +128,17 @@ impl GrowthService for MyGrowthService {
         let download_count = self.downloads.read().unwrap().len() as i32 + 105;
 
         // Generate clean business URL for sharing
+        let business_name: String = sqlx::query_scalar("SELECT business_name FROM tenants WHERE tenant_id = $1::uuid")
+            .bind(&org_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_else(|| "My Awesome Store".to_string());
+
         let slug = ::server_utils::slug::slugify(&business_name);
         let business_share_url = format!("ohc.app/b/{}", slug);
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(ReferralStatsResponse {
             total_referrals,

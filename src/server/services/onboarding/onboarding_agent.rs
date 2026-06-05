@@ -243,7 +243,6 @@ impl OnboardingAgent {
                 .execute(&pool)
                 .await
             {
-                ::server_telemetry::record_error_signal("Failed to schedule weekly health report");
                 tracing::error!("Failed to schedule weekly health report: {}", e);
             }
 

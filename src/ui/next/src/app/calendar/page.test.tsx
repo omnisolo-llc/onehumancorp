@@ -21,16 +21,16 @@ describe('CalendarPage', () => {
   it('renders upcoming appointments section', () => {
     render(<CalendarPage />);
     expect(screen.getByText('Upcoming Appointments')).toBeDefined();
-    expect(screen.getByText('No upcoming appointments.')).toBeDefined();
-    // Removed mock assert
-    // Removed mock assert
+    expect(screen.getByText('Custom Cake Consultation')).toBeDefined();
+    expect(screen.getByText('Pipe Fixing')).toBeDefined();
+    expect(screen.getByText('Styling Session')).toBeDefined();
   });
 
   it('renders AI operations activity feed', () => {
     render(<CalendarPage />);
     expect(screen.getByText('Operations Agent')).toBeDefined();
     expect(screen.getByText('Real-time activity of your AI managing bookings and inquiries.')).toBeDefined();
-    // Removed ai activity mock assert
-    // Removed ai activity mock assert
+    expect(screen.getByText('Proactively offered 3 time slots to Maya for Cake Consultation via IG DM.')).toBeDefined();
+    expect(screen.getByText('Automatically followed up with Carlos regarding Pipe Fixing inquiry.')).toBeDefined();
   });
 });

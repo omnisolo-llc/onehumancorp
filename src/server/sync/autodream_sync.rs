@@ -76,11 +76,9 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
                     sync_successful = true;
                 }
                 Ok(resp) => {
-                    ::server_telemetry::record_error_signal("Cloud sync failed with status");
                     tracing::error!("Cloud sync failed with status: {}", resp.status());
                 }
                 Err(e) => {
-                    ::server_telemetry::record_error_signal("Cloud sync request failed");
                     tracing::error!("Cloud sync request failed: {}", e);
                 }
             }
@@ -168,7 +166,6 @@ pub fn start_autodream_sync_engine(db: Arc<DB>) {
         loop {
             interval.tick().await;
             if let Err(e) = process_forecast_tick(db.clone()).await {
-                ::server_telemetry::record_error_signal("AutoDream Sync Engine error");
                 tracing::error!("AutoDream Sync Engine error: {}", e);
             }
         }
@@ -227,7 +224,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         // Insert unsynced embedding
         sqlx::query(
@@ -238,7 +235,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         // Insert synced embedding
         sqlx::query(
@@ -249,7 +246,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         // Insert unsynced mission
         sqlx::query(
@@ -260,7 +257,7 @@ mod tests {
         )
         .execute(&pool)
         .await
-        .expect("Database URL or operation failed in test");
+        .unwrap();
 
         let db = Arc::new(DB {
             pool: crate::db::get_pool(), // Fake PG pool
@@ -268,32 +265,32 @@ mod tests {
         });
 
         // Run sync
-        process_forecast_tick(db).await.expect("Database URL or operation failed in test");
+        process_forecast_tick(db).await.unwrap();
 
         // Verify embeddings
         let unsynced_embeddings: i64 = sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 0")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(unsynced_embeddings, 0);
 
         let synced_embeddings: i64 = sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 1")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(synced_embeddings, 2);
 
         // Verify missions
         let unsynced_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 0")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(unsynced_missions, 0);
 
         let synced_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 1")
             .fetch_one(&pool)
             .await
-            .expect("Database URL or operation failed in test");
+            .unwrap();
         assert_eq!(synced_missions, 1);
     }
 }

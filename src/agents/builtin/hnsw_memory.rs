@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 /// Ruflo Unique Harness Innovations: HNSW vector memory: 150x-12,500x faster search via AgentDB
 /// A hierarchical navigable small world (HNSW) graph implementation for fast approximate nearest neighbor search.
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Vector {
     pub id: String,
     pub values: Vec<f32>,
@@ -91,7 +91,6 @@ impl Ord for MaxDistNode {
 }
 
 #[derive(Debug)]
-#[derive(serde::Serialize, serde::Deserialize)]
 pub struct AgentDB {
     vectors: HashMap<String, Vector>,
 
@@ -364,21 +363,7 @@ mod tests {
         assert_eq!(results[1].id, "D");
 
         // Verify graph structure was created
+        assert!(db.layers.len() >= 1);
         assert!(db.layers[0].contains_key("A"));
-    }
-
-    #[test]
-    fn test_hnsw_persistence_serialization_deserialization() {
-        let mut db = AgentDB::with_params(2, 10);
-        db.insert("persist_1".to_string(), vec![1.0, 0.5, 0.0], "data".to_string());
-
-        // We can serialize and deserialize as JSON because it contains HashMaps, Vecs, and String.
-        let json_str = serde_json::to_string(&db).unwrap();
-        let db_restored: AgentDB = serde_json::from_str(&json_str).unwrap();
-
-        assert_eq!(db_restored.vectors.len(), 1);
-        let results = db_restored.search(&vec![1.0, 0.5, 0.0], 1);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, "persist_1");
     }
 }
