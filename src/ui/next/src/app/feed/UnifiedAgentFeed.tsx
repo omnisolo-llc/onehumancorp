@@ -124,7 +124,7 @@ export function UnifiedAgentFeed() {
 
   return (
     <section className="mb-6 w-full max-w-md mx-auto font-inter" aria-label="Unified Agent Feed">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between px-1">
         <h2 className="app-panel-title text-xl font-bold font-outfit">Agent Proposals</h2>
         <span className="app-badge">{approvals.length} Urgent</span>
       </div>
@@ -133,7 +133,7 @@ export function UnifiedAgentFeed() {
         {approvals.map((approval) => (
           <div
             key={approval.id}
-            className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+            className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4 backdrop-blur-[20px] saturate-200"
           >
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
@@ -146,11 +146,11 @@ export function UnifiedAgentFeed() {
                   </span>
                 )}
               </div>
-              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
+              <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                 {approval.description}
               </h3>
               {approval.payload?.context && (
-                <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50/80 dark:bg-gray-800/50 rounded-[12px]">
                   {approval.payload.context.abandoned_carts_count !== undefined && (
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
@@ -169,10 +169,10 @@ export function UnifiedAgentFeed() {
               )}
             </div>
 
-            <div className="flex flex-col gap-3 w-full mt-2">
+            <div className="flex flex-col gap-3 w-full mt-2 font-inter">
               <button
                 onClick={() => handleDecision(approval.id, true)}
-                className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
+                className="w-full min-h-[44px] px-4 py-3 rounded-[12px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md text-base"
                 aria-label="Approve proposal"
               >
                 Approve
@@ -180,14 +180,14 @@ export function UnifiedAgentFeed() {
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => {}}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="flex-1 min-h-[44px] px-4 py-3 rounded-[12px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base"
                   aria-label="Edit proposal"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDecision(approval.id, false)}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="flex-1 min-h-[44px] px-4 py-3 rounded-[12px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base"
                   aria-label="Reject proposal"
                 >
                   Decline

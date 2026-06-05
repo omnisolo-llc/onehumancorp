@@ -1,8 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('Unified Agent Feed', () => {
-  test('should display agent feed and allow interaction', async ({ page }) => {
+  test('should display agent feed and allow interaction on mobile viewport', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
+
+    // Target 375px mobile viewport specifically as per OHC Mobile-First Non-Negotiables
+    await page.setViewportSize({ width: 375, height: 812 });
 
     // Ensure we are using the seeded e2e tenant explicitly to fetch the seed data
     await page.addInitScript(() => {
@@ -36,5 +39,15 @@ test.describe('Unified Agent Feed', () => {
 
     // Verify it was optimistically removed from the UI
     await expect(page.getByText('Abandoned cart recovery: 10% discount for Sarah')).not.toBeVisible();
+
+    // Verify touch targets and layout constraints (glassmorphism/375px max width)
+    const approveBtn = page.locator('button[aria-label="Approve proposal"]').first();
+    const box = await approveBtn.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+
+    const section = page.locator('section[aria-label="Unified Agent Feed"]');
+    const sectionBox = await section.boundingBox();
+    expect(sectionBox?.width).toBeLessThanOrEqual(375);
   });
 });
