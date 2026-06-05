@@ -280,6 +280,22 @@ export default function CheckoutPage() {
                   Share on Facebook
                 </a>
               </div>
+              <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col gap-3">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider text-center">Save to your phone</p>
+                <button
+                  onClick={() => alert("Downloading Apple Wallet Pass...")}
+                  className="w-full flex items-center justify-center gap-2 bg-black text-white px-4 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+                >
+                  Add to Apple Wallet
+                </button>
+                <button
+                  onClick={() => alert("Downloading Google Wallet Pass...")}
+                  className="w-full flex items-center justify-center gap-2 bg-white text-gray-900 border border-gray-300 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Add to Google Wallet
+                </button>
+              </div>
+
 
               <button
                 onClick={() => router.push('/dashboard')}

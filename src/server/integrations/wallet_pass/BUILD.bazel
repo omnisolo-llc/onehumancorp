@@ -1,0 +1,15 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_integrations_wallet_pass",
+    srcs = glob(["**/*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/common:server_common",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:wallet-pass",
+    ],
+)

@@ -228,6 +228,30 @@ pub async fn stripe_webhook_handler(
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
 
+            if payload.r#type == "checkout.session.completed" {
+                let customer_id = obj.get("customer").and_then(|id| id.as_str());
+                let tenant_id = obj.get("metadata")
+                    .and_then(|m| m.get("tenant_id"))
+                    .and_then(|id| id.as_str())
+                    .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
+
+                if let (Some(c_id), Some(t_id)) = (customer_id, tenant_id) {
+                    let client = ::server_integrations_wallet_pass::WalletPassClient::new();
+                    let c_id = c_id.to_string();
+                    let t_id = t_id.to_string();
+                    tokio::spawn(async move {
+                        // Add tenant name lookup from DB in reality, using t_id for now
+                        let pass_res = client.generate_pass(&c_id, &t_id, None, None).await;
+                        if let Ok(_pass_data) = pass_res {
+                            // We would store the metadata and pass link in db here.
+                            tracing::info!("Successfully generated wallet pass for customer: {}", c_id);
+                        } else {
+                            tracing::error!("Failed to generate wallet pass for customer: {}", c_id);
+                        }
+                    });
+                }
+            }
+
             // Extract tenant ID. Depending on your Stripe setup, this might be in metadata
             // or client_reference_id. Here we assume it's in metadata.tenant_id.
             let tenant_id_opt = obj.get("metadata")
