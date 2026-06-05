@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import SwaggerUI from "swagger-ui-react";
+import SwaggerUIWrapper from "./SwaggerUIWrapper";
 import "swagger-ui-react/swagger-ui.css";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
@@ -179,7 +179,7 @@ export default function ApiDocsPage() {
           </WithTooltip>{" "}This section is for developers directly integrating with our APIs. Not required for normal use.
         </div>
       </div>
-      {mounted && spec && <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40">{React.createElement(SwaggerUI as any, { spec })}</div>}
+      {mounted && spec && <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40"><SwaggerUIWrapper spec={spec} /></div>}
     </div>
   );
 }

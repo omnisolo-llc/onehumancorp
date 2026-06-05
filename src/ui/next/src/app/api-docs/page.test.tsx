@@ -6,7 +6,7 @@ import ApiDocsPage from './page';
 import { TooltipProvider } from '../../components/TooltipRegistry';
 
 // Mock SwaggerUI to avoid running an actual parser in tests
-vi.mock('swagger-ui-react', () => {
+vi.mock('./SwaggerUIWrapper', () => {
   return {
     default: () => <div data-testid="swagger-ui-mock">Mocked Swagger UI</div>
   };
