@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Documentation Feature E2E', () => {
   test('should display and navigate the help center properly', async ({ page }) => {
     // Navigate to homepage or dashboard
-    await page.goto('/dashboard');
+    await page.goto('/dashboard?test_chat=true');
 
     // Check if the Help Widget is present
     const askButton = page.getByRole('button', { name: 'Ask anything' });
