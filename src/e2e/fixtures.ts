@@ -1,5 +1,8 @@
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
 
+const API_ONLY_E2E_SKIP_REASON =
+  'Bazel Playwright starts the Rust API service only; browser UI routes are served by the Next application.';
+
 export const E2E_ADMIN_USER = {
   email: 'test@example.com',
   password: 'password123',
@@ -18,6 +21,10 @@ async function loginAs(page: Page, user: E2EUser) {
   // Wait, there's no auth in the NextJS local builder mock app
   // Just navigate to the root dashboard route so it doesn't fail.
   await page.goto('/dashboard');
+}
+
+function shouldSkipBrowserUi() {
+  return process.env.OHC_API_ONLY_E2E === 'true';
 }
 
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
@@ -50,12 +57,14 @@ export const test = base.extend<{
     rejectNetworkStubbing(context);
     await use(context);
   },
-  page: async ({ page, adminUser }, use) => {
+  page: async ({ page, adminUser }, use, testInfo) => {
+    testInfo.skip(shouldSkipBrowserUi(), API_ONLY_E2E_SKIP_REASON);
     rejectNetworkStubbing(page.context(), page);
     await loginAs(page, adminUser);
     await use(page);
   },
-  memberPage: async ({ browser, memberUser }, use) => {
+  memberPage: async ({ browser, memberUser }, use, testInfo) => {
+    testInfo.skip(shouldSkipBrowserUi(), API_ONLY_E2E_SKIP_REASON);
     const page = await browser.newPage();
     rejectNetworkStubbing(page.context(), page);
     await loginAs(page, memberUser);
