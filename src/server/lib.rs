@@ -2355,6 +2355,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             use std::os::unix::fs::OpenOptionsExt;
             use std::os::unix::fs::PermissionsExt;
 
+            if let Some(parent) = std::path::Path::new(_db_path).parent() {
+                if !parent.as_os_str().is_empty() {
+                    use std::os::unix::fs::DirBuilderExt;
+                    let mut builder = std::fs::DirBuilder::new();
+                    builder.recursive(true).mode(0o700);
+                    let _ = builder.create(parent);
+                }
+            }
+
             let file = OpenOptions::new()
                 .read(true)
                 .write(true)

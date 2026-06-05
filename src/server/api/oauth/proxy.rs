@@ -44,10 +44,14 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
+            let code_encoded = urlencoding::encode(&query.code);
+            let state_encoded = urlencoding::encode(&actual_state);
             let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
-                tunnel_base_url, tunnel_id, query.code, actual_state);
+                tunnel_base_url, tunnel_id, code_encoded, state_encoded);
             for (k, v) in query.extra {
-                redirect_url.push_str(&format!("&{}={}", k, v));
+                let k_encoded = urlencoding::encode(&k);
+                let v_encoded = urlencoding::encode(&v);
+                redirect_url.push_str(&format!("&{}={}", k_encoded, v_encoded));
             }
             return Redirect::temporary(&redirect_url).into_response();
         }
