@@ -32,6 +32,26 @@ impl Department for MarketingAgent {
         let risk = ActionRisk::DraftForReview;
 
 
+        if event.event_type == "tenant.product.created" {
+            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");
+
+            let draft_copy = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
+            let payload = serde_json::json!({
+                "feature_type": "social_post",
+                "product_name": product_name,
+                "draft_copy": draft_copy
+            });
+            let description = format!("7-Day Social Calendar: {}", product_name);
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
+
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
             let media = event.payload.get("media").and_then(|v| v.as_array());

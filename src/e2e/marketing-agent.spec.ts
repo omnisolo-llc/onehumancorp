@@ -5,9 +5,9 @@ test.describe('Marketing Agent Social Media Manager E2E', () => {
   test('Persona: Business Owner adds a product and approves social post', async ({ page }) => {
     // 1. Owner registers/logs in
     await page.goto('/login');
-    await page.getByPlaceholder(/Email/i).fill(`test@example.com`);
-    await page.getByPlaceholder(/Password/i).fill('password123');
-    await page.getByRole('button', { name: /Log In/i }).click();
+    await page.getByPlaceholder("Email or Username").fill(`test@example.com`);
+    await page.getByPlaceholder("Password").fill('password123');
+    await page.getByRole('button', { name: /Login/i }).click();
 
     // 2. Mock /api/products
     await page.route('/api/products', async route => {
