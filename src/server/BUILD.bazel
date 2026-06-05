@@ -92,6 +92,8 @@ SERVER_RS_SRCS = [
     "//src/server/integrations:chat.rs",
     "//src/server/integrations:chatwoot.rs",
     "//src/server/integrations:githubissues.rs",
+    "//src/server/integrations:hybrid_cache/mod.rs",
+    "//src/server/integrations:hybrid_cache/cache.rs",
     "//src/server/integrations:imessage.rs",
     "//src/server/integrations:jira.rs",
     "//src/server/integrations:mcp/registry.rs",
