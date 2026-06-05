@@ -99,6 +99,23 @@ impl MyDashboardService {
         let _guard = lock.lock().await;
 
         if let Some(products) = cache.get(&cache_key).await {
+            let locks = PRODUCTS_LOCKS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+            let mut map = locks.lock().unwrap();
+            map.remove(&cache_key);
+            return Ok(products);
+        }
+
+        let locks = PRODUCTS_LOCKS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+        let lock = {
+            let mut map = locks.lock().unwrap();
+            map.entry(cache_key.clone())
+               .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+               .clone()
+        };
+
+        let _guard = lock.lock().await;
+
+        if let Some(products) = cache.get(&cache_key).await {
             let mut map = locks.lock().unwrap();
             map.remove(&cache_key);
             return Ok(products);
