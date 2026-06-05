@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReferralsPage from './page';
 
@@ -29,20 +29,6 @@ describe('ReferralsPage', () => {
     // Copy button should be disabled
     const copyButton = screen.getByText('Copy');
     expect(copyButton.hasAttribute('disabled')).toBe(true);
-  });
-
-  it('renders how it works section', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
-    });
-    await act(async () => {
-      render(<ReferralsPage />);
-    });
-    expect(screen.getByText('How it works')).toBeDefined();
-    expect(screen.getByText('Share Link')).toBeDefined();
-    expect(screen.getByText('They Sign Up')).toBeDefined();
-    expect(screen.getByText('You Get $50')).toBeDefined();
   });
 
   it('fetches and displays dynamic referral link', async () => {

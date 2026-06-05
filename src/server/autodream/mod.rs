@@ -66,7 +66,6 @@ impl AutoDreamWorker {
                 }
 
                 if let Err(e) = Self::compress_session_contexts(&db).await {
-                    ::server_telemetry::record_error_signal("AutoDream: compress_session_contexts failed");
                     tracing::error!("AutoDream: compress_session_contexts failed: {}", e);
                 }
                 let cache_ref = cache_for_ingest.clone();
@@ -124,7 +123,6 @@ impl AutoDreamWorker {
                          emb_str
                      },
                      Err(e) => {
-                         ::server_telemetry::record_error_signal("AutoDream: failed to generate embedding");
                          tracing::error!("AutoDream: failed to generate embedding: {}", e);
                          format!("[{}]", vec!["0.0"; 1536].join(", "))
                      }

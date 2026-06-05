@@ -15,7 +15,6 @@ mod tests {
     // ML-Resilience Parity Audit Rule 3: TestSIPDB_ChaosParity
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(Duration::from_millis(50))
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -70,7 +69,6 @@ mod tests {
     // Testing graceful degradation during network latency
     #[tokio::test]
     async fn test_chaos_network_spike_degradation() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use std::collections::HashMap;
         use std::sync::Arc;
         use tokio::sync::Mutex;
@@ -107,7 +105,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_sipdb_cuj_stress_verification() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         use std::sync::Arc;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -181,7 +178,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_lock_contention_resilience() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let mut success = false;
         let mut attempt = 0;
         let max_attempts = 3;
@@ -209,7 +205,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_sentry_team_mesh_corruption() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let temp_dir = std::env::temp_dir().join(format!("mailbox_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
 
@@ -247,7 +242,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_sentry_chaos_network_partition() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use sqlx::sqlite::SqlitePoolOptions;
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -295,7 +289,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_sql_sync_lag_simulation() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Simulate SQL sync lag by delaying the "synced" status update in a multi-step workflow
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -348,7 +341,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_degradation_validation_mobile() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // "Verify that mobile/Thin Client features fail-safe when backend latency spikes >2s or connections drop entirely."
         let start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(50);
@@ -372,7 +364,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_mobile_thin_client_degradation_fallback() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // Chaos Engineering: Verify mobile/Thin Client features fail-safe when backend latency spikes >2s.
         // Read ops use cached data, write ops queue locally.
         use std::time::Duration;
@@ -444,7 +435,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_exhaust_cpu_memory_and_verify_graceful_degradation() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Simulate CPU/Memory exhaustion via high artificial latency and verify timeout/circuit breaking
         let start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(50);
@@ -479,7 +469,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_queue_overload_degradation() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use std::sync::Arc;
         use crate::orchestration::tasks::TaskDecompositionService;
 
@@ -550,7 +539,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_transport_packet_loss_simulation() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Stress test a mock transport layer that randomly drops packets to verify application-level retries
         struct ChaosTransport {
             drop_rate: f64,
@@ -583,7 +571,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_message_duplication_resilience() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
 
@@ -609,7 +596,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_transient_db_failure_retry() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let attempts = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let max_retries = 3;
 
@@ -748,7 +734,6 @@ mod tests {
             let p = pool_arc.clone();
             handles.push(tokio::spawn(async move {
                 let mut attempts = 0;
-                let mut backoff = std::time::Duration::from_millis(10);
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', '{}')")
                         .bind(format!("mission_{}", i))
@@ -764,8 +749,7 @@ mod tests {
                             if attempts >= 20 {
                                 panic!("Failed to insert mission after 20 attempts due to lock contention");
                             }
-                            tokio::time::sleep(backoff).await;
-                            backoff *= 2;
+                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                         } else {
                             panic!("Unexpected error: {}", e);
                         }
@@ -789,7 +773,6 @@ mod tests {
     // test_sipdb_chaos_mesh
     #[tokio::test]
     async fn test_sipdb_chaos_mesh() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // Create an unreadable file to simulate memory file corruption
         let temp_dir = std::env::temp_dir().join("sipdb_chaos_mesh");
         let _ = std::fs::create_dir_all(&temp_dir);
@@ -809,7 +792,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
         let timeout_duration = Duration::from_millis(150);
         let start = std::time::Instant::now();

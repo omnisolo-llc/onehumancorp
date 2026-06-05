@@ -2,26 +2,26 @@ import { test, expect } from './fixtures';
 
 test.describe('Help Center', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
   });
 
   test('should display dashboard with nav', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    await expect(page.locator('nav')).toBeVisible();
   });
 
   test('should show dashboard link in nav', async ({ page }) => {
-    const dashLink = page.getByRole('link', { name: 'Dashboard' });
+    const dashLink = page.locator('nav a:has-text("Dashboard")');
     await expect(dashLink).toBeVisible();
   });
 
   test('should show agents link in nav', async ({ page }) => {
-    const agentsLink = page.getByRole('link', { name: 'Agents' });
+    const agentsLink = page.locator('nav a:has-text("Agents")');
     await expect(agentsLink).toBeVisible();
   });
 
   test('should show setup link in nav', async ({ page }) => {
-    const setupLink = page.getByRole('link', { name: 'Setup' });
+    const setupLink = page.locator('nav a:has-text("Setup")');
     await expect(setupLink).toBeVisible();
   });
 
@@ -47,7 +47,7 @@ test.describe('Login Page', () => {
 test.describe('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 
   test('should show hire agent button', async ({ page }) => {
@@ -70,8 +70,8 @@ test.describe('Business Setup Page', () => {
 
 test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Agents' }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.goto('/');
+    await page.locator('nav a:has-text("Agents")').click();
+    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 });

@@ -3,8 +3,8 @@ import { test, expect } from './fixtures';
 test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/dashboard');
-    await expect(page).toHaveTitle(/OHC Builder/);
+    await page.goto('/');
+    await expect(page).toHaveTitle(/OneHuman/);
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
@@ -57,7 +57,7 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
   test('Displays PO approval in inbox and allows single-tap approval', async ({ page }) => {
     // In a fully dynamic e2e test we would trigger an order here and wait for the worker.
     // Given the constraints and seed environment, we rely on the component test.
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Ensure the pending actions hub is generally functional or visible
     await expect(page.getByRole('heading', { name: 'Pending Actions Hub' }).first()).toBeVisible();

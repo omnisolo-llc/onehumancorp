@@ -64,15 +64,6 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
 }
 
-fn request_timeout() -> Duration {
-    let secs = std::env::var("OHC_LLM_TIMEOUT_SECS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .filter(|value| *value > 0)
-        .unwrap_or(60);
-    Duration::from_secs(secs)
-}
-
 pub struct OpenAIClient {
     api_key: String,
     base_url: String,
@@ -118,7 +109,7 @@ impl OpenAIClientConfig {
             project: std::env::var("OPENAI_PROJECT")
                 .ok()
                 .filter(|v| !v.trim().is_empty()),
-            timeout: request_timeout(),
+            timeout: Duration::from_secs(60),
         }
     }
 
@@ -137,7 +128,7 @@ impl OpenAIClientConfig {
             embedding_format: EmbeddingRequestFormat::OpenAI,
             organization: None,
             project: None,
-            timeout: request_timeout(),
+            timeout: Duration::from_secs(60),
         }
     }
 
@@ -153,7 +144,7 @@ impl OpenAIClientConfig {
             embedding_format: EmbeddingRequestFormat::Minimax,
             organization: None,
             project: None,
-            timeout: request_timeout(),
+            timeout: Duration::from_secs(60),
         }
     }
 }

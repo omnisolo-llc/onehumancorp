@@ -1,6 +1,6 @@
 use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolError};
 use crate::output_parser::{parse_structured_output, LlmClientForParser};
-use crate::tools::Tool;
+use ohc_builtin_agent_tools::Tool;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -185,7 +185,7 @@ impl PlanAndExecuteOrchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tools::ToolExecutor;
+    use ohc_builtin_agent_tools::ToolExecutor;
     use ohc_builtin_agent_core::types::{ChatResponse, Role, ToolCall, Usage};
 
     struct MockPlannerLlm {

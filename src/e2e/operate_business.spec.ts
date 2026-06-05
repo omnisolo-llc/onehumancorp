@@ -10,12 +10,10 @@ test('Maya operates her custom cake business', async ({ page }) => {
   }, id);
 
   await page.goto('/website-builder');
-  await page.waitForLoadState('networkidle');
 
   await page.getByRole('button', { name: /Start My Business/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('Maya Bakery');
-  await page.locator('input[placeholder="e.g. Maya\'s Cakes"]').waitFor({ state: 'visible', timeout: 10000 });
   await page.getByPlaceholder("e.g. Maya's Cakes").fill('Custom cakes and pastries');
   await page.locator('#step-3').getByRole('button', { name: /Next/ }).click();
 

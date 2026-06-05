@@ -3,22 +3,5 @@ name = "server_pricing"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-server_harness = { path = "../harness" }
-opentelemetry = "0.27"
-serde = { workspace = true }
-serde_json = { workspace = true }
-sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
-tokio = { workspace = true }
-image = "0.25"
-redis = { version = "0.27.6", features = ["tokio-comp"] }
-chrono = { workspace = true }
-flate2 = "1"
-base64 = "0.22"
-dashmap = "5"
-sha2 = "0.10"
-tracing = "0.1"
-hex = "0.4"
-
 [lib]
 path = "mod.rs"

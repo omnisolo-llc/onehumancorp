@@ -5,17 +5,3 @@ edition = "2024"
 
 [lib]
 path = "mod.rs"
-
-[dependencies]
-async-nats = "0.47.0"
-async-trait = "0.1"
-futures = { workspace = true }
-opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
-server_integrations_core = { path = "../core" }
-tokio = { workspace = true }
-reqwest = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
-tracing = "0.1"
-uuid = { version = "1", features = ["v4", "serde"] }

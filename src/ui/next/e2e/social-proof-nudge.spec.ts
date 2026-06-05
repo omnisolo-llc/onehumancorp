@@ -13,12 +13,12 @@ test.describe('Social Proof Nudge Generator', () => {
     await page.fill('input[placeholder="e.g. Someone in London"]', 'John in Seattle');
 
     // 4. Verify preview updates
-    await expect(page.getByText('Artisan Bread', { exact: true })).toBeVisible();
-    await expect(page.locator('p').filter({ hasText: 'John in Seattle' })).toBeVisible();
+    await expect(page.locator('text=Artisan Bread')).toBeVisible();
+    await expect(page.locator('text=John in Seattle')).toBeVisible();
 
     // 5. Change Time Display
     await page.selectOption('select', '1 hour ago');
-    await expect(page.locator('p').filter({ hasText: '1 hour ago' })).toBeVisible();
+    await expect(page.locator('text=1 hour ago')).toBeVisible();
 
     // 6. Test soft paywall
     const removeBrandingCheckbox = page.locator('label', { hasText: /Remove "Powered by OHC" Badge/i });

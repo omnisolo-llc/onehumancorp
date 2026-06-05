@@ -3,7 +3,6 @@ import { test, expect } from './fixtures';
 test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () => {
 
   test('verify seasonal promo generation without setTimeout', async ({ page }) => {
-    await page.addInitScript(() => window.localStorage.removeItem('has_pro'));
     await page.goto('/seasonal-promo');
 
     // Fill out form
@@ -18,7 +17,7 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
     await generateBtn.click();
 
     // Expect to see soft paywall if we are not Pro
-    await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
+    await expect(page.locator('#seasonal-paywall').getByText('Upgrade to Pro').first()).toBeVisible();
 
     // Bypass window.open mock
     await page.evaluate(() => {
@@ -41,7 +40,7 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
     await page.goto('/services/new');
 
     // Fill out title
-    const titleInput = page.getByPlaceholder('e.g. Weekly Music Tutoring');
+    const titleInput = page.getByLabel('Service Title');
     if (await titleInput.isVisible()) {
         await titleInput.fill('Test Service');
     }
@@ -57,9 +56,9 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
   test('verify Kairos walkthrough has no delay', async ({ page }) => {
-    await page.goto('/kairos?test_walkthrough=true');
+    await page.goto('/kairos?walkthrough=true');
     // Ensure the walkthrough elements exist immediately
-    await expect(page.getByText('Quick Guide').first()).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/The Shared Task List is the 'Brain'/)).toBeVisible({ timeout: 2000 });
   });
 
   test('verify dashboard VIP customer referral campaign modal', async ({ page }) => {

@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Seasonal Promotion Generator Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 

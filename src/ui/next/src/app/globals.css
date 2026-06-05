@@ -420,35 +420,25 @@ body {
 
 @media (max-width: 980px) {
   .app-shell {
-    display: flex;
+    display: block;
   }
 
   .app-sidebar {
-    width: 72px;
-    min-width: 72px;
-    min-height: 100vh;
-    position: sticky;
-    top: 0;
-    align-self: flex-start;
-    overflow-y: auto;
-    padding: 12px 8px;
+    width: 100%;
+    min-height: auto;
+    position: static;
+    border-right: 0;
+    padding-bottom: 10px;
   }
 
   .app-brand {
-    justify-content: center;
-    height: 44px;
-    margin-bottom: 10px;
-    padding: 0 0 12px;
-  }
-
-  .app-brand > div:not(.app-brand-mark) {
-    display: none;
+    margin-bottom: 8px;
   }
 
   .app-nav {
-    flex-direction: column;
-    overflow-x: visible;
-    padding-bottom: 0;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
 
   .app-nav-section {
@@ -456,27 +446,13 @@ body {
   }
 
   .app-nav-link {
-    width: 100%;
-    height: 40px;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .app-nav-link > span:last-child {
-    display: none;
-  }
-
-  .app-nav-marker {
-    width: 32px;
-    height: 32px;
+    flex: 0 0 auto;
   }
 
   .app-topbar {
-    position: sticky;
+    position: static;
     align-items: flex-start;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px 14px;
   }
 
   .app-topbar-right,
@@ -504,14 +480,14 @@ body {
 
 .mac-glass-container {
   background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(20px) saturate(200%);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
   .mac-glass-container {
     background: rgba(22, 22, 26, 0.7);
-    backdrop-filter: blur(30px) saturate(210%);
+    backdrop-filter: blur(20px) saturate(200%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }

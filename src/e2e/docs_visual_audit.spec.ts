@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('Generate visual screenshots for User Guide', async ({ page }) => {
-  await page.goto('/dashboard');
+  await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(5000); // Give the UI time to settle
 

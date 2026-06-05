@@ -6,36 +6,6 @@ import * as fs from 'fs';
 
 const ROOT = path.resolve(fs.realpathSync('.'));
 
-function loadDotEnv() {
-  const envPath = path.join(ROOT, '.env');
-  if (!fs.existsSync(envPath)) return;
-
-  const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const index = trimmed.indexOf('=');
-    if (index <= 0) continue;
-    const key = trimmed.slice(0, index).trim();
-    let value = trimmed.slice(index + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
-  }
-}
-
-function resolveExistingPath(...candidates) {
-  for (const candidate of candidates) {
-    if (candidate && fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return '';
-}
-
 async function waitForPort(port, maxAttempts = 30) {
   for (let i = 0; i < maxAttempts; i++) {
     try {
@@ -57,8 +27,6 @@ async function waitForPort(port, maxAttempts = 30) {
 }
 
 async function main() {
-  loadDotEnv();
-
   console.log('[run-playwright] Starting infrastructure...');
   if (process.env.E2E_SKIP_DOCKER !== 'true') {
     await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'up', '-d']);
@@ -67,25 +35,6 @@ async function main() {
   console.log('[run-playwright] Server already built in outer execution');
 
   const serverBin = process.env.SERVER_BIN || path.join(ROOT, 'bazel-bin/src/server/server');
-  const agentBin = resolveExistingPath(
-    process.env.OHC_BUILTIN_AGENT_BINARY,
-    process.env.AGENT_BIN,
-    path.join(ROOT, 'bazel-bin/src/agents/builtin/ohc-builtin-agent'),
-    path.join(ROOT, 'src/agents/builtin/ohc-builtin-agent'),
-  );
-  if (agentBin) {
-    process.env.OHC_BUILTIN_AGENT_BINARY = agentBin;
-  } else if (process.env.OHC_BUILTIN_AGENT_BINARY && !fs.existsSync(process.env.OHC_BUILTIN_AGENT_BINARY)) {
-    delete process.env.OHC_BUILTIN_AGENT_BINARY;
-  }
-  if (process.env.MINIMAX_API_KEY) {
-    process.env.OHC_LLM_PROVIDER = process.env.OHC_LLM_PROVIDER || 'minimax';
-    process.env.OHC_LLM_MODEL = process.env.OHC_LLM_MODEL || 'MiniMax-M3';
-    process.env.MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M3';
-  }
-  process.env.OHC_AGENT_TASK_TIMEOUT_SECS = process.env.OHC_AGENT_TASK_TIMEOUT_SECS || '240';
-  process.env.OHC_LLM_TIMEOUT_SECS = process.env.OHC_LLM_TIMEOUT_SECS || '180';
-
   console.log(`[run-playwright] Starting server at ${serverBin}...`);
   const server = spawn(serverBin, [], {
     cwd: ROOT,

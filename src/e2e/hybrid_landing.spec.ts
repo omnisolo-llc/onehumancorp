@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Hybrid Landing Page', () => {
   test('should display Local-First and Cloud options', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     await expect(page.getByRole('heading', { name: 'OneHumanCorp' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /Hybrid Agentic OS/ })).toBeVisible();

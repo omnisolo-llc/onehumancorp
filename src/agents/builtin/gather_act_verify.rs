@@ -135,65 +135,11 @@ impl GatherActVerifyHarness {
                             }
                         }
 
-                        let mut read_only_calls = Vec::new();
-                        let mut mutating_calls = Vec::new();
-
+                        // Execute tools sequentially
+                        let mut tool_results = vec![];
                         for tc in msg.tool_calls {
-                            let is_read_only = current_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
-                            if is_read_only {
-                                read_only_calls.push(tc);
-                            } else {
-                                mutating_calls.push(tc);
-                            }
-                        }
-
-                        let mut read_only_futures = Vec::new();
-                        for tc in read_only_calls {
-                            let current_tools = current_tools.clone();
-                            let tx = tx.clone();
-                            read_only_futures.push(async move {
-                                let _ = tx.send(AgentEvent::TextChunk {
-                                    content: format!("Starting read-only tool call: {}", tc.name),
-                                });
-
-                                let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
-                                let tr = if let Some(tool) = tool_opt {
-                                    match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2).await {
-                                        Ok(res) => ohc_builtin_agent_core::types::ToolResult {
-                                            tool_call_id: tc.id.clone(),
-                                            content: res.clone(),
-                                            error: String::new(),
-                                        },
-                                        Err(e) => ohc_builtin_agent_core::types::ToolResult {
-                                            tool_call_id: tc.id.clone(),
-                                            content: String::new(),
-                                            error: e.to_string(),
-                                        },
-                                    }
-                                } else {
-                                    ohc_builtin_agent_core::types::ToolResult {
-                                        tool_call_id: tc.id.clone(),
-                                        content: String::new(),
-                                        error: format!("Tool {} not found in this phase", tc.name),
-                                    }
-                                };
-
-                                let _ = tx.send(AgentEvent::ToolCall {
-                                    name: tc.name.clone(),
-                                    args_json: tc.arguments.to_string(),
-                                    result: tr.content.clone() + &tr.error,
-                                    iteration: iteration as i32,
-                                });
-                                tr
-                            });
-                        }
-
-                        let ro_results = futures::future::join_all(read_only_futures).await;
-                        let mut tool_results = ro_results;
-
-                        for tc in mutating_calls {
                             let _ = tx.send(AgentEvent::TextChunk {
-                                content: format!("Starting mutating tool call: {}", tc.name),
+                                content: format!("Starting tool call: {}", tc.name),
                             });
 
                             let tool_opt = current_tools.iter().find(|t| t.name == tc.name);

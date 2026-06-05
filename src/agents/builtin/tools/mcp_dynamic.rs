@@ -6,7 +6,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
 use super::{Tool, ToolExecutor};
-use server_ohc::agent::service::{McpServerConfig, McpTransportType};
+use agent_service_proto::ohc::agent::service::{McpServerConfig, McpTransportType};
 
 // Simulated MCP Client Gateway
 struct McpGatewayClient {
