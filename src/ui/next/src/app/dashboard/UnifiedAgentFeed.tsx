@@ -21,13 +21,19 @@ export function UnifiedAgentFeed() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
+  const [activeTab, setActiveTab] = useState<"proposals" | "activity">(
+    "proposals",
+  );
   const [activities, setActivities] = useState<ApprovalRequest[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
-    return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+    return (
+      localStorage.getItem("tenant_id") ||
+      localStorage.getItem("tenant") ||
+      "default"
+    );
   };
 
   useEffect(() => {
@@ -67,12 +73,15 @@ export function UnifiedAgentFeed() {
       try {
         setActivityLoading(true);
         const tenant = tenantId();
-        const res = await fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
+        const res = await fetch(
+          `/api/agents/approvals/activity?tenant_id=${tenant}`,
+          {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
           },
-        });
+        );
 
         if (res.ok) {
           const data: ApprovalsResponse = await res.json();
@@ -91,12 +100,14 @@ export function UnifiedAgentFeed() {
 
     fetchFeed();
     fetchActivity();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
-    setApprovals(prev => prev.filter(app => app.id !== id));
+    setApprovals((prev) => prev.filter((app) => app.id !== id));
 
     try {
       const tenant = tenantId();
@@ -112,12 +123,15 @@ export function UnifiedAgentFeed() {
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-            headers: { "x-tenant-id": tenant, "x-user-id": "default" }
-        });
+        const refreshRes = await fetch(
+          `/api/agents/approvals?tenant_id=${tenant}`,
+          {
+            headers: { "x-tenant-id": tenant, "x-user-id": "default" },
+          },
+        );
         if (refreshRes.ok) {
-            const data: ApprovalsResponse = await refreshRes.json();
-            setApprovals(data.pending_approvals);
+          const data: ApprovalsResponse = await refreshRes.json();
+          setApprovals(data.pending_approvals);
         }
         throw new Error("Failed to submit decision");
       }
@@ -126,11 +140,12 @@ export function UnifiedAgentFeed() {
     }
   };
 
-
-
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 mac-glass-container rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
+      <div
+        className="w-full mb-6 p-4 rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center"
+        style={{ backdropFilter: "blur(20px) saturate(200%)" }}
+      >
         {error}
       </div>
     );
@@ -138,7 +153,7 @@ export function UnifiedAgentFeed() {
 
   return (
     <section className="mb-6 w-full" aria-label="Unified Agent Feed">
-      <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
+      <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700 min-h-[44px]">
         <button
           onClick={() => setActiveTab("proposals")}
           className={`flex-1 py-3 text-center text-sm font-semibold transition-colors ${
@@ -165,14 +180,22 @@ export function UnifiedAgentFeed() {
         {activeTab === "proposals" && (
           <>
             {loading && (
-              <div className="w-full p-4 mac-glass-container rounded-[16px] text-center text-gray-500">
+              <div
+                className="w-full p-4 rounded-[16px] text-center text-gray-500 bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10"
+                style={{ backdropFilter: "blur(20px) saturate(200%)" }}
+              >
                 Loading Agent Proposals...
               </div>
             )}
             {!loading && approvals.length === 0 && (
-              <div className="w-full p-6 mac-glass-container rounded-[16px] text-center">
+              <div
+                className="w-full p-6 rounded-[16px] text-center bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10"
+                style={{ backdropFilter: "blur(20px) saturate(200%)" }}
+              >
                 <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  All caught up!
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Your agents are currently monitoring the business.
                 </p>
@@ -181,14 +204,15 @@ export function UnifiedAgentFeed() {
             {approvals.map((approval) => (
               <div
                 key={approval.id}
-                className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className="p-5 rounded-[16px] shadow-sm flex flex-col gap-4 bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10"
+                style={{ backdropFilter: "blur(20px) saturate(200%)" }}
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                      {approval.department.replace('_', ' ')}
+                      {approval.department.replace("_", " ")}
                     </span>
-                    {approval.action_risk === 'HIGH' && (
+                    {approval.action_risk === "HIGH" && (
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
                         Requires Review
                       </span>
@@ -199,17 +223,28 @@ export function UnifiedAgentFeed() {
                   </h3>
                   {approval.payload?.context && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      {approval.payload.context.abandoned_carts_count !== undefined && (
+                      {approval.payload.context.abandoned_carts_count !==
+                        undefined && (
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
-                          <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.context.abandoned_carts_count}</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Abandoned Carts:
+                          </span>
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">
+                            {approval.payload.context.abandoned_carts_count}
+                          </span>
                         </div>
                       )}
-                      {approval.payload.context.potential_revenue !== undefined && (
+                      {approval.payload.context.potential_revenue !==
+                        undefined && (
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Potential Revenue:
+                          </span>
                           <span className="font-semibold text-green-600 dark:text-green-400">
-                            ${Number(approval.payload.context.potential_revenue).toFixed(2)}
+                            $
+                            {Number(
+                              approval.payload.context.potential_revenue,
+                            ).toFixed(2)}
                           </span>
                         </div>
                       )}
@@ -250,12 +285,18 @@ export function UnifiedAgentFeed() {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 mac-glass-container rounded-[16px] text-center text-gray-500">
+              <div
+                className="w-full p-4 rounded-[16px] text-center text-gray-500 bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10"
+                style={{ backdropFilter: "blur(20px) saturate(200%)" }}
+              >
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 mac-glass-container rounded-[16px] text-center">
+              <div
+                className="w-full p-6 rounded-[16px] text-center bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10"
+                style={{ backdropFilter: "blur(20px) saturate(200%)" }}
+              >
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   No recent activity found.
                 </p>
@@ -264,17 +305,22 @@ export function UnifiedAgentFeed() {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90"
+                className="p-5 rounded-[16px] shadow-sm flex flex-col gap-3 opacity-90 bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10"
+                style={{ backdropFilter: "blur(20px) saturate(200%)" }}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                    {activity.department.replace('_', ' ')}
+                    {activity.department.replace("_", " ")}
                   </span>
-                  <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md ${
-                    activity.status === 'Approved' ? 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30' :
-                    activity.status === 'Rejected' ? 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30' :
-                    'text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-800'
-                  }`}>
+                  <span
+                    className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md ${
+                      activity.status === "Approved"
+                        ? "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30"
+                        : activity.status === "Rejected"
+                          ? "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30"
+                          : "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-800"
+                    }`}
+                  >
                     {activity.status}
                   </span>
                 </div>
