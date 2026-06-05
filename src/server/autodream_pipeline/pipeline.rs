@@ -32,7 +32,6 @@ impl AutoDreamPipeline {
                     cache: cache.clone(),
                 };
                 if let Err(e) = pipeline.process_closed_tasks().await {
-                    ::server_telemetry::record_error_signal("AutoDreamPipeline worker error");
                     tracing::error!("AutoDreamPipeline worker error: {}", e);
                 }
                 sleep(Duration::from_secs(60)).await;
@@ -129,12 +128,10 @@ impl AutoDreamPipeline {
                         ).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
 
                         if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
-                            ::server_telemetry::record_error_signal("AutoDreamPipeline: Failed to record telemetry");
                             tracing::error!("AutoDreamPipeline: Failed to record telemetry: {}", telemetry_err);
                         }
                     }
                     Err(e) => {
-                        ::server_telemetry::record_error_signal("AutoDreamPipeline: Failed to generate embedding for task ");
                         tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
                     }
                 }

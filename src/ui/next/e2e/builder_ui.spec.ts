@@ -10,7 +10,7 @@ test('builder flow completes successfully', async ({ page }) => {
     json: { domain: 'test' }
   }));
 
-  await page.goto('/builder');
+  await page.goto('http://localhost:3000/builder');
 
   await expect(page.getByText(/What are you building today/i)).toBeVisible();
   await page.getByText('Selling Products').click();

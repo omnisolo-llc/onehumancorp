@@ -37,7 +37,7 @@ impl InteropProtocol {
             let mut retries = 0;
             loop {
                 if self.lock.acquire_lock(&lock_resource, &self.node_id, 10).await.unwrap_or(false) {
-                    break Ok::<(), ()>(());
+                    break;
                 }
                 tracing::debug!(mission_id = %mission_id, "Waiting to acquire handoff lock");
                 retries += 1;

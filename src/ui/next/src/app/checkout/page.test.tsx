@@ -25,9 +25,23 @@ describe('CheckoutPage', () => {
   });
 
   it('handles payment click', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ referral_link: 'http://test.link' })
-    } as any);
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/v1/growth/upsell/generate') {
+        return Promise.resolve({
+          json: () => Promise.resolve({
+            success: true,
+            product_name: 'Premium Matches',
+            discounted_price: 10.2,
+            original_price: 12.0,
+            discount_percentage: 15,
+            description: 'Perfectly pairs with your cart items!'
+          })
+        });
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ referral_link: 'http://test.link' })
+      });
+    });
 
     render(<CheckoutPage />);
 

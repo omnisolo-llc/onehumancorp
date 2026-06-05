@@ -677,7 +677,7 @@ mod tests {
         assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
 
         // Allow lock to expire
-        tokio::time::sleep(tokio::time::Duration::from_millis(2100)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
 
         bus.release_lock(resource, owner2).await.unwrap();

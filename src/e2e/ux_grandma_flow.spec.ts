@@ -9,10 +9,10 @@ test.describe('Grandmother UX End-to-End Flow Validation', () => {
 
   test('quick actions expose guidance and custom software', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('button', { name: 'Start Tour' }).click();
-    await expect(page.getByText('Business Analytics')).toBeVisible();
-    await page.getByRole('link', { name: 'Integrations' }).click();
-    await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
+    await page.getByRole('button', { name: '?' }).click();
+    await expect(page.locator('#quick-actions-hint')).toBeVisible();
+    await page.getByText('Connect Tools').click();
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' })).toBeVisible();
   });
 
   test('login setup action opens the guided setup process', async ({ page }) => {

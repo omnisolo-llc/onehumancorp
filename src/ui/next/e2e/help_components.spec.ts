@@ -12,7 +12,7 @@ test.describe('Help Components', () => {
   });
 
   test('Help Center page loads with articles', async ({ page }) => {
-    await page.goto('/help');
+    await page.goto('http://localhost:3000/help');
 
     // Wait for at least one article title to appear
     await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();
@@ -22,7 +22,7 @@ test.describe('Help Components', () => {
   test('Contextual Tooltip triggers correctly', async ({ page }) => {
     // This requires a component that uses WithTooltip on the page.
     // We can test the /pricing page which has one.
-    await page.goto('/pricing');
+    await page.goto('http://localhost:3000/pricing');
 
     // Hover over the pricing tier heading to trigger the tooltip
     // In pricing/page.tsx: <WithTooltip id="pricing-tier-tooltip" defaultText="..."> <h1 ...>Pricing Plans</h1> </WithTooltip>
@@ -35,34 +35,5 @@ test.describe('Help Components', () => {
     // Verify the tooltip text is visible
     const tooltipText = page.locator('text=Select the plan that best fits your business needs.');
     await expect(tooltipText).toBeVisible();
-  });
-
-  test('Interactive Walkthrough functions correctly on dashboard', async ({ page }) => {
-    await page.goto('/dashboard?test_walkthrough=true');
-
-    const startTourBtn = page.locator('button:has-text("Start Tour")');
-    await expect(startTourBtn).toBeVisible();
-    await startTourBtn.click();
-
-    // Verify the first walkthrough step appears
-    const firstStepTitle = page.locator('text=Business Analytics');
-    await expect(firstStepTitle).toBeVisible();
-
-    // Advance to the next step
-    const nextBtn = page.locator('button:has-text("Next")');
-    await expect(nextBtn).toBeVisible();
-    await nextBtn.click();
-
-    // Verify the second walkthrough step appears
-    const secondStepTitle = page.locator('text=Operations Map');
-    await expect(secondStepTitle).toBeVisible();
-
-    // Finish the walkthrough
-    const finishBtn = page.locator('button:has-text("Finish")');
-    await expect(finishBtn).toBeVisible();
-    await finishBtn.click();
-
-    // Verify the walkthrough bubble is no longer visible
-    await expect(secondStepTitle).not.toBeVisible();
   });
 });

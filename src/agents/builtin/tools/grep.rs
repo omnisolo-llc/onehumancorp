@@ -180,7 +180,7 @@ mod tests {
         });
 
         let result = executor.execute(args).await.unwrap();
-        let _expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
+        let expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
         // The display string might be just the name if we strip it
         assert!(result.contains("critical failure found here!"));
         assert!(result.contains(":4500:"));

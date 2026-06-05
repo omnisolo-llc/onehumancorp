@@ -198,7 +198,6 @@ impl DepartmentOrchestrator {
                         }
 
                         if !success {
-                            ::server_telemetry::record_error_signal("Dead-letter logging for event  after 3 failed retries. Error");
                             tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
                             let dl_id = Uuid::new_v4().to_string();
                             let redacted_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
@@ -218,7 +217,6 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await;
                                     if let Err(err) = res {
-                                        ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
                                 }
@@ -235,7 +233,6 @@ impl DepartmentOrchestrator {
                                     .execute(pool)
                                     .await;
                                     if let Err(err) = res {
-                                        ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
                                 }
@@ -666,20 +663,6 @@ impl DepartmentOrchestrator {
     }
 
 
-    pub async fn update_inbox_message_status(&self, message_id: &str, tenant_id: &str, new_status: &str) -> Result<(), String> {
-        match &self.db.store {
-            DbStore::Postgres => {
-                sqlx::query("UPDATE inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(new_status).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
-            }
-            DbStore::Sqlite(pool) => {
-                sqlx::query("UPDATE inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
-                    .bind(new_status).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
-            }
-        }
-        Ok(())
-    }
-
     pub async fn query_long_term_memory(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<String>, String> {
         let records = self.memory_repo.cross_department_search(tenant_id, query_embedding, limit).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
@@ -1044,44 +1027,6 @@ impl DepartmentOrchestrator {
                 if let Some(r) = row {
                     use sqlx::Row;
                     Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
-                } else {
-                    Ok(None)
-                }
-            }
-        }
-    }
-
-    pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64)>, String> {
-        let pattern = format!("%{}%", name);
-        match &self.db.store {
-            crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT name, CAST(price AS DOUBLE PRECISION) as price_f64 FROM services WHERE tenant_id = $1 AND name ILIKE $2 LIMIT 1")
-                    .bind(tenant_id)
-                    .bind(&pattern)
-                    .fetch_optional(&self.db.pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                if let Some(r) = row {
-                    use sqlx::Row;
-                    let n: String = r.get("name");
-                    let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
-                } else {
-                    Ok(None)
-                }
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT name, CAST(price AS REAL) as price_f64 FROM services WHERE tenant_id = ? AND name LIKE ? LIMIT 1")
-                    .bind(tenant_id)
-                    .bind(&pattern)
-                    .fetch_optional(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                if let Some(r) = row {
-                    use sqlx::Row;
-                    let n: String = r.get("name");
-                    let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
                 } else {
                     Ok(None)
                 }

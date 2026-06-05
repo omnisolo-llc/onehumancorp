@@ -36,7 +36,7 @@ impl TeamsProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::provider::TeamsProvider;
+    use crate::integrations::teams::provider::TeamsProvider;
 
     #[test]
     fn test_teams_provider_metadata() {

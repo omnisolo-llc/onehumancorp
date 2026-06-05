@@ -10,24 +10,24 @@ test.describe('Login Page', () => {
 
   test('should display login button', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByRole('button', { name: 'Log In' })).toBeVisible();
+    await expect(page.locator('button:has-text("Login")')).toBeVisible();
   });
 });
 
 test.describe('Dashboard', () => {
   test('should display dashboard', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   test('should display nav', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    await page.goto('/');
+    await expect(page.locator('nav')).toBeVisible();
   });
 
   test('should show business snapshot', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Business Analytics' })).toBeVisible();
+    await page.goto('/');
+    await expect(page.getByText('Business Snapshot').first()).toBeVisible();
   });
 });
 

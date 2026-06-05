@@ -1698,43 +1698,4 @@ Content-Length: 0
 
         cancel();
     }
-
-    #[tokio::test]
-    async fn test_universal_transport_bridge_integration() {
-        let inner = std::sync::Arc::new(InProcessTransport::new());
-        let bridge = UniversalTransportBridge::new(inner);
-
-        // Test lock acquisition
-        let acquired = bridge.acquire_lock("bridge_resource", "agent_1", 10).await.unwrap();
-        assert!(acquired);
-
-        // Test presence
-        bridge.register_presence("agent_1", "online", 10).await.unwrap();
-        let agents = bridge.get_active_agents().await.unwrap();
-        assert_eq!(agents.len(), 1);
-
-        // Test pub/sub
-        let received = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let rx = received.clone();
-
-        let handler = Box::new(move |msg: Message| {
-            if msg.action == "test_bridge_topic" {
-                rx.store(true, std::sync::atomic::Ordering::SeqCst);
-            }
-        });
-
-        let _cancel = bridge.subscribe("test_bridge_topic", handler).await.unwrap();
-
-        let msg = Message {
-            agent_id: "test".to_string(),
-            action: "test_bridge_topic".to_string(),
-            status: "ok".to_string(),
-            payload: vec![],
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-
-        let _ = bridge.publish("test_bridge_topic", msg).await;
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-    }
 }

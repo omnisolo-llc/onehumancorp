@@ -1,11 +1,4 @@
 use serde::{Deserialize, Serialize};
-#[cfg(ohc_bazel)]
-use crate::integrations::mercadopago::client::MercadoPagoClient;
-#[cfg(not(ohc_bazel))]
-use server_integrations_mercadopago::client::MercadoPagoClient;
-
-use super::payout_batcher::PayoutBatcher;
-use super::routing::{PaymentMethod, PaymentRouter};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StripeSubscription {
@@ -38,24 +31,30 @@ impl StripeClient {
     }
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            customer_id, // assume customer_id is a proxy for organization_id
+            "stripe_checkout_session",
+            0.10 // mock cost for api orchestration
+        ).await;
 
         // Use PaymentRouter to optimize method
-        let pm = PaymentRouter::optimize_payment_method(amount_usd);
+        let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
 
         match pm {
-            PaymentMethod::Ach => {
+            crate::integrations::stripe::routing::PaymentMethod::Ach => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
             },
-            PaymentMethod::CreditCard => {
+            crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
             },
-            PaymentMethod::Razorpay => {
+            crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
                 // Return razorpay checkout dummy link here since routing was updated
                 Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string())
             },
-            PaymentMethod::MercadoPago => {
+            crate::integrations::stripe::routing::PaymentMethod::MercadoPago => {
                 if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
-                    let mp_client = MercadoPagoClient::new(token);
+                    let mp_client = crate::integrations::mercadopago::client::MercadoPagoClient::new(token);
                     mp_client.create_checkout_preference(_price_id, customer_id).await
                 } else {
                     Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
@@ -65,6 +64,12 @@ impl StripeClient {
     }
 
     pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            tenant_id,
+            "stripe_terminal_connection_token",
+            0.05 // mock cost for api orchestration
+        ).await;
 
         // In a real implementation, this would make an HTTP POST to Stripe's /v1/terminal/connection_tokens
         // endpoint. Since we're mocking external APIs, we return a mock token string here.
@@ -75,6 +80,12 @@ impl StripeClient {
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            "unknown",
+            "stripe_get_subscription",
+            0.01
+        ).await;
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
             status: "active".to_string(),
@@ -108,10 +119,16 @@ impl StripeClient {
         &self,
         account_id: &str,
         amount_cents: i64,
-        batcher: &PayoutBatcher,
+        batcher: &crate::integrations::stripe::payout_batcher::PayoutBatcher,
     ) -> Result<Option<String>, String> {
         let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
         if let Some(total_cents) = payout_amount {
+            let _ = ::server_telemetry::record_api_call_cost(
+                &crate::db::get_pool(),
+                account_id,
+                "stripe_payout",
+                0.25 // Standard Stripe Payout Fee
+            ).await;
 
             // Execute real payout call here...
             Ok(Some(format!("po_test_{}", total_cents)))
@@ -132,34 +149,5 @@ mod tests {
         assert!(result.is_ok());
         let token = result.unwrap();
         assert_eq!(token, "tss_mock_token_for_test_tenant");
-    }
-}
-
-impl StripeClient {
-    pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
-        let mut form = std::collections::HashMap::new();
-        form.insert("amount".to_string(), amount_cents.to_string());
-        form.insert("currency".to_string(), currency.to_string());
-        form.insert("payment_method_types[]".to_string(), "card_present".to_string());
-        form.insert("capture_method".to_string(), "manual".to_string());
-        form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
-
-        let res = reqwest::Client::new().post("https://api.stripe.com/v1/payment_intents")
-            .basic_auth(&self.api_key, Some(""))
-            .form(&form)
-            .send()
-            .await
-            .map_err(|e| format!("Stripe API request failed: {}", e))?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let text = res.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error ({}): {}", status, text));
-        }
-
-        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        let secret = json["client_secret"].as_str().ok_or_else(|| "Missing client_secret in response".to_string())?;
-
-        Ok(secret.to_string())
     }
 }
