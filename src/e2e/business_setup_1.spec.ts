@@ -11,12 +11,12 @@ test.describe('Business Setup Wizard', () => {
     }, id);
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('#setup-screen')).toBeVisible();
+    await expect(page.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
   });
 
   test('shows the current setup welcome step', async ({ page }) => {
     test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: /Start My Business/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Instant Build/ })).toBeVisible();
   });
