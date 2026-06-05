@@ -23,6 +23,13 @@ export async function GET() {
     "total-sales-tooltip": "Total revenue generated from your sales today.",
     "visitors-tooltip": "Number of unique visitors who viewed your store today.",
     "agents-tab-tooltip": "Hire and manage your AI assistants here.",
-    "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC."
+    "walkthrough-btn-tooltip": "Start an interactive guide to learn how to use OHC.",
+    "dept-operations-tooltip": "Handles the day-to-day execution of orders, bookings, inventory, and deliveries.",
+    "dept-marketing-tooltip": "Gets the business noticed. Handles everything from website design to social media to getting found on Google.",
+    "dept-sales-tooltip": "Turns interest into revenue. Helps the business owner find and win customers.",
+    "dept-customer-success-tooltip": "Keeps customers happy and coming back. Handles all post-sale relationship management.",
+    "dept-finance-tooltip": "Makes sure money flows correctly. Handles pricing, payments, and financial visibility.",
+    "dept-legal-tooltip": "Keeps the business safe and compliant. Handles contracts, policies, and regulatory requirements.",
+    "dept-advisory-tooltip": "Acts as a personal business consultant. Analyzes performance and gives actionable advice."
   });
 }
