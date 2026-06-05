@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function StorefrontBuilderPage() {
+  const router = useRouter();
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
@@ -185,6 +187,7 @@ export default function StorefrontBuilderPage() {
         const url = `https://${data.domain || 'myshop'}.ohc.store`;
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
+        localStorage.setItem("has_onboarded", "true");
       } else {
         console.error('Failed to publish');
       }
@@ -280,7 +283,7 @@ export default function StorefrontBuilderPage() {
 
           <button
             className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200 rounded-[8px]"
-            onClick={() => updateStatus("idle")}
+            onClick={() => router.push("/dashboard")}
           >
             Go to Dashboard
           </button>

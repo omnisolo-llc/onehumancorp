@@ -577,6 +577,7 @@ export default function WebsiteBuilderPage() {
                       onClick={() => {
                         setStatus('generating');
                         setTimeout(() => {
+                           localStorage.setItem('has_onboarded', 'true');
                            setStatus('live');
                         }, 2000);
                       }}
@@ -626,7 +627,10 @@ export default function WebsiteBuilderPage() {
                             setProductPrice(data.initial_products?.[0]?.price || '10.00');
 
                             // Let the debounce save it
-                            setTimeout(() => setStatus('live'), 2000);
+                            setTimeout(() => {
+                              localStorage.setItem('has_onboarded', 'true');
+                              setStatus('live');
+                            }, 2000);
                           } else {
                             console.error('Failed to generate storefront:', data);
                             setStatus('idle');
