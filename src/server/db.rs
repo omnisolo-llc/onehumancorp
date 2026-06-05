@@ -1797,3 +1797,76 @@ mod e2e_cleanup_stagnant_missions_tests {
             .execute(&pool).await.expect("Database URL or operation failed in test");
     }
 }
+
+impl DB {
+    pub async fn get_translation_from_cache(&self, tenant_id: &str, source_hash: &str, target_locale: &str) -> Result<Option<String>, sqlx::Error> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let row = sqlx::query("SELECT translated_text FROM translation_cache WHERE tenant_id = ? AND source_hash = ? AND target_locale = ?")
+                    .bind(tenant_id)
+                    .bind(source_hash)
+                    .bind(target_locale)
+                    .fetch_optional(sqlite_pool)
+                    .await?;
+
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(r.get("translated_text")))
+                } else {
+                    Ok(None)
+                }
+            }
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let row = sqlx::query("SELECT translated_text FROM translation_cache WHERE tenant_id = $1 AND source_hash = $2 AND target_locale = $3")
+                    .bind(tenant_id)
+                    .bind(source_hash)
+                    .bind(target_locale)
+                    .fetch_optional(&mut *tx)
+                    .await?;
+
+                tx.commit().await?;
+
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(r.get("translated_text")))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+
+    pub async fn save_translation_to_cache(&self, id: &str, tenant_id: &str, source_hash: &str, source_text: &str, target_locale: &str, translated_text: &str) -> Result<(), sqlx::Error> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO translation_cache (id, tenant_id, source_hash, source_text, target_locale, translated_text) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(tenant_id, source_hash, target_locale) DO UPDATE SET translated_text=EXCLUDED.translated_text")
+                    .bind(id)
+                    .bind(tenant_id)
+                    .bind(source_hash)
+                    .bind(source_text)
+                    .bind(target_locale)
+                    .bind(translated_text)
+                    .execute(sqlite_pool)
+                    .await?;
+                Ok(())
+            }
+            DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                sqlx::query("INSERT INTO translation_cache (id, tenant_id, source_hash, source_text, target_locale, translated_text) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT(tenant_id, source_hash, target_locale) DO UPDATE SET translated_text=EXCLUDED.translated_text")
+                    .bind(id)
+                    .bind(tenant_id)
+                    .bind(source_hash)
+                    .bind(source_text)
+                    .bind(target_locale)
+                    .bind(translated_text)
+                    .execute(&mut *tx)
+                    .await?;
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+    }
+}

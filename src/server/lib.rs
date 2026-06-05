@@ -2267,6 +2267,27 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
+    // Start Translation Worker
+    let qm = Arc::new(crate::queue::QueueManager::new(db.pool.clone()));
+    let translation_db = db.clone();
+    tokio::spawn(async move {
+        loop {
+            match qm.poll("translation-worker-1").await {
+                Ok(Some(job)) => {
+                    if job.payload.get("type").and_then(|v| v.as_str()) == Some("translate") {
+                        let _ = crate::workers::translation_worker::handle_translation_job(translation_db.clone(), job).await;
+                    }
+                }
+                Ok(None) => {
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    tracing::error!("Error polling translation queue: {}", e);
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                }
+            }
+        }
+    });
 
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());

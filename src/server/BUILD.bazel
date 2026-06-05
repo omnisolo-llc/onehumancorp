@@ -265,6 +265,8 @@ SERVER_RS_SRCS = [
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
     "//src/server/workers:mod.rs",
+    "//src/server/workers:translation_worker.rs",
+    "//src/server/workers:translation_worker_test.rs",
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
     "//src/server/voice:router.rs",
