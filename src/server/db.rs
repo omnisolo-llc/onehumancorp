@@ -550,6 +550,17 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS availability_schedules (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        day_of_week INTEGER,
+                        start_time TEXT,
+                        end_time TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
                     CREATE TABLE IF NOT EXISTS bookings (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
@@ -560,6 +571,8 @@ impl DB {
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        deposit_amount_cents BIGINT,
+                        deposit_payment_intent_id TEXT,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );

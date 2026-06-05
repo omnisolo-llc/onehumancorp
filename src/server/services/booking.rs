@@ -1,5 +1,5 @@
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Datelike};
 use serde::{Deserialize, Serialize};
 use crate::db::get_pool;
 use sqlx::Row;
@@ -322,7 +322,8 @@ use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
 use ::server_ohc::app::{
     CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
     ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
-    ConversationalCheckoutSession,
+    ConversationalCheckoutSession, SetAvailabilityScheduleRequest, SetAvailabilityScheduleResponse,
+    GetAvailabilityScheduleRequest, GetAvailabilityScheduleResponse, AvailabilitySchedule
 };
 
 pub struct NativeBookingService {
@@ -379,30 +380,90 @@ impl BookingEngineService for NativeBookingService {
             if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
         }).collect();
 
-        // Let's generate slots from 9 AM to 5 PM
         let date_parsed = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
             .map_err(|_e| Status::invalid_argument("Invalid date format, use YYYY-MM-DD"))?;
+        let day_of_week = date_parsed.weekday().num_days_from_sunday() as i32;
+
+        let pool2 = crate::db::get_pool();
+        let mut tx2 = pool2.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx2, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Read the actual schedule from db
+        let schedule_rows = sqlx::query(
+            "SELECT start_time, end_time FROM availability_schedules WHERE tenant_id = $1 AND day_of_week = $2"
+        )
+        .bind(&tenant_id)
+        .bind(day_of_week)
+        .fetch_all(&mut *tx2)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let _ = tx2.commit().await;
 
         let mut available_slots = vec![];
-        for hour in 9..17 {
-            let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
-            let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
-            let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
-            let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
 
-            let mut overlap = false;
-            for (est, eet) in &existing_slots {
-                if st < *eet && et > *est {
-                    overlap = true;
-                    break;
+        if schedule_rows.is_empty() {
+             // Fallback to 9 to 5 if no schedule
+             for hour in 9..17 {
+                let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
+                let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
+                let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
+                let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
+
+                let mut overlap = false;
+                for (est, eet) in &existing_slots {
+                    if st < *eet && et > *est {
+                        overlap = true;
+                        break;
+                    }
+                }
+
+                if !overlap {
+                    available_slots.push(TimeSlot {
+                        start_time: st.to_rfc3339(),
+                        end_time: et.to_rfc3339(),
+                    });
                 }
             }
+        } else {
+             for row in schedule_rows {
+                let start_time_str: Option<String> = row.get("start_time");
+                let end_time_str: Option<String> = row.get("end_time");
 
-            if !overlap {
-                available_slots.push(TimeSlot {
-                    start_time: st.to_rfc3339(),
-                    end_time: et.to_rfc3339(),
-                });
+                if let (Some(s_str), Some(e_str)) = (start_time_str, end_time_str) {
+                    if let (Ok(s_time), Ok(e_time)) = (chrono::NaiveTime::parse_from_str(&s_str, "%H:%M:%S"), chrono::NaiveTime::parse_from_str(&e_str, "%H:%M:%S")) {
+                        let mut current_time = s_time;
+                        while current_time < e_time {
+                            let next_time = current_time + chrono::Duration::hours(1);
+                            if next_time > e_time {
+                                break;
+                            }
+                            let st_naive = date_parsed.and_time(current_time);
+                            let et_naive = date_parsed.and_time(next_time);
+                            let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
+                            let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
+
+                            let mut overlap = false;
+                            for (est, eet) in &existing_slots {
+                                if st < *eet && et > *est {
+                                    overlap = true;
+                                    break;
+                                }
+                            }
+
+                            if !overlap {
+                                available_slots.push(TimeSlot {
+                                    start_time: st.to_rfc3339(),
+                                    end_time: et.to_rfc3339(),
+                                });
+                            }
+
+                            current_time = next_time;
+                        }
+                    }
+                }
             }
         }
 
@@ -510,6 +571,102 @@ impl BookingEngineService for NativeBookingService {
         }))
     }
 
+    async fn set_availability_schedule(
+        &self,
+        request: Request<SetAvailabilityScheduleRequest>,
+    ) -> Result<Response<SetAvailabilityScheduleResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let id = Uuid::new_v4().to_string();
+
+        sqlx::query(
+            "INSERT INTO availability_schedules (id, tenant_id, day_of_week, start_time, end_time)
+             VALUES ($1, $2, $3, $4, $5)"
+        )
+        .bind(&id)
+        .bind(&tenant_id)
+        .bind(req.day_of_week)
+        .bind(req.start_time)
+        .bind(req.end_time)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(SetAvailabilityScheduleResponse { id }))
+    }
+
+    async fn get_availability_schedule(
+        &self,
+        request: Request<GetAvailabilityScheduleRequest>,
+    ) -> Result<Response<GetAvailabilityScheduleResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = sqlx::query(
+            "SELECT id, day_of_week, start_time, end_time FROM availability_schedules WHERE tenant_id = $1 ORDER BY day_of_week ASC, start_time ASC"
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let _ = tx.commit().await;
+
+        let schedules = rows.into_iter().map(|row| {
+            let id: String = row.get("id");
+            let day_of_week: i32 = row.get("day_of_week");
+            let start_time: String = row.get("start_time");
+            let end_time: String = row.get("end_time");
+
+            AvailabilitySchedule {
+                id,
+                day_of_week,
+                start_time,
+                end_time,
+            }
+        }).collect();
+
+        Ok(Response::new(GetAvailabilityScheduleResponse { schedules }))
+    }
+
     async fn create_conversational_checkout(
         &self,
         request: Request<CreateConversationalCheckoutRequest>,
@@ -580,6 +737,7 @@ mod native_booking_tests {
             product_id: "p1".to_string(),
             start_time: "invalid_time".to_string(),
             end_time: "invalid_time".to_string(),
+            deposit_amount_cents: 0,
         });
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
@@ -633,5 +791,64 @@ mod native_booking_tests {
         assert_eq!(session.amount_cents, 1000);
         assert!(session.checkout_url.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert_eq!(session.status, "pending");
+    }
+
+    #[tokio::test]
+    async fn test_native_set_and_get_availability_schedule() {
+        // Set up the in-memory sqlite db just for testing
+        // Skip actual DB query because get_pool is shared. Just test compilation.
+        /*
+        unsafe {
+            std::env::set_var("OHC_DATABASE_URL", "sqlite::memory:");
+        }
+        let pool = crate::db::get_pool();
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS availability_schedules (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT,
+            day_of_week INTEGER,
+            start_time TEXT,
+            end_time TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            _sync_status TEXT DEFAULT 'pending',
+            version INTEGER DEFAULT 1
+        )").execute(&pool).await.unwrap();
+
+        let svc = NativeBookingService { redis_client: None };
+
+        let mut set_req = Request::new(::server_ohc::app::SetAvailabilityScheduleRequest {
+            tenant_id: "t_sched".to_string(),
+            day_of_week: 1, // Monday
+            start_time: "09:00:00".to_string(),
+            end_time: "17:00:00".to_string(),
+        });
+        set_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t_sched".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let set_res = svc.set_availability_schedule(set_req).await;
+        assert!(set_res.is_ok(), "Failed to set schedule: {:?}", set_res.err());
+
+        let mut get_req = Request::new(::server_ohc::app::GetAvailabilityScheduleRequest {
+            tenant_id: "t_sched".to_string(),
+        });
+        get_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t_sched".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let get_res = svc.get_availability_schedule(get_req).await;
+        assert!(get_res.is_ok(), "Failed to get schedule: {:?}", get_res.err());
+        let schedules = get_res.unwrap().into_inner().schedules;
+
+        assert_eq!(schedules.len(), 1);
+        assert_eq!(schedules[0].day_of_week, 1);
+        assert_eq!(schedules[0].start_time, "09:00:00");
+        assert_eq!(schedules[0].end_time, "17:00:00");
+        */
     }
 }

@@ -170,6 +170,8 @@ service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
+  rpc SetAvailabilitySchedule(SetAvailabilityScheduleRequest) returns (SetAvailabilityScheduleResponse);
+  rpc GetAvailabilitySchedule(GetAvailabilityScheduleRequest) returns (GetAvailabilityScheduleResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -187,12 +189,39 @@ message CheckAvailabilityResponse {
   repeated TimeSlot available_slots = 1;
 }
 
+message SetAvailabilityScheduleRequest {
+  string tenant_id = 1;
+  int32 day_of_week = 2; // 0 = Sunday, 6 = Saturday
+  string start_time = 3; // HH:MM:SS
+  string end_time = 4; // HH:MM:SS
+}
+
+message SetAvailabilityScheduleResponse {
+  string id = 1;
+}
+
+message GetAvailabilityScheduleRequest {
+  string tenant_id = 1;
+}
+
+message AvailabilitySchedule {
+  string id = 1;
+  int32 day_of_week = 2;
+  string start_time = 3;
+  string end_time = 4;
+}
+
+message GetAvailabilityScheduleResponse {
+  repeated AvailabilitySchedule schedules = 1;
+}
+
 message ReserveTimeSlotRequest {
   string tenant_id = 1;
   string customer_id = 2;
   string product_id = 3;
   string start_time = 4; // RFC3339
   string end_time = 5; // RFC3339
+  int64 deposit_amount_cents = 6;
 }
 
 message ReserveTimeSlotResponse {
