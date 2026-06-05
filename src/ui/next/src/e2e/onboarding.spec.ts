@@ -189,6 +189,31 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
   });
 
+  test('User can save a draft and restore it across sessions', async ({ page }) => {
+    // Note: The global beforeEach mocks /api/onboarding/draft by default.
+    // We must unroute it for this specific test so it hits the real backend.
+    await page.unroute('/api/onboarding/draft');
+    await page.unroute('/api/onboarding/state');
+
+    // 1. Start Wizard and Save Draft
+    await page.goto('/onboarding');
+    await page.getByText('Start Onboarding').click();
+
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('My Restored Business');
+    await page.getByRole('button', { name: 'Save Draft' }).click();
+    await expect(page.getByText('Draft Saved!')).toBeVisible();
+
+    // 2. Clear local storage to simulate device switch
+    await page.evaluate(() => window.localStorage.clear());
+
+    // 3. Reload page and check restoration
+    await page.reload();
+
+    // We should be restored to the first step of the wizard where we were, with the text filled
+    await expect(page.getByText("What's the name of your business?")).toBeVisible();
+    await expect(page.locator('input[value="My Restored Business"]')).toBeVisible();
+  });
+
   test('Validation errors prevent launching without complete admin info', async ({ page }) => {
     await page.route('/api/onboarding/intake', async route => {
       await route.fulfill({
@@ -217,14 +242,22 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    // Do NOT fill out admin email and password
+    // Do NOT fill out admin email and password initially
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
 
     // Attempt to launch store
     await page.getByRole('button', { name: 'Launch Store' }).click();
 
-    // Expect validation errors to be visible - check exact wording from page.tsx ("Admin email is required") or just general red borders/messages
+    // Expect validation errors to be visible
     await expect(page.getByText(/is required/i).first()).toBeVisible();
+
+    // Fill in invalid email and password without number
+    await page.getByPlaceholder(/you@example.com/i).fill('invalid-email');
+    await page.getByPlaceholder(/••••••••/i).fill('password');
+    await page.getByRole('button', { name: 'Launch Store' }).click();
+
+    await expect(page.getByText('Please enter a valid email address')).toBeVisible();
+    await expect(page.getByText('Password must be at least 8 characters and contain a number')).toBeVisible();
 
     // Ensure it hasn't progressed to the success screen
     await expect(page.getByText("You're Live!")).toBeHidden();
