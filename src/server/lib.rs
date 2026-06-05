@@ -960,14 +960,35 @@ async fn draft_reply_handler(
         }
     };
 
-    let (business_name, industry): (String, String) = sqlx::query_as(
-        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&db.pool)
-    .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    let cache_key = format!("advisory:org:{}", tenant_id);
+    let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let org_data = if let Some(org) = cache.get(&cache_key).await {
+        org
+    } else {
+        let result = match &db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&db.pool)
+                .await
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(pool)
+                .await
+            }
+        };
+        let data = result.unwrap_or(None).unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+        cache.set(&cache_key, Some(data.clone()), std::time::Duration::from_secs(3600)).await;
+        Some(data)
+    };
+
+    let (business_name, industry) = org_data.unwrap();
 
     let customer_message = payload
         .customer_message
