@@ -2,12 +2,16 @@ use axum::{Json, response::IntoResponse, http::StatusCode, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct OfflineMutation {
     pub transaction_id: String,
     pub timestamp: String,
     pub product_id: String,
     pub quantity_deducted: i32,
+    pub amount: Option<i64>, // amount in cents
+    pub payment_method: Option<String>,
+    pub payment_intent_id: Option<String>,
+    pub currency: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -130,6 +134,7 @@ pub async fn offline_sync_handler(
                 tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
             }
             Err(e) => {
+                ::server_telemetry::record_error_signal("Failed to deduct inventory for product ");
                 tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
             }
         }
@@ -189,6 +194,10 @@ mod tests {
                     timestamp: "2024-01-01T00:00:00Z".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()),
                 },
             ],
         };
@@ -199,9 +208,11 @@ mod tests {
         let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
+        // The handler enqueues a job now, it doesn't process it synchronously.
+        // We can verify the job was enqueued.
+        let job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
             .fetch_one(&pool).await.unwrap();
-        assert_eq!(count.0, 2); // 5 - 3 = 2
+        assert_eq!(job_count.0, 1);
 
         let req_over = OfflineSyncRequest {
             mutations: vec![
@@ -210,6 +221,10 @@ mod tests {
                     timestamp: "2024-01-01T00:00:00Z".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()),
                 },
             ],
         };
@@ -217,8 +232,11 @@ mod tests {
         let response2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
 
-        let count2: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-offline-1'")
+        let job_count2: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
             .fetch_one(&pool).await.unwrap();
+<<<<<<< HEAD
+        assert_eq!(job_count2.0, 2);
+=======
         assert_eq!(count2.0, -8); // 2 - 10 = -8
 
         // Test idempotency
@@ -240,5 +258,6 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count_idempotent.0, -8); // unchanged since tx2 already processed
 
+>>>>>>> 38a8b6d7 (🔨 Forge: Offline-First Tap-to-Pay Omnichannel Inventory Sync Mesh)
     }
 }

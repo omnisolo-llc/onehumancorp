@@ -9,75 +9,20 @@ use std::fmt::Write;
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
 use ohc_builtin_agent_llm::LlmClient;
-use ohc_builtin_agent_tools::Tool;
+use crate::tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
-use crate::verification_loops::{ComputationalGuide, VisualVerifier};
+
+pub(crate) fn agent_task_timeout() -> std::time::Duration {
+    let secs = std::env::var("OHC_AGENT_TASK_TIMEOUT_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(60);
+    std::time::Duration::from_secs(secs)
+}
 
 /// Default computational guide using bash commands
-struct BashComputationalGuide {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl ComputationalGuide for BashComputationalGuide {
-    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                        self.command, stdout, stderr
-                    ));
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute computational guide command '{}': {}", self.command, e)),
-        }
-    }
-}
-
 /// Default visual verifier using bash commands
-struct BashVisualVerifier {
-    command: String,
-    workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl VisualVerifier for BashVisualVerifier {
-    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg("-c").arg(&self.command).current_dir(wd);
-
-        match cmd.output() {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                        self.command, stdout, stderr
-                    ));
-                } else {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    if stdout.contains("REJECT") {
-                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
-                    }
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to execute visual verification command '{}': {}", self.command, e)),
-        }
-    }
-}
-
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
@@ -92,6 +37,7 @@ pub enum AgentEvent {
     Handoff { target_agent: String },
     RewindOccurred { iteration: i32, checkpoint_id: String, reason: String },
     GuardrailTripped { reason: String },
+    CostUpdate { total_cost_usd: f64 },
 }
 
 /// Configuration for a single agent run.
@@ -464,7 +410,7 @@ impl Agent {
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
-        session_tools: &[ohc_builtin_agent_tools::Tool],
+        session_tools: &[crate::tools::Tool],
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
@@ -700,7 +646,7 @@ impl Agent {
         &self,
         cfg: &AgentRunConfig,
         initial_message: &str,
-        session_tools: &[ohc_builtin_agent_tools::Tool],
+        session_tools: &[crate::tools::Tool],
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
@@ -719,6 +665,7 @@ impl Agent {
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let mut turn_count = 0;
         let mut total_tokens = 0;
+        let mut total_session_cost = 0.0;
         let mut budget_tracker = crate::budget::BudgetTracker::default();
 
         let system_prompt = build_hierarchical_system_prompt(cfg, session_tools);
@@ -748,6 +695,17 @@ impl Agent {
             let usage = resp.usage;
 
             total_tokens += usage.input_tokens + usage.output_tokens;
+            let turn_cost = ::server_pricing::calculator::calculate_cost(
+                cfg.model.to_lowercase().as_str(),
+                usage.input_tokens as i64,
+                usage.output_tokens as i64,
+                0,
+            );
+            if turn_cost > 0.0 {
+                total_session_cost += turn_cost;
+                on_event(AgentEvent::CostUpdate { total_cost_usd: total_session_cost });
+            }
+
             messages.push(msg.clone());
 
             // 3. Termination Condition: Safety refusal
@@ -1454,7 +1412,7 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
-        let timeout_duration = std::time::Duration::from_secs(60);
+        let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -1838,7 +1796,7 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
-        let timeout_duration = std::time::Duration::from_secs(60);
+        let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -1978,7 +1936,7 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
-        let timeout_duration = std::time::Duration::from_secs(60);
+        let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -2135,6 +2093,7 @@ impl Agent {
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
+        let mut total_session_cost = 0.0;
 
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut malformed_retries = 0;
@@ -2412,7 +2371,9 @@ impl Agent {
             );
 
             if turn_cost > 0.0 {
+                total_session_cost += turn_cost;
                 cost_counter.add(turn_cost, &[model_label, agent_label, tool_label]);
+                on_event(AgentEvent::CostUpdate { total_cost_usd: total_session_cost });
             }
 
             llm_span.record("input_tokens", &turn_input_tokens);
@@ -2488,25 +2449,40 @@ impl Agent {
 
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    verification_manager.add_computational(Arc::new(crate::verification_loops::BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
-                if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                if final_cfg.enable_visual_verification {
+                    if final_cfg.visual_verification_command == "playwright" {
+                        verification_manager.add_visual(Arc::new(crate::verification_loops::PlaywrightVisualVerifier));
+                    } else if !final_cfg.visual_verification_command.is_empty() {
+                        verification_manager.add_visual(Arc::new(crate::verification_loops::BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    }
                 }
                 if final_cfg.enable_llm_judge {
-                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone(), model: final_cfg.model.clone() }));
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor {
+                        llm: self.llm.clone(),
+                        model: final_cfg.model.clone(),
+                        criteria: Some(format!(
+                            "correctness, completeness, and strict adherence to these instructions: {}",
+                            final_cfg.developer_instructions
+                        )),
+                    }));
                 }
 
-                if let Err(e) = verification_manager.run_computational_guides("", "").await {
+                let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                if let Err(e) = verification_manager.run_computational_guides(&last_assistant_content, &current_context).await {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_visual_verifiers("").await {
+                if let Err(e) = verification_manager.run_visual_verifiers(&last_assistant_content).await {
                     messages.push(Message::user(e));
                     continue;
                 }
-                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, "").await {
-                    messages.push(Message::user(format!("LLM-as-judge subagent rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", e)));
+                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
+                    messages.push(Message::user(format!(
+                        "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
+                        e
+                    )));
                     continue;
                 }
                 // OpenAI Mechanic: Output Guardrails
@@ -2723,16 +2699,17 @@ impl Agent {
                         }
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: msg.clone(),
+                            result: self_correct_msg.clone(),
                             iteration,
                         });
                         tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: self_correct_msg,
                         };
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -2915,13 +2892,14 @@ impl Agent {
                             }
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
-                                result: msg.clone(),
+                                result: self_correct_msg.clone(),
                                 iteration,
                             });
-                            error = msg;
+                            error = self_correct_msg;
                             content = String::new();
                             break;
                         }
@@ -3009,13 +2987,13 @@ impl Agent {
                     created_at: chrono::Utc::now(),
                 };
                 if let Err(e) = checkpointer.put_checkpoint(cp).await {
-                    tracing::warn!("Failed to save checkpoint to database: {}", e);
+                    tracing::warn!("Failed to save checkpoint: {}", e);
                 } else {
                     last_checkpoint_id = Some(checkpoint_id.clone());
                     checkpoint_history.push(checkpoint_id.clone());
                     on_event(AgentEvent::CheckpointSaved {
                         iteration,
-                        path: format!("db:{}", checkpoint_id),
+                        path: format!("{}:{}", checkpointer.storage_prefix(), checkpoint_id),
                     });
                 }
             }
@@ -3542,6 +3520,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_tao_cost_tracking() {
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Calculating cost"),
+                    usage: crate::types::Usage { input_tokens: 1000, output_tokens: 200, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        // Using gpt-4o for pricing map match
+        cfg.model = "gpt-4o".to_string();
+        cfg.enable_tao_orchestration_loop = true;
+
+        let mut events = vec![];
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
+        assert!(res.is_ok());
+
+        let mut cost_emitted = false;
+        for e in events {
+            if let AgentEvent::CostUpdate { total_cost_usd } = e {
+                assert!(total_cost_usd > 0.0);
+                cost_emitted = true;
+            }
+        }
+        assert!(cost_emitted, "CostUpdate event should be emitted when model has pricing");
+    }
+
+    #[tokio::test]
     async fn test_tao_termination_token_budget_exhausted() {
         let llm = Arc::new(crate::agent::tests::MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -3829,13 +3840,13 @@ mod tests {
 
         struct UserFixableExecutor;
         #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for UserFixableExecutor {
+        impl crate::tools::ToolExecutor for UserFixableExecutor {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
                 Err(crate::types::ToolError::UserFixable("needs human".to_string()))
             }
         }
 
-        let dummy_tool = ohc_builtin_agent_tools::Tool {
+        let dummy_tool = crate::tools::Tool {
             name: "test".to_string(),
             description: "A mutating tool".to_string(),
             parameters: serde_json::json!({}),
@@ -4657,7 +4668,7 @@ mod tests {
 
 
     use ohc_builtin_agent_core::types::{ChatRequest};
-    use ohc_builtin_agent_tools::ToolExecutor;
+    use crate::tools::ToolExecutor;
     use serde_json::Value;
 
     struct MockLlmClient {
@@ -5118,7 +5129,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result == "missing parameter X"
+                name == "llm_recoverable_tool" && result.contains("missing parameter X")
             } else {
                 false
             }
@@ -5132,7 +5143,7 @@ mod tests {
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
-        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
+        assert!(tool_msg.tool_results[0].error.contains("missing parameter X"));
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
@@ -5516,7 +5527,7 @@ mod tests {
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_1".to_string(),
                             name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
+                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9, "missing_elements": ["data"], "suggested_fixes": ["add data"]}}),
                         }],
                         tool_results: vec![],
                         response_id: Some("mock-id".to_string()),
@@ -5539,7 +5550,7 @@ mod tests {
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_2".to_string(),
                             name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}}),
+                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good", "confidence": 1.0, "missing_elements": [], "suggested_fixes": []}}),
                         }],
                         tool_results: vec![],
                         response_id: Some("mock-id".to_string()),
@@ -5915,6 +5926,7 @@ mod tests {
         agent.checkpointer = Some(Arc::new(cp));
 
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_state_checkpointing = true;
         cfg.workspace_path = Some(temp_dir.to_string_lossy().to_string());
         cfg.thread_id = Some("test-thread".to_string());
 
@@ -5928,7 +5940,7 @@ mod tests {
         let mut found_checkpoint_event = false;
         for e in events {
             if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path.starts_with("db:") {
+                if path.starts_with("git:") {
                     found_checkpoint_event = true;
                 }
             }
@@ -6228,6 +6240,7 @@ mod tests {
         let agent = Agent::new(client_with_tools, vec![mutating_tool]).with_checkpointer(checkpointer.clone());
 
         let mut cfg = AgentRunConfig::default();
+        cfg.enable_state_checkpointing = true;
         cfg.thread_id = Some("git-thread-123".to_string());
 
         let mut events = vec![];
@@ -6879,7 +6892,7 @@ mod stream_tests {
 
     struct DumbLoopMockExecutor;
     #[async_trait::async_trait]
-    impl ohc_builtin_agent_tools::ToolExecutor for DumbLoopMockExecutor {
+    impl crate::tools::ToolExecutor for DumbLoopMockExecutor {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
             Ok("read".to_string())
         }
@@ -6887,7 +6900,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_anthropic_dumb_loop() {
-        let mock_tool = ohc_builtin_agent_tools::Tool {
+        let mock_tool = crate::tools::Tool {
             name: "mock_read".to_string(),
             description: "reads".to_string(),
             is_read_only: true,
@@ -6911,7 +6924,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
-        use ohc_builtin_agent_tools::ToolExecutor;
+        use crate::tools::ToolExecutor;
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
@@ -7217,7 +7230,7 @@ async fn test_stripe_retry_limit() {
 
     struct FailingTool;
     #[async_trait::async_trait]
-    impl ohc_builtin_agent_tools::ToolExecutor for FailingTool {
+    impl crate::tools::ToolExecutor for FailingTool {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             Err(ToolError::LlmRecoverable("I always fail".to_string()))
         }
@@ -7256,7 +7269,7 @@ async fn test_stripe_retry_limit() {
 
     let client = Arc::new(RetryMockClient { call_count: tokio::sync::Mutex::new(0) });
     let tools = vec![
-        ohc_builtin_agent_tools::Tool {
+        crate::tools::Tool {
             name: "failing_tool".to_string(),
             description: "Fails".to_string(),
             is_read_only: false,
