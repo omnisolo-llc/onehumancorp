@@ -2351,18 +2351,22 @@ impl Agent {
                 }
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                let mut combined_verification_errors = Vec::new();
+
                 if let Err(e) = verification_manager.run_computational_guides(&last_assistant_content, &current_context).await {
-                    messages.push(Message::user(e));
-                    continue;
+                    combined_verification_errors.push(e);
                 }
                 if let Err(e) = verification_manager.run_visual_verifiers(&last_assistant_content).await {
-                    messages.push(Message::user(e));
-                    continue;
+                    combined_verification_errors.push(e);
                 }
                 if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
+                    combined_verification_errors.push(format!("[Inferential Evaluation]\n{}", e));
+                }
+
+                if !combined_verification_errors.is_empty() {
                     messages.push(Message::user(format!(
-                        "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
-                        e
+                        "[Verification Loop REJECTED the output]\nThe following verification errors were found:\n\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
+                        combined_verification_errors.join("\n\n")
                     )));
                     continue;
                 }

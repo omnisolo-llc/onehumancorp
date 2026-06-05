@@ -119,22 +119,40 @@ impl VerificationManager {
     }
 
     pub async fn run_computational_guides(&self, code: &str, context: &str) -> Result<(), String> {
+        let mut errors = Vec::new();
         for guide in &self.computational {
-            guide.verify(code, context).await?;
+            if let Err(e) = guide.verify(code, context).await {
+                errors.push(e);
+            }
+        }
+        if !errors.is_empty() {
+            return Err(format!("Computational Guides failed with errors:\n- {}", errors.join("\n- ")));
         }
         Ok(())
     }
 
     pub async fn run_visual_verifiers(&self, ui_state_path: &str) -> Result<(), String> {
+        let mut errors = Vec::new();
         for verifier in &self.visual {
-            verifier.verify_visual(ui_state_path).await?;
+            if let Err(e) = verifier.verify_visual(ui_state_path).await {
+                errors.push(e);
+            }
+        }
+        if !errors.is_empty() {
+            return Err(format!("Visual Verifiers failed with errors:\n- {}", errors.join("\n- ")));
         }
         Ok(())
     }
 
     pub async fn run_inferential_sensors(&self, output: &str, task: &str) -> Result<(), String> {
+        let mut errors = Vec::new();
         for sensor in &self.inferential {
-            sensor.verify_inferential(output, task).await?;
+            if let Err(e) = sensor.verify_inferential(output, task).await {
+                errors.push(e);
+            }
+        }
+        if !errors.is_empty() {
+            return Err(format!("Inferential Sensors failed with errors:\n- {}", errors.join("\n- ")));
         }
         Ok(())
     }
@@ -188,7 +206,9 @@ impl InferentialSensor for LlmJudgeSensor {
             "You are an expert Quality Assurance Judge. \
              Your mission is to evaluate if the agent's output successfully completes the task based on the following criteria: {}. \
              You must be critical and detail-oriented. If there are any ambiguities, errors, or missing requirements, you MUST REJECT. \
-             Provide your evaluation structured as JSON using the 'structured_output' tool.",
+             Provide your evaluation structured as JSON using the 'structured_output' tool. \
+             Ensure you strictly follow the Pydantic-like JSON schema provided in the tool definition. \
+             The schema requires the following fields: status, reason, confidence, missing_elements, suggested_fixes.",
             criteria
         );
         let user_prompt = format!("Task Objective: {}\n\nAgent Output to Evaluate:\n---\n{}\n---", task, output);
@@ -397,7 +417,13 @@ mod tests {
 
         let mut fail_manager = VerificationManager::new();
         fail_manager.add_computational(Arc::new(MockComputationalGuide { should_pass: false }));
-        assert!(fail_manager.run_computational_guides("", "").await.is_err());
+        fail_manager.add_computational(Arc::new(MockComputationalGuide { should_pass: false }));
+        let res = fail_manager.run_computational_guides("", "").await;
+        assert!(res.is_err());
+        let err_msg = res.unwrap_err();
+        assert!(err_msg.contains("Computational Guides failed with errors:"));
+        // Check that errors were aggregated
+        assert_eq!(err_msg.matches("- Computational check failed").count(), 2);
     }
 
     #[tokio::test]
