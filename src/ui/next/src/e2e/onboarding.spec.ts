@@ -217,14 +217,22 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    // Do NOT fill out admin email and password
+    // Do NOT fill out admin email and password initially
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
 
     // Attempt to launch store
     await page.getByRole('button', { name: 'Launch Store' }).click();
 
-    // Expect validation errors to be visible - check exact wording from page.tsx ("Admin email is required") or just general red borders/messages
+    // Expect validation errors to be visible
     await expect(page.getByText(/is required/i).first()).toBeVisible();
+
+    // Fill in invalid email and password without number
+    await page.getByPlaceholder(/you@example.com/i).fill('invalid-email');
+    await page.getByPlaceholder(/••••••••/i).fill('password');
+    await page.getByRole('button', { name: 'Launch Store' }).click();
+
+    await expect(page.getByText('Please enter a valid email address')).toBeVisible();
+    await expect(page.getByText('Password must be at least 8 characters and contain a number')).toBeVisible();
 
     // Ensure it hasn't progressed to the success screen
     await expect(page.getByText("You're Live!")).toBeHidden();

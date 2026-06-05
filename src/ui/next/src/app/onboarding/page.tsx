@@ -238,13 +238,13 @@ export default function OnboardingWizard() {
     }
     if (!adminEmail.trim()) {
       errors.adminEmail = 'Admin Email is required';
-    } else if (!/^\S+@\S+\.\S+$/.test(adminEmail)) {
-      errors.adminEmail = 'Invalid email format';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
+      errors.adminEmail = 'Please enter a valid email address';
     }
     if (!adminPassword.trim()) {
       errors.adminPassword = 'Password is required';
-    } else if (adminPassword.length < 8) {
-      errors.adminPassword = 'Password must be at least 8 characters';
+    } else if (adminPassword.length < 8 || !/\d/.test(adminPassword)) {
+      errors.adminPassword = 'Password must be at least 8 characters and contain a number';
     }
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
