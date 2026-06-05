@@ -218,6 +218,21 @@ export default function Dashboard() {
         <UnifiedAgentFeed />
 
         <section>
+          <div className="mb-6 mac-glass-container p-6 rounded-[16px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-4xl">🎉</div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white font-outfit">Milestone Unlocked!</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
+                </div>
+              </div>
+              <button onClick={() => window.alert("Awesome! Your 7-day Pro Trial Extension has been unlocked.")} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors">
+                Share & Claim Reward
+              </button>
+            </div>
+          </div>
+
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
