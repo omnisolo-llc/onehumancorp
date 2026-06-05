@@ -22,12 +22,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-<<<<<<< HEAD
-    "@playwright/test": "^1.50.1",
-    "@tailwindcss/postcss": "^4.3.0",
-=======
     "@playwright/test": "^1.60.0",
->>>>>>> 097f2d4a (Resolves #23879)
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

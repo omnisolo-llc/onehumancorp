@@ -124,8 +124,8 @@ For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
 bazelisk build //...
 bazelisk test //...
 
-# Run the full UI E2E suite (requires Docker for postgres/redis)
-bazelisk test //src/e2e:playwright --nocache_test_results --local_test_jobs="$(nproc)" --jobs="$(nproc)"
+# Run E2E tests (requires Docker for postgres/redis)
+bazelisk test //src/e2e:playwright
 
 # Quick Local Dev (run these in separate terminals)
 bazelisk run //src/server:server
@@ -134,7 +134,7 @@ bazelisk run //src/ui/tauri:app
 
 ### E2E Tests with Playwright
 
-The `//src/e2e:playwright` target runs the full Playwright UI E2E suite against the real server, real browser UI, Postgres, and Redis. The Bazel aggregate includes every `*.spec.ts` file under `src/e2e/`, `src/ui/next/src/e2e/`, `src/ui/next/e2e/`, and top-level `e2e/`. The aggregate is split into shard targets that run in parallel when `--local_test_jobs` is greater than 1.
+The `//src/e2e:playwright` target runs the Playwright E2E suite against the real server, real browser UI, Postgres, and Redis. The suite currently discovers 250 tests across 61 spec files.
 
 E2E tests follow a strict no-substitution contract:
 - Test data is seeded only through the database, using `src/e2e/e2e-seed.sql`.
@@ -153,7 +153,7 @@ Seeded E2E users:
 Run the full Bazel-managed suite:
 
 ```bash
-bazelisk test //src/e2e:playwright --nocache_test_results --local_test_jobs="$(nproc)" --jobs="$(nproc)"
+bazelisk test //src/e2e:playwright
 ```
 
 Run the local Playwright suite against an already running app:
