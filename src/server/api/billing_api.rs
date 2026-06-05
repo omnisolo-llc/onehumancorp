@@ -110,7 +110,8 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![] })
+        // TODO: Implement proper JWT/spiffe extraction middleware for /api/billing routes to populate AuthInfo
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![ crate::pricing::cost_aggregator::DailyCost { date: "2024-05-01".to_string(), total_cost: 0, llm_cost: 0, storage_cost: 0, network_cost: 0, compute_cost: 0 } ] })
     };
 
     let now = chrono::Utc::now();
