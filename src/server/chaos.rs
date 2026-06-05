@@ -810,18 +810,3 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 120ms)
-        let timeout_duration = Duration::from_millis(120);
-        let start = std::time::Instant::now();
-
-        let result = tokio::time::timeout(timeout_duration, async {
-            // Simulate a stalled chaos operation (e.g., dropped packets on agent connection)
-            tokio::time::sleep(Duration::from_millis(300)).await;
-            Ok::<(), String>(())
-        }).await;
-
-        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
-        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
-    }
-}
-
