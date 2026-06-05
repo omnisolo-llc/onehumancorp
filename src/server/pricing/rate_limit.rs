@@ -30,6 +30,17 @@ impl PlanTier {
     }
 
     pub fn agent_action_limit(&self) -> Option<u32> {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_AGENT_ACTIONS",
+            PlanTier::Starter => "OHC_STARTER_TIER_AGENT_ACTIONS",
+            _ => "",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
+                return Some(v);
+            }
+        }
+
         match self {
             PlanTier::Free => Some(20),
             PlanTier::Starter => Some(200),
@@ -59,6 +70,18 @@ impl PlanTier {
     }
 
     pub fn max_agents(&self) -> Option<usize> {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_MAX_AGENTS",
+            PlanTier::Starter => "OHC_STARTER_TIER_MAX_AGENTS",
+            PlanTier::Pro => "OHC_PRO_TIER_MAX_AGENTS",
+            _ => "",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<usize>().ok()) {
+                return Some(v);
+            }
+        }
+
         match self {
             PlanTier::Free => Some(1),
             PlanTier::Starter => Some(3),
@@ -68,6 +91,17 @@ impl PlanTier {
     }
 
     pub fn max_products(&self) -> Option<usize> {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_MAX_PRODUCTS",
+            PlanTier::Starter => "OHC_STARTER_TIER_MAX_PRODUCTS",
+            _ => "",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<usize>().ok()) {
+                return Some(v);
+            }
+        }
+
         match self {
             PlanTier::Free => Some(10),
             PlanTier::Starter => Some(100),
@@ -300,7 +334,7 @@ impl RedisRateLimiter {
                     is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
+                        "You've reached your {} tier limit of {} agents. Upgrade to unlock more power!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",

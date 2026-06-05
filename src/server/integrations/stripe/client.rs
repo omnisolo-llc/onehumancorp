@@ -5,7 +5,7 @@ use crate::integrations::mercadopago::client::MercadoPagoClient;
 use server_integrations_mercadopago::client::MercadoPagoClient;
 
 use super::payout_batcher::PayoutBatcher;
-use super::routing::{PaymentMethod, PaymentRouter};
+use ::server_pricing::payment_routing::{PaymentMethod, PaymentRouter};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StripeSubscription {

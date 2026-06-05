@@ -73,6 +73,15 @@ pub fn minify_json_prompt(data: &str) -> String {
     data.to_string()
 }
 
+/// Estimates token count based on a realistic character-to-token ratio (approx 3.7 chars per token).
+pub fn estimate_tokens(text: &str) -> i64 {
+    if text.is_empty() {
+        return 0;
+    }
+    // 3.7 chars per token is a safe industry average for mixed English/Code.
+    (text.len() as f64 / 3.7).round() as i64
+}
+
 /// Optimizes an image by resizing it to a maximum dimension and converting it to WebP.
 pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), String> {
     let img = image::load_from_memory(data).map_err(|e| e.to_string())?;
@@ -90,6 +99,7 @@ pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), St
 
     // We use a default quality for WebP encoding
     // This reduces storage compression and CDN transit costs significantly.
+    // Miser cost optimization: Using lossless WebP as a baseline for storage efficiency.
     let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
     resized.write_with_encoder(encoder).map_err(|e| e.to_string())?;
 
@@ -214,6 +224,15 @@ mod tests {
         let invalid_data = vec![0, 1, 2, 3];
         let result = optimize_image(&invalid_data, 5);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_estimate_tokens() {
+        assert_eq!(estimate_tokens(""), 0);
+        // "Hello" is 5 chars. 5 / 3.7 = 1.35... -> 1
+        assert_eq!(estimate_tokens("Hello"), 1);
+        // "This is a test sentence." is 22 chars. 22 / 3.7 = 5.94... -> 6
+        assert_eq!(estimate_tokens("This is a test sentence."), 6);
     }
 
     #[test]

@@ -186,7 +186,7 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            self.cache.set(prompt, &content, estimate_tokens(prompt) as usize); // realistic token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
@@ -433,7 +433,7 @@ impl LocalLLMClient {
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
         let response = result["response"].as_str().ok_or("missing response field")?;
-        self.cache.set(prompt, response, prompt.len() / 4);
+        self.cache.set(prompt, response, estimate_tokens(prompt) as usize);
         Ok(response.to_string())
     }
 
