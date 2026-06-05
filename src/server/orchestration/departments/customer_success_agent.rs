@@ -147,7 +147,7 @@ impl Department for CustomerSuccessAgent {
         self.configs.insert(tenant_id, config);
     }
 
-    async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
+    async fn query_memory(&self, tenant_id: &str, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 

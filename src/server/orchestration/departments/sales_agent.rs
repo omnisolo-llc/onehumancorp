@@ -4,11 +4,12 @@ use serde_json::Value;
 
 pub struct SalesAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    configs: std::collections::HashMap<String, DepartmentConfig>,
 }
 
 impl SalesAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        Self { orchestrator }
+        Self { orchestrator, configs: std::collections::HashMap::new() }
     }
 }
 
@@ -69,18 +70,18 @@ impl Department for SalesAgent {
         ).await.map(|_| ())
     }
 
-    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        None
+    fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
+        self.configs.get(tenant_id).cloned()
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
+    fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
+        self.configs.insert(tenant_id, config);
     }
 
-    async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
+    async fn query_memory(&self, tenant_id: &str, _query: &str) -> Result<Vec<String>, String> {
         let embedding = vec![0.5, 0.5, 0.5];
-        // Note: We need a tenant_id here, but the trait signature doesn't provide one.
-        // We'll pass a dummy one or extract it if available.
-        self.orchestrator.query_long_term_memory("default_tenant", &embedding, 5).await
+
+        self.orchestrator.query_long_term_memory(tenant_id, &embedding, 5).await
     }
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {

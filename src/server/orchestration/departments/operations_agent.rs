@@ -4,11 +4,12 @@ use serde_json::Value;
 
 pub struct OperationsAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    configs: std::collections::HashMap<String, DepartmentConfig>,
 }
 
 impl OperationsAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        Self { orchestrator }
+        Self { orchestrator, configs: std::collections::HashMap::new() }
     }
 }
 
@@ -61,14 +62,15 @@ impl Department for OperationsAgent {
         self.orchestrator.dispatch_event(cs_event).await
     }
 
-    fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 })
+    fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
+        self.configs.get(tenant_id).cloned().or_else(|| Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 }))
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
+    fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
+        self.configs.insert(tenant_id, config);
     }
 
-    async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
+    async fn query_memory(&self, tenant_id: &str, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 

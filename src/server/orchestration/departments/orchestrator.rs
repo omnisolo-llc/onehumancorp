@@ -31,7 +31,7 @@ pub trait Department: Send + Sync {
     fn department_type(&self) -> DepartmentType;
     fn subscribed_events(&self) -> Vec<String>;
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String>;
-    async fn query_memory(&self, query: &str) -> Result<Vec<String>, String>;
+    async fn query_memory(&self, tenant_id: &str, query: &str) -> Result<Vec<String>, String>;
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String>;
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig>;
     fn set_config(&mut self, tenant_id: String, config: DepartmentConfig);
@@ -76,7 +76,7 @@ impl Department for DummyDepartment {
         Ok(())
     }
 
-    async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
+    async fn query_memory(&self, _tenant_id: &str, _query: &str) -> Result<Vec<String>, String> {
         // Dummy implementation
         Ok(vec![])
     }
