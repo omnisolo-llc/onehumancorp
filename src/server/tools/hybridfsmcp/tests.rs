@@ -33,7 +33,7 @@ async fn test_cloud_fs_provider() {
     // Test write and read
     provider.write_file("test.txt", b"cloud content").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"cloud content");
+    assert_eq!(content.as_slice(), b"cloud content");
 
     // Verify it was written to tenant dir
     let tenant_file = dir.path().join(&tenant_id).join("test.txt");
@@ -41,7 +41,8 @@ async fn test_cloud_fs_provider() {
 
     // Test list dir
     provider.write_file("docs/doc1.md", b"doc").await.unwrap();
-    let entries = provider.list_dir("docs").await.unwrap();
+    let mut entries = provider.list_dir("docs").await.unwrap();
+    entries.sort();
     assert_eq!(entries, vec!["doc1.md"]);
 }
 
