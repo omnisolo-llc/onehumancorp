@@ -135,7 +135,8 @@ impl IntegrationsRegistry {
                              let client = client.clone();
                              tokio::spawn(async move {
                                  if let Err(e) = client.send_sms(&to, &from, &text).await {
-                                     tracing::error!("Failed to send Twilio SMS: {}", e);
+                                     ::server_telemetry::record_error_signal("Failed to send Twilio SMS");
+                                     tracing::warn!("Failed to send Twilio SMS: {}", e);
                                  }
                              });
                          }
@@ -154,7 +155,8 @@ impl IntegrationsRegistry {
                                  // Otherwise we default to whatsapp
                                  let platform = if to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
                                  if let Err(e) = client.send_message(platform, &to, &text).await {
-                                     tracing::error!("Failed to send Meta message: {}", e);
+                                     ::server_telemetry::record_error_signal("Failed to send Meta message");
+                                     tracing::warn!("Failed to send Meta message: {}", e);
                                  }
                              });
                          }
@@ -843,7 +845,8 @@ async fn send_telegram_message(bot_token: String, chat_id: String, text: String)
         .await;
     
     if let Err(e) = res {
-        tracing::error!("Failed to send Telegram message: {}", e);
+        ::server_telemetry::record_error_signal("Failed to send Telegram message");
+        tracing::warn!("Failed to send Telegram message: {}", e);
     }
 }
 
@@ -858,7 +861,8 @@ async fn send_discord_webhook(webhook_url: String, username: String, content: St
         .await;
 
     if let Err(e) = res {
-        tracing::error!("Failed to send Discord webhook: {}", e);
+        ::server_telemetry::record_error_signal("Failed to send Discord webhook");
+        tracing::warn!("Failed to send Discord webhook: {}", e);
     }
 }
 #[cfg(test)]
