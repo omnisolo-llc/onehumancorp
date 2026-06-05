@@ -170,6 +170,10 @@ service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
+  rpc GetAvailabilitySchedule(GetAvailabilityScheduleRequest) returns (GetAvailabilityScheduleResponse);
+  rpc UpdateAvailabilitySchedule(UpdateAvailabilityScheduleRequest) returns (UpdateAvailabilityScheduleResponse);
+  rpc GetUpcomingBookings(GetUpcomingBookingsRequest) returns (GetUpcomingBookingsResponse);
+  rpc ManageBookingStatus(ManageBookingStatusRequest) returns (ManageBookingStatusResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -244,4 +248,58 @@ message SyncOfflineTransactionsResponse {
 
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+}
+
+message GetAvailabilityScheduleRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+}
+
+message ScheduleDay {
+  int32 day_of_week = 1; // 0-6
+  string start_time = 2; // e.g. "09:00:00"
+  string end_time = 3;   // e.g. "17:00:00"
+  bool is_available = 4;
+}
+
+message GetAvailabilityScheduleResponse {
+  repeated ScheduleDay schedule = 1;
+}
+
+message UpdateAvailabilityScheduleRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  repeated ScheduleDay schedule = 3;
+}
+
+message UpdateAvailabilityScheduleResponse {
+  bool success = 1;
+}
+
+message GetUpcomingBookingsRequest {
+  string tenant_id = 1;
+  string provider_id = 2; // If empty, gets all for tenant.
+}
+
+message BookingInfo {
+  string booking_id = 1;
+  string customer_name = 2;
+  string service_name = 3;
+  string start_time = 4; // RFC3339
+  string end_time = 5; // RFC3339
+  string status = 6;
+}
+
+message GetUpcomingBookingsResponse {
+  repeated BookingInfo bookings = 1;
+}
+
+message ManageBookingStatusRequest {
+  string tenant_id = 1;
+  string booking_id = 2;
+  string new_status = 3; // e.g., "confirmed", "cancelled", "completed"
+}
+
+message ManageBookingStatusResponse {
+  bool success = 1;
 }
