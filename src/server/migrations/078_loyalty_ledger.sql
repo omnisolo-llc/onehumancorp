@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS loyalty_ledger;
 CREATE TABLE IF NOT EXISTS loyalty_ledgers (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
@@ -54,13 +55,13 @@ ALTER TABLE referral_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loyalty_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation_loyalty_ledgers ON loyalty_ledgers
-    USING (tenant_id = current_setting('app.current_tenant_id'));
+    USING (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE POLICY tenant_isolation_loyalty_transactions ON loyalty_transactions
-    USING (tenant_id = current_setting('app.current_tenant_id'));
+    USING (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE POLICY tenant_isolation_referral_links ON referral_links
-    USING (tenant_id = current_setting('app.current_tenant_id'));
+    USING (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE POLICY tenant_isolation_loyalty_settings ON loyalty_settings
-    USING (tenant_id = current_setting('app.current_tenant_id'));
+    USING (tenant_id = current_setting('app.current_tenant', true));
