@@ -12,7 +12,7 @@ async fn test_local_fs_provider() {
     // Test write and read
     provider.write_file("test.txt", b"hello world").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"hello world");
+    assert_eq!(content, b"hello world".to_vec());
 
     // Test list dir
     provider.write_file("dir/file1.txt", b"1").await.unwrap();
@@ -68,7 +68,7 @@ async fn test_hybrid_fs_mcp_server() {
     assert_eq!(payload["status"], "success");
 
     // Important: Wait for the file system to actually sync before reading it back
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     // Test fs_read_file tool
     let req = McpInvokeRequest {

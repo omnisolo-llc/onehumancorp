@@ -303,7 +303,7 @@ impl SyncService for MySyncService {
         let md = request.metadata().clone();
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-        let tenant_id = if parsed.0.is_empty() { "system".to_string() } else { parsed.0 };
+        let tenant_id = if parsed.0.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { parsed.0 };
 
         let req = request.into_inner();
         let payloads = req.payloads;
