@@ -1757,6 +1757,10 @@ mod e2e_cleanup_stagnant_missions_tests {
         // Use a unique tenant for this test to avoid conflicting with other tests
         let test_tenant = format!("test_cleanup_stagnant_{}", uuid::Uuid::new_v4());
 
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant')")
+            .bind(&test_tenant)
+            .execute(&mut *tx).await.expect("Database URL or operation failed in test");
+
         // 1. Stuck mission (should be updated)
         sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_1', 'STUCK', '{}', CURRENT_TIMESTAMP, $1)")
             .bind(&test_tenant)
@@ -1794,6 +1798,9 @@ mod e2e_cleanup_stagnant_missions_tests {
 
         // Clean up the table for the unique tenant
         sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
+            .bind(&test_tenant)
+            .execute(&pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("DELETE FROM tenants WHERE id = $1")
             .bind(&test_tenant)
             .execute(&pool).await.expect("Database URL or operation failed in test");
     }
