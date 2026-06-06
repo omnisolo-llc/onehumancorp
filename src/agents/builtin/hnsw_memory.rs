@@ -382,3 +382,154 @@ mod tests {
         assert_eq!(results[0].id, "persist_1");
     }
 }
+
+use crate::memory_store::LongTermMemory;
+use async_trait::async_trait;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+pub struct HnswMemoryStore {
+    db: Arc<RwLock<AgentDB>>,
+    llm: Arc<dyn ohc_builtin_agent_llm::LlmClient>,
+    file_path: Option<std::path::PathBuf>,
+}
+
+impl std::fmt::Debug for HnswMemoryStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HnswMemoryStore")
+            .field("file_path", &self.file_path)
+            .finish()
+    }
+}
+
+impl HnswMemoryStore {
+    pub async fn new(llm: Arc<dyn ohc_builtin_agent_llm::LlmClient>, file_path: Option<std::path::PathBuf>) -> Result<Self, String> {
+        let mut db = AgentDB::with_params(16, 200);
+
+        if let Some(ref path) = file_path {
+            if path.exists() {
+                if let Ok(content) = tokio::fs::read_to_string(path).await {
+                    if let Ok(loaded_db) = serde_json::from_str::<AgentDB>(&content) {
+                        db = loaded_db;
+                    }
+                }
+            } else {
+                if let Some(parent) = path.parent() {
+                    let _ = tokio::fs::create_dir_all(parent).await;
+                }
+            }
+        }
+
+        Ok(Self {
+            db: Arc::new(RwLock::new(db)),
+            llm,
+            file_path,
+        })
+    }
+
+    async fn save(&self) -> Result<(), String> {
+        if let Some(ref path) = self.file_path {
+            let db = self.db.read().await;
+            let json = serde_json::to_string(&*db).map_err(|e| e.to_string())?;
+            tokio::fs::write(path, json).await.map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl LongTermMemory for HnswMemoryStore {
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
+        let db = self.db.read().await;
+        let mut results = db.search(&embedding, limit);
+
+        let q = Vector::new("".to_string(), embedding.clone(), "".to_string());
+        results.sort_by(|a, b| {
+            let dist_a = a.distance(&q);
+            let dist_b = b.distance(&q);
+            dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        results.truncate(limit);
+        Ok(results.into_iter().map(|v| v.metadata).collect())
+    }
+
+    async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
+        let embedding = self.llm.generate_embedding(content).await.map_err(|e| e.to_string())?;
+        let id = uuid::Uuid::new_v4().to_string();
+
+        let metadata_obj = serde_json::json!({
+            "content": content,
+            "tags": tags,
+        });
+
+        let metadata = metadata_obj.to_string();
+
+        {
+            let mut db = self.db.write().await;
+            db.insert(id, embedding, metadata);
+        }
+
+        self.save().await?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod memory_store_tests {
+    use super::*;
+    use async_trait::async_trait;
+
+    struct DummyLlm;
+
+    #[async_trait]
+    impl ohc_builtin_agent_llm::LlmClient for DummyLlm {
+        async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            unimplemented!()
+        }
+
+        async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            let val = match text { "first memory" => 1.0, "second memory item" => 2.0, "persist" => 3.0, _ => 0.0 };
+            Ok(vec![val, 1.0, 0.0])
+        }
+    }
+
+    #[tokio::test]
+    async fn test_hnsw_memory_store_basic() {
+        let llm = Arc::new(DummyLlm);
+        let store = HnswMemoryStore::new(llm, None).await.unwrap();
+
+        // Store some memories
+        store.store("first memory", vec!["tag1".to_string()]).await.unwrap();
+        store.store("second memory item", vec!["tag2".to_string()]).await.unwrap();
+
+        // Retrieve
+        let results = store.retrieve("first", 1).await.unwrap();
+        assert_eq!(results.len(), 1);
+        let parsed: serde_json::Value = serde_json::from_str(&results[0]).unwrap();
+        assert_eq!(parsed["content"].as_str().unwrap(), "first memory");
+        assert_eq!(parsed["tags"][0].as_str().unwrap(), "tag1");
+    }
+
+    #[tokio::test]
+    async fn test_hnsw_memory_store_persistence() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir.path().join("memory.json");
+
+        let llm = Arc::new(DummyLlm);
+
+        {
+            let store = HnswMemoryStore::new(llm.clone(), Some(file_path.clone())).await.unwrap();
+            store.store("persistent memory", vec!["persist".to_string()]).await.unwrap();
+        } // store is dropped, file should be written
+
+        {
+            let store2 = HnswMemoryStore::new(llm, Some(file_path)).await.unwrap();
+            let results = store2.retrieve("persist", 1).await.unwrap();
+            assert_eq!(results.len(), 1);
+            let parsed: serde_json::Value = serde_json::from_str(&results[0]).unwrap();
+            assert_eq!(parsed["content"].as_str().unwrap(), "persistent memory");
+        }
+    }
+}

@@ -35,6 +35,7 @@ pub mod service;
 pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
+pub mod hnsw_memory;
 pub mod prompt_construction;
 pub mod json_store;
 pub mod memory_exhaustive_tests;

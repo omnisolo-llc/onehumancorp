@@ -481,6 +481,15 @@ impl AgentServiceImpl {
 
         // Inject SqliteMemoryStore if configured
         let mut sqlite_memory = None;
+        let mut hnsw_memory = None;
+        if std::env::var("OHC_ENABLE_HNSW_MEMORY").unwrap_or_default() == "true" {
+            let file_path = std::env::var("OHC_HNSW_MEMORY_FILE").ok().map(std::path::PathBuf::from);
+            if let Ok(store) = crate::hnsw_memory::HnswMemoryStore::new(llm.clone(), file_path).await {
+                hnsw_memory = Some(std::sync::Arc::new(store) as std::sync::Arc<dyn crate::memory_store::LongTermMemory>);
+            } else {
+                tracing::warn!("Failed to initialize HnswMemoryStore");
+            }
+        }
         if std::env::var("OHC_ENABLE_SQLITE_MEMORY").unwrap_or_default() == "true" {
             let db_url = std::env::var("OHC_SQLITE_MEMORY_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
             if let Ok(store) = crate::sqlite_memory::SqliteMemoryStore::new(&db_url, llm.clone()).await {
@@ -490,7 +499,9 @@ impl AgentServiceImpl {
             }
         }
 
-        let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> = if sqlite_memory.is_some() {
+        let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> = if hnsw_memory.is_some() {
+            hnsw_memory
+        } else if sqlite_memory.is_some() {
             sqlite_memory
         } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR").unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
