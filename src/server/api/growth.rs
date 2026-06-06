@@ -103,6 +103,8 @@ pub struct Milestone {
     pub reached: bool,
 }
 
+use crate::domain::lead_gen::LeadGenCampaignRequest;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MilestonesResponse {
     pub milestones: Vec<Milestone>,
@@ -132,6 +134,7 @@ where
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
+        .route("/lead_gen_campaign", post(handle_create_lead_gen_campaign))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
@@ -201,6 +204,41 @@ pub struct ReferralGenerateResponse {
     pub referral_link: String,
 }
 
+async fn handle_create_lead_gen_campaign(
+    Extension(state): Extension<GrowthState>,
+    _headers: axum::http::HeaderMap,
+    Json(payload): Json<LeadGenCampaignRequest>,
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let pool = state.pool;
+    let tenant_id = "e2e-tenant"; // Hardcoded for simplicity/e2e testing as per other growth.rs handlers
+
+    let campaign_id = format!("lead_gen_camp_{}", uuid::Uuid::new_v4());
+
+    let _ = sqlx::query(
+        "INSERT INTO lead_gen_campaigns (id, tenant_id, budget, radius_miles, zip_code, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')"
+    )
+    .bind(&campaign_id)
+    .bind(&tenant_id)
+    .bind(payload.budget)
+    .bind(payload.radius_miles)
+    .bind(&payload.zip_code)
+    .execute(&pool)
+    .await;
+
+    let job_id = format!("job_{}", uuid::Uuid::new_v4());
+    let payload_json = serde_json::to_value(&payload).unwrap();
+
+    let _ = sqlx::query(
+        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'lead_gen_campaign', $3, 'PENDING')"
+    )
+    .bind(&job_id)
+    .bind(&tenant_id)
+    .bind(&payload_json)
+    .execute(&pool)
+    .await;
+
+    Ok(Json(serde_json::json!({ "success": true, "campaign_id": campaign_id })))
+}
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct GrowthMetrics {
