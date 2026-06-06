@@ -453,6 +453,7 @@ impl DashboardService for MyDashboardService {
                 let role_val = match a.role.to_uppercase().as_str() {
                     "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
                     "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
+                    "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
                     _ => ::server_ohc::common::Role::Unspecified as i32,
                 };
 
