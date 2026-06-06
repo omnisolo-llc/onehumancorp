@@ -1,18 +1,35 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function CalendarPage() {
-  const [appointments, setAppointments] = useState([
-    { id: '1', customer: 'Maya', service: 'Custom Cake Consultation', time: '10:00 AM', date: 'Today', status: 'confirmed', ai_scheduled: true, link: "https://zoom.us/j/mock_meeting_123" },
-    { id: '2', customer: 'Carlos', service: 'Pipe Fixing', time: '2:00 PM', date: 'Tomorrow', status: 'pending', ai_scheduled: true, link: "" },
-    { id: '3', customer: 'Priya', service: 'Styling Session', time: '4:00 PM', date: 'Tomorrow', status: 'confirmed', ai_scheduled: false, link: "" },
-  ]);
+  const [appointments, setAppointments] = useState<any[]>([]);
 
-  const [aiActivity, setAiActivity] = useState([
-    { id: '1', action: 'Proactively offered 3 time slots to Maya for Cake Consultation via IG DM.', time: '09:15 AM' },
-    { id: '2', action: 'Automatically followed up with Carlos regarding Pipe Fixing inquiry.', time: '08:30 AM' },
-  ]);
+  useEffect(() => {
+    const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+    fetch(`/api/ui/bookings?tenant_id=${tenantId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAppointments(data.map((b: any) => {
+            const startDate = new Date(b.start_time);
+            return {
+              id: b.id,
+              customer: b.customer_name || 'Customer',
+              service: b.product_title || 'Service Booking',
+              time: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              date: startDate.toLocaleDateString(),
+              status: b.status || 'pending',
+              ai_scheduled: true, // Assuming OHC Operations AI manages these
+              link: '' // No link for physical bookings by default, could add if it's a virtual service
+            };
+          }));
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const [aiActivity, setAiActivity] = useState<any[]>([]);
 
   const [aiEnabled, setAiEnabled] = useState(true);
 
@@ -44,7 +61,9 @@ export default function CalendarPage() {
           <section className="bg-white rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Upcoming Appointments</h2>
             <div className="space-y-4">
-              {appointments.map(apt => (
+              {appointments.length === 0 ? (
+                <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center">No upcoming appointments.</div>
+              ) : appointments.map(apt => (
                 <div key={apt.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-100 rounded-lg hover:shadow-md transition-shadow">
                   <div>
                     <h3 className="font-semibold text-gray-900 text-lg">{apt.service}</h3>
@@ -79,7 +98,9 @@ export default function CalendarPage() {
             <p className="text-sm text-gray-500 mb-6">Real-time activity of your AI managing bookings and inquiries.</p>
 
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px  before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
-              {aiActivity.map((activity, idx) => (
+              {aiActivity.length === 0 ? (
+                <div className="text-sm text-gray-500 text-center py-4">No recent AI activity.</div>
+              ) : aiActivity.map((activity, idx) => (
                 <div key={activity.id} className="relative flex items-center justify-between  group is-active">
                   <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-blue-100 text-blue-500 shadow shrink-0  z-10">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>

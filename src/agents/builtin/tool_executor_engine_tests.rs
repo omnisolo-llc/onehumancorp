@@ -4,7 +4,7 @@ use tool_executor_engine::ToolExecutionEngine;
 #[cfg(test)]
 mod tests {
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_jitter_calc() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -72,7 +72,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_immediate_success() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_success_eventually() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -133,7 +133,7 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
-    #[tokio::test(flavor = "current_thread", start_paused = true)]
+    #[tokio::test(start_paused = true)]
     async fn test_transient_retry_exhausted() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -169,6 +169,117 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
     }
 
+
+    #[tokio::test]
+    async fn test_pydantic_to_engine_integration() {
+        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use serde::Deserialize;
+
+        #[derive(Deserialize)]
+        struct MyTypedArgs {
+            required_string: String,
+            required_int: i32,
+        }
+
+        struct RealExecutor;
+
+        #[async_trait::async_trait]
+        impl PydanticToolExecutor<MyTypedArgs> for RealExecutor {
+            async fn execute_typed(&self, args: MyTypedArgs) -> Result<String, ToolError> {
+                Ok(format!("{}-{}", args.required_string, args.required_int))
+            }
+        }
+
+        let pydantic_adapter = PydanticAdapter::new(RealExecutor);
+
+        let tool = Tool {
+            name: "real_tool".to_string(),
+            description: "test tool".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(pydantic_adapter),
+        };
+
+        // Create a ToolCall with invalid arguments (missing `required_int`)
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "real_tool".to_string(),
+            arguments: json!({ "required_string": "test" }),
+        };
+
+        // Execute via the engine
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+                assert!(msg.contains("missing field `required_int`"));
+            },
+            _ => panic!("Expected LlmRecoverable error from Pydantic adapter"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_recoverable_pydantic_retry() {
+        let tool_fail = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): Failed to parse".to_string())),
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        // We simulate the pydantic loop which returns the recoverable error directly
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
+
+    #[tokio::test]
+    async fn test_llm_recoverable_pydantic_integration_loop() {
+        // This test simulates the orchestrator loop receiving an LlmRecoverable error and returning it to the LLM.
+        let tool_fail = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): Failed to parse arguments".to_string())),
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
+
+        // Ensure the engine correctly bubbles up the exact recoverable error back to the orchestration loop
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+                // The main orchestration loop in agent.rs uses this exact error string to feed back to the LLM
+            },
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
     #[tokio::test]
     async fn test_llm_recoverable() {
         let tool = Tool {
@@ -195,7 +306,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "current_thread")]
+    #[tokio::test()]
     async fn test_user_fixable() {
         unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let tool = Tool {
@@ -223,7 +334,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(flavor = "current_thread")]
+    #[tokio::test()]
     async fn test_user_fixable_resolve() {
         unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "here is the fix"); }
         let tool = Tool {

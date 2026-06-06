@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Growth Loop: Milestone Viral Share', () => {
   test('User can share milestone and unlock reward', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
     // Navigate to the dashboard
     await page.goto('/dashboard');
 
@@ -22,7 +21,7 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     // Create a mock for window.open to prevent new tabs from opening and failing the test unexpectedly
     await page.addInitScript(() => {
         (window as any).open = function(url: string, target: string) {
-            console.log('Intercepted window.open:', url);
+            console.debug('Intercepted window.open:', url);
             return null;
         };
     });
