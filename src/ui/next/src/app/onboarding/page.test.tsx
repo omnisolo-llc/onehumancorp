@@ -7,6 +7,15 @@ import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
 describe('OnboardingWizard', () => {
+  it('validates business name correctly for short names', async () => {
+    await renderOnboardingWizard();
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await userEvent.type(nameInput, 'Ma');
+    const nextButton = screen.getByRole('button', { name: /Next/i });
+    await userEvent.click(nextButton);
+    expect(screen.getByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+  });
+
   const renderOnboardingWizard = async () => {
     let view: any;
     await act(async () => {

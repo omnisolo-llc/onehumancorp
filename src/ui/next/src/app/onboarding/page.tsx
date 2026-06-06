@@ -327,6 +327,15 @@ export default function OnboardingWizard() {
     }
   };
 
+  const handleBusinessNameNext = () => {
+    if (businessName.trim().length < 3) {
+      setValidationError('Business Name must be at least 3 characters.');
+      return;
+    }
+    setValidationError('');
+    setChatStep(2);
+  };
+
   if (!isLoaded) return null;
 
   // Progress percentage calculation
@@ -427,12 +436,7 @@ export default function OnboardingWizard() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (businessName.trim().length < 3) {
-                              setValidationError('Business Name must be at least 3 characters.');
-                              return;
-                            }
-                            setValidationError('');
-                            setChatStep(2);
+                            handleBusinessNameNext();
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
@@ -444,14 +448,7 @@ export default function OnboardingWizard() {
                   {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
-                          return;
-                        }
-                        setValidationError('');
-                        setChatStep(2);
-                      }}
+                      onClick={handleBusinessNameNext}
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
