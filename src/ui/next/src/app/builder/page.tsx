@@ -197,7 +197,7 @@ export default function BuilderPage() {
                     setBlocks(d);
                     setSelectedDraftIndex(idx);
                   }}
-                  className={`w-full text-left mac-glass-container backdrop-blur-md rounded-[16px] border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20 shadow-lg' : 'border-white/50 dark:border-white/10 opacity-70 hover:opacity-100 hover:border-white/80'}`}
+                  className={`w-full text-left mac-glass-container backdrop-blur-md rounded-[16px] border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20 shadow-lg' : 'border-white/40 dark:border-white/10 opacity-70 hover:opacity-100 hover:border-white/80'}`}
                 >
                    <div className="h-32 bg-white/50 dark:bg-black/30 flex items-center justify-center relative backdrop-blur-sm border-b border-white/40 dark:border-white/10">
                       <span className="font-outfit font-bold text-gray-400 dark:text-gray-500">Draft {idx + 1}</span>
@@ -238,7 +238,7 @@ export default function BuilderPage() {
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-            <div className="mac-glass-container backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <div className="mac-glass-container backdrop-blur-md rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-6 leading-tight">
                 What are you building today?
               </h1>
@@ -255,7 +255,7 @@ export default function BuilderPage() {
                       setBusinessGoal(option.id as any);
                       setStatus("idle");
                     }}
-                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
+                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/40 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
                   >
                     <span className="text-3xl group-hover:scale-110 transition-transform">{option.icon}</span>
                     <span className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{option.label}</span>
@@ -293,8 +293,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 mac-glass-container backdrop-blur-md p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
-                  style={{ borderRadius: '8px' }}
+                  className="w-full border border-white/40 dark:border-white/10 mac-glass-container backdrop-blur-md p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="e.g. Acme Corp"
@@ -303,8 +302,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 mac-glass-container backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
-                  style={{ borderRadius: '8px' }}
+                  className="w-full border border-white/40 dark:border-white/10 mac-glass-container backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
                   placeholder="e.g. Retail, Consulting, Tech"
@@ -318,9 +316,8 @@ export default function BuilderPage() {
                   className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
                     businessName.trim().length >= 3 && businessCategory.trim().length >= 5
                       ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
-                      : "mac-glass-container text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10"
+                      : "mac-glass-container text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/40 dark:border-white/10"
                   }`}
-                  style={{ borderRadius: '8px' }}
                   onClick={handleStep1Next}
                 >
                   Next: Choose Vibe
@@ -341,9 +338,8 @@ export default function BuilderPage() {
                       key={v}
                       onClick={() => setVibe(v)}
                       className={`p-4 border text-left transition-all font-semibold backdrop-blur-md ${
-                        vibe === v ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm" : "border-white/50 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 mac-glass-container"
+                        vibe === v ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm" : "border-white/40 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 mac-glass-container"
                       }`}
-                      style={{ borderRadius: '8px' }}
                     >
                       {v}
                     </button>
@@ -352,8 +348,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 mac-glass-container text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md"
-                    style={{ borderRadius: '8px' }}
+                    className="flex-1 p-4 mac-glass-container text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/40 dark:border-white/10 backdrop-blur-md"
                     onClick={() => setWizardStep(1)}
                   >
                     Back
@@ -362,9 +357,8 @@ export default function BuilderPage() {
                     className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
                       vibe
                         ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
-                        : "mac-glass-container text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
+                        : "mac-glass-container text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/40 dark:border-white/10 backdrop-blur-md"
                     }`}
-                    style={{ borderRadius: '8px' }}
                     onClick={() => {
                        if (!bio.trim()) {
                          setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
@@ -390,8 +384,7 @@ export default function BuilderPage() {
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
-                    className="w-full border border-white/50 dark:border-white/10 mac-glass-container backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
-                    style={{ borderRadius: '8px' }}
+                    className="w-full border border-white/40 dark:border-white/10 mac-glass-container backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="e.g. I run a mobile dog grooming service in Portland"
@@ -401,8 +394,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 mac-glass-container text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md"
-                    style={{ borderRadius: '8px' }}
+                    className="flex-1 p-4 mac-glass-container text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/40 dark:border-white/10 backdrop-blur-md"
                     onClick={() => setWizardStep(2)}
                   >
                     Back
@@ -413,9 +405,8 @@ export default function BuilderPage() {
                       className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
                         bio.trim().length > 5
                           ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
-                          : "mac-glass-container text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
+                          : "mac-glass-container text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/40 dark:border-white/10 backdrop-blur-md"
                       }`}
-                      style={{ borderRadius: '8px' }}
                       onClick={handleGenerate}
                       disabled={bio.trim().length <= 5}
                     >
@@ -470,10 +461,10 @@ export default function BuilderPage() {
           </div>
 
           {/* Growth Loop: Embeddable Storefront Widget */}
-          <div className="w-full mac-glass-container backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
+          <div className="w-full mac-glass-container backdrop-blur-md rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
             <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="bg-white/60 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
+            <div className="bg-white/60 dark:bg-black/30 backdrop-blur-sm border border-white/40 dark:border-white/10 rounded-[8px] p-3 relative">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
@@ -487,7 +478,7 @@ export default function BuilderPage() {
                         navigator.clipboard.writeText(code);
                         alert("Copied embed code to clipboard!");
                     }}
-                    className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
+                    className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/40 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
                 >
                     Copy
                 </button>
@@ -500,7 +491,7 @@ export default function BuilderPage() {
           </div>
 
           {/* Growth Loop 1: Acquisition (Get your first customer) */}
-          <div className="w-full mac-glass-container backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
+          <div className="w-full mac-glass-container backdrop-blur-md rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Get your first customer 🚀</h2>
             <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Share your new store with friends and family to get early sales.</p>
 
@@ -566,7 +557,7 @@ export default function BuilderPage() {
           </div>
 
           <button
-            className="w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-white/60 dark:hover:bg-black/40 border border-white/50 dark:border-white/10 backdrop-blur-md"
+            className="w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-white/60 dark:hover:bg-black/40 border border-white/40 dark:border-white/10 backdrop-blur-md"
             onClick={() => setStatus("idle")}
           >
             Go to Dashboard
@@ -650,7 +641,7 @@ export default function BuilderPage() {
                 <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
                 <input
                   type="text"
-                  className="w-full p-4 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
+                  className="w-full p-4 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/40 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                   value={blocks[selectedBlockIndex || 0]?.props.headline}
                   onChange={(e) => {
                     const newBlocks = [...blocks];
@@ -659,11 +650,11 @@ export default function BuilderPage() {
                   }}
                 />
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button className="p-4 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/40 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
                     <span>🖼️</span>
                     <span>Upload Photo</span>
                   </button>
-                  <button className="p-4 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 mac-glass-container backdrop-blur-md rounded-[8px] border border-white/40 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
                     <span>✨</span>
                     <span>AI Generate</span>
                   </button>
