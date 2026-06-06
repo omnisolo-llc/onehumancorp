@@ -90,6 +90,7 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
+    m.insert("checkout-subscribe-tooltip".to_string(), "Securely subscribe to a monthly plan using your digital wallet.".to_string());
     RwLock::new(m)
     })
 }
@@ -3633,7 +3634,7 @@ async fn create_ui_bom_item_handler(
         ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
+            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started-1" },
             { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
             { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
@@ -3679,7 +3680,7 @@ async fn create_ui_bom_item_handler(
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let mut link_url = "/help/getting-started-1";
 
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
