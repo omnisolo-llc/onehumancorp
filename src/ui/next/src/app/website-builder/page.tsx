@@ -320,7 +320,7 @@ export default function WebsiteBuilderPage() {
                     </button>
 
                     <button
-                      className="w-full bg-white text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full mac-glass-container text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('instant-build')}
                     >
                       Instant Build
@@ -539,7 +539,7 @@ export default function WebsiteBuilderPage() {
                       Free OHC Domain
                     </button>
                     <button
-                      className="w-full bg-white text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full mac-glass-container text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('8.5')}
                     >
                       Connect Custom Domain
@@ -582,7 +582,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 'instant-build' && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Tell us about your business</h1>
                   <div className="flex flex-col gap-4 mt-6">
                     <textarea
                       value={bio}
@@ -727,7 +727,7 @@ export default function WebsiteBuilderPage() {
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
+        <div className="absolute bottom-0 w-full p-4 mac-glass-container z-50 rounded-b-[16px]">
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
