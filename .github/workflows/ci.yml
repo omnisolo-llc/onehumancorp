@@ -301,12 +301,26 @@ jobs:
             //...
 
   bazel-test-e2e:
-    name: Bazel Full UI E2E
+    name: Bazel UI E2E (${{ matrix.name }})
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: spec coverage
+            target: //src/e2e:playwright_spec_coverage
+          - name: shard 1/4
+            target: //src/e2e:playwright_shard_1_of_4
+          - name: shard 2/4
+            target: //src/e2e:playwright_shard_2_of_4
+          - name: shard 3/4
+            target: //src/e2e:playwright_shard_3_of_4
+          - name: shard 4/4
+            target: //src/e2e:playwright_shard_4_of_4
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
@@ -360,12 +374,12 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          for i in {1..3}; do docker pull pgvector/pgvector:pg16 && break || sleep 15; done
+          for i in {1..3}; do docker pull valkey/valkey:8-alpine && break || sleep 15; done
 
-      - name: Test full Playwright UI E2E suite
+      - name: Test Playwright UI E2E target
         run: |
-          bazelisk test //src/e2e:playwright \
+          bazelisk test "${{ matrix.target }}" \
             --local_test_jobs="$(nproc)" \
             --jobs="$(nproc)" \
             --nocache_test_results
@@ -532,8 +546,8 @@ jobs:
 
       - name: Pull Docker Compose images
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          for i in {1..3}; do docker pull pgvector/pgvector:pg16 && break || sleep 15; done
+          for i in {1..3}; do docker pull valkey/valkey:8-alpine && break || sleep 15; done
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
             pgvector/pgvector:pg16 \
