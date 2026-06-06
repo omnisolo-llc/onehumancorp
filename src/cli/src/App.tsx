@@ -6,6 +6,8 @@ import { ToolProgress } from './components/ToolProgress';
 import { MarkdownText } from './components/MarkdownText';
 import { PromptInput } from './components/PromptInput';
 import { ErrorState } from './components/ErrorState';
+import { MasterMenu } from './components/MasterMenu';
+
 import { useOrchestrator } from './hooks/useOrchestrator';
 
 export const App = () => {
@@ -27,6 +29,8 @@ export const App = () => {
           <Box borderStyle="round" borderColor="gray" padding={1} marginTop={1} marginBottom={1} dimColor>
             <MarkdownText content={markdown} />
           </Box>
+
+          <MasterMenu />
 
           <Box flexDirection="column">
             {inputs.map((input, idx) => (
