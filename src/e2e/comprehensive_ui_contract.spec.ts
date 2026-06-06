@@ -207,6 +207,146 @@ async function describeTaggedTarget(page: Page, index: number) {
   }, index).catch(() => `click target #${index + 1}`);
 }
 
+async function auditInteractivePurposeForRoute(page: Page, route: string) {
+  await gotoReady(page, route);
+  const results = await page.locator(interactiveSelector).evaluateAll((elements) =>
+    elements.filter((element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      if (element.closest('[aria-hidden="true"]')) return false;
+      return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+    }).map((element, index) => {
+      const tag = element.tagName.toLowerCase();
+      const type = element.getAttribute('type') || '';
+      const href = element.getAttribute('href') || '';
+      const role = element.getAttribute('role') || '';
+      const purpose =
+        element.getAttribute('aria-label') ||
+        element.getAttribute('title') ||
+        element.getAttribute('placeholder') ||
+        element.getAttribute('name') ||
+        element.getAttribute('value') ||
+        Array.from((element as HTMLInputElement).labels || []).map((labelElement) => labelElement.textContent || '').join(' ').trim() ||
+        (element.textContent || '').trim().replace(/\s+/g, ' ');
+      const disabled = element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true';
+      return { index, tag, type, href, role, purpose: purpose.trim(), disabled };
+    }),
+  );
+
+  const failures: string[] = [];
+  for (const result of results) {
+    const target = `${route}: ${result.tag}${result.type ? `[type=${result.type}]` : ''} #${result.index + 1}`;
+    if (!result.disabled && !result.purpose) {
+      failures.push(`${target} has no visible or accessible designed purpose`);
+    }
+    if (result.tag === 'a') {
+      if (!result.href.trim()) failures.push(`${target} has no href`);
+      if (result.href === '#' || result.href.startsWith('#')) failures.push(`${target} uses a placeholder hash href`);
+      if (result.href.startsWith('javascript:')) failures.push(`${target} uses a javascript: href`);
+      if (isFakeOHCUrl(result.href)) failures.push(`${target} uses fake OHC destination ${result.href}`);
+    }
+    if ((result.tag === 'button' || result.role === 'button') && /^button$/i.test(result.purpose)) {
+      failures.push(`${target} exposes only a generic button purpose`);
+    }
+  }
+
+  return { auditedElements: results.length, failures };
+}
+
+async function auditClickEffectsForRoute(page: Page, route: string) {
+  await gotoReady(page, route);
+  const failures: string[] = [];
+  let auditedTargets = 0;
+  const targetCount = await tagClickTargets(page);
+  auditedTargets += targetCount;
+
+  for (let index = 0; index < targetCount; index += 1) {
+    let target = page.locator(`[data-ui-audit-click-index="${index}"]`);
+    if (await target.count() === 0) {
+      await gotoReady(page, route);
+      await tagClickTargets(page);
+      target = page.locator(`[data-ui-audit-click-index="${index}"]`);
+    }
+
+    if (await target.count() === 0) {
+      break;
+    }
+
+    const isCurrentSelection = await target.evaluate((element) =>
+      element.getAttribute('aria-pressed') === 'true' ||
+      element.getAttribute('aria-current') === 'page' ||
+      element.getAttribute('aria-selected') === 'true',
+    ).catch(() => false);
+    if (isCurrentSelection) continue;
+
+    const label = await describeTaggedTarget(page, index);
+    const beforeUrl = page.url();
+    const beforeSignature = await pageSignature(page);
+    let dialogSeen = false;
+    let requestSeen = false;
+
+    const dialogPromise = page.waitForEvent('dialog', { timeout: 75 })
+      .then(async (dialog) => {
+        dialogSeen = true;
+        await dialog.dismiss().catch(() => undefined);
+      })
+      .catch(() => undefined);
+    const requestPromise = page.waitForEvent('request', { timeout: 75 })
+      .then(() => { requestSeen = true; })
+      .catch(() => undefined);
+
+    await target.evaluate((element) => {
+      (element as HTMLElement).click();
+    }, undefined, { timeout: 500 }).catch((error) => {
+      failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
+    });
+    await Promise.all([dialogPromise, requestPromise]);
+
+    const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
+    const realEffect = requestSeen || effect.changed;
+
+    if (dialogSeen && !realEffect) {
+      failures.push(`${route}: "${label}" only opened a browser dialog`);
+    }
+    if (!realEffect) {
+      failures.push(`${route}: "${label}" produced no navigation, network request, or DOM change`);
+    }
+    if (effect.afterUrl !== beforeUrl || effect.changed) {
+      await gotoReady(page, route);
+      await tagClickTargets(page);
+    }
+  }
+
+  return { auditedTargets, failures };
+}
+
+const generatedContractRoutes = discoverAppRoutes();
+
+test.describe('per-route exhaustive UI element contracts', () => {
+  test.describe.configure({ timeout: 120000 });
+
+  test('generated route contract suite covers at least 100 additional checks', async () => {
+    expect(generatedContractRoutes.length, 'Route discovery must find enough pages for 100+ generated UI contracts.').toBeGreaterThanOrEqual(50);
+    expect(generatedContractRoutes.length * 2).toBeGreaterThanOrEqual(100);
+  });
+
+  for (const route of generatedContractRoutes) {
+    test(`all visible interactive elements declare their designed purpose on ${routeLabel(route)}`, async ({ page }) => {
+      test.setTimeout(30000);
+      const audit = await auditInteractivePurposeForRoute(page, route);
+      console.log(`Audited ${audit.auditedElements} interactive elements on ${routeLabel(route)}.`);
+      expect(audit.failures).toEqual([]);
+    });
+
+    test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ page }) => {
+      test.setTimeout(60000);
+      const audit = await auditClickEffectsForRoute(page, route);
+      console.log(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
+      expect(audit.failures).toEqual([]);
+    });
+  }
+});
+
 test.describe('comprehensive UI contract', () => {
   test('every app page loads without visible crash output', async ({ page }) => {
     expect(fs.existsSync(appRoot), 'Next UI source/routes are not available in this Playwright runfiles tree.').toBeTruthy();
