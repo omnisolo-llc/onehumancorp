@@ -10,7 +10,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
-  minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
+  minReplicas: {{ if .Values.multiTenant.enabled }}{{ .Values.backend.autoscaling.minReplicas }}{{ else }}1{{ end }}
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
   metrics:
     - type: Resource
@@ -39,7 +39,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
-  minReplicas: {{ .Values.ohcCore.autoscaling.minReplicas }}
+  minReplicas: {{ if .Values.multiTenant.enabled }}{{ .Values.ohcCore.autoscaling.minReplicas }}{{ else }}1{{ end }}
   maxReplicas: {{ .Values.ohcCore.autoscaling.maxReplicas }}
   metrics:
     - type: Resource
@@ -68,7 +68,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-chatwoot
-  minReplicas: {{ .Values.chatwoot.autoscaling.minReplicas }}
+  minReplicas: {{ if .Values.multiTenant.enabled }}{{ .Values.chatwoot.autoscaling.minReplicas }}{{ else }}1{{ end }}
   maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
   metrics:
     - type: Resource
@@ -97,7 +97,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-powersync
-  minReplicas: {{ .Values.powersync.autoscaling.minReplicas }}
+  minReplicas: {{ if .Values.multiTenant.enabled }}{{ .Values.powersync.autoscaling.minReplicas }}{{ else }}1{{ end }}
   maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
   metrics:
     - type: Resource

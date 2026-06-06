@@ -58,7 +58,7 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 # Build optimized binaries instead of running through Bazelisk repeatedly
 echo -e "${DIM}  Compiling optimized binaries...${RESET}"
 # Optimize caching
-npx @bazel/bazelisk build -c opt --disk_cache=~/.cache/bazel-disk-cache //src/server:server //src/ui/tauri:app --//src/ui/tauri:build_tauri=true > /dev/null 2>&1
+npx @bazel/bazelisk build -c opt --jobs="$(nproc)" --disk_cache=~/.cache/bazel-disk-cache --local_cpu_resources=HOST_CPUS*.75 --local_ram_resources=HOST_RAM*.75 //src/server:server //src/ui/tauri:app --//src/ui/tauri:build_tauri=true > /dev/null 2>&1
 echo -e "  ${GREEN}✓ Binaries compiled${RESET}"
 
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth

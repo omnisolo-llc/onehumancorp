@@ -17,7 +17,7 @@ mod tests {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT,\n                tenant_id TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
@@ -142,14 +142,14 @@ mod tests {
         }).to_string();
 
         // Test sync_cloud_escalations
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_cloud_1', 'CLOUD_ESCALATION', $1, false)")
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud, tenant_id) VALUES ('test_cloud_1', 'CLOUD_ESCALATION', $1, false, 'system')")
             .bind(&pii_payload_1)
             .execute(&sqlite_pool)
             .await
             .unwrap();
 
         // Test BURSTING sync
-        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ('test_burst_1', 'BURSTING', $1, false)")
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud, tenant_id) VALUES ('test_burst_1', 'BURSTING', $1, false, 'system')")
             .bind(&pii_payload_2)
             .execute(&sqlite_pool)
             .await
@@ -208,7 +208,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .await
         .unwrap();
 
-    sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT,\n                tenant_id TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
