@@ -41,6 +41,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:dynamic_workflows.rs",
     "//src/server/api:growth.rs",
     "//src/server/api:health.rs",
+    "//src/server/api:health_test.rs",
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
