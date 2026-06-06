@@ -124,7 +124,10 @@ mod tests {
         // This benchmark asserts that the fundamental timeout utility function
         // guarantees the underlying bounded logic without network drift.
         let start = std::time::Instant::now();
-        let slow_operation = async { tokio::task::yield_now().await; tokio::time::sleep(std::time::Duration::from_millis(3000)).await; "ok" };
+        let slow_operation = async {
+            tokio::task::yield_now().await; sleep(Duration::from_millis(3000)).await;
+            "ok"
+        };
 
         let result = timeout(Duration::from_millis(500), slow_operation).await;
         assert!(result.is_err()); // Timeout triggers
