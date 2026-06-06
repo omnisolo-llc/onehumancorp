@@ -108,6 +108,7 @@ mod tests {
             tenant_id: "2".to_string(),
             name: "test".to_string(),
             r#type: "retail".to_string(),
+            onboarding_prompt: None,
             created_at: None,
             updated_at: None,
         };
@@ -160,6 +161,7 @@ mod tests {
             inventory_count: None,
             is_sold_out: None,
             metadata: None,
+            duration_minutes: None,
             created_at: None,
             updated_at: None,
         };

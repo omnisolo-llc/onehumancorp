@@ -53,6 +53,7 @@ pub struct Business {
     pub tenant_id: String,
     pub name: String,
     pub r#type: String,
+    pub onboarding_prompt: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -96,6 +97,7 @@ pub struct Product {
     pub inventory_count: Option<i32>,
     pub is_sold_out: Option<bool>,
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
+    pub duration_minutes: Option<i32>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
