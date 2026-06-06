@@ -56,10 +56,6 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
 }
 
 pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyCost> {
-    if std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true" {
-        return process_telemetry_rows(vec![]);
-    }
-
     let raw_rows = sqlx::query(
         r#"
         SELECT
