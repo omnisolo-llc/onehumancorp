@@ -634,7 +634,14 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
+    pub async fn fetch_rates(
+        &self,
+        integration_id: &str,
+        weight: f64,
+        dimensions: &str,
+        address_from: Option<crate::integrations::shippo::client::Address>,
+        address_to: Option<crate::integrations::shippo::client::Address>,
+    ) -> Result<Vec<crate::integrations::shippo::client::Rate>, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -644,12 +651,12 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.fetch_rates(weight, dimensions).await;
+            return c.fetch_rates(weight, dimensions, address_from, address_to).await;
         }
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn purchase_label(&self, integration_id: &str, rate_id: &str) -> Result<String, String> {
+    pub async fn purchase_label(&self, integration_id: &str, rate_id: &str) -> Result<crate::integrations::shippo::client::TransactionResponse, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();

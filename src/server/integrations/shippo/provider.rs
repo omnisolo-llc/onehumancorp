@@ -1,10 +1,10 @@
-use super::client::ShippoClient;
+use super::client::{Rate, ShippoClient, TransactionResponse};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct ShippoProvider {
     _client: Arc<ShippoClient>,
-    metadata: ProviderMetadata,
+    pub metadata: ProviderMetadata,
 }
 
 impl ShippoProvider {
@@ -33,12 +33,34 @@ impl ShippoProvider {
         }
     }
 
-    pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
-        self._client.fetch_rates(weight, dimensions).await
+    pub async fn fetch_rates(&self, weight: f64, dimensions: &str, address_from: Option<super::client::Address>, address_to: Option<super::client::Address>) -> Result<Vec<Rate>, String> {
+        let default_from = super::client::Address {
+            name: "Shipper".to_string(),
+            street1: "215 Clayton St.".to_string(),
+            city: "San Francisco".to_string(),
+            state: "CA".to_string(),
+            zip: "94117".to_string(),
+            country: "US".to_string(),
+        };
+        let default_to = super::client::Address {
+            name: "Recipient".to_string(),
+            street1: "123 Main St".to_string(),
+            city: "San Francisco".to_string(),
+            state: "CA".to_string(),
+            zip: "94105".to_string(),
+            country: "US".to_string(),
+        };
+        self._client.fetch_rates(weight, dimensions, address_from.unwrap_or(default_from), address_to.unwrap_or(default_to)).await
     }
 
-    pub async fn purchase_label(&self, rate_id: &str) -> Result<String, String> {
+    pub async fn purchase_label(&self, rate_id: &str) -> Result<TransactionResponse, String> {
         self._client.purchase_label(rate_id).await
+    }
+
+    pub async fn generate_and_email_label(&self, rate_id: &str, _email: &str) -> Result<String, String> {
+        let transaction = self.purchase_label(rate_id).await?;
+        // Mock emailing tracking numbers to the customer
+        Ok(transaction.label_url)
     }
 }
 
@@ -58,13 +80,5 @@ mod tests {
         let provider = ShippoProvider::new("test_token".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "shippo");
-    }
-}
-
-impl ShippoProvider {
-    pub async fn generate_and_email_label(&self, rate_id: &str, _email: &str) -> Result<String, String> {
-        let label_url = self.purchase_label(rate_id).await?;
-        // Mock emailing tracking numbers to the customer
-        Ok(label_url)
     }
 }
