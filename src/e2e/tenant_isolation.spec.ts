@@ -58,4 +58,60 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
         await expect(page.getByText('vector', { exact: false })).not.toBeVisible();
         await expect(page.getByText('1536', { exact: false })).not.toBeVisible();
     });
+
+    test('verifies cloud multi-tenant IDOR protection by injecting system tenant_id in API via UI', async ({ page }) => {
+        // E2E Mandatory: Start from home page after user login via UI
+        await page.goto('/');
+        await page.goto('/login');
+        await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+        await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password');
+        await page.getByRole('button', { name: 'Log In' }).click();
+
+        await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+        // Simulate an IDOR attempt by intercepting an authenticated request from the UI
+        // and modifying the header/payload to target the 'system' tenant
+
+        // We will intercept the next API call to the backend and modify the tenant ID
+        await page.route('**/api/v1/user/profile*', async route => {
+            const request = route.request();
+            const headers = request.headers();
+            // Inject malicious system tenant ID
+            headers['x-organization-id'] = 'system';
+
+            const response = await route.fetch({ headers });
+
+            // Fulfill with the original response so the page doesn't crash completely unhandled
+            await route.fulfill({ response });
+        });
+
+        // Trigger an action that makes an API call
+        const responsePromise = page.waitForResponse('**/api/v1/user/profile*');
+        await page.getByRole('link', { name: 'Settings' }).click();
+        const idorResponse = await responsePromise;
+
+        // Wait for the settings page to load
+        await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+
+        // Since we modified the tenant ID to 'system' and the system is in multi-tenant mode,
+        // the backend should have rejected the request (likely 401, 403, or 500), NOT 200.
+        expect(idorResponse.status()).not.toBe(200);
+    });
+
+    test('verifies standard authenticated queries succeed without system tampering', async ({ page }) => {
+        // The positive bypass case - normal users accessing their own tenant's data should get 200 OK.
+        // We verify that an untampered request passes cleanly.
+        await page.goto('/login');
+        await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+        await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password');
+        await page.getByRole('button', { name: 'Log In' }).click();
+
+        await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+        const responsePromise = page.waitForResponse('**/api/v1/user/profile*');
+        await page.getByRole('link', { name: 'Settings' }).click();
+        const response = await responsePromise;
+
+        expect(response.status()).toBe(200);
+    });
 });

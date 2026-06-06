@@ -84,6 +84,9 @@ impl UserRepository for PgUserRepository {
         let is_multitenant = ::server_config::get().multitenant;
         let is_system = org_id.trim() == "system";
         let should_bypass = !is_multitenant && is_system;
+        if is_multitenant && is_system {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
@@ -128,6 +131,9 @@ impl UserRepository for PgUserRepository {
         let is_multitenant = ::server_config::get().multitenant;
         let is_system = org_id.trim() == "system";
         let should_bypass = !is_multitenant && is_system;
+        if is_multitenant && is_system {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
@@ -171,6 +177,9 @@ impl UserRepository for PgUserRepository {
         let is_multitenant = ::server_config::get().multitenant;
         let is_system = org_id.trim() == "system";
         let should_bypass = !is_multitenant && is_system;
+        if is_multitenant && is_system {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
@@ -214,6 +223,9 @@ impl UserRepository for PgUserRepository {
         let is_multitenant = ::server_config::get().multitenant;
         let is_system = org_id.trim() == "system";
         let should_bypass = !is_multitenant && is_system;
+        if is_multitenant && is_system {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
