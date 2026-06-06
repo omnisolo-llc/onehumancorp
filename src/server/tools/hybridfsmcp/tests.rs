@@ -5,7 +5,6 @@ use tempfile::tempdir;
 use ::server_ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
-#[ignore] // Pre-existing issue: fails due to permissions/setup issues
 async fn test_local_fs_provider() {
     let dir = tempdir().unwrap();
     let provider = LocalFSProvider::new(dir.path().to_path_buf());
@@ -35,7 +34,7 @@ async fn test_cloud_fs_provider() {
     // Test write and read
     provider.write_file("test.txt", b"cloud content").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"cloud content");
+    assert_eq!(content, b"cloud content".to_vec());
 
     // Verify it was written to tenant dir
     let tenant_file = dir.path().join(&tenant_id).join("test.txt");
