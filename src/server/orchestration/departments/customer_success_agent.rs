@@ -119,6 +119,16 @@ impl Department for CustomerSuccessAgent {
                 "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
             });
 
+            if risk == ActionRisk::DraftForReview {
+                if let Some(inbox_id) = event.payload.get("inbox_message_id").and_then(|v| v.as_str()) {
+                    if !inbox_id.is_empty() {
+                        if let Err(e) = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, generated_response).await {
+                            tracing::error!("Failed to update inbox message draft: {}", e);
+                        }
+                    }
+                }
+            }
+
             self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
                 description,

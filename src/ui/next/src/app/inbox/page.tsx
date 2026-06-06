@@ -20,7 +20,7 @@ function tenantId() {
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved"].includes(normalized)) return "good";
-  if (["open", "pending", ""].includes(normalized)) return "warn";
+  if (["open", "pending", "pending_approval", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
   return "";
 }
@@ -90,6 +90,7 @@ export default function InboxPage() {
 
       if (approveRes.ok) {
         setMessages((prev) => prev.map((m) => m.id === inboxMessageId ? { ...m, status: "sent" } : m));
+        setSelectedId(inboxMessageId);
       } else {
         alert("Failed to approve and send message.");
       }

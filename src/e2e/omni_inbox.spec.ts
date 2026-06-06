@@ -1,12 +1,30 @@
 import { test, expect } from './fixtures';
 
-test.describe('Omni-Inbox Auto-Reply Agent', () => {
-  test('displays the database-backed inbox experience', async ({ page }) => {
+test.describe('Omnichannel AI Unified Inbox', () => {
+  test('Agent drafts reply and user approves it', async ({ page, request }) => {
     await page.goto('/inbox');
     await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
 
-    await expect(page.getByText('Message Queue')).toBeVisible();
-    await expect(page.getByText('Conversation Detail')).toBeVisible();
-    await expect(page.getByText('Loaded from `/api/ui/inbox/messages`')).toBeVisible();
+    const webhookResponse = await request.post('/api/agents/webhook', {
+      data: {
+        tenant_id: 'e2e-tenant',
+        message: 'Do you sell vegan cakes?',
+        source: 'instagram',
+      }
+    });
+    expect(webhookResponse.ok()).toBeTruthy();
+
+    await page.waitForTimeout(2000);
+    await page.reload();
+
+    await expect(page.getByText('instagram', { exact: false }).first()).toBeVisible();
+    await expect(page.locator('text="Yes, we do vegan cakes!"').first()).toBeVisible();
+
+    const approveBtn = page.locator('button:has-text("Approve & Send Draft")').first();
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    await expect(page.getByText('sent').first()).toBeVisible();
+    await expect(approveBtn).not.toBeVisible();
   });
 });
