@@ -3,14 +3,14 @@ use super::parse_spiffe_id;
 use ::server_ohc::orchestration::*;
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
+
 pub struct AuthInfo {
     pub org_id: String,
     pub agent_id: String,
     pub spiffe_id: String,
 }
 
-#[allow(dead_code)]
+
 pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
     let spiffe_id_str = req.metadata().get("x-spiffe-id")
         .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
@@ -30,7 +30,7 @@ pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
     Ok(req)
 }
 
-#[allow(dead_code)]
+
 pub fn authorize_register_agent(auth: &AuthInfo, req: &RegisterAgentRequest) -> Result<(), Status> {
     if let Some(agent) = &req.agent {
         if auth.agent_id != agent.id {
@@ -43,7 +43,7 @@ pub fn authorize_register_agent(auth: &AuthInfo, req: &RegisterAgentRequest) -> 
     Ok(())
 }
 
-#[allow(dead_code)]
+
 pub fn authorize_publish_message(auth: &AuthInfo, req: &PublishMessageRequest) -> Result<(), Status> {
     if let Some(msg) = &req.message {
         if auth.agent_id != msg.from_agent {
@@ -53,7 +53,7 @@ pub fn authorize_publish_message(auth: &AuthInfo, req: &PublishMessageRequest) -
     Ok(())
 }
 
-#[allow(dead_code)]
+
 pub fn authorize_delegate_task(auth: &AuthInfo, req: &DelegateTaskRequest) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
         return Err(Status::permission_denied(format!("SPIFFE ID {} cannot delegate task as agent {}", auth.spiffe_id, req.from_agent_id)));
@@ -61,7 +61,7 @@ pub fn authorize_delegate_task(auth: &AuthInfo, req: &DelegateTaskRequest) -> Re
     Ok(())
 }
 
-#[allow(dead_code)]
+
 pub fn authorize_sub_task(auth: &AuthInfo, req: &SubTask) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
         return Err(Status::permission_denied(format!("SPIFFE ID {} cannot delegate subtask as agent {}", auth.spiffe_id, req.from_agent_id)));
@@ -69,7 +69,7 @@ pub fn authorize_sub_task(auth: &AuthInfo, req: &SubTask) -> Result<(), Status> 
     Ok(())
 }
 
-#[allow(dead_code)]
+
 pub fn authorize_reason_request(auth: &AuthInfo, req: &ReasonRequest) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
         return Err(Status::permission_denied(format!("SPIFFE ID {} cannot request reasoning as agent {}", auth.spiffe_id, req.from_agent_id)));
@@ -77,7 +77,7 @@ pub fn authorize_reason_request(auth: &AuthInfo, req: &ReasonRequest) -> Result<
     Ok(())
 }
 
-#[allow(dead_code)]
+
 pub fn authorize_open_meeting(auth: &AuthInfo, req: &OpenMeetingRequest) -> Result<(), Status> {
     let found = req.participants.iter().any(|p| p == &auth.agent_id);
     if !found {

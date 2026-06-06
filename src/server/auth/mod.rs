@@ -113,16 +113,15 @@ pub struct OIDCConfig {
 
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
-    #[allow(dead_code)]
-    roles: RwLock<HashMap<String, Role>>,
+
     by_name: RwLock<HashMap<TenantKey, String>>,
     by_email: RwLock<HashMap<TenantKey, String>>,
     by_oidc: RwLock<HashMap<TenantKey, String>>,
     revoked: RwLock<HashMap<String, DateTime<Utc>>>,
     redis_client: Option<redis::Client>,
-    #[allow(dead_code)]
+
     secret: Vec<u8>,
-    #[allow(dead_code)]
+
     oidc_cfg: RwLock<OIDCConfig>,
 }
 
@@ -226,7 +225,6 @@ impl Store {
 
         let store = Store {
             users: RwLock::new(HashMap::new()),
-            roles: RwLock::new(roles),
             by_name: RwLock::new(HashMap::new()),
             by_email: RwLock::new(HashMap::new()),
             by_oidc: RwLock::new(HashMap::new()),
