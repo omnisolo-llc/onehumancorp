@@ -133,7 +133,7 @@ export default function OnboardingWizard() {
       const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
         if (data.wizardState.step) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
+        if (data.wizardState.chatStep !== undefined) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
@@ -376,7 +376,7 @@ export default function OnboardingWizard() {
                     Let's get your business online in under 10 minutes.
                   </p>
                   <button
-                    role="link"
+
                     onClick={() => setChatStep(1)}
                     className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                   >

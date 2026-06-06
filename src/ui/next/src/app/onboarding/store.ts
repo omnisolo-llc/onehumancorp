@@ -89,7 +89,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v4', // Changed name to avoid cache collision with new structure
     }
   )
 );
