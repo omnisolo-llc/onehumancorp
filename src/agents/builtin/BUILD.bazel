@@ -239,7 +239,6 @@ AGENT_UNIT_TEST_FILTERS = [
     "gpt_researcher",
     "local_provider",
     "sona_patterns",
-    "visual_workflow",
 ]
 
 rust_test(
