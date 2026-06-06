@@ -15,6 +15,15 @@ test.describe('OnboardingWizard CUJ', () => {
         body: JSON.stringify({})
       });
     });
+
+    // Universal mock for state
+    await page.route('/api/onboarding/state', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({})
+      });
+    });
   });
 
   test('Maya the Baker can complete the onboarding flow', async ({ page }) => {
@@ -36,7 +45,8 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.goto('/onboarding');
-    await expect(page.getByText('Welcome')).toBeVisible();
+
+    await expect(page.getByText('Start Onboarding')).toBeVisible();
     await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Maya Bakery');
@@ -81,6 +91,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.goto('/onboarding');
+    await expect(page.getByText('Start Onboarding')).toBeVisible();
     await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Carlos Fixes It');
@@ -125,6 +136,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.goto('/onboarding');
+    await expect(page.getByText('Start Onboarding')).toBeVisible();
     await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Leo Guitar Lessons');
@@ -172,6 +184,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.goto('/onboarding');
+    await expect(page.getByText('Start Onboarding')).toBeVisible();
     await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Fatima Halal Food');
@@ -230,6 +243,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');
+    await expect(page.getByText('Start Onboarding')).toBeVisible();
     await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('My Restored Business');
@@ -262,6 +276,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.goto('/onboarding');
+    await expect(page.getByText('Start Onboarding')).toBeVisible();
     await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');

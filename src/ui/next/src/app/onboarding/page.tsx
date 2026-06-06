@@ -117,9 +117,13 @@ export default function OnboardingWizard() {
   };
 
   // Read state from server on mount
+  const [isInitializing, setIsInitializing] = useState(true);
+
   useEffect(() => {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    let isMounted = true;
 
     Promise.all([
       fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
@@ -130,9 +134,10 @@ export default function OnboardingWizard() {
         .catch(() => null)
     ])
     .then(([draftData, stateData]) => {
-      const data = (draftData && draftData.wizardState) ? draftData : stateData;
+      if (!isMounted) return;
+      const data = (draftData && Object.keys(draftData).length > 0 && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
+        if (data.wizardState.step !== undefined) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
