@@ -17,6 +17,10 @@ pub struct WebhookPayload {
     pub tenant_id: String,
     pub message: String,
     pub source: String,
+    #[serde(default)]
+    pub cart_value: Option<String>,
+    #[serde(default)]
+    pub customer_name: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -38,6 +42,25 @@ async fn handle_webhook(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
+
+    // Abandoned Cart Event Handling
+    if payload.source == "system" && payload.message == "abandoned_cart" {
+        let cart_value = payload.cart_value.clone().unwrap_or_else(|| "0".to_string());
+        let customer_name = payload.customer_name.clone().unwrap_or_else(|| "there".to_string());
+
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: payload.tenant_id.clone(),
+            event_type: "tenant.cart.abandoned".to_string(),
+            payload: serde_json::json!({"source": payload.source, "message": payload.message, "cart_value": cart_value, "customer_name": customer_name}),
+        };
+
+        match orchestrator.dispatch_event(event).await {
+            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+            Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+        }
+    }
+
     // For incoming Stripe webhooks for new orders, route to Operations to process the order
     if payload.source == "stripe" && payload.message == "order_placed" {
         // Trigger SMS notification for new orders

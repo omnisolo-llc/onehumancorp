@@ -28,6 +28,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
+            "tenant.cart.abandoned".to_string(),
         ]
     }
 
@@ -82,6 +83,41 @@ impl Department for CustomerSuccessAgent {
                 metadata: None,
             };
             self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.cart.abandoned" {
+            let cart_value_str = event.payload.get("cart_value").and_then(|v| v.as_str()).unwrap_or("0");
+            let cart_value: f64 = cart_value_str.replace("$", "").parse().unwrap_or(0.0);
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("there");
+
+            let generated_response = if cart_value >= 50.0 {
+                format!("Hi {}, we noticed you left some items in your cart. Here is a 10% discount to complete your purchase!", customer_name)
+            } else {
+                format!("Hi {}, we noticed you left some items in your cart. Did you need any help checking out?", customer_name)
+            };
+
+            let description = if risk == ActionRisk::AutoExecute {
+                format!("Auto-sent cart recovery email to {}", customer_name)
+            } else {
+                format!("Draft cart recovery email for {}", customer_name)
+            };
+
+            let action_payload = serde_json::json!({
+                "feature_type": "abandoned_cart",
+                "customer_name": customer_name,
+                "cart_value": cart_value_str,
+                "generated_response": generated_response,
+            });
+
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                action_payload,
+            ).await.map(|_| ())?;
 
             return Ok(());
         }

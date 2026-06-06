@@ -485,7 +485,7 @@ export default function ApprovalInbox({
                         Abandoned Cart Detected
                       </div>
                       <div className="text-xs text-rose-700 font-medium">
-                        Sarah left a $45 Vegan Chocolate Cake in her cart.
+                        {req.payload?.customer_name || 'A customer'} left {req.payload?.cart_value ? `$${req.payload.cart_value}` : 'items'} in their cart.
                       </div>
 
                       <div className="bg-white p-3 rounded-lg border border-rose-100 relative">
@@ -493,9 +493,7 @@ export default function ApprovalInbox({
                           AI Draft
                         </div>
                         <p className="text-xs text-gray-700 italic">
-                          "Hi Sarah, noticed you left the Vegan Chocolate Cake
-                          in your cart! Here's 10% off to sweeten the deal if
-                          you finish your order today."
+                          "{req.payload?.generated_response || "We noticed you left some items in your cart. Did you need any help checking out?"}"
                         </p>
                       </div>
 
