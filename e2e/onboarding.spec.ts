@@ -3,31 +3,6 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Wizard CUJ', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => window.localStorage.clear());
-    await page.route('/api/onboarding/state', async route => {
-      if (route.request().method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({}),
-        });
-        return;
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({}),
-      });
-    });
-    await page.route('/api/onboarding/start', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          message: 'Your business has been successfully launched.',
-        }),
-      });
-    });
   });
 
   async function startOnboarding(page: import('@playwright/test').Page) {
