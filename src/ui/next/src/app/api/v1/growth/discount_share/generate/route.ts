@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error generating discount share link:", error);
+    console.error("Error generating discount share link:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }

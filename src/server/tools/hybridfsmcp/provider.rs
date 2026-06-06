@@ -93,7 +93,6 @@ impl FileSystemProvider for BaseFSProvider {
                 .open(resolved)
                 .await?;
             file.write_all(content).await?;
-            file.sync_all().await?;
         }
         #[cfg(not(unix))]
         {

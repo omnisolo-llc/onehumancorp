@@ -20,7 +20,7 @@ def _shard_specs(specs, index, total):
             shard_specs.append(spec)
     return shard_specs
 
-def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = "long", exclusive = False, extra_env = {}, extra_data = []):
+def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = "long"):
     tags = [
         "e2e",
         "no-remote-exec",
@@ -29,23 +29,18 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
     ]
     if manual:
         tags.append("manual")
-    if exclusive:
-        tags.append("exclusive")
-    env = {
-        "BASE_URL": "http://localhost:18789",
-        "NEXT_APP_PACKAGE_JSON": "$(rootpath //src/ui/next:package.json)",
-        "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
-        "PLAYWRIGHT_RETRIES": "0",
-        "PLAYWRIGHT_TEST_TIMEOUT": "180000",
-        "PLAYWRIGHT_VIDEO": "off",
-    }
-    env.update(extra_env)
     attrs = {
         "name": name,
         "srcs": ["//bazel/rules/playwright:playwright_test.sh"],
         "args": ["$(rootpath {})".format(spec) for spec in spec_args],
-        "data": spec_args + common_data + extra_data,
-        "env": env,
+        "data": spec_args + common_data,
+        "env": {
+            "BASE_URL": "http://localhost:18789",
+            "NEXT_APP_PACKAGE_JSON": "$(rootpath //src/ui/next:package.json)",
+            "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
+            "PLAYWRIGHT_RETRIES": "0",
+            "PLAYWRIGHT_TEST_TIMEOUT": "180000",
+        },
         "size": "large",
         "timeout": timeout,
         "tags": tags,
@@ -56,7 +51,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
     }
     sh_test(**attrs)
 
-def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = [], server = None, ci_discovery_data = []):
+def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = [], server = None):
     """Generate one sharded all-spec CI test plus manual per-spec debug targets."""
     common_data = [
         "//src/e2e:fixtures.ts",
@@ -88,28 +83,22 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
             timeout = "eternal",
         )
 
-    use_runfile_discovery = not ci_specs
     if not ci_specs:
         ci_specs = specs
     ci_specs = sorted(ci_specs)
 
-    coverage_attrs = {
-        "name": "playwright_spec_coverage",
-        "srcs": ["//bazel/rules/playwright:playwright_spec_coverage_check.sh"],
-        "size": "small",
-        "tags": ["playwright"],
-    }
-    if use_runfile_discovery:
-        coverage_attrs["args"] = ["--scan-runfiles"]
-        coverage_attrs["data"] = sorted(specs) + common_data + ci_discovery_data
-    else:
-        coverage_attrs["args"] = ["--all"] + sorted(specs) + ["--ci"] + sorted(ci_specs)
-    sh_test(**coverage_attrs)
+    sh_test(
+        name = "playwright_spec_coverage",
+        srcs = ["//bazel/rules/playwright:playwright_spec_coverage_check.sh"],
+        args = ["--all"] + sorted(specs) + ["--ci"] + sorted(ci_specs),
+        size = "small",
+        tags = ["playwright"],
+    )
 
     shard_targets = []
     for index in range(ci_shard_count):
-        shard_specs = [] if use_runfile_discovery else _shard_specs(ci_specs, index, ci_shard_count)
-        if not use_runfile_discovery and not shard_specs:
+        shard_specs = _shard_specs(ci_specs, index, ci_shard_count)
+        if not shard_specs:
             continue
         shard_name = _playwright_shard_target_name(index, ci_shard_count)
         shard_targets.append(":" + shard_name)
@@ -119,9 +108,6 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
             common_data = common_data,
             manual = True,
             timeout = "eternal",
-            exclusive = True,
-            extra_env = {"PLAYWRIGHT_SHARD": "{}/{}".format(index + 1, ci_shard_count)} if use_runfile_discovery else {},
-            extra_data = ci_discovery_data if use_runfile_discovery else [],
         )
 
     native.test_suite(

@@ -28,7 +28,7 @@ test.describe('Milestones Page UI', () => {
     await expect(page.locator('text=Your Achievements')).toBeVisible();
 
     // Verify Glassmorphism styles are applied
-    const firstMilestone = page.locator('.glassmorphism').first();
+    const firstMilestone = page.locator('.mac-glass-container').first();
     await expect(firstMilestone).toBeVisible();
   });
 
@@ -37,6 +37,6 @@ test.describe('Milestones Page UI', () => {
     await expect(lockedMilestone).toContainText(/LOCKED/i);
 
     const milestoneContainer = lockedMilestone.locator('..').locator('..');
-    await expect(milestoneContainer).toHaveClass(/glassmorphism/);
+    await expect(milestoneContainer).toHaveClass(/mac-glass-container/);
   });
 });

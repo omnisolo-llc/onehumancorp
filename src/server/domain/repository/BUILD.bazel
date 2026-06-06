@@ -112,7 +112,6 @@ rust_library(
 
 rust_test(
     name = "server_domain_repository_unit_test",
-    timeout = "eternal",
     crate = ":server_domain_repository",
     edition = "2024",
 )

@@ -91,14 +91,6 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             manager_id: director_id.clone(),
             organization_id: id.to_string(),
         },
-        TeamMember {
-            id: format!("{}-ops-manager", id),
-            name: "Operations Manager".to_string(),
-            role: Role::OperationsManager as i32,
-            is_human: false,
-            manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
-        },
     ];
 
     Organization {
@@ -206,14 +198,6 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             manager_id: ceo_id.clone(),
             organization_id: id.to_string(),
         },
-        TeamMember {
-            id: format!("{}-ops-manager", id),
-            name: "Operations Manager".to_string(),
-            role: Role::OperationsManager as i32,
-            is_human: false,
-            manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
-        },
     ];
 
     Organization {
@@ -287,14 +271,6 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::PayrollManager as i32,
             is_human: false,
             manager_id: cfo_id.clone(),
-            organization_id: id.to_string(),
-        },
-        TeamMember {
-            id: format!("{}-ops-manager", id),
-            name: "Operations Manager".to_string(),
-            role: Role::OperationsManager as i32,
-            is_human: false,
-            manager_id: ceo_id.clone(),
             organization_id: id.to_string(),
         },
     ];

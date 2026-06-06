@@ -170,12 +170,6 @@ where
         if let Ok(mut guard) = self.get_local().write() {
             guard.remove(key);
         }
-        if let Ok(mut tag_guard) = self.get_local_tags().write() {
-            for (_, keys) in tag_guard.iter_mut() {
-                keys.remove(key);
-            }
-            tag_guard.retain(|_, keys| !keys.is_empty());
-        }
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
             let _: Result<(), _> = conn.del(key).await;

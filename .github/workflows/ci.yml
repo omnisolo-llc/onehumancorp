@@ -301,26 +301,12 @@ jobs:
             //...
 
   bazel-test-e2e:
-    name: Bazel UI E2E (${{ matrix.name }})
+    name: Bazel Full UI E2E
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: spec coverage
-            target: //src/e2e:playwright_spec_coverage
-          - name: shard 1/4
-            target: //src/e2e:playwright_shard_1_of_4
-          - name: shard 2/4
-            target: //src/e2e:playwright_shard_2_of_4
-          - name: shard 3/4
-            target: //src/e2e:playwright_shard_3_of_4
-          - name: shard 4/4
-            target: //src/e2e:playwright_shard_4_of_4
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
@@ -377,9 +363,9 @@ jobs:
           docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine
 
-      - name: Test Playwright UI E2E target
+      - name: Test full Playwright UI E2E suite
         run: |
-          bazelisk test "${{ matrix.target }}" \
+          bazelisk test //src/e2e:playwright \
             --local_test_jobs="$(nproc)" \
             --jobs="$(nproc)" \
             --nocache_test_results

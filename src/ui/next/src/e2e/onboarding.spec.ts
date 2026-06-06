@@ -198,35 +198,10 @@ test.describe('OnboardingWizard CUJ', () => {
   });
 
   test('User can save a draft and restore it across sessions', async ({ page }) => {
-    let savedWizardState: Record<string, unknown> | undefined;
-    await page.route('/api/onboarding/draft', async route => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
-        savedWizardState = body.wizardState;
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
-        return;
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(savedWizardState ? { wizardState: savedWizardState } : {}),
-      });
-    });
-    await page.route('/api/onboarding/state', async route => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
-        savedWizardState = body.wizardState;
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
-        return;
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(savedWizardState ? { wizardState: savedWizardState } : {}),
-      });
-    });
+    // Note: The global beforeEach mocks /api/onboarding/draft by default.
+    // We must unroute it for this specific test so it hits the real backend.
+    await page.unroute('/api/onboarding/draft');
+    await page.unroute('/api/onboarding/state');
 
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');

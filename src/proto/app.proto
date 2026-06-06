@@ -34,22 +34,6 @@ message Order {
   int64 created_at_unix = 6;
 }
 
-message Quote {
-  string id = 1;
-  string tenant_id = 2;
-  string status = 3;
-  int64 total_amount = 4;
-  int64 required_deposit = 5;
-  int64 expires_at_unix = 6;
-}
-
-message Invoice {
-  string id = 1;
-  string tenant_id = 2;
-  string type = 3;
-  int64 amount = 4;
-}
-
 message Booking {
   string id = 1;
   string organization_id = 2;
