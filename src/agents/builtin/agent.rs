@@ -846,11 +846,11 @@ impl Agent {
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
-                let msgs_val = state.get("messages").unwrap().as_array().unwrap();
                 let mut msgs = vec![];
+                if let Some(msgs_val) = state.get("messages").and_then(|v| v.as_array()) {
                 for m in msgs_val {
-                    let role_str = m["role"].as_str().unwrap();
-                    let content = m["content"].as_str().unwrap().to_string();
+                    let role_str = m.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+                    let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     let role = match role_str {
                         "user" => crate::types::Role::User,
                         "assistant" => crate::types::Role::Assistant,
@@ -862,8 +862,8 @@ impl Agent {
                     if let Some(tcs) = m.get("tool_calls").and_then(|v| v.as_array()) {
                         for tc in tcs {
                             tool_calls.push(crate::types::ToolCall {
-                                id: tc["id"].as_str().unwrap().to_string(),
-                                name: tc["name"].as_str().unwrap().to_string(),
+                                id: tc.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                name: tc.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
                                 arguments: tc["arguments"].clone(),
                             });
                         }
@@ -886,6 +886,7 @@ impl Agent {
                         response_id: None,
                 previous_response_id: None,
                     });
+                }
                 }
 
                 let req = crate::types::ChatRequest {
@@ -1221,9 +1222,14 @@ impl Agent {
 
         match graph.run(initial_state).await {
             Ok(final_state) => {
-                let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
-                let last_msg = final_msgs.last().unwrap();
-                let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let content = final_state
+                    .get("messages")
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| arr.last())
+                    .and_then(|last_msg| last_msg.get("content"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 on_event(AgentEvent::TaskComplete { content: content.clone() });
 
                 // Cross-Department Memory Consolidation for LangGraph
