@@ -106,7 +106,7 @@ impl HybridSyncDaemon {
 
         for row in rows {
             let id: i32 = row.get("id");
-            let _ = sqlx::query("UPDATE telemetry_buffer SET sync_status = 'SYNCED' WHERE id = ?")
+            let _ = sqlx::query("UPDATE telemetry_buffer SET sync_status = 'SYNCED', sync_error = NULL WHERE id = ?")
                 .bind(id)
                 .execute(&self.sqlite_pool)
                 .await;
@@ -343,7 +343,7 @@ impl HybridSyncDaemon {
                     }
 
                     // Update SQLite sync status
-                    sqlx::query("UPDATE swarm_truth_embeddings SET sync_status = 'SYNCED' WHERE memory_id = ?")
+                    sqlx::query("UPDATE swarm_truth_embeddings SET sync_status = 'SYNCED', sync_error = NULL WHERE memory_id = ?")
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await?;
