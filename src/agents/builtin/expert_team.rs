@@ -237,9 +237,21 @@ impl QualityGates {
         }
 
         // 75% similarity deduplication using Jaccard index on word tokens
+        // Normalize strings to be case-insensitive and ignore punctuation.
         let mut token_sets = Vec::with_capacity(summaries.len());
+        let mut normalized_summaries = Vec::with_capacity(summaries.len());
+
         for summary in summaries {
-            let set: std::collections::HashSet<&str> = summary.split_whitespace().collect();
+            let normalized: String = summary
+                .chars()
+                .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+                .flat_map(|c| c.to_lowercase())
+                .collect();
+            normalized_summaries.push(normalized);
+        }
+
+        for normalized in &normalized_summaries {
+            let set: std::collections::HashSet<&str> = normalized.split_whitespace().collect();
             token_sets.push(set);
         }
 
@@ -388,6 +400,29 @@ mod tests {
         let summaries = vec![
             "Identical output about market analysis Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
             "Identical output about market analysis Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+        ];
+        let res = QualityGates::pre_merge(&summaries);
+        assert!(res.is_err());
+        assert!(matches!(res, Err(e) if e.contains("High similarity detected")));
+    }
+
+    #[test]
+    fn test_pre_merge_success_low_similarity() {
+        let summaries = vec![
+            "This is a completely unique summary about AI trends for Chapter 1 and Chapter 2.".to_string(),
+            "And here we have financial data talking about profits for Chapter 3 and Chapter 4.".to_string(),
+            "Strategic overview with different insights for Chapter 5 and Chapter 6.".to_string(),
+            "Process analysis detailing operational changes for Chapter 7 and Chapter 8.".to_string(),
+        ];
+        let res = QualityGates::pre_merge(&summaries);
+        assert!(res.is_ok(), "Expected success but got error: {:?}", res.err());
+    }
+
+    #[test]
+    fn test_pre_merge_failure_high_similarity_casing() {
+        let summaries = vec![
+            "IDENTICAL output about market analysis! Chapter 1, Chapter 2, Chapter 3, Chapter 4, Chapter 5, Chapter 6, Chapter 7, Chapter 8.".to_string(),
+            "identical output about market analysis chapter 1 chapter 2 chapter 3 chapter 4 chapter 5 chapter 6 chapter 7 chapter 8".to_string(),
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
