@@ -17,7 +17,7 @@ test.describe('Brand Studio workflow', () => {
     await page.locator('#brand-toolbox-campaign').fill('launch the summer dessert box');
 
     await page.getByRole('button', { name: 'Generate Toolbox' }).click();
-    await expect(page.getByText('Brand DNA').first()).toBeVisible({
+    await expect(page.locator('#brand-toolbox-status')).toHaveText('Brand toolbox ready.', {
       timeout: 30_000,
     });
 
@@ -30,12 +30,18 @@ test.describe('Brand Studio workflow', () => {
     await expect(page.getByRole('heading', { name: 'Creative Assets' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Photoshoot' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Website Draft' })).toBeVisible();
-    await expect(page.locator('svg').first()).toBeVisible();
+    await expect(page.locator('#brand-toolbox-colors span')).toHaveCount(4);
+    await expect(page.locator('#brand-toolbox-results svg').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Publish Website' }).click();
-    await expect(page.getByText(/Published domain: .*\.ohc\.store/)).toBeVisible({
+    await expect(page.locator('#brand-toolbox-status')).toContainText(/Website published at .*\.ohc\.store/, {
       timeout: 30_000,
     });
+    await expect(page.locator('#brand-toolbox-published-domain')).toContainText(/Published domain: .*\.ohc\.store/);
+
+    await page.getByRole('button', { name: 'Open Website Draft' }).click();
+    await expect(page.getByRole('heading', { name: 'Edit Website' })).toBeVisible();
+    await expect(page.locator('.builder-block').first()).toContainText('HeroBlock');
     await expect(page.locator('body')).not.toContainText(confusingCompetitorName);
   });
 });

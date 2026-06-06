@@ -22,28 +22,6 @@ if [[ ! -f "$workspace_root/package.json" || ! -d "$workspace_root/node_modules"
   echo "[playwright] Error: Bazel runfiles are missing package.json or node_modules under $workspace_root" >&2
   exit 1
 fi
-
-SOURCE_REPO_ROOT_CANDIDATES=(
-  "${SOURCE_REPO_ROOT:-}"
-  "${GITHUB_WORKSPACE:-}"
-  "$(pwd)"
-  "/home/kevin/mono"
-  "/home/runner/work/mono/mono"
-  "$workspace_root"
-)
-for candidate in "${SOURCE_REPO_ROOT_CANDIDATES[@]}"; do
-  if [[ -n "$candidate" && -f "$candidate/src/server/lib.rs" ]]; then
-    export SOURCE_REPO_ROOT="$(realpath "$candidate")"
-    break
-  fi
-done
-export SOURCE_REPO_ROOT="${SOURCE_REPO_ROOT:-$(pwd)}"
-if [[ -f "$SOURCE_REPO_ROOT/.env" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "$SOURCE_REPO_ROOT/.env"
-  set +a
-fi
 cd "$workspace_root"
 
 # Resolve spec files to absolute paths if passed as arguments.
@@ -394,9 +372,7 @@ fi
 export OHC_AGENT_TASK_TIMEOUT_SECS="${OHC_AGENT_TASK_TIMEOUT_SECS:-240}"
 export OHC_LLM_TIMEOUT_SECS="${OHC_LLM_TIMEOUT_SECS:-180}"
 if [[ -n "$AGENT_BIN" ]]; then
-  if [[ -z "${OHC_BUILTIN_AGENT_BINARY:-}" || ! -x "${OHC_BUILTIN_AGENT_BINARY:-}" ]]; then
-    export OHC_BUILTIN_AGENT_BINARY="$AGENT_BIN"
-  fi
+  export OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-$AGENT_BIN}"
 fi
 
 # Pick ports from a target-specific window. Plain "bind to port 0, close, then
@@ -410,10 +386,6 @@ export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
 export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
 export API_BASE_URL="http://127.0.0.1:$OHC_SERVER_PORT"
-export BACKEND_URL="$API_BASE_URL"
-export OHC_BACKEND_URL="$API_BASE_URL"
-export OHC_API_URL="$API_BASE_URL"
-export OHC_STANDALONE_MODE="${OHC_STANDALONE_MODE:-false}"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
@@ -437,7 +409,6 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
   OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \
   MINIMAX_MODEL="${MINIMAX_MODEL:-}" \
-  OHC_STANDALONE_MODE="$OHC_STANDALONE_MODE" \
   OHC_AGENT_TASK_TIMEOUT_SECS="$OHC_AGENT_TASK_TIMEOUT_SECS" \
   OHC_LLM_TIMEOUT_SECS="$OHC_LLM_TIMEOUT_SECS" \
   OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-}" \
