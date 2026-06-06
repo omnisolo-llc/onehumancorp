@@ -3646,47 +3646,85 @@ async fn create_ui_bom_item_handler(
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
-                ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
-                ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
-                ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
-                ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
-                ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "Interactive API reference for integrations."),
+                ("Getting Started", "/help/getting-started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
+                ("My Store", "/help/my-store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
+                ("Payments", "/help/payments", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
+                ("AI Agents", "/help/ai-agents", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
+                ("Marketing", "/help/marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
+                ("Account & Billing", "/help/account-billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
+                ("API Reference", "/api-docs", "Interactive API reference for integrations for advanced users."),
             ];
 
-            let query = req.message.to_lowercase();
-            let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+            let client = crate::minimax::MinimaxClient::new(api_key);
 
-            if query.contains("getting started") {
-                reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
-            } else if query.contains("store") {
-                reply = format!("Based on our help center: {}", help_articles[1].1);
-                link_url = "/help/my-store";
-            } else if query.contains("payment") {
-                reply = format!("Based on our help center: {}", help_articles[2].1);
-                link_url = "/help/payments";
-            } else if query.contains("ai agent") {
-                reply = format!("Based on our help center: {}", help_articles[3].1);
-                link_url = "/help/ai-agents";
-            } else if query.contains("marketing") {
-                reply = format!("Based on our help center: {}", help_articles[4].1);
-                link_url = "/help/marketing";
-            } else if query.contains("billing") {
-                reply = format!("Based on our help center: {}", help_articles[5].1);
-                link_url = "/help/account-billing";
-            } else if query.contains("api") || query.contains("advanced") {
-                reply = format!("Based on our help center: {}", help_articles[6].1);
-                link_url = "/api-docs";
+            let mut context_str = String::new();
+            for (title, link, content) in &help_articles {
+                context_str.push_str(&format!("Article Title: {}\nLink: {}\nContent: {}\n\n", title, link, content));
             }
 
-            axum::Json(serde_json::json!({
-                "reply": reply,
-                "link": { "url": link_url, "title": link_title }
-            }))
+            let prompt = format!(
+                "You are an AI Help Agent for One Human Corp (OHC). You must answer the user's question using only the help articles provided below.\n\
+                \n\
+                Help Articles:\n\
+                {}\n\
+                User Question: {}\n\
+                \n\
+                Provide a helpful, plain-language response. Keep it under 2 paragraphs. If the answer is not in the articles, say 'I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business, but I couldn't find a specific answer for that in our help center.'\n\
+                \n\
+                You must also provide the link to the most relevant article in your JSON response. Format your response strictly as a JSON object with two keys: 'reply' (your text response) and 'link' (an object with 'url' and 'title' for the most relevant article, or null if no article matched).\n\
+                Example:\n\
+                {{\"reply\": \"Welcome to OHC! You can start by setting up your store...\", \"link\": {{\"url\": \"/help/getting-started\", \"title\": \"Getting Started\"}}}}",
+                context_str, req.message
+            );
+
+            let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
+
+            let fallback_response = serde_json::json!({
+                "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.",
+                "link": { "url": "/help/getting-started", "title": "Read the full article →" }
+            });
+
+            match client.reason(&compressed_prompt).await {
+                Ok(content) => {
+                    // Try to parse the JSON output from the LLM
+                    let mut clean_content = content.trim();
+                    if clean_content.starts_with("```json") {
+                        clean_content = clean_content.trim_start_matches("```json").trim();
+                    }
+                    if clean_content.ends_with("```") {
+                        clean_content = clean_content.trim_end_matches("```").trim();
+                    }
+
+                    match serde_json::from_str::<serde_json::Value>(clean_content) {
+                        Ok(mut parsed) => {
+                            // Ensure link has "Read the full article →" if not present
+                            if let Some(link_obj) = parsed.get_mut("link") {
+                                if let Some(obj) = link_obj.as_object_mut() {
+                                    if !obj.contains_key("title") || obj["title"].as_str().unwrap_or("") == "" {
+                                        obj.insert("title".to_string(), serde_json::Value::String("Read the full article →".to_string()));
+                                    } else {
+                                        obj.insert("title".to_string(), serde_json::Value::String("Read the full article →".to_string()));
+                                    }
+                                }
+                            }
+                            axum::Json(parsed)
+                        },
+                        Err(_) => {
+                            // LLM didn't return valid JSON, just return the raw text with a generic link
+                            tracing::error!("Failed to parse LLM response as JSON: {}", content);
+                            axum::Json(serde_json::json!({
+                                "reply": content,
+                                "link": { "url": "/help/getting-started", "title": "Read the full article →" }
+                            }))
+                        }
+                    }
+                },
+                Err(e) => {
+                    tracing::error!("AI Help Agent error: {}", e);
+                    axum::Json(fallback_response)
+                }
+            }
         }))
         .merge(webhook_router)
         .merge(meta_webhook_router)

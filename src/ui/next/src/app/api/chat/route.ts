@@ -22,8 +22,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `message must be ${MAX_MESSAGE_LENGTH} characters or fewer` }, { status: 413 });
   }
 
-  return NextResponse.json({
-    reply: "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.",
-    link: { url: "/help", title: "Read the full article →" }
-  });
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const tenantId = req.headers.get('x-tenant-id') || 'default';
+  const userId = req.headers.get('x-user-id') || 'default';
+
+  const authHeader = req.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-tenant-id': tenantId,
+    'x-user-id': userId
+  };
+  if (authHeader) {
+    headers['authorization'] = authHeader;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    const res = await fetch(`${backendUrl}/api/chat`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ message: message.trim() }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
+    }
+
+    return NextResponse.json({ error: 'Failed to process chat request' }, { status: res.status });
+  } catch (e) {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
 }
