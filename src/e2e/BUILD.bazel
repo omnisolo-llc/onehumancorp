@@ -81,7 +81,7 @@ sh_binary(
 # Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_16
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
-    ci_shard_count = 16,
+    ci_shard_count = 64,
     data = [
         "//src/ui/next:next_app_e2e_data",
     ],
