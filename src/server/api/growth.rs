@@ -442,6 +442,7 @@ pub struct StorefrontEmbedQuery {
 }
 
 async fn handle_storefront_embed(
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -467,6 +468,27 @@ async fn handle_storefront_embed(
     // Note: URL encode tenant for the href
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
 
+    let mut has_pro = false;
+    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
+        use sqlx::Row;
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+            .bind(tenant)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
+        if let Some(plan) = row {
+            has_pro = plan.to_lowercase() == "pro";
+        }
+    }
+
+    let branding = if !has_pro {
+        format!(r#"<div class="footer">
+            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+        </div>"#)
+    } else {
+        "".to_string()
+    };
+
     let html = format!(r##"
 <!DOCTYPE html>
 <html>
@@ -488,9 +510,7 @@ async fn handle_storefront_embed(
         <h2 class="title">{safe_name}</h2>
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
-        <div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
-        </div>
+        {branding}
     </div>
 </body>
 </html>
@@ -499,8 +519,10 @@ async fn handle_storefront_embed(
 }
 
 async fn handle_og_card(
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
     let bg_color = if query.theme.as_deref() == Some("dark") { "#1a1a1a" } else { "#ffffff" };
@@ -534,6 +556,24 @@ async fn handle_og_card(
             .into_response();
     }
 
+    let mut has_pro = false;
+    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+            .bind(tenant)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
+        if let Some(plan) = row {
+            has_pro = plan.to_lowercase() == "pro";
+        }
+    }
+
+    let branding = if !has_pro {
+        format!(r#"<text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>"#, text_color)
+    } else {
+        "".to_string()
+    };
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
@@ -544,7 +584,7 @@ async fn handle_og_card(
   <rect x="100" y="450" width="300" height="80" fill="{accent_color}" rx="10" />
   <text x="250" y="505" font-family="sans-serif" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="middle">Buy Now</text>
 
-  <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
+  {branding}
 </svg>"##);
 
     axum::response::Response::builder()
@@ -615,14 +655,18 @@ async fn handle_get_milestone_card(
 
     // Fetch business name - handle "DEFAULT" and ID vs tenant_id
     let mut business_name = "My Awesome Store".to_string();
+    let mut has_pro = false;
     if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(tenant_id).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT business_name FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT business_name, plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant_id)
             .fetch_optional(&state.pool)
             .await
             .unwrap_or_default();
-        if let Some(name) = row {
+        if let Some((name, plan_tier)) = row {
             business_name = name;
+            if let Some(plan) = plan_tier {
+                has_pro = plan.to_lowercase() == "pro";
+            }
         }
     }
 
@@ -641,6 +685,12 @@ async fn handle_get_milestone_card(
         "10th_order" => ("10th Order!", "Business is booming", "📈"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
         _ => ("Success Milestone!", "Built with OHC", "✨"),
+    };
+
+    let branding = if !has_pro {
+        r##"<text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>"##.to_string()
+    } else {
+        "".to_string()
     };
 
     if false {
@@ -675,7 +725,7 @@ async fn handle_get_milestone_card(
   <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
-  <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+  {branding}
 </svg>"##);
 
     axum::response::Response::builder()
@@ -747,13 +797,20 @@ async fn handle_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
-        .bind(&query.team_id)
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+    let pool_clone = state.pool.clone();
+    let team_id = query.team_id.clone();
+    let active_referrals_fut = async {
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+            .bind(&team_id)
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
+    };
 
-    match tracker.get_team_invites_count(&query.team_id).await {
+    let invites_count_fut = tracker.get_team_invites_count(&query.team_id);
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
+
+    match invites_count_res {
         Ok(total_invites) => {
             let resp = TeamInvitesMetricsResponse {
                 total_invites,
@@ -1227,6 +1284,41 @@ mod tests {
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
     }
+
+    #[tokio::test]
+    async fn test_powered_by_ohc_branding() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Pro', 'pro') ON CONFLICT (id) DO UPDATE SET plan_tier = 'pro'")
+            .bind("11111111-1111-1111-1111-111111111111")
+            .execute(&pool).await.unwrap();
+
+        // Pro plan should not have branding
+        let query = StorefrontEmbedQuery { tenant: Some("11111111-1111-1111-1111-111111111111".to_string()), product_name: None, price: None, theme: None };
+        let res = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+        assert!(!html.contains("Powered by OHC"));
+
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Free', 'free') ON CONFLICT (id) DO UPDATE SET plan_tier = 'free'")
+            .bind("22222222-2222-2222-2222-222222222222")
+            .execute(&pool).await.unwrap();
+
+        // Free plan should have branding
+        let query2 = StorefrontEmbedQuery { tenant: Some("22222222-2222-2222-2222-222222222222".to_string()), product_name: None, price: None, theme: None };
+        let res2 = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query2)).await.into_response();
+        let body_bytes2 = axum::body::to_bytes(res2.into_body(), usize::MAX).await.unwrap();
+        let html2 = String::from_utf8(body_bytes2.to_vec()).unwrap();
+        assert!(html2.contains("Powered by OHC"));
+    }
 }
 
 async fn handle_aggregated_team_invites_metrics(
@@ -1241,12 +1333,18 @@ async fn handle_aggregated_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+    let pool_clone = state.pool.clone();
+    let active_referrals_fut = async {
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
+    };
 
-    match tracker.get_total_invites_count().await {
+    let invites_count_fut = tracker.get_total_invites_count();
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
+
+    match invites_count_res {
         Ok(total_invites) => {
             let resp = TeamInvitesMetricsResponse {
                 total_invites,

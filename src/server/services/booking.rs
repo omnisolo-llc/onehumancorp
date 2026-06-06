@@ -12,8 +12,18 @@ pub struct Quote {
     pub amount: i64,
     pub status: String,
     pub booking_id: Option<Uuid>,
+    pub required_deposit: i64,
+    pub expires_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Invoice {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub invoice_type: String, // 'Deposit' or 'Final'
+    pub amount: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +47,7 @@ pub struct BookingRecord {
     pub tenant_id: String,
     pub customer_id: String,
     pub product_id: String,
+    pub quote_id: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub status: String,
@@ -49,6 +60,8 @@ impl BookingService {
         tenant_id: Uuid,
         customer_id: Uuid,
         amount: i64,
+        required_deposit: i64,
+        expires_at: DateTime<Utc>,
     ) -> Quote {
         Quote {
             id: Uuid::new_v4(),
@@ -57,6 +70,8 @@ impl BookingService {
             amount,
             status: "draft".to_string(),
             booking_id: None,
+            required_deposit,
+            expires_at,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }
@@ -181,7 +196,7 @@ impl BookingService {
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
+        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, quote_id, start_time, end_time, status FROM bookings")
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -193,6 +208,7 @@ impl BookingService {
             tenant_id: row.get("tenant_id"),
             customer_id: row.get("customer_id"),
             product_id: row.get("product_id"),
+            quote_id: row.try_get("quote_id").ok(),
             start_time: row.get("start_time"),
             end_time: row.get("end_time"),
             status: row.get("status"),
@@ -214,13 +230,14 @@ impl BookingService {
         }
 
         sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, quote_id, start_time, end_time, status) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&booking.id)
         .bind(&booking.tenant_id)
         .bind(&booking.customer_id)
         .bind(&booking.product_id)
+        .bind(&booking.quote_id)
         .bind(booking.start_time)
         .bind(booking.end_time)
         .bind(&booking.status)
@@ -258,12 +275,16 @@ mod tests {
         let tenant_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
         let amount = 15000;
+        let required_deposit = 5000;
+        let expires_at = Utc::now() + chrono::Duration::days(7);
 
-        let quote = BookingService::create_draft_quote(tenant_id, customer_id, amount);
+        let quote = BookingService::create_draft_quote(tenant_id, customer_id, amount, required_deposit, expires_at);
 
         assert_eq!(quote.tenant_id, tenant_id);
         assert_eq!(quote.customer_id, customer_id);
         assert_eq!(quote.amount, amount);
+        assert_eq!(quote.required_deposit, required_deposit);
+        assert_eq!(quote.expires_at, expires_at);
         assert_eq!(quote.status, "draft");
         assert!(quote.booking_id.is_none());
     }
@@ -273,8 +294,10 @@ mod tests {
         let tenant_id = Uuid::new_v4();
         let customer_id = Uuid::new_v4();
         let amount = 15000;
+        let required_deposit = 5000;
+        let expires_at = Utc::now() + chrono::Duration::days(7);
 
-        let mut quote = BookingService::create_draft_quote(tenant_id, customer_id, amount);
+        let mut quote = BookingService::create_draft_quote(tenant_id, customer_id, amount, required_deposit, expires_at);
 
         let new_amount = Some(20000);
         let result = BookingService::approve_quote(&mut quote, new_amount);
