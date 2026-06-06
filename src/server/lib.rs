@@ -2280,6 +2280,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
+    let yield_worker = crate::workers::yield_management_worker::YieldManagementWorker::new(db.clone());
+    tokio::spawn(async move {
+        yield_worker.start().await;
+    });
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();

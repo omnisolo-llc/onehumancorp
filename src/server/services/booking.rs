@@ -510,6 +510,103 @@ impl BookingEngineService for NativeBookingService {
         }))
     }
 
+    async fn get_yield_opportunities(
+        &self,
+        request: Request<::server_ohc::app::GetYieldOpportunitiesRequest>,
+    ) -> Result<Response<::server_ohc::app::GetYieldOpportunitiesResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Query the yield_opportunities table
+        let opportunities = sqlx::query_as::<_, (String, String, chrono::NaiveDate, i32, i32, i32, String, String)>(
+            "SELECT id, product_id, target_date, empty_slots, total_slots, recommended_discount_percent, target_audience, status FROM yield_opportunities WHERE tenant_id = $1 AND status = 'PENDING_APPROVAL'"
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut res = vec![];
+        for (id, product_id, target_date, empty_slots, total_slots, recommended_discount_percent, target_audience, status) in opportunities {
+            res.push(::server_ohc::app::YieldOpportunity {
+                id,
+                product_id,
+                target_date: target_date.to_string(),
+                empty_slots,
+                total_slots,
+                recommended_discount_percent,
+                target_audience,
+                status,
+            });
+        }
+
+        Ok(Response::new(::server_ohc::app::GetYieldOpportunitiesResponse {
+            opportunities: res,
+        }))
+    }
+
+    async fn approve_yield_opportunity(
+        &self,
+        request: Request<::server_ohc::app::ApproveYieldOpportunityRequest>,
+    ) -> Result<Response<::server_ohc::app::ApproveYieldOpportunityResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let opportunity_id = request.into_inner().opportunity_id;
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows_affected = sqlx::query(
+            "UPDATE yield_opportunities SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2 AND status = 'PENDING_APPROVAL'"
+        )
+        .bind(&tenant_id)
+        .bind(&opportunity_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .rows_affected();
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        if rows_affected == 0 {
+            return Err(Status::not_found("Yield opportunity not found or already processed"));
+        }
+
+        Ok(Response::new(::server_ohc::app::ApproveYieldOpportunityResponse {
+            success: true,
+        }))
+    }
+
     async fn create_conversational_checkout(
         &self,
         request: Request<CreateConversationalCheckoutRequest>,

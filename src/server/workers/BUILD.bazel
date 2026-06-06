@@ -8,6 +8,7 @@ exports_files(
         "maintenance.rs",
         "memory.rs",
         "pos_sync_worker.rs",
+        "yield_management_worker.rs",
         "mod.rs",
     ],
     visibility = ["//visibility:public"],

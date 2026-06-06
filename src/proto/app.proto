@@ -181,6 +181,8 @@ service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
+  rpc GetYieldOpportunities(GetYieldOpportunitiesRequest) returns (GetYieldOpportunitiesResponse);
+  rpc ApproveYieldOpportunity(ApproveYieldOpportunityRequest) returns (ApproveYieldOpportunityResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -227,6 +229,35 @@ message ConversationalCheckoutSession {
   string checkout_url = 6;
   string status = 7;
   int64 expires_at_unix = 8;
+}
+
+// Yield Management Messages
+message YieldOpportunity {
+  string id = 1;
+  string product_id = 2;
+  string target_date = 3;
+  int32 empty_slots = 4;
+  int32 total_slots = 5;
+  int32 recommended_discount_percent = 6;
+  string target_audience = 7;
+  string status = 8;
+}
+
+message GetYieldOpportunitiesRequest {
+  string tenant_id = 1;
+}
+
+message GetYieldOpportunitiesResponse {
+  repeated YieldOpportunity opportunities = 1;
+}
+
+message ApproveYieldOpportunityRequest {
+  string tenant_id = 1;
+  string opportunity_id = 2;
+}
+
+message ApproveYieldOpportunityResponse {
+  bool success = 1;
 }
 
 // POS Engine messages
