@@ -3,9 +3,9 @@ import { test, expect } from './fixtures';
 test.describe('Wizard Refinement E2E', () => {
   test('keeps the setup flow plain-language', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.getByText(/Zero tech skills needed\\. We do the heavy lifting/)).toBeVisible();
-    await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await page.getByRole('button', { name: 'Instant Build' }).click();
+    await expect(page.getByRole('heading', { name: 'Describe your business in a sentence' })).toBeVisible();
   });
 
   test('exposes AI helper and prompt tuning areas', async ({ page }) => {
