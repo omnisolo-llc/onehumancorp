@@ -50,6 +50,40 @@ export default function ReferralsPage() {
               When your friends launch their storefront on OHC, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
             </p>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
+                <div className="text-sm font-bold uppercase tracking-wide text-gray-500">Total Referrals</div>
+                <div className="mt-2 text-3xl font-bold font-outfit text-gray-900">0</div>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
+                <div className="text-sm font-bold uppercase tracking-wide text-gray-500">Rewards Earned</div>
+                <div className="mt-2 text-3xl font-bold font-outfit text-gray-900">$0</div>
+              </div>
+            </div>
+
+            <div className="mb-8 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+              <h3 className="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">How it works</h3>
+              <div className="flex flex-col sm:flex-row gap-4 relative">
+                <div className="flex-1 flex flex-col items-center text-center relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold mb-2">1</div>
+                  <h4 className="text-sm font-semibold text-gray-900">Share Link</h4>
+                  <p className="text-xs text-gray-500 mt-1">Send your unique link to a friend</p>
+                </div>
+                <div className="hidden sm:block absolute top-4 left-[16.66%] right-[16.66%] h-0.5 bg-gray-200 z-0"></div>
+                <div className="flex-1 flex flex-col items-center text-center relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold mb-2">2</div>
+                  <h4 className="text-sm font-semibold text-gray-900">They Sign Up</h4>
+                  <p className="text-xs text-gray-500 mt-1">Friend creates their OHC store</p>
+                </div>
+                <div className="hidden sm:block absolute top-4 left-[50%] right-[16.66%] h-0.5 bg-gray-200 z-0"></div>
+                <div className="flex-1 flex flex-col items-center text-center relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold mb-2">3</div>
+                  <h4 className="text-sm font-semibold text-gray-900">You Get $50</h4>
+                  <p className="text-xs text-gray-500 mt-1">Earn credit for premium features</p>
+                </div>
+              </div>
+            </div>
+
             <div className="mb-8">
               <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Your Referral Link</label>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -72,7 +106,7 @@ export default function ReferralsPage() {
                   className={`px-6 py-3 rounded-xl text-sm font-bold transition-all sm:w-auto w-full ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
                   disabled={isLoading}
                 >
-                  {copied ? 'Copied!' : 'Copy'}
+                  {copied ? 'Copied!' : 'Copy Link'}
                 </button>
               </div>
             </div>

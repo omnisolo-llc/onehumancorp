@@ -20,6 +20,11 @@ message StatusCount {
 }
 
 
+enum PaymentSource {
+  STRIPE_TERMINAL_TAP = 0;
+  ONLINE_CHECKOUT = 1;
+}
+
 message Order {
   string id = 1;
   string organization_id = 2;
@@ -27,6 +32,16 @@ message Order {
   int64 amount_cents = 4;
   string status = 5;
   int64 created_at_unix = 6;
+}
+
+message Booking {
+  string id = 1;
+  string organization_id = 2;
+  string customer_id = 3;
+  string product_id = 4;
+  int64 start_time_unix = 5;
+  int64 end_time_unix = 6;
+  string status = 7;
 }
 
 message DashboardSnapshot {
@@ -39,6 +54,7 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
+  repeated Booking bookings = 9;
 }
 
 message GetDashboardRequest {
@@ -211,4 +227,32 @@ message ConversationalCheckoutSession {
   string checkout_url = 6;
   string status = 7;
   int64 expires_at_unix = 8;
+}
+
+// POS Engine messages
+message PosOfflineTransaction {
+  string id = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string payload = 6; // JSON detailing the items bought
+  string status = 7; // PENDING, SYNCED, FAILED
+  int64 created_at_unix = 8;
+}
+
+message SyncOfflineTransactionsRequest {
+  string tenant_id = 1;
+  string client_id = 2;
+  repeated PosOfflineTransaction transactions = 3;
+}
+
+message SyncOfflineTransactionsResponse {
+  bool success = 1;
+  int32 synced_count = 2;
+  repeated string failed_transaction_ids = 3;
+}
+
+service PosService {
+  rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
 }

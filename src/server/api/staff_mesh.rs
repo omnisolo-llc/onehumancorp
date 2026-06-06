@@ -322,7 +322,7 @@ mod tests {
             .method("POST")
             .uri("/staff")
             .header("content-type", "application/json")
-            .header("x-spiffe-id", "spiffe://onehumancorp.io/system/test_tenant")
+            .header("x-spiffe-id", "spiffe://onehumancorp.io/test_org/test_tenant")
             .body(Body::from(create_payload.to_string()))
             .unwrap();
 
@@ -342,7 +342,7 @@ mod tests {
             .method("POST")
             .uri(format!("/staff/{}/pin", staff_id))
             .header("content-type", "application/json")
-            .header("x-spiffe-id", "spiffe://onehumancorp.io/system/test_tenant")
+            .header("x-spiffe-id", "spiffe://onehumancorp.io/test_org/test_tenant")
             .body(Body::from(pin_payload.to_string()))
             .unwrap();
 
@@ -353,7 +353,7 @@ mod tests {
         let request = Request::builder()
             .method("GET")
             .uri("/staff")
-            .header("x-spiffe-id", "spiffe://onehumancorp.io/system/test_tenant")
+            .header("x-spiffe-id", "spiffe://onehumancorp.io/test_org/test_tenant")
             .body(Body::empty())
             .unwrap();
 
@@ -380,7 +380,7 @@ mod tests {
             .method("POST")
             .uri("/timecard")
             .header("content-type", "application/json")
-            .header("x-spiffe-id", "spiffe://onehumancorp.io/system/test_tenant")
+            .header("x-spiffe-id", "spiffe://onehumancorp.io/test_org/test_tenant")
             .body(Body::from(timecard_payload.to_string()))
             .unwrap();
 

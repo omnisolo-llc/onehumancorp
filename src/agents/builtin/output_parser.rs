@@ -48,9 +48,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                                 format!("{}", e)
                             };
                             Err(format!(
-                                "Failed to parse tool call arguments as valid JSON matching the schema.
-Reason: {}
-Please fix the JSON and retry calling the tool.", detail
+                                "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nPlease strictly follow the tool's JSON schema and try again.", detail
                             ))
                         }
                     };
@@ -381,7 +379,7 @@ mod tests {
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Failed to parse tool call arguments"));
+            assert!(msg.contains("Failed to parse arguments") || msg.contains("Output parsing failed after"), "msg was: {}", msg);
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }

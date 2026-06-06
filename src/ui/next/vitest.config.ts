@@ -16,11 +16,14 @@ export default defineConfig({
       '**/external/**',
       '**/.next/**',
       '**/coverage/**',
-      '**/api/**', // API routes require Next.js specific testing utilities or E2E tests
+      // '**/api/**',
     ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+    },
+    alias: {
+      '^swagger-ui-react.*css$': path.resolve(__dirname, './src/mocks/empty.css'),
     },
   },
   resolve: {

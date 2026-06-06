@@ -76,6 +76,7 @@ rust_library(
         "human_in_loop.rs",
         "plane.rs",
         "plugins.rs",
+        "prompt_construction.rs",
         "progressive_skills.rs",
         "proto.rs",
         "provider.rs",
@@ -85,8 +86,11 @@ rust_library(
         "openhands.rs",
         "goose/mod.rs",
         "guardrails/mod.rs",
+        "guardrails/anthropic_hooks.rs",
         "guardrails/openai_hooks.rs",
     "ruflo_plugins.rs",
+        "agentic_seek.rs",
+        "pi.rs",
         "scalable_multi_agent.rs",
         "service.rs",
         "sona_patterns.rs",
@@ -112,6 +116,7 @@ rust_library(
         "//src/proto:common_prost",
         "//src/proto:hub_prost",
         "//src/proto:interop_prost",
+        "//src/server/ohc:server_ohc",
         "//src/server/pricing:server_pricing",
         "//src/server/telemetry:server_telemetry",
         "//src/server/harness:server_harness",
@@ -204,6 +209,7 @@ rust_binary(
 
 AGENT_UNIT_TEST_FILTERS = [
     "agent",
+    "prompt_construction",
     "auth",
     "budget",
     "caveman",
@@ -222,6 +228,8 @@ AGENT_UNIT_TEST_FILTERS = [
     "ruflo",
     "openhands",
     "ruflo_plugins",
+    "agentic_seek",
+    "pi",
     "observability",
     "output_parser",
     "ralph_loop",
@@ -324,8 +332,30 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:serde_json",
+        "@crates//:serde",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "expert_team_integration_tests",
+    size = "small",
+    srcs = ["tests/expert_team_integration.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:serde_json",
     ],
 )

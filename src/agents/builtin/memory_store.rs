@@ -397,31 +397,13 @@ impl VectorRepository {
 
     /// Determines the winner of a memory conflict between two embedding records.
     pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
-        if a.owner_override != b.owner_override {
-            if a.owner_override {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.reliability_score != b.reliability_score {
-            if a.reliability_score > b.reliability_score {
-                (a, b)
-            } else {
-                (b, a)
-            }
-        } else if a.created_at != b.created_at {
-            if a.created_at > b.created_at {
-                (a, b)
-            } else {
-                (b, a)
-            }
+        let cmp = (a.owner_override, a.reliability_score, a.created_at, std::cmp::Reverse(&a.id))
+            .cmp(&(b.owner_override, b.reliability_score, b.created_at, std::cmp::Reverse(&b.id)));
+
+        if cmp == std::cmp::Ordering::Greater {
+            (a, b)
         } else {
-            // Fallback, make it deterministic by ID
-            if a.id < b.id {
-                (a, b)
-            } else {
-                (b, a)
-            }
+            (b, a)
         }
     }
 
@@ -771,6 +753,16 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
         Ok("".to_string())
     }
 
+    /// Store a raw message into the session search FTS5 table
+    async fn store_session_message(&self, _session_id: &str, _role: &str, _content: &str) -> Result<(), String> {
+        Ok(()) // Default no-op
+    }
+
+    /// Searches session messages using FTS5 MATCH, returning ranked snippets
+    async fn search_session_messages(&self, _session_id: &str, _query: &str, _limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
+        Ok(vec![]) // Default no-op
+    }
+
     /// 3-Tier: Pull a detailed topic file on demand
     async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
         Err("Not implemented".to_string())
@@ -780,7 +772,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> { None }
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> { None }
 }
 
 pub struct PersistentMemoryStore {
@@ -895,7 +887,7 @@ impl Anthropic3TierMemoryStore {
 }
 
 #[async_trait]
-impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
+impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
         let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
@@ -999,7 +991,7 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         }
         Ok(results)
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>> {
+    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
     }
 }
@@ -2388,6 +2380,34 @@ mod determine_conflict_winner_tests {
 
         let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
         assert_eq!(winner.id, "a"); // fallback to a, because a.id < b.id
+        assert_eq!(loser.id, "b");
+    }
+
+    #[test]
+    fn test_winner_owner_override_trumps_all() {
+        let a = create_test_record("a", true, 10, 100); // Override but terrible score, very old
+        let b = create_test_record("b", false, 100, 0); // No override but perfect score, very new
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+    }
+
+    #[test]
+    fn test_winner_reliability_score_trumps_recency() {
+        let a = create_test_record("a", false, 90, 100); // Great score, very old
+        let b = create_test_record("b", false, 80, 0); // Good score, very new
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&b, &a);
+        assert_eq!(winner.id, "a");
         assert_eq!(loser.id, "b");
     }
 }

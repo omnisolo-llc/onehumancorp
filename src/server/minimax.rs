@@ -389,7 +389,6 @@ impl MinimaxClient {
     }
 }
 
-#[allow(dead_code)]
 pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
@@ -397,7 +396,6 @@ pub struct LocalLLMClient {
     cache: PromptCache,
 }
 
-#[allow(dead_code)]
 impl LocalLLMClient {
     pub fn new() -> Self {
         let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
@@ -463,38 +461,3 @@ impl LocalLLMClient {
     }
 }
 
-#[allow(dead_code)]
-pub struct ResilientClient {
-    primary: MinimaxClient,
-    fallback: LocalLLMClient,
-}
-
-#[allow(dead_code)]
-impl ResilientClient {
-    pub fn new(primary: MinimaxClient) -> Self {
-        ResilientClient {
-            primary,
-            fallback: LocalLLMClient::new(),
-        }
-    }
-
-    pub async fn reason(&self, prompt: &str) -> Result<String, String> {
-        match self.primary.reason(prompt).await {
-            Ok(res) => Ok(res),
-            Err(e) => {
-                tracing::warn!("Primary LLM failed: {}. Falling back to local.", e);
-                self.fallback.reason(prompt).await
-            }
-        }
-    }
-
-    pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
-        match self.primary.generate_embedding(text).await {
-            Ok(res) => Ok(res),
-            Err(e) => {
-                tracing::warn!("Primary LLM failed: {}. Falling back to local.", e);
-                self.fallback.generate_embedding(text).await
-            }
-        }
-    }
-}

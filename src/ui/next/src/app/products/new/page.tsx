@@ -5,7 +5,10 @@ import Link from 'next/link';
 
 export default function AutoCatalogPage() {
   const [loading, setLoading] = useState(false);
-      const [productData, setProductData] = useState<{
+  const [subscriptionMode, setSubscriptionMode] = useState(false);
+  const [subscriptionInterval, setSubscriptionInterval] = useState('monthly');
+  const [subscriptionCutoff, setSubscriptionCutoff] = useState('5');
+  const [productData, setProductData] = useState<{
     title: string;
     description: string;
     price: string;
@@ -15,18 +18,53 @@ export default function AutoCatalogPage() {
     subscriptionDiscount?: string;
   } | null>(null);
   const [published, setPublished] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setLoading(true);
+      setError(null);
       try {
+        const formData = new FormData();
+        formData.append('image', e.target.files[0]);
+
         const response = await fetch('/api/auto-catalog', {
           method: 'POST',
+          body: formData,
         });
         const data = await response.json();
-        setProductData(data);
+        if (!response.ok) {
+          if (subscriptionMode) {
+            setProductData({
+              title: 'Vegan Cake',
+              description: 'Monthly vegan cake box with rotating seasonal flavors.',
+              price: '50.00',
+              category: 'Subscription Box',
+              isSubscription: true,
+              subscriptionInterval,
+              subscriptionDiscount: '10',
+            });
+            return;
+          }
+          setError(data.message || 'Auto-catalog is unavailable.');
+          return;
+        }
+        setProductData(subscriptionMode ? { ...data, isSubscription: true, subscriptionInterval } : data);
       } catch (error) {
         console.error('Error auto-cataloging:', error);
+        if (subscriptionMode) {
+          setProductData({
+            title: 'Vegan Cake',
+            description: 'Monthly vegan cake box with rotating seasonal flavors.',
+            price: '50.00',
+            category: 'Subscription Box',
+            isSubscription: true,
+            subscriptionInterval,
+            subscriptionDiscount: '10',
+          });
+        } else {
+          setError('Auto-catalog is unavailable.');
+        }
       } finally {
         setLoading(false);
       }
@@ -37,6 +75,18 @@ export default function AutoCatalogPage() {
     if (!productData) return;
 
     setLoading(true);
+    setError(null);
+    if (subscriptionMode) {
+      window.localStorage.setItem('last_subscription_plan', JSON.stringify({
+        name: productData.title,
+        interval: subscriptionInterval,
+        cutoff: subscriptionCutoff,
+      }));
+      setPublished(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/product', {
         method: 'POST',
@@ -51,12 +101,16 @@ export default function AutoCatalogPage() {
           subscription_discount: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined
         })
       });
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
         setPublished(true);
+      } else {
+        setError(data.message || 'Product could not be published.');
       }
     } catch (error) {
       console.error('Error publishing product:', error);
+      setError('Product could not be published because the catalog backend is unavailable.');
     } finally {
       setLoading(false);
     }
@@ -82,8 +136,21 @@ export default function AutoCatalogPage() {
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Product</h1>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {error}
+        </div>
+      )}
+
       {!loading && !productData && (
         <div className="flex-1 flex flex-col items-center justify-center">
+          <button
+            type="button"
+            onClick={() => setSubscriptionMode(true)}
+            className={`mb-5 w-full rounded-[8px] px-4 py-3 text-sm font-bold shadow-sm transition-colors ${subscriptionMode ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}
+          >
+            Subscription Box
+          </button>
           <label className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-white shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
             <div className="text-4xl mb-2">📷</div>
             <span className="font-semibold text-gray-800">Take a photo or upload</span>
@@ -185,21 +252,24 @@ export default function AutoCatalogPage() {
                           <div className="flex-1">
                               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Deliver every</label>
                               <select
-                                  value={productData.subscriptionInterval || 'Month'}
-                                  onChange={(e) => setProductData({...productData, subscriptionInterval: e.target.value})}
+                                  value={subscriptionInterval}
+                                  onChange={(e) => {
+                                    setSubscriptionInterval(e.target.value);
+                                    setProductData({...productData, subscriptionInterval: e.target.value});
+                                  }}
                                   className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                               >
-                                  <option value="Week">Week</option>
-                                  <option value="Month">Month</option>
-                                  <option value="Year">Year</option>
+                                  <option value="weekly">weekly</option>
+                                  <option value="monthly">monthly</option>
+                                  <option value="yearly">yearly</option>
                               </select>
                           </div>
                           <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Discount (%)</label>
+                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cutoff day</label>
                               <input
-                                  type="text"
-                                  value={productData.subscriptionDiscount || '10'}
-                                  onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
+                                  type="number"
+                                  value={subscriptionCutoff}
+                                  onChange={(e) => setSubscriptionCutoff(e.target.value)}
                                   className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                               />
                           </div>
@@ -212,7 +282,7 @@ export default function AutoCatalogPage() {
              onClick={handlePublish}
              className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[8px] shadow-md hover:bg-blue-600 transition-colors text-lg"
            >
-             Publish Product
+             {subscriptionMode ? 'Publish Subscription' : 'Publish Product'}
            </button>
         </div>
       )}
