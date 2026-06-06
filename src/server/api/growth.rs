@@ -130,6 +130,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/share-output", post(handle_share_agentic_output))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -154,6 +155,19 @@ where
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
     pub id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShareAgenticOutputHttpReq {
+    pub tenant_id: String,
+    pub output_type: String,
+    pub output_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShareAgenticOutputHttpRes {
+    pub share_id: String,
+    pub share_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -296,6 +310,29 @@ async fn handle_generate_cart(
     Json(GenerateCartResponse {
         message: generated,
     })
+}
+
+async fn handle_share_agentic_output(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ShareAgenticOutputHttpReq>,
+) -> Result<Json<ShareAgenticOutputHttpRes>, StatusCode> {
+    use ::server_ohc::orchestration::ShareAgenticOutputRequest;
+
+    let grpc_req = ShareAgenticOutputRequest {
+        tenant_id: req.tenant_id,
+        output_type: req.output_type,
+        output_id: req.output_id,
+    };
+
+    let service = crate::services::growth::service::MyGrowthService::new(state.pool.clone(), state.hub.clone());
+    use ::server_ohc::orchestration::growth_service_server::GrowthService;
+    let res = service.share_agentic_output(tonic::Request::new(grpc_req)).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let inner = res.into_inner();
+
+    Ok(Json(ShareAgenticOutputHttpRes {
+        share_id: inner.share_id,
+        share_url: inner.share_url,
+    }))
 }
 
 async fn handle_send_receipt(
@@ -1168,6 +1205,29 @@ mod tests {
 
         assert!(res_json.message.contains("Hi Bob"));
         assert!(res_json.message.contains("totaling $100.00"));
+    }
+
+    #[tokio::test]
+    async fn test_share_agentic_output() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = ShareAgenticOutputHttpReq {
+            tenant_id: "test_tenant".to_string(),
+            output_type: "business_analytics".to_string(),
+            output_id: "output_123".to_string(),
+        };
+
+        let res = handle_share_agentic_output(Extension(state.clone()), Json(req)).await.unwrap();
+        let res_json = res.0;
+
+        assert!(res_json.share_id.starts_with("share-"));
+        assert!(res_json.share_url.starts_with("https://ohc.app/shared/share-"));
+
+        let recent_events = state.hub.recent_events(10);
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.agentic_output_shared"));
     }
 
     #[tokio::test]

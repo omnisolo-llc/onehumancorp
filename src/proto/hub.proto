@@ -745,6 +745,17 @@ message TeamInvitesResponse {
   repeated TeamInviteProto invites = 1;
 }
 
+message ShareAgenticOutputRequest {
+  string tenant_id = 1;
+  string output_type = 2; // e.g., "market_audit", "prd", "business_analytics"
+  string output_id = 3;
+}
+
+message ShareAgenticOutputResponse {
+  string share_id = 1;
+  string share_url = 2;
+}
+
 message ReferralScoreResponse {
   int32 total_referrals = 1;
   int32 total_conversions = 2;
@@ -828,6 +839,8 @@ service GrowthService {
   rpc CreateTeamInvite(CreateTeamInviteRequest) returns (TeamInviteProto);
   rpc AcceptTeamInvite(GrowthIdRequest) returns (TeamInviteProto);
   
+  rpc ShareAgenticOutput(ShareAgenticOutputRequest) returns (ShareAgenticOutputResponse);
+
   rpc GetReferralScore(EmptyRequest) returns (ReferralScoreResponse);
   rpc GetReferralScoreMetrics(EmptyRequest) returns (ReferralScoreMetricsResponse);
   

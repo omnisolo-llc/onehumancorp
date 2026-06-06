@@ -500,6 +500,34 @@ impl GrowthService for MyGrowthService {
         Ok(Response::new(invite))
     }
 
+    async fn share_agentic_output(
+        &self,
+        request: Request<ShareAgenticOutputRequest>,
+    ) -> Result<Response<ShareAgenticOutputResponse>, Status> {
+        let req = request.into_inner();
+        if req.tenant_id.is_empty() || req.output_type.is_empty() || req.output_id.is_empty() {
+            return Err(Status::invalid_argument("tenant_id, output_type, and output_id are required"));
+        }
+
+        let share_id = format!("share-{}", Utc::now().timestamp());
+        let share_url = format!("https://ohc.app/shared/{}", share_id);
+
+        // Log the viral growth event sharing output (could persist to DB as well)
+        let msg = self.hub.sanitize_hub_event(serde_json::json!({
+            "type": "growth.agentic_output_shared",
+            "tenant_id": req.tenant_id,
+            "output_type": req.output_type,
+            "output_id": req.output_id,
+            "share_id": share_id,
+        }));
+        self.hub.append_recent_event(msg);
+
+        Ok(Response::new(ShareAgenticOutputResponse {
+            share_id,
+            share_url,
+        }))
+    }
+
     async fn accept_team_invite(
         &self,
         request: Request<GrowthIdRequest>,

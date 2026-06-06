@@ -16,12 +16,42 @@ export default function BusinessAnalytics() {
     }
   }, []);
 
+  const [shareLink, setShareLink] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
+
   const claimTrialExtension = () => {
     window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('I just unlocked advanced AI business analytics on OHC! Start your business in minutes at https://ohc.app 🚀'), '_blank');
     localStorage.setItem('trial_active', 'true');
     setHasPro(true);
     setShowSoftPaywall(false);
     alert('🎉 7-day Pro Trial activated! You now have access to advanced analytics.');
+  };
+
+  const handleShareOutput = async () => {
+    setIsSharing(true);
+    try {
+      const response = await fetch('/api/v1/growth/share-output', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'current_tenant', // hardcoded for demo
+          output_type: 'business_analytics',
+          output_id: 'report_monthly',
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setShareLink(data.share_url);
+        alert(`Successfully generated share link: ${data.share_url}`);
+      } else {
+        alert('Failed to generate share link.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error generating share link.');
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   return (
@@ -31,6 +61,9 @@ export default function BusinessAnalytics() {
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Analytics 📊</h1>
          <div className="flex items-center gap-3">
+             <button onClick={handleShareOutput} disabled={isSharing} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50">
+               {isSharing ? 'Sharing...' : 'Share Report'}
+             </button>
              <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
                Back to Dashboard
              </button>
