@@ -398,16 +398,17 @@ impl CostAuditor {
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
 
-        let mut report = format!("Total Cost: ${:.4}\n", *total_cost);
-        report += &format!("Total Savings via Caching: ${:.4}\n", *caching_savings);
-        report += &format!("Total Savings via Storage Compression: ${:.4}\n", *storage_savings);
-        report += &format!("Total Compute Cost: ${:.4}\n", *total_compute_cost);
-        report += &format!("Total Network Cost: ${:.4}\n", *total_network_cost);
-        report += "Agent Costs:
-";
+        use std::fmt::Write;
+        let mut report = String::with_capacity(1024);
+
+        let _ = writeln!(&mut report, "Total Cost: ${:.4}", *total_cost);
+        let _ = writeln!(&mut report, "Total Savings via Caching: ${:.4}", *caching_savings);
+        let _ = writeln!(&mut report, "Total Savings via Storage Compression: ${:.4}", *storage_savings);
+        let _ = writeln!(&mut report, "Total Compute Cost: ${:.4}", *total_compute_cost);
+        let _ = writeln!(&mut report, "Total Network Cost: ${:.4}", *total_network_cost);
+        let _ = writeln!(&mut report, "Agent Costs:");
 
         for (agent_id, cost) in agent_costs.iter() {
-
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
 
@@ -419,21 +420,19 @@ impl CostAuditor {
             let budget = agent_budgets.get(agent_id);
             if let Some(budget) = budget {
                 if cost > budget {
-                    report += &format!("- {}: ${:.4} (OVER BUDGET){}\n", agent_id, cost, metrics_str);
+                    let _ = writeln!(&mut report, "- {}: ${:.4} (OVER BUDGET){}", agent_id, cost, metrics_str);
                 } else {
-                    report += &format!("- {}: ${:.4}{}\n", agent_id, cost, metrics_str);
+                    let _ = writeln!(&mut report, "- {}: ${:.4}{}", agent_id, cost, metrics_str);
                 }
             } else {
-                report += &format!("- {}: ${:.4}{}\n", agent_id, cost, metrics_str);
+                let _ = writeln!(&mut report, "- {}: ${:.4}{}", agent_id, cost, metrics_str);
             }
         }
 
         let tenant_costs = self.tenant_costs.lock().unwrap();
-        report += "Tenant Costs:
-";
+        let _ = writeln!(&mut report, "Tenant Costs:");
         for (tenant_id, cost) in tenant_costs.iter() {
-            report += &format!("- {}: ${:.4}
-", tenant_id, cost);
+            let _ = writeln!(&mut report, "- {}: ${:.4}", tenant_id, cost);
         }
 
         report
