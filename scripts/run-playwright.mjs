@@ -98,6 +98,7 @@ async function main() {
     },
   });
 
+  process.env.BACKEND_URL = `http://localhost:${process.env.OHC_PORT ?? 18789}`;
   const appReady = await waitForPort(Number(process.env.OHC_PORT ?? 18789), 60);
   if (!appReady) {
     server.kill();
