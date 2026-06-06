@@ -30,6 +30,10 @@ function IconLabel({ icon, children }: { icon: SetupIconName; children: React.Re
 }
 
 export default function OnboardingWizard() {
+  const getApiUrl = (path: string) => {
+    return process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${path}` : path;
+  };
+
   const {
     step, setStep,
     chatStep, setChatStep,
@@ -86,7 +90,7 @@ export default function OnboardingWizard() {
         aiAutoRespond
       };
 
-      const res = await fetch('/api/onboarding/draft', {
+      const res = await fetch(getApiUrl('/api/onboarding/draft'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,10 +121,10 @@ export default function OnboardingWizard() {
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
     Promise.all([
-      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+      fetch(getApiUrl('/api/onboarding/draft'), { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
         .then(res => res.ok ? res.json() : null)
         .catch(() => null),
-      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+      fetch(getApiUrl('/api/onboarding/state'), { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
         .then(res => res.ok ? res.json() : null)
         .catch(() => null)
     ])
@@ -180,7 +184,7 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(() => {
-      fetch('/api/onboarding/state', {
+      fetch(getApiUrl('/api/onboarding/state'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
@@ -204,7 +208,7 @@ export default function OnboardingWizard() {
 
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
 
-      const intakeRes = await fetch('/api/onboarding/intake', {
+      const intakeRes = await fetch(getApiUrl('/api/onboarding/intake'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -271,7 +275,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const startRes = await fetch('/api/onboarding/start', {
+      const startRes = await fetch(getApiUrl('/api/onboarding/start'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
