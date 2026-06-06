@@ -14,16 +14,10 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
-    if ::server_config::get().multitenant {
-        if org_id.trim() == "system" {
+    if org_id.trim() == "system" {
+        if ::server_config::get().multitenant {
             return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode".into()));
         }
-        if org_id.trim().is_empty() {
-            return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
-        }
-    }
-
-    if org_id.trim() == "system" {
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
         // and we cannot call execute multiple times because E is consumed.
@@ -35,6 +29,9 @@ where
             .execute(executor)
             .await?;
     } else {
+        if org_id.trim().is_empty() && ::server_config::get().multitenant {
+            return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
+        }
         // No need to RESET ROLE since SET LOCAL is transaction scoped.
         query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(org_id)
@@ -42,13 +39,4 @@ where
             .await?;
     }
     Ok(())
-}
-
-
-pub fn get_default_tenant() -> String {
-    if ::server_config::get().multitenant {
-        "".to_string()
-    } else {
-        "system".to_string()
-    }
 }

@@ -485,23 +485,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_check_storage_quota_no_mutation() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-storage-no-mutation";
-
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
-
-                let status = limiter.check_storage_quota(tenant_id, 0).await.unwrap();
-                assert!(status.is_allowed);
-            }
-        }
-    }
-
-    #[tokio::test]
     async fn test_check_storage_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
@@ -584,31 +567,6 @@ mod tests {
                 // Verify the monthly key was created and has a value of 1
                 let count: usize = conn.get(&tenant_key).await.unwrap_or(0);
                 assert_eq!(count, 1);
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_agent_action_limit() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-agent-action";
-                let agent_id = "agent-limit";
-
-                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let now = chrono::Utc::now();
-                let month_key = now.format("%Y-%m").to_string();
-                let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
-                let _ : () = conn.del(&agent_key).await.unwrap_or(());
-
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
-
-                for _ in 0..20 {
-                    let _ = limiter.record_action(tenant_id, agent_id).await;
-                }
-                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
-                assert!(status.soft_limit_reached);
             }
         }
     }

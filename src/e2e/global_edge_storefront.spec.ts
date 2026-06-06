@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   test('updates storefront and validates cache invalidation at the edge', async ({ page }) => {

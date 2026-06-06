@@ -38,39 +38,18 @@ impl SyncDeltas for CloudSyncService {
             tracing::debug!("Standalone mode, telemetry disabled, syncing anyway but without telemetry tracking.");
         }
 
-        let mut futures = Vec::new();
         for delta in deltas {
-            let db_clone = self.db.clone();
-            futures.push(async move {
-                let payload_str = serde_json::to_string(&delta.payload).map_err(|e| e.to_string())?;
-                if db_clone.is_sqlite() {
-                    if let DbStore::Sqlite(ref pool) = db_clone.store {
-                        let query = r#"
-                            INSERT INTO mcp_sync_deltas (id, entity_type, entity_id, payload, updated_at)
-                            VALUES ($1, $2, $3, $4, $5)
-                            ON CONFLICT (id) DO UPDATE SET
-                            payload = excluded.payload,
-                            updated_at = excluded.updated_at
-                            WHERE mcp_sync_deltas.updated_at < excluded.updated_at
-                        "#;
-                        sqlx::query(query)
-                            .bind(&delta.id)
-                            .bind(&delta.entity_type)
-                            .bind(&delta.entity_id)
-                            .bind(&payload_str)
-                            .bind(delta.updated_at)
-                            .execute(pool)
-                            .await
-                            .map_err(|e| e.to_string())?;
-                    }
-                } else {
+            let payload_str = serde_json::to_string(&delta.payload).map_err(|e| e.to_string())?;
+
+            if self.db.is_sqlite() {
+                if let DbStore::Sqlite(ref pool) = self.db.store {
                     let query = r#"
                         INSERT INTO mcp_sync_deltas (id, entity_type, entity_id, payload, updated_at)
                         VALUES ($1, $2, $3, $4, $5)
                         ON CONFLICT (id) DO UPDATE SET
-                        payload = EXCLUDED.payload,
-                        updated_at = EXCLUDED.updated_at
-                        WHERE mcp_sync_deltas.updated_at < EXCLUDED.updated_at
+                        payload = excluded.payload,
+                        updated_at = excluded.updated_at
+                        WHERE mcp_sync_deltas.updated_at < excluded.updated_at
                     "#;
                     sqlx::query(query)
                         .bind(&delta.id)
@@ -78,17 +57,29 @@ impl SyncDeltas for CloudSyncService {
                         .bind(&delta.entity_id)
                         .bind(&payload_str)
                         .bind(delta.updated_at)
-                        .execute(&db_clone.pool)
+                        .execute(pool)
                         .await
                         .map_err(|e| e.to_string())?;
                 }
-                Ok::<(), String>(())
-            });
-        }
-
-        let results = futures::future::join_all(futures).await;
-        for res in results {
-            res?;
+            } else {
+                let query = r#"
+                    INSERT INTO mcp_sync_deltas (id, entity_type, entity_id, payload, updated_at)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (id) DO UPDATE SET
+                    payload = EXCLUDED.payload,
+                    updated_at = EXCLUDED.updated_at
+                    WHERE mcp_sync_deltas.updated_at < EXCLUDED.updated_at
+                "#;
+                sqlx::query(query)
+                    .bind(&delta.id)
+                    .bind(&delta.entity_type)
+                    .bind(&delta.entity_id)
+                    .bind(&payload_str)
+                    .bind(delta.updated_at)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
         }
         Ok(())
     }
