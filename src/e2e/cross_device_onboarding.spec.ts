@@ -24,7 +24,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
     }
 
     // Verify it landed on the Onboarding page
-    await expect(page.getByText('Tell us about your business')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
 
     // 2. Owner enters business name
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
