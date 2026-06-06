@@ -2350,7 +2350,8 @@ impl Agent {
                 }
                 if final_cfg.enable_visual_verification {
                     if final_cfg.visual_verification_command == "playwright" {
-                        verification_manager.add_visual(Arc::new(crate::verification_loops::PlaywrightVisualVerifier));
+                        // If visual verifier is used, rely on dynamically passed ui_state_path from the verify_visual caller, defaulting to local fixture.
+                        verification_manager.add_visual(Arc::new(crate::verification_loops::PlaywrightVisualVerifier::new("http://localhost:18789", "/tmp/ohc_playwright_verification.png").with_selector("body")));
                     } else if !final_cfg.visual_verification_command.is_empty() {
                         verification_manager.add_visual(Arc::new(crate::verification_loops::BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                     }
