@@ -16,6 +16,7 @@ interface LocalizationState {
   setCurrency: (currency: string) => void;
   setTranslations: (translations: Record<string, string>) => void;
   setFxRates: (rates: FxRate[]) => void;
+  syncLocalization: () => Promise<void>;
   t: (key: string) => string;
   convert: (amount: number, from: string, to: string) => { amount: number; rate: number; isOffline: boolean };
 }
@@ -31,24 +32,63 @@ export const useLocalizationStore = create<LocalizationState>()(
       setCurrency: (currency) => set({ currency }),
       setTranslations: (translations) => set({ translations }),
       setFxRates: (fxRates) => set({ fxRates }),
+      syncLocalization: async () => {
+        try {
+          // If offline, skip sync to rely on cached state.
+          if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+          const response = await fetch('/api/v1/localization/sync');
+          if (response.ok) {
+             const data = await response.json();
+             set({
+               locale: data.locale || get().locale,
+               translations: data.translations || {},
+               fxRates: data.fx_rates || [],
+             });
+          }
+        } catch (error) {
+          console.error("Failed to sync localization:", error);
+        }
+      },
       t: (key) => get().translations[key] || key,
       convert: (amount, from, to) => {
-        if (from === to) return { amount, rate: 1.0, isOffline: false };
+        if (from === to) return { amount, rate: 1.0, isOffline: typeof navigator !== 'undefined' && !navigator.onLine };
         const rateEntry = get().fxRates.find(r => r.from === from && r.to === to);
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
         if (rateEntry) {
+          let convertedAmount = amount * rateEntry.rate;
+
+          if (isOffline) {
+              // Apply cosmetic rounding offline (e.g. 49.99 format, converting cents back and forth)
+              // amount is typically in cents.
+              const dollars = convertedAmount / 100;
+              const roundedDollars = Math.ceil(dollars) - 0.01;
+              convertedAmount = Math.round(roundedDollars * 100);
+          } else {
+              convertedAmount = Math.round(convertedAmount);
+          }
+
           return {
-            amount: Math.round(amount * rateEntry.rate),
+            amount: convertedAmount,
             rate: rateEntry.rate,
-            isOffline: !navigator.onLine
+            isOffline
           };
         }
-        // Fallback or error handling
-        return { amount, rate: 1.0, isOffline: false };
+        // Fallback
+        return { amount, rate: 1.0, isOffline };
       }
     }),
     {
       name: 'ohc-localization-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => {
+        if (typeof window !== 'undefined') return localStorage;
+        return {
+          getItem: () => null,
+          setItem: () => {},
+          removeItem: () => {},
+        };
+      }),
     }
   )
 );

@@ -23,10 +23,11 @@ export const LocalizationToggle: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm hover:bg-white/80 transition-all text-sm font-medium"
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm hover:bg-white/80 transition-all text-sm font-medium ${typeof navigator !== 'undefined' && !navigator.onLine ? 'ring-2 ring-amber-400' : ''}`}
       >
         <span>{locales.find(l => l.code === locale)?.flag}</span>
         <span className="text-gray-900">{currency}</span>
+        {typeof navigator !== 'undefined' && !navigator.onLine && <span className="w-2 h-2 rounded-full bg-amber-400 ml-1" title="Offline - Using cached rates"></span>}
       </button>
 
       {isOpen && (

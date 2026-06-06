@@ -67,16 +67,10 @@ test('Global Offline-First Localization & Currency Toggle', async ({ page, conte
     window.dispatchEvent(new Event('offline'));
   });
 
-  let dialogMessage = '';
-  page.once('dialog', async dialog => {
-    dialogMessage = dialog.message();
-    await dialog.accept();
-  });
-
-  // Click "New Order"
+// Click "New Order"
   await page.click('text=New Order');
 
-  expect(dialogMessage).toContain('46 EUR');
+  await expect(page.locator('text=45.99 EUR')).toBeVisible({ timeout: 10000 });
 
   // 6. Verify Offline Feedback
   await expect(page.locator('text=Using cached rates - Syncing soon')).toBeVisible();

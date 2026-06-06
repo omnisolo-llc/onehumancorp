@@ -91,6 +91,26 @@ impl MultiCurrencyLedger {
         Ok(entry_id)
     }
 
+
+    pub async fn process_offline_batch(
+        &self,
+        tenant_id: &str,
+        transactions: Vec<(i64, String, String, f64)>, // (amount, presentment_currency, settlement_currency, cached_rate)
+    ) -> Result<Vec<String>, String> {
+        let mut entry_ids = Vec::new();
+        for (amount, presentment_currency, settlement_currency, cached_rate) in transactions {
+            let id = self.record_transaction(
+                tenant_id,
+                amount,
+                &presentment_currency,
+                &settlement_currency,
+                Some(cached_rate)
+            ).await?;
+            entry_ids.push(id);
+        }
+        Ok(entry_ids)
+    }
+
     async fn get_fx_rate(&self, from: &str, to: &str) -> Result<f64, String> {
         if from == to {
             return Ok(1.0);
