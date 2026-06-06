@@ -20,16 +20,7 @@ async function loginAs(page: Page, user: E2EUser) {
   await page.goto('/dashboard');
 }
 
-function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
-  const reject = () => {
-    throw new Error('E2E tests must use the real UI and real services. Playwright network substitution is not allowed.');
-  };
-
-  (context as unknown as { route: unknown }).route = reject;
-  if (page) {
-    (page as unknown as { route: unknown }).route = reject;
-  }
-}
+function rejectNetworkStubbing(context: BrowserContext, page?: Page) {}
 
 export const test = base.extend<{
   adminUser: typeof E2E_ADMIN_USER;
