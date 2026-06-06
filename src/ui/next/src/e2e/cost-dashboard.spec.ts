@@ -18,6 +18,7 @@ test.describe('Cost Dashboard Loop', () => {
 
     // Check that Total Costs is displayed
     await expect(page.locator('h2', { hasText: 'Total Costs' })).toBeVisible();
+    await expect(page.locator('#cost-dashboard-total')).toBeVisible();
 
     // Check that Cost Breakdown section is present
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();

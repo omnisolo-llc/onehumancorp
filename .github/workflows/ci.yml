@@ -360,7 +360,7 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
+          docker pull public.ecr.aws/docker/library/postgres:16-alpine
           docker pull valkey/valkey:8-alpine
 
       - name: Test full Playwright UI E2E suite
@@ -532,11 +532,11 @@ jobs:
 
       - name: Pull Docker Compose images
         run: |
-          docker pull pgvector/pgvector:pg16
+          docker pull public.ecr.aws/docker/library/postgres:16-alpine
           docker pull valkey/valkey:8-alpine
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
-            pgvector/pgvector:pg16 \
+            public.ecr.aws/docker/library/postgres:16-alpine \
             valkey/valkey:8-alpine \
             -o /tmp/ohc-docker-compose-images/images.tar
 
