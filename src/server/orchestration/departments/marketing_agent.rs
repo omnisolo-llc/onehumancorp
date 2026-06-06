@@ -1,14 +1,66 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
+use std::sync::Arc;
+
+#[async_trait::async_trait]
+pub trait MarketingCopyClient: Send + Sync {
+    async fn draft_caption(&self, prompt: &str, fallback: &str) -> String;
+}
+
+struct EnvMarketingCopyClient;
+
+#[async_trait::async_trait]
+impl MarketingCopyClient for EnvMarketingCopyClient {
+    async fn draft_caption(&self, prompt: &str, fallback: &str) -> String {
+        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            Ok("minimax") => {
+                let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                crate::minimax::MinimaxClient::new(minimax_key)
+                    .reason(prompt)
+                    .await
+                    .unwrap_or_else(|_| fallback.to_string())
+            }
+            _ => crate::minimax::LocalLLMClient::new()
+                .reason(prompt)
+                .await
+                .unwrap_or_else(|_| fallback.to_string()),
+        }
+    }
+}
 
 pub struct MarketingAgent {
-    orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    orchestrator: Option<Arc<DepartmentOrchestrator>>,
+    copy_client: Arc<dyn MarketingCopyClient>,
 }
 
 impl MarketingAgent {
-    pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        Self { orchestrator }
+    pub fn new(orchestrator: Arc<DepartmentOrchestrator>) -> Self {
+        Self::new_with_copy_client(orchestrator, Arc::new(EnvMarketingCopyClient))
+    }
+
+    pub fn new_with_copy_client(
+        orchestrator: Arc<DepartmentOrchestrator>,
+        copy_client: Arc<dyn MarketingCopyClient>,
+    ) -> Self {
+        Self { orchestrator: Some(orchestrator), copy_client }
+    }
+
+    #[cfg(test)]
+    fn new_for_test(copy_client: Arc<dyn MarketingCopyClient>) -> Self {
+        Self { orchestrator: None, copy_client }
+    }
+
+    fn orchestrator(&self) -> Result<&Arc<DepartmentOrchestrator>, String> {
+        self.orchestrator
+            .as_ref()
+            .ok_or_else(|| "MarketingAgent orchestrator is not configured".to_string())
+    }
+
+    pub async fn draft_product_caption(&self, product_name: &str, description: &str) -> String {
+        let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
+        let fallback = format!("Check out our new {}!", product_name);
+        self.copy_client.draft_caption(&prompt, &fallback).await
     }
 }
 
@@ -43,7 +95,7 @@ impl Department for MarketingAgent {
             });
             let description = format!("7-Day Social Calendar: {}", product_name);
 
-            return self.orchestrator.execute_action(
+            return self.orchestrator()?.execute_action(
                 DepartmentType::Marketing,
                 description,
                 event.tenant_id.clone(),
@@ -71,7 +123,7 @@ impl Department for MarketingAgent {
 
                     let description = format!("Draft portfolio case study for {}", service_name);
 
-                    return self.orchestrator.execute_action(
+                    return self.orchestrator()?.execute_action(
                         DepartmentType::Marketing,
                         description,
                         event.tenant_id.clone(),
@@ -106,18 +158,7 @@ impl Department for MarketingAgent {
                 "".to_string()
             };
 
-            let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
-
-            let draft_copy = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
-                if provider == "minimax" {
-                    let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
-                } else {
-                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
-                }
-            } else {
-                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
-            };
+            let draft_copy = self.draft_product_caption(product_name, description).await;
 
             let payload = serde_json::json!({
                 "feature_type": "social_post",
@@ -127,10 +168,10 @@ impl Department for MarketingAgent {
             });
 
             let action_desc = format!("Draft Instagram post for {}", product_name);
-            return self.orchestrator.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
+            return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
         }
 
-        self.orchestrator.execute_action(
+        self.orchestrator()?.execute_action(
             DepartmentType::Marketing,
             "Draft social media campaign for trending item".to_string(),
             event.tenant_id.clone(),
@@ -151,7 +192,7 @@ impl Department for MarketingAgent {
     }
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+        self.orchestrator()?.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
     }
 }
 
@@ -167,5 +208,31 @@ impl BaseAgent for MarketingAgent {
 
     async fn execute(&self, _payload: Value) -> Result<(), String> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    struct FixedCopyClient;
+
+    #[async_trait::async_trait]
+    impl MarketingCopyClient for FixedCopyClient {
+        async fn draft_caption(&self, _prompt: &str, _fallback: &str) -> String {
+            "Injected caption from test client".to_string()
+        }
+    }
+
+    #[tokio::test]
+    async fn marketing_agent_uses_injected_copy_client_for_product_captions() {
+        let agent = MarketingAgent::new_for_test(Arc::new(FixedCopyClient));
+
+        let caption = agent
+            .draft_product_caption("Ceramic Mug", "Handmade stoneware")
+            .await;
+
+        assert_eq!(caption, "Injected caption from test client");
     }
 }

@@ -12,6 +12,19 @@ This manifest records the first 50 open issues reviewed from `onehumancorp/mono`
 - #24409: `SalesAgent` now accepts native LLM quote intent payloads before falling back to legacy keyword matching.
 - #24255: The Agents page now subscribes to a server-sent events bridge for real-time Activity Feed updates.
 
+## Additional 300-Issue Scan
+
+After the first 50, the next 300 open issues were scanned for code-resolvable feature follow-ups. Most were generated `agent-report` architecture/research issues, but the following were implemented with code and tests in this branch:
+
+- #24045: `MarketingAgent` now accepts an injected marketing copy client instead of reading LLM provider environment variables inline.
+- #23999: The Conversational Checkout generated-card API route now proxies to the Rust backend instead of manufacturing mock checkout sessions.
+- #23956: The frontend `CreateConversationalCheckout` path is wired to the backend route contract for the booking service.
+- #23519: The `/sites/{site_id}` builder endpoint now fetches site, pages, and blocks with a single joined query instead of per-page block queries.
+- #23425: Removed unused Rust imports that were surfacing during shared `server_lib` builds.
+- #22508: Integration connect buttons now request backend-generated OAuth URLs through `/api/integrations/{id}/connect`.
+- #22181: Added an AutoDream sync-duration metric recorder and a dashboard-backed test for `ohc_autodream_sync_duration_seconds`.
+- #22180: Added a test to prevent `hybrid-telemetry.json` drift and synchronized deploy dashboard mirrors to the canonical dashboard.
+
 ## Report Or Research Artifacts
 
 These issues are research reports, generated report placeholders, or architecture briefs. They are recorded here so the PR accounts for the full 50-issue review, but this branch does not use closing keywords for them because shipping the full product surfaces described in those reports would be separate large epics.
@@ -64,4 +77,4 @@ These issues are research reports, generated report placeholders, or architectur
 
 ## Reviewer Notes
 
-The PR should close only the five code-backed follow-up issues listed in the first section. The research and architecture items remain valuable backlog input, but they should not be auto-closed as implemented by this branch.
+The PR should close only code-backed follow-up issues listed above. The research and architecture items remain valuable backlog input, but they should not be auto-closed as implemented by this branch unless the team intentionally closes them as research artifacts after extracting backlog items.
