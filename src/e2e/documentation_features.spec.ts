@@ -78,3 +78,48 @@ test.describe('Video Tutorials in Help Widget', () => {
     expect(result[0].duration).toBeDefined();
   });
 });
+
+test.describe('Tooltips', () => {
+  test('should show tooltip on hover', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // the label uses withTooltip which renders a div block, find it by text and wait for tooltips to load
+    await page.waitForResponse(response => response.url().includes('/api/tooltips') && response.status() === 200);
+
+    const tooltipTarget = page.locator('div', { hasText: 'Total Sales' }).last();
+    await expect(tooltipTarget).toBeVisible();
+
+    // hover target
+    await tooltipTarget.hover();
+
+    const tooltip = page.locator('text=Total revenue generated from your sales today.');
+    await expect(tooltip).toBeVisible();
+  });
+});
+
+test.describe('Walkthrough', () => {
+  test('should open walkthrough and show steps', async ({ page }) => {
+    // Navigate with a specific test parameter if your component listens for it
+    await page.goto('/dashboard');
+
+    // Make sure we have the parameter stored in local storage before navigating again
+    await page.evaluate(() => window.localStorage.setItem('TEST_WALKTHROUGH', 'true'));
+
+    await page.goto('/dashboard');
+
+    // open help widget
+    await page.locator('button[aria-label="Help"]').click();
+
+    // click tour button
+    await page.locator('text=Tour: Activate your AI Support Agent').click();
+
+    // assert walkthrough step is visible
+    await expect(page.locator('text=Activate your AI agent.')).toBeVisible();
+
+    // click close button inside the dialogue
+    await page.locator('div[role="dialog"] button').click();
+
+    // assert walkthrough is closed
+    await expect(page.locator('text=Activate your AI agent.')).not.toBeVisible();
+  });
+});
