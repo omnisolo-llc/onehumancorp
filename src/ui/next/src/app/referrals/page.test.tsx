@@ -27,7 +27,7 @@ describe('ReferralsPage', () => {
     expect(screen.getByText('Generating your unique link...')).toBeDefined();
 
     // Copy button should be disabled
-    const copyButton = screen.getByText('Copy');
+    const copyButton = screen.getByText('Copy Link');
     expect(copyButton.hasAttribute('disabled')).toBe(true);
   });
 
@@ -62,7 +62,7 @@ describe('ReferralsPage', () => {
     expect(referralSpan?.textContent).toBe('https://ohc.app/ref/test1234');
 
     // Copy button should be enabled
-    const copyButton = screen.getByText('Copy');
+    const copyButton = screen.getByText('Copy Link');
     expect(copyButton.hasAttribute('disabled')).toBe(false);
   });
 

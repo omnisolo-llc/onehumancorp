@@ -5658,7 +5658,6 @@ dependencies = [
  "glob",
  "hex",
  "hmac",
- "image",
  "ohc_builtin_agent_core",
  "ohc_builtin_agent_llm",
  "ohc_builtin_agent_tools",
