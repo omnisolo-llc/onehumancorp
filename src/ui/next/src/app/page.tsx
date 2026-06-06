@@ -1,6 +1,7 @@
 'use client';
-import { Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 function PageContent() {
   const router = useRouter();
