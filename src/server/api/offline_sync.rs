@@ -11,6 +11,8 @@ pub struct OfflineMutation {
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
+    #[serde(rename = "type")]
+    pub mutation_type: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -46,19 +48,36 @@ pub async fn offline_sync_handler(
     for mutation in &payload.mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
-        let query = "
+        let query = if mutation.mutation_type.as_deref() == Some("inventory_toggle") {
+            "
+            UPDATE products
+            SET is_sold_out = true
+            WHERE id = $1 AND tenant_id = $2
+            RETURNING id
+            "
+        } else {
+            "
             UPDATE products
             SET inventory_count = GREATEST(0, inventory_count - $1)
             WHERE id = $2 AND tenant_id = $3
             RETURNING id
-        ";
+            "
+        };
 
-        let result = sqlx::query(query)
-            .bind(mutation.quantity_deducted)
-            .bind(&mutation.product_id)
-            .bind(&tenant_id)
-            .fetch_optional(&db)
-            .await;
+        let result = if mutation.mutation_type.as_deref() == Some("inventory_toggle") {
+            sqlx::query(query)
+                .bind(&mutation.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&db)
+                .await
+        } else {
+            sqlx::query(query)
+                .bind(mutation.quantity_deducted)
+                .bind(&mutation.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&db)
+                .await
+        };
 
         match result {
             Ok(Some(_)) => {
@@ -72,6 +91,7 @@ pub async fn offline_sync_handler(
                     "payment_method": mutation.payment_method,
                     "payment_intent_id": mutation.payment_intent_id,
                     "currency": mutation.currency,
+                    "type": mutation.mutation_type,
                 }).to_string();
 
                 let job_res = sqlx::query(
@@ -168,6 +188,7 @@ mod tests {
                     payment_method: None,
                     payment_intent_id: None,
                     currency: Some("USD".to_string()),
+                    mutation_type: None,
                 },
             ],
         };
@@ -194,6 +215,7 @@ mod tests {
                     payment_method: None,
                     payment_intent_id: None,
                     currency: Some("USD".to_string()),
+                    mutation_type: None,
                 },
             ],
         };

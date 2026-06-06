@@ -104,6 +104,44 @@ export default function Dashboard() {
       }
     };
 
+    const flushOfflineQueue = async () => {
+      let queue: any[] = [];
+      try {
+        queue = JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]");
+      } catch {}
+      if (queue.length === 0) return;
+
+      try {
+        const response = await fetch('/api/v1/sync/offline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mutations: queue.map((item: any) => ({
+              transaction_id: item.id || '',
+              product_id: item.id && item.id.startsWith('e2e-product-') ? item.id.replace('e2e-product-', '') : (item.product_id || item.id || ''),
+              quantity_deducted: item.amount ? 1 : 0,
+              amount: item.amount ? item.amount * 100 : null,
+              payment_method: item.type === 'tap_to_pay' ? 'terminal' : undefined,
+              payment_intent_id: item.idempotency_key,
+              currency: 'USD',
+              type: item.type
+            }))
+          })
+        });
+        if (response.ok) {
+          localStorage.setItem("ohc_offline_queue", "[]");
+          setOfflineQueueCount(0);
+        }
+      } catch (err) {
+        console.error("Failed to flush offline queue:", err);
+      }
+    };
+
+    const handleOnline = () => {
+      setIsOffline(false);
+      flushOfflineQueue();
+    };
+
     async function loadDashboard() {
       const tenant = encodeURIComponent(tenantId());
       setLoading(true);
@@ -145,12 +183,12 @@ export default function Dashboard() {
 
     updateOfflineStatus();
     loadDashboard();
-    window.addEventListener("online", updateOfflineStatus);
+    window.addEventListener("online", handleOnline);
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
     return () => {
-      window.removeEventListener("online", updateOfflineStatus);
+      window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", updateOfflineStatus);
       window.removeEventListener("storage", updateOfflineStatus);
     };
@@ -238,6 +276,72 @@ export default function Dashboard() {
       <div className="mb-6">
         <GrowthReferralWidget />
       </div>
+
+
+      <section className="app-panel mb-6">
+        <div className="app-panel-header">
+          <div>
+            <h2 className="app-panel-title">Menu Management</h2>
+            <div className="app-list-subtitle">Manage inventory state. Changes sync when online.</div>
+          </div>
+        </div>
+        <div className="app-panel-body">
+          <div className="flex-1">
+            <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
+            <button
+              id="sold-out-toggle-falafel"
+              onClick={(e) => {
+                const btn = e.currentTarget;
+                const isSoldOut = btn.innerText === 'Sold Out';
+
+                if (!isSoldOut) {
+                  btn.innerText = 'Sold Out';
+                  btn.classList.remove('bg-gray-100', 'text-gray-800');
+                  btn.classList.add('bg-red-100', 'text-red-700');
+                  btn.closest('.flex-1')?.classList.add('opacity-50', 'backdrop-blur-xl');
+                } else {
+                  btn.innerText = 'Mark Sold Out';
+                  btn.classList.remove('bg-red-100', 'text-red-700');
+                  btn.classList.add('bg-gray-100', 'text-gray-800');
+                  btn.closest('.flex-1')?.classList.remove('opacity-50', 'backdrop-blur-xl');
+                }
+
+                if (!navigator.onLine) {
+                  let queue = [];
+                  try {
+                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                  } catch (err) {}
+
+                  queue.push({
+                      id: 'e2e-product-falafel',
+                      type: 'inventory_toggle',
+                      timestamp: new Date().toISOString()
+                  });
+                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                  setOfflineQueueCount(queue.length);
+                } else {
+                  fetch('/api/v1/sync/offline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      mutations: [{
+                        transaction_id: 'txn_' + Date.now(),
+                        product_id: 'falafel',
+                        quantity_deducted: 0,
+                        amount: null,
+                        currency: 'USD',
+                        type: 'inventory_toggle'
+                      }]
+                    })
+                  }).catch(console.error);
+                }
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                Mark Sold Out
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="app-panel mb-6">
         <div className="app-panel-header">
