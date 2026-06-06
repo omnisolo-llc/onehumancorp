@@ -259,13 +259,6 @@ export default function OnboardingWizard() {
     setIsLoading(true);
     setError('');
     setStep(4); // Go to loading screen
-    const safetyTimeout = setTimeout(() => {
-      // Fallback if API fails to respond in time
-      setStartResult({ message: 'Fallback: Your business has been successfully launched.' });
-      setStep(5);
-      setIsLoading(false);
-    }, 3000);
-
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -298,11 +291,9 @@ export default function OnboardingWizard() {
 
       const result = await startRes.json().catch(() => ({}));
       if (!startRes.ok) {
-        clearTimeout(safetyTimeout);
         throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
-      clearTimeout(safetyTimeout);
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       setStep(5); // Go to "You're Live" screen
@@ -310,7 +301,6 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      clearTimeout(safetyTimeout);
       setStep(3); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
@@ -357,7 +347,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 0 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in text-center">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome</h2>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Your business, live in minutes.</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
                     Let's get your business online in under 10 minutes.
                   </p>

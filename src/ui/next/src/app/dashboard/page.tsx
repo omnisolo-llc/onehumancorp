@@ -43,6 +43,14 @@ type SupplyPayload = {
   bom_items: unknown[];
 };
 
+type Milestone = {
+  id: string;
+  milestone_type: string;
+  reached_at: string;
+  shared_at: string;
+  metadata: any;
+};
+
 const emptyMetrics: DashboardMetrics = {
   active_customers: 0,
   pending_orders: 0,
@@ -72,6 +80,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
@@ -104,27 +113,30 @@ export default function Dashboard() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, milestonesRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
+          fetch(`/api/ui/dashboard/milestones?tenant_id=${tenant}`),
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok || !milestonesRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, milestonesData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
+          milestonesRes.json(),
         ]);
 
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setMilestones(Array.isArray(milestonesData) ? milestonesData : []);
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
@@ -187,7 +199,7 @@ export default function Dashboard() {
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
+        <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, Human.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your AI assistants are working on your behalf.</p>
       </div>
 
@@ -218,20 +230,24 @@ export default function Dashboard() {
         <UnifiedAgentFeed />
 
         <section>
-          <div className="mb-6 mac-glass-container p-6 rounded-[16px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">🎉</div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white font-outfit">Milestone Unlocked!</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
+          {milestones.length > 0 && milestones.slice(0, 1).map(milestone => (
+            <div key={milestone.id} className="mb-6 mac-glass-container p-6 rounded-[16px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="text-4xl">🎉</div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white font-outfit">Milestone Unlocked!</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {milestone.milestone_type === 'first_5_orders' ? 'You completed your first 5 orders!' : `Achievement unlocked: ${milestone.milestone_type}`}
+                    </p>
+                  </div>
                 </div>
+                <button onClick={() => window.alert("Awesome! Sharing functionality coming soon.")} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors">
+                  Share & Claim Reward
+                </button>
               </div>
-              <button onClick={() => window.alert("Awesome! Your 7-day Pro Trial Extension has been unlocked.")} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors">
-                Share & Claim Reward
-              </button>
             </div>
-          </div>
+          ))}
 
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>

@@ -1,25 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+interface Integration {
+  id: string;
+  name: string;
+  category: string;
+  status: string;
+  icon: string;
+  description: string;
+}
 
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
   const router = useRouter();
 
-  const [integrations, setIntegrations] = useState([
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Single API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
-    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
-    { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
-    { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
-  ]);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadIntegrations() {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const res = await fetch(`/api/ui/integrations?tenant_id=${tenantId}`);
+        if (!res.ok) throw new Error("Failed to load integrations");
+        const data = await res.json();
+        setIntegrations(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        setError(err.message || "Failed to load");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadIntegrations();
+  }, []);
+
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
@@ -31,38 +48,51 @@ export default function Integrations() {
     sms: true,
   });
 
-  const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push("/dashboard");
-    }
-    if (id === 'ayrshare') {
-      alert("Connecting Ayrshare via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push('/inbox');
-    }
+  const handleConnect = async (id: string) => {
     if (id === 'twilio') {
       setShowTwilioModal(true);
+      return;
     }
-    if (id === 'zoom' || id === 'whereby' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com' || id === 'front') {
-      alert(`Connecting ${id} via OAuth...`);
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const res = await fetch('/api/ui/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId, integration_id: id })
+      });
+      if (!res.ok) throw new Error(`Failed to connect ${id}`);
+
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
+
+      if (id === 'calendly') router.push("/dashboard");
+      if (id === 'ayrshare') router.push('/inbox');
+    } catch (err: any) {
+      console.error(err);
+      // In a real app we'd show a toast error here
     }
   };
 
-  const saveTwilioIntegration = () => {
-    setIntegrations(prev => prev.map(integration =>
-      integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
-    ));
-    setShowTwilioModal(false);
-    router.push('/inbox');
+  const saveTwilioIntegration = async () => {
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const res = await fetch('/api/ui/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId, integration_id: 'twilio', channels: twilioChannels })
+      });
+      if (!res.ok) throw new Error("Failed to connect Twilio");
+
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
+      ));
+      setShowTwilioModal(false);
+      router.push('/inbox');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -131,8 +161,16 @@ export default function Integrations() {
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full">
 
-        {/* Navigation Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-200 pb-4 overflow-x-auto hide-scrollbar">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 text-red-600 rounded-lg">{error}</div>
+        ) : (
+          <>
+            {/* Navigation Tabs */}
+            <div className="flex gap-4 mb-8 border-b border-gray-200 pb-4 overflow-x-auto hide-scrollbar">
           {["all", "marketing", "operations", "finance", "social"].map(tab => (
             <button
               key={tab}
@@ -180,6 +218,8 @@ export default function Integrations() {
             </div>
           ))}
         </div>
+          </>
+        )}
 
       </main>
 

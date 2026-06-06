@@ -2674,6 +2674,199 @@ fn ui_tenant_id(query: &UiTenantQuery) -> String {
         .to_string()
 }
 
+async fn list_ui_milestones_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let milestones = match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query("SELECT id, milestone_type, COALESCE(reached_at::text, '') AS reached_at, COALESCE(shared_at::text, '') AS shared_at, metadata FROM business_milestones WHERE tenant_id = $1 ORDER BY reached_at DESC")
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "milestone_type": row.get::<String, _>("milestone_type"),
+                        "reached_at": row.get::<String, _>("reached_at"),
+                        "shared_at": row.get::<String, _>("shared_at"),
+                        "metadata": row.get::<serde_json::Value, _>("metadata"),
+                    })).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("SELECT id, milestone_type, COALESCE(CAST(reached_at AS TEXT), '') AS reached_at, COALESCE(CAST(shared_at AS TEXT), '') AS shared_at, metadata FROM business_milestones WHERE tenant_id = ? ORDER BY reached_at DESC")
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "milestone_type": row.get::<String, _>("milestone_type"),
+                        "reached_at": row.get::<String, _>("reached_at"),
+                        "shared_at": row.get::<String, _>("shared_at"),
+                        "metadata": serde_json::from_str::<serde_json::Value>(&row.get::<String, _>("metadata")).unwrap_or(serde_json::json!({})),
+                    })).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+        }
+    };
+
+    match milestones {
+        Ok(data) => (axum::http::StatusCode::OK, axum::Json(data)).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch milestones: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct ConnectIntegrationPayload {
+    tenant_id: String,
+    integration_id: String,
+    #[serde(default)]
+    channels: Option<serde_json::Value>,
+}
+
+async fn list_ui_integrations_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    // Bootstrap available integrations if table is empty for this tenant
+    // In a real system, these would be seeded or joined with a global integrations catalog
+    let default_integrations = vec![
+        ("ayrshare", "Ayrshare", "marketing", "📱", "Single API for posting and retrieving messages across social networks."),
+        ("cal_com", "Cal.com", "operations", "📅", "Zero-Config Booking & Calendar Sync."),
+        ("mailerlite", "MailerLite", "marketing", "📨", "Embedded, No-Jargon Email Campaigns."),
+        ("mercadopago", "Mercado Pago", "finance", "🌎", "Accept credit cards and local payment methods in Latin America."),
+        ("shippo", "Shippo", "operations", "📦", "Painless Shipping Labels & Tracking."),
+        ("twilio", "Twilio Conversations", "operations", "🔔", "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat."),
+        ("whereby", "Whereby", "operations", "📹", "Zero-Setup Online Lessons and video conferencing."),
+        ("resend", "Resend", "marketing", "📧", "Transactional and Marketing Emails."),
+        ("meta", "Meta Graph API", "social", "💬", "Central Instagram and Facebook Inbox."),
+        ("front", "Front", "operations", "📥", "Central omnichannel inbox aggregating messages across all channels."),
+        ("zoom", "Zoom", "operations", "📹", "Automated Online Lesson Links.")
+    ];
+
+    let mut conn = match db.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire db connection: {}", e);
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
+        }
+    };
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            // First ensure default integrations exist for this tenant
+            for (id, name, cat, icon, desc) in &default_integrations {
+                let _ = sqlx::query("INSERT INTO tenant_integrations (id, tenant_id, integration_id, category, name, icon, description, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'disconnected') ON CONFLICT (tenant_id, integration_id) DO NOTHING")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(id)
+                    .bind(cat)
+                    .bind(name)
+                    .bind(icon)
+                    .bind(desc)
+                    .execute(&mut *conn).await;
+            }
+
+            match sqlx::query("SELECT integration_id AS id, name, category, status, icon, description, config FROM tenant_integrations WHERE tenant_id = $1 ORDER BY name")
+                .bind(&tenant_id)
+                .fetch_all(&mut *conn)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "name": row.get::<String, _>("name"),
+                        "category": row.get::<String, _>("category"),
+                        "status": row.get::<String, _>("status"),
+                        "icon": row.get::<String, _>("icon"),
+                        "description": row.get::<String, _>("description"),
+                        "config": row.get::<serde_json::Value, _>("config"),
+                    })).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+        }
+        crate::db::DbStore::Sqlite(_) => {
+            for (id, name, cat, icon, desc) in &default_integrations {
+                let _ = sqlx::query("INSERT OR IGNORE INTO tenant_integrations (id, tenant_id, integration_id, category, name, icon, description, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'disconnected')")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(id)
+                    .bind(cat)
+                    .bind(name)
+                    .bind(icon)
+                    .bind(desc)
+                    .execute(&mut *conn).await;
+            }
+
+            match sqlx::query("SELECT integration_id AS id, name, category, status, icon, description, config FROM tenant_integrations WHERE tenant_id = ? ORDER BY name")
+                .bind(&tenant_id)
+                .fetch_all(&mut *conn)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "name": row.get::<String, _>("name"),
+                        "category": row.get::<String, _>("category"),
+                        "status": row.get::<String, _>("status"),
+                        "icon": row.get::<String, _>("icon"),
+                        "description": row.get::<String, _>("description"),
+                        "config": serde_json::from_str::<serde_json::Value>(&row.get::<String, _>("config")).unwrap_or(serde_json::json!({})),
+                    })).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+        }
+    }.map(|data| (axum::http::StatusCode::OK, axum::Json(data)).into_response())
+    .unwrap_or_else(|e| {
+        tracing::error!("Failed to fetch integrations: {}", e);
+        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+    })
+}
+
+async fn connect_ui_integration_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::Json(payload): axum::Json<ConnectIntegrationPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
+    let config_val = payload.channels.unwrap_or(serde_json::json!({}));
+
+    let res = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("UPDATE tenant_integrations SET status = 'connected', config = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND integration_id = $3")
+                .bind(&config_val)
+                .bind(&payload.tenant_id)
+                .bind(&payload.integration_id)
+                .execute(&db.pool)
+                .await
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query("UPDATE tenant_integrations SET status = 'connected', config = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND integration_id = ?")
+                .bind(config_val.to_string())
+                .bind(&payload.tenant_id)
+                .bind(&payload.integration_id)
+                .execute(pool)
+                .await
+        }
+    };
+
+    match res {
+        Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to connect integration: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"success": false}))).into_response()
+        }
+    }
+}
+
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -3326,6 +3519,7 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/milestones", axum::routing::get(list_ui_milestones_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
@@ -3333,6 +3527,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
+        .route("/api/ui/integrations", axum::routing::get(list_ui_integrations_handler).with_state(db.clone()))
+        .route("/api/ui/integrations/connect", axum::routing::post(connect_ui_integration_handler).with_state(db.clone()))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {

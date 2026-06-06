@@ -19,7 +19,7 @@ test.describe('Dashboard UX Simplification (Grandmother Test)', () => {
   });
 
   test('should display business setup page', async ({ page }) => {
-    await page.goto('/business-setup');
+    await page.goto('/onboarding');
     await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
   });
 });

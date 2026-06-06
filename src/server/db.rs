@@ -845,6 +845,22 @@ impl DB {
                         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
+
+                    CREATE TABLE IF NOT EXISTS tenant_integrations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        integration_id TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'disconnected',
+                        name TEXT NOT NULL,
+                        icon TEXT NOT NULL,
+                        description TEXT,
+                        config TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, integration_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_tenant_integrations_tenant_id ON tenant_integrations(tenant_id);
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
