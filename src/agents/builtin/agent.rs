@@ -846,11 +846,16 @@ impl Agent {
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
-                let msgs_val = state.get("messages").unwrap().as_array().unwrap();
+                let msgs_val = match state.get("messages").and_then(|m| m.as_array()) {
+                    Some(arr) => arr,
+                    None => {
+                        return Err("Missing or invalid 'messages' array in state".into());
+                    }
+                };
                 let mut msgs = vec![];
                 for m in msgs_val {
-                    let role_str = m["role"].as_str().unwrap();
-                    let content = m["content"].as_str().unwrap().to_string();
+                    let role_str = m.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+                    let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     let role = match role_str {
                         "user" => crate::types::Role::User,
                         "assistant" => crate::types::Role::Assistant,
@@ -862,9 +867,9 @@ impl Agent {
                     if let Some(tcs) = m.get("tool_calls").and_then(|v| v.as_array()) {
                         for tc in tcs {
                             tool_calls.push(crate::types::ToolCall {
-                                id: tc["id"].as_str().unwrap().to_string(),
-                                name: tc["name"].as_str().unwrap().to_string(),
-                                arguments: tc["arguments"].clone(),
+                                id: tc.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                name: tc.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                arguments: tc.get("arguments").cloned().unwrap_or(serde_json::json!({})),
                             });
                         }
                     }
@@ -872,9 +877,9 @@ impl Agent {
                     if let Some(trs) = m.get("tool_results").and_then(|v| v.as_array()) {
                         for tr in trs {
                             tool_results.push(crate::types::ToolResult {
-                                tool_call_id: tr["tool_call_id"].as_str().unwrap().to_string(),
-                                content: tr["content"].as_str().unwrap_or("").to_string(),
-                                error: tr["error"].as_str().unwrap_or("").to_string(),
+                                tool_call_id: tr.get("tool_call_id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                content: tr.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                error: tr.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string(),
                             });
                         }
                     }
