@@ -24,6 +24,44 @@ impl InteropProtocol {
         }
     }
 
+    /// Helper method to publish a message with exponential backoff retries
+    async fn retry_publish(&self, msg: Message, max_retries: usize) -> Result<(), String> {
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        loop {
+            match self.bus.publish(msg.clone()).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if retries >= max_retries {
+                        return Err(e);
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        }
+    }
+
+    async fn retry_publish_static(bus: Arc<dyn Bus>, msg: Message, max_retries: usize) -> Result<(), String> {
+        let mut retries = 0;
+        let mut delay_ms = 50;
+        loop {
+            match bus.publish(msg.clone()).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if retries >= max_retries {
+                        return Err(e);
+                    }
+                    retries += 1;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2; // Exponential backoff
+                }
+            }
+        }
+    }
+
+
     /// Triggers a state handoff when switching modes using protobuf on the wire
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
@@ -81,21 +119,7 @@ impl InteropProtocol {
             payload: buf,
         };
 
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        let result = loop {
-            match self.bus.publish(msg.clone()).await {
-                Ok(_) => break Ok(()),
-                Err(e) => {
-                    if retries >= 5 {
-                        break Err(format!("Failed to publish state handoff after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
-            }
-        };
+        let result = self.retry_publish(msg, 5).await.map_err(|e| format!("Failed to publish state handoff after retries: {}", e));
 
         if result.is_err() {
             // Failed to publish, release idempotency lock so it can be retried
@@ -149,16 +173,7 @@ impl InteropProtocol {
                         };
                         let bus_clone = bus.clone();
                         tokio::spawn(async move {
-                            let mut retries = 0;
-                            let mut delay_ms = 50;
-                            while retries < 5 {
-                                if bus_clone.publish(ack_msg.clone()).await.is_ok() {
-                                    break;
-                                }
-                                retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                delay_ms *= 2; // Exponential backoff
-                            }
+                            let _ = Self::retry_publish_static(bus_clone, ack_msg, 5).await;
                         });
                     }
                 }
@@ -253,24 +268,14 @@ impl InteropProtocol {
         };
 
         // Add internal retry for publishing to ensure dispatch survives partitions
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        loop {
-            match self.bus.publish(msg.clone()).await {
-                Ok(_) => {
-                    tracing::debug!(job_id = %job_id, "Successfully published job dispatch message");
-                    break;
-                },
-                Err(e) => {
-                    if retries >= 5 {
-                        cancel();
-                        tracing::error!(job_id = %job_id, error = %e, "Failed to publish job dispatch after max retries");
-                        return Err(format!("Failed to publish job dispatch after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
+        match self.retry_publish(msg, 5).await {
+            Ok(_) => {
+                tracing::debug!(job_id = %job_id, "Successfully published job dispatch message");
+            },
+            Err(e) => {
+                cancel();
+                tracing::error!(job_id = %job_id, error = %e, "Failed to publish job dispatch after max retries");
+                return Err(format!("Failed to publish job dispatch after retries: {}", e));
             }
         }
 
@@ -315,16 +320,7 @@ impl InteropProtocol {
                         let bus_clone = bus.clone();
                         tokio::spawn(async move {
                             // Retry mechanism to ensure ACK reaches the dispatcher
-                            let mut retries = 0;
-                            let mut delay_ms = 50;
-                            while retries < 5 {
-                                if bus_clone.publish(ack_msg.clone()).await.is_ok() {
-                                    break;
-                                }
-                                retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                                delay_ms *= 2; // Exponential backoff
-                            }
+                            let _ = Self::retry_publish_static(bus_clone, ack_msg, 5).await;
                         });
                     }
                 }
@@ -355,21 +351,7 @@ impl InteropProtocol {
         };
 
         // Add internal retry for publishing to ensure reporting survives partitions
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        loop {
-            match self.bus.publish(msg.clone()).await {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    if retries >= 5 {
-                        return Err(format!("Failed to publish job status update after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
-            }
-        }
+        self.retry_publish(msg, 5).await.map_err(|e| format!("Failed to publish job status update after retries: {}", e))
     }
 
     /// Listens for job status updates for a specific job
@@ -410,21 +392,7 @@ impl InteropProtocol {
             payload: buf,
         };
 
-        let mut retries = 0;
-        let mut delay_ms = 100;
-        let result = loop {
-            match self.bus.publish(msg.clone()).await {
-                Ok(_) => break Ok(()),
-                Err(e) => {
-                    if retries >= 5 {
-                        break Err(format!("Failed to publish queue job sync after retries: {}", e));
-                    }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms *= 2; // Exponential backoff
-                }
-            }
-        };
+        let result = self.retry_publish(msg, 5).await.map_err(|e| format!("Failed to publish queue job sync after retries: {}", e));
 
         if result.is_err() {
             // Failed to publish, release idempotency lock so it can be retried
