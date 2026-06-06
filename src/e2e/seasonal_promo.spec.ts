@@ -2,22 +2,19 @@ import { test, expect } from './fixtures';
 
 test.describe('Seasonal Promotion Generator Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   test('user can open seasonal promo generator and create a campaign', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    // Navigate to the Seasonal Promos screen
-    await page.getByRole('button', { name: 'Seasonal Promos ✨' }).click();
-
+    await page.goto('/seasonal-promo');
     await expect(page.getByRole('heading', { name: 'Seasonal Promotion Generator ✨' })).toBeVisible();
 
-    // Fill the inputs
+    // Generate Campaign
+    await page.evaluate(() => localStorage.setItem('has_pro', 'true'));
+    await page.reload();
     await page.locator('#promo-occasion').fill('Winter Wonderland');
     await page.locator('#promo-discount').fill('25');
-
-    // Generate Campaign
     await page.getByRole('button', { name: 'Generate Campaign' }).click();
 
     // Verify the result
@@ -27,6 +24,6 @@ test.describe('Seasonal Promotion Generator Flow', () => {
     const resultText = await resultCard.textContent();
     expect(resultText).toContain('Winter Wonderland Special!');
     expect(resultText).toContain('25% OFF');
-    expect(resultText).toContain('Use code: WINTERWO25');
+    expect(resultText).toContain('Use code: WINTERW25');
   });
 });

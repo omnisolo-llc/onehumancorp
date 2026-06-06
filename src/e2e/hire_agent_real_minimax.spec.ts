@@ -24,7 +24,8 @@ const specialistLabels = [
 ] as const;
 
 async function readWorkflow(request: APIRequestContext, workflowId: string): Promise<WorkflowRecord | undefined> {
-  const response = await request.get('/api/agents/workflows');
+  const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+  const response = await request.get(`${apiBase}/api/agents/workflows`);
   expect(response.ok()).toBeTruthy();
   const body = await response.json();
   return (body.workflows as WorkflowRecord[]).find((workflow) => workflow.id === workflowId);
@@ -49,13 +50,14 @@ function specialistProcessesFor(commands: string, agentName: string): string[] {
 test.describe('real MiniMax hire-agent flow', () => {
   test('hiring an agent starts a real M3 business swarm with specialist agents', async ({ request }) => {
     test.setTimeout(360_000);
-    test.skip(!process.env.MINIMAX_API_KEY, 'requires a real MINIMAX_API_KEY in the environment or .env');
 
+    expect(process.env.MINIMAX_API_KEY, 'requires a real MINIMAX_API_KEY in the environment or .env').toBeTruthy();
     expect(process.env.OHC_LLM_PROVIDER || 'minimax').toBe('minimax');
     expect(process.env.OHC_LLM_MODEL || process.env.MINIMAX_MODEL || 'MiniMax-M3').toBe('MiniMax-M3');
 
     const agentName = `M3 E2E Business Operator ${Date.now()}`;
-    const hireResponse = await request.post('/api/agents/hire', {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+    const hireResponse = await request.post(`${apiBase}/api/agents/hire`, {
       data: {
         name: agentName,
         role: 'Business growth operator',
@@ -70,7 +72,7 @@ test.describe('real MiniMax hire-agent flow', () => {
     expect(hired.agent_id).toMatch(/^agent-/);
     expect(hired.workflow_id).toMatch(/^[0-9a-f-]{36}$/);
 
-    const agentsResponse = await request.get('/api/agents');
+    const agentsResponse = await request.get(`${apiBase}/api/agents`);
     expect(agentsResponse.ok()).toBeTruthy();
     const agents = await agentsResponse.json();
     const hiredAgent = agents.find((agent: any) => agent.id === hired.agent_id);

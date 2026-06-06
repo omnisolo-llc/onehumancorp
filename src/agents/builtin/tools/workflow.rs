@@ -281,6 +281,9 @@ async fn run_builtin_agent(
         envs.push(("OHC_AGENT_TASK_TIMEOUT_SECS".to_string(), "240".to_string()));
         envs.push(("OHC_LLM_TIMEOUT_SECS".to_string(), "180".to_string()));
         envs.push(("OHC_MAX_TOKENS".to_string(), "1200".to_string()));
+        if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+            envs.push(("OHC_AGENT_SPECIALIST_EXIT_HOLD_SECS".to_string(), "20".to_string()));
+        }
     }
 
     let output = runner
