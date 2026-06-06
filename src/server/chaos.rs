@@ -122,9 +122,10 @@ mod tests {
                 id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 payload TEXT NOT NULL,
+
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
+                tenant_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -144,7 +145,7 @@ mod tests {
                 let max_attempts = 10;
                 let mut backoff = Duration::from_millis(10);
                 loop {
-                    let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
+                    let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES (?, 'PENDING', 'data', 'system')")
                         .bind(format!("m_{}", i))
                         .execute(&*p)
                         .await;
@@ -258,9 +259,10 @@ mod tests {
                 id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 payload TEXT NOT NULL,
+
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
+                tenant_id TEXT NOT NULL DEFAULT 'system',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -272,7 +274,7 @@ mod tests {
         ).execute(&pool).await.unwrap();
 
         let mission_id = "test_mission_partition";
-        sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES (?, 'PENDING', 'data', 'system')")
             .bind(mission_id)
             .execute(&pool)
             .await
@@ -494,7 +496,7 @@ mod tests {
             .unwrap();
 
         sqlx::query(
-            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, tenant_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
@@ -657,7 +659,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                tenant_id TEXT DEFAULT 'system',
+                tenant_id TEXT,
                 mission_log TEXT
             );"
         ).execute(&pool).await.unwrap();
@@ -683,8 +685,8 @@ mod tests {
         }
         cloud_latencies.sort();
         let cp50 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[cloud_latencies.len() / 2] };
-        let cp95 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.95) as usize] };
-        let cp99 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[(cloud_latencies.len() as f64 * 0.99) as usize] };
+        let cp95 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[((cloud_latencies.len() as f64 * 0.95).floor() as usize).min(cloud_latencies.len() - 1)] };
+        let cp99 = if cloud_latencies.is_empty() { 0 } else { cloud_latencies[((cloud_latencies.len() as f64 * 0.99).floor() as usize).min(cloud_latencies.len() - 1)] };
         tracing::info!("Cloud Stress Results: p50={}us, p95={}us, p99={}us", cp50, cp95, cp99);
 
         // Standalone Mode Simulation (10 simultaneous business owners)
@@ -694,7 +696,7 @@ mod tests {
             let p = pool_arc.clone();
             standalone_handles.push(tokio::spawn(async move {
                 let start = Instant::now();
-                let _ = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
+                let _ = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES (?, 'PENDING', 'data', 'system')")
                     .bind(format!("stress_{}", i))
                     .execute(&*p)
                     .await;
@@ -708,8 +710,8 @@ mod tests {
         }
         standalone_latencies.sort();
         let sp50 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[standalone_latencies.len() / 2] };
-        let sp95 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.95) as usize] };
-        let sp99 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[(standalone_latencies.len() as f64 * 0.99) as usize] };
+        let sp95 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[((standalone_latencies.len() as f64 * 0.95).floor() as usize).min(standalone_latencies.len() - 1)] };
+        let sp99 = if standalone_latencies.is_empty() { 0 } else { standalone_latencies[((standalone_latencies.len() as f64 * 0.99).floor() as usize).min(standalone_latencies.len() - 1)] };
         tracing::info!("Standalone Stress Results: p50={}us, p95={}us, p99={}us", sp50, sp95, sp99);
 
         assert!(cp50 <= cp95);
@@ -737,7 +739,8 @@ mod tests {
             "CREATE TABLE IF NOT EXISTS agent_missions (
                 id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
-                payload TEXT NOT NULL
+                payload TEXT NOT NULL,
+                tenant_id TEXT
             );"
         ).execute(&pool).await.unwrap();
 
@@ -750,7 +753,7 @@ mod tests {
                 let mut attempts = 0;
                 let mut backoff = std::time::Duration::from_millis(10);
                 loop {
-                    let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', '{}')")
+                    let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES (?, 'PENDING', '{}', 'system')")
                         .bind(format!("mission_{}", i))
                         .execute(&*p)
                         .await;
