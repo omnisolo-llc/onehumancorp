@@ -317,29 +317,24 @@ impl DepartmentOrchestrator {
 
         match &self.db.store {
             DbStore::Postgres => {
-                if let Ok(mut tx) = self.db.pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.is_ok() {
-                        let _ = sqlx::query(
-                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-                        )
-                        .bind(&req.id)
-                        .bind(&req.tenant_id)
-                        .bind(req.department.to_string())
-                        .bind(&req.description)
-                        .bind(status_str)
-                        .bind(req.action_risk.to_string())
-                        .bind({
-                            let p = req.payload.clone().unwrap_or(serde_json::json!({}));
-                            let redacted = ::server_telemetry::redact_interface_pii(p);
-                            serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
-                        })
-                        .bind(now)
-                        .bind(now)
-                        .execute(&mut *tx)
-                        .await;
-                        let _ = tx.commit().await;
-                    }
-                }
+                let _ = sqlx::query(
+                    "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+                )
+                .bind(&req.id)
+                .bind(&req.tenant_id)
+                .bind(req.department.to_string())
+                .bind(&req.description)
+                .bind(status_str)
+                .bind(req.action_risk.to_string())
+                .bind({
+                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
+                    let redacted = ::server_telemetry::redact_interface_pii(p);
+                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+                })
+                .bind(now)
+                .bind(now)
+                .execute(&self.db.pool)
+                .await;
             }
             DbStore::Sqlite(pool) => {
                 let _ = sqlx::query(
@@ -369,29 +364,19 @@ impl DepartmentOrchestrator {
 
         match &self.db.store {
             DbStore::Postgres => {
-                let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
-                        let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' AND id > $2 ORDER BY id ASC LIMIT $3")
-                                .bind(tenant_id)
-                                .bind(cur)
-                                .bind(limit)
-                                .fetch_all(&mut *tx)
-                                .await
-                        } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' ORDER BY id ASC LIMIT $2")
-                                .bind(tenant_id)
-                                .bind(limit)
-                                .fetch_all(&mut *tx)
-                                .await
-                        };
-                        let _ = tx.commit().await;
-                        rows
-                    } else {
-                        Err(sqlx::Error::Configuration("failed to set tenant context".into()))
-                    }
+                let fetch_res = if let Some(ref cur) = cursor {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' AND id > $2 ORDER BY id ASC LIMIT $3")
+                        .bind(tenant_id)
+                        .bind(cur)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
                 } else {
-                    Err(sqlx::Error::Configuration("failed to begin tenant query".into()))
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' ORDER BY id ASC LIMIT $2")
+                        .bind(tenant_id)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
                 };
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
@@ -480,29 +465,19 @@ impl DepartmentOrchestrator {
 
         match &self.db.store {
             DbStore::Postgres => {
-                let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
-                        let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' AND id < $2 ORDER BY id DESC LIMIT $3")
-                                .bind(tenant_id)
-                                .bind(cur)
-                                .bind(limit)
-                                .fetch_all(&mut *tx)
-                                .await
-                        } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' ORDER BY id DESC LIMIT $2")
-                                .bind(tenant_id)
-                                .bind(limit)
-                                .fetch_all(&mut *tx)
-                                .await
-                        };
-                        let _ = tx.commit().await;
-                        rows
-                    } else {
-                        Err(sqlx::Error::Configuration("failed to set tenant context".into()))
-                    }
+                let fetch_res = if let Some(ref cur) = cursor {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' AND id < $2 ORDER BY id DESC LIMIT $3")
+                        .bind(tenant_id)
+                        .bind(cur)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
                 } else {
-                    Err(sqlx::Error::Configuration("failed to begin tenant query".into()))
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' ORDER BY id DESC LIMIT $2")
+                        .bind(tenant_id)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
                 };
                 if let Ok(rows) = fetch_res {
                     use sqlx::Row;
@@ -603,23 +578,13 @@ impl DepartmentOrchestrator {
         let mut error_response = None;
         let opt_dept_payload = match &self.db.store {
             DbStore::Postgres => {
-                let row = if let Ok(mut tx) = self.db.pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
-                        let updated = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
-                            .bind(new_status)
-                            .bind(now)
-                            .bind(request_id)
-                            .bind(tenant_id)
-                            .fetch_optional(&mut *tx)
-                            .await;
-                        let _ = tx.commit().await;
-                        updated
-                    } else {
-                        Err(sqlx::Error::Configuration("failed to set tenant context".into()))
-                    }
-                } else {
-                    Err(sqlx::Error::Configuration("failed to begin tenant update".into()))
-                };
+                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
+                    .bind(new_status)
+                    .bind(now)
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .fetch_optional(&self.db.pool)
+                    .await;
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;

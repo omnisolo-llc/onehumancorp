@@ -10,8 +10,6 @@ use super::{Tool, ToolExecutor};
 static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").unwrap());
 static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").unwrap());
 static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").unwrap());
-static GO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(func|type)\s+([a-zA-Z0-9_]+)").unwrap());
-static CPP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:virtual\s+|static\s+)?(?:[a-zA-Z0-9_:]+(?:<[^>]+>)?\s+)+(?:\*|&)?\s*([a-zA-Z0-9_:]+)\s*\([^\)]*\)\s*(?:const)?\s*(?:override)?\s*(?:;|\{)|class\s+([a-zA-Z0-9_]+)|struct\s+([a-zA-Z0-9_]+)").unwrap());
 
 /// SOTA Harness Pattern: Aider: RepoMap for large codebases.
 /// Generates a compact summary of the repository's architecture including file structure and basic symbol signatures.
@@ -44,20 +42,6 @@ impl RepoMapExecutor {
             "ts" | "js" | "tsx" | "jsx" => {
                 for line in content.lines() {
                     if let Some(_) = TS_REGEX.captures(line) {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            "go" => {
-                for line in content.lines() {
-                    if let Some(_) = GO_REGEX.captures(line) {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            "c" | "cpp" | "h" | "hpp" => {
-                for line in content.lines() {
-                    if let Some(_) = CPP_REGEX.captures(line) {
                         sigs.push(line.trim().to_string());
                     }
                 }
@@ -193,12 +177,6 @@ mod tests {
         let ts_file = src_dir.join("app.ts");
         fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").unwrap();
 
-        let go_file = src_dir.join("server.go");
-        fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").unwrap();
-
-        let cpp_file = src_dir.join("engine.cpp");
-        fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").unwrap();
-
         // Should ignore hidden and target
         let hidden_dir = root.join(".git");
         fs::create_dir(&hidden_dir).unwrap();
@@ -222,14 +200,6 @@ mod tests {
         assert!(result.contains("📄 app.ts"));
         assert!(result.contains("│ export function init() {}"));
         assert!(result.contains("│ interface Config {}"));
-
-        assert!(result.contains("📄 server.go"));
-        assert!(result.contains("│ func StartServer() {}"));
-        assert!(result.contains("│ type Handler struct {}"));
-
-        assert!(result.contains("📄 engine.cpp"));
-        assert!(result.contains("│ class Engine {"));
-        assert!(result.contains("│ void globalFunc() {}"));
 
         assert!(!result.contains(".git"));
         assert!(!result.contains("target"));

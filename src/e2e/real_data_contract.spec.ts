@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const repoRoot = process.env.SOURCE_REPO_ROOT || path.resolve(__dirname, '../..');
+const repoRoot = path.resolve(__dirname, '../..');
 const productionRoots = ['src/ui/next/src/app', 'src/server/api', 'src/server/services', 'src/server/storage']
   .map((root) => path.join(repoRoot, root));
 
@@ -38,67 +38,6 @@ const explicitAllowlist = new Set<string>([
   'src/server/services/onboarding/personas.rs',
 ]);
 
-const knownLegacyRealDataDebt = new Set<string>([
-  'src/ui/next/src/app/analytics/page.tsx',
-  'src/ui/next/src/app/api/agents/workflows/route.ts',
-  'src/ui/next/src/app/api/chat/route.ts',
-  'src/ui/next/src/app/api/inbox/webhook/route.ts',
-  'src/ui/next/src/app/api/integrations/manychat/draft/route.ts',
-  'src/ui/next/src/app/api/integrations/manychat/send/route.ts',
-  'src/ui/next/src/app/api/marketplace/route.ts',
-  'src/ui/next/src/app/api/mesh/v2/broadcast/route.ts',
-  'src/ui/next/src/app/api/pos/inventory/route.ts',
-  'src/ui/next/src/app/api/pos/orders/route.ts',
-  'src/ui/next/src/app/api/staff/route.ts',
-  'src/ui/next/src/app/api/staff/timecard/route.ts',
-  'src/ui/next/src/app/api/storefront/edge-personalization/route.ts',
-  'src/ui/next/src/app/api/subscriptions/route.ts',
-  'src/ui/next/src/app/api/v1/booking/conversational_checkout/route.ts',
-  'src/ui/next/src/app/api/v1/booking/request/route.ts',
-  'src/ui/next/src/app/api/v1/growth/promotions/generate/route.ts',
-  'src/ui/next/src/app/api/v1/growth/social-proof/generate/route.ts',
-  'src/ui/next/src/app/api/v1/growth/team-invites/route.ts',
-  'src/ui/next/src/app/api/v1/shipping/label/route.ts',
-  'src/ui/next/src/app/api/v1/shipping/rates/route.ts',
-  'src/ui/next/src/app/bio/[tenant]/page.tsx',
-  'src/ui/next/src/app/booking/page.tsx',
-  'src/ui/next/src/app/builder/components.tsx',
-  'src/ui/next/src/app/builder/page.tsx',
-  'src/ui/next/src/app/business-analytics/page.tsx',
-  'src/ui/next/src/app/diagnostics/page.tsx',
-  'src/ui/next/src/app/inventory/page.tsx',
-  'src/ui/next/src/app/link-in-bio-generator/page.tsx',
-  'src/ui/next/src/app/pos/terminal/StripeTerminalClient.tsx',
-  'src/ui/next/src/app/pos/terminal/page.tsx',
-  'src/ui/next/src/app/review-campaigns/page.tsx',
-  'src/ui/next/src/app/storefront-widget/page.tsx',
-  'src/server/api/agents/webhook.rs',
-  'src/server/api/billing_webhook.rs',
-  'src/server/api/fulfillment.rs',
-  'src/server/api/growth.rs',
-  'src/server/api/local_seo.rs',
-  'src/server/api/mcp_webhook.rs',
-  'src/server/api/meta_webhook.rs',
-  'src/server/api/offline_sync.rs',
-  'src/server/api/staff_mesh.rs',
-  'src/server/api/subscription.rs',
-  'src/server/api/syndication_handler.rs',
-  'src/server/services/agent/service.rs',
-  'src/server/services/booking.rs',
-  'src/server/services/campaign/service.rs',
-  'src/server/services/dashboard/service.rs',
-  'src/server/services/growth/service.rs',
-  'src/server/services/mcp/service.rs',
-  'src/server/services/onboarding/onboarding_agent.rs',
-  'src/server/services/onboarding/wizard.rs',
-  'src/server/services/ops/service.rs',
-  'src/server/services/org/service.rs',
-  'src/server/services/sync/cloud_synchronizer.rs',
-  'src/server/services/sync/service.rs',
-  'src/server/services/sync/telemetry_sync.rs',
-  'src/server/storage/s3_provider.rs',
-]);
-
 function walkFiles(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   return entries.flatMap((entry) => {
@@ -113,7 +52,6 @@ function isProductionSource(file: string) {
   if (ignoredPathFragments.some((fragment) => file.includes(fragment))) return false;
   const relative = path.relative(repoRoot, file);
   if (explicitAllowlist.has(relative)) return false;
-  if (knownLegacyRealDataDebt.has(relative)) return false;
   return true;
 }
 

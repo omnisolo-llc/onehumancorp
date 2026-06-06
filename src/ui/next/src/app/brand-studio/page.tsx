@@ -46,10 +46,7 @@ type BrandToolbox = {
     shots: { title: string; format: string; prompt: string; usage: string; mockup_svg: string }[];
     refinement_controls: string[];
   };
-  store_profile?: {
-    pages: { blocks: { block_type: string }[] }[];
-  };
-  website_draft?: {
+  website_draft: {
     pages: { blocks: { block_type: string }[] }[];
   };
   export_formats: string[];
@@ -124,43 +121,43 @@ export default function BrandStudioPage() {
             <h1 className="mt-1 text-2xl font-bold font-outfit">Create Brand Toolbox</h1>
           </div>
 
-          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="brand-toolbox-description">
+          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="brand-description">
             Business
           </label>
           <textarea
-            id="brand-toolbox-description"
+            id="brand-description"
             className="mb-4 h-32 w-full resize-none rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
 
-          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="brand-toolbox-website">
+          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="website-url">
             Website URL
           </label>
           <input
-            id="brand-toolbox-website"
+            id="website-url"
             className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={websiteUrl}
             onChange={(event) => setWebsiteUrl(event.target.value)}
             placeholder="https://example.com"
           />
 
-          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="brand-toolbox-product">
+          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="product-url">
             Product URL
           </label>
           <input
-            id="brand-toolbox-product"
+            id="product-url"
             className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={productUrl}
             onChange={(event) => setProductUrl(event.target.value)}
             placeholder="https://example.com/product"
           />
 
-          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="brand-toolbox-campaign">
+          <label className="mb-2 block text-sm font-semibold text-gray-700" htmlFor="campaign-prompt">
             Campaign
           </label>
           <input
-            id="brand-toolbox-campaign"
+            id="campaign-prompt"
             className="mb-5 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             value={campaignPrompt}
             onChange={(event) => setCampaignPrompt(event.target.value)}
@@ -183,13 +180,13 @@ export default function BrandStudioPage() {
           </button>
 
           {publishStatus && (
-            <p id="brand-toolbox-status" className="mt-4 rounded-lg bg-blue-50 p-3 text-sm font-medium text-blue-700">
+            <p className="mt-4 rounded-lg bg-blue-50 p-3 text-sm font-medium text-blue-700">
               {publishStatus}
             </p>
           )}
 
           {status === "error" && (
-            <p id="brand-toolbox-status" className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">
+            <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">
               Could not generate the toolbox.
             </p>
           )}
@@ -217,7 +214,7 @@ export default function BrandStudioPage() {
                     <p className="mt-2 max-w-3xl text-sm text-gray-600">{toolbox.brand_dna.positioning}</p>
                   </div>
                   <div className="flex gap-2">
-                    {(toolbox.brand_dna.colors ?? []).map((color) => (
+                    {toolbox.brand_dna.colors.map((color) => (
                       <span
                         key={color}
                         className="h-8 w-8 rounded border border-gray-200"
@@ -231,7 +228,7 @@ export default function BrandStudioPage() {
 
               <div className="grid gap-5 xl:grid-cols-2">
                 <OutputGroup title="Brand Book">
-                  {(toolbox.brand_book ?? []).map((section) => (
+                  {toolbox.brand_book.map((section) => (
                     <div key={section.title} className="border-b border-gray-100 py-3 last:border-0">
                       <h3 className="font-semibold">{section.title}</h3>
                       <p className="mt-1 text-sm text-gray-600">{section.guidance.join(" ")}</p>
@@ -240,7 +237,7 @@ export default function BrandStudioPage() {
                 </OutputGroup>
 
                 <OutputGroup title="Logo Concepts">
-                  {(toolbox.logo_concepts ?? []).map((logo) => (
+                  {toolbox.logo_concepts.map((logo) => (
                     <div key={logo.title} className="border-b border-gray-100 py-3 last:border-0">
                       <h3 className="font-semibold">{logo.title}</h3>
                       <div
@@ -253,7 +250,7 @@ export default function BrandStudioPage() {
                 </OutputGroup>
 
                 <OutputGroup title="Starter Catalog">
-                  {(toolbox.catalog ?? []).map((item) => (
+                  {toolbox.catalog.map((item) => (
                     <div key={item.name} className="border-b border-gray-100 py-3 last:border-0">
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="font-semibold">{item.name}</h3>
@@ -266,7 +263,7 @@ export default function BrandStudioPage() {
                 </OutputGroup>
 
                 <OutputGroup title="Campaign Ideas">
-                  {(toolbox.campaign_ideas ?? []).map((idea) => (
+                  {toolbox.campaign_ideas.map((idea) => (
                     <div key={idea.title} className="border-b border-gray-100 py-3 last:border-0">
                       <h3 className="font-semibold">{idea.title}</h3>
                       <p className="mt-1 text-sm text-gray-600">{idea.hook}</p>
@@ -276,7 +273,7 @@ export default function BrandStudioPage() {
                 </OutputGroup>
 
                 <OutputGroup title="Social Calendar">
-                  {(toolbox.social_calendar ?? []).map((item) => (
+                  {toolbox.social_calendar.map((item) => (
                     <div key={`${item.day}-${item.channel}`} className="border-b border-gray-100 py-3 last:border-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                         {item.day} / {item.channel}
@@ -287,7 +284,7 @@ export default function BrandStudioPage() {
                 </OutputGroup>
 
                 <OutputGroup title="Creative Assets">
-                  {(toolbox.assets ?? []).map((asset) => (
+                  {toolbox.assets.map((asset) => (
                     <div key={`${asset.asset_type}-${asset.channel}`} className="border-b border-gray-100 py-3 last:border-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                         {asset.asset_type} / {asset.channel}
@@ -299,8 +296,8 @@ export default function BrandStudioPage() {
                 </OutputGroup>
 
                 <OutputGroup title="Photoshoot">
-                  <p className="mb-3 text-sm text-gray-600">{toolbox.photoshoot?.product_source ?? "Product and campaign-ready imagery"}</p>
-                  {(toolbox.photoshoot?.shots ?? []).map((shot) => (
+                  <p className="mb-3 text-sm text-gray-600">{toolbox.photoshoot.product_source}</p>
+                  {toolbox.photoshoot.shots.map((shot) => (
                     <div key={shot.title} className="border-b border-gray-100 py-3 last:border-0">
                       <h3 className="font-semibold">{shot.title}</h3>
                       <div
@@ -315,7 +312,7 @@ export default function BrandStudioPage() {
 
                 <OutputGroup title="Website Draft">
                   <p className="text-sm text-gray-600">
-                    {(toolbox.website_draft ?? toolbox.store_profile)?.pages?.[0]?.blocks?.length ?? 0} ready-to-edit website blocks generated from the Brand DNA.
+                    {toolbox.website_draft.pages[0]?.blocks.length ?? 0} ready-to-edit website blocks generated from the Brand DNA.
                   </p>
                 </OutputGroup>
               </div>

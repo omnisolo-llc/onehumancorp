@@ -146,13 +146,7 @@ export default function AgentsPage() {
  <div className="flex items-center gap-2">
  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pro Mode</span>
  <button
- onClick={() => {
- if (!hasPro && !showAdvanced) {
- setShowSoftPaywall(true);
- return;
- }
- setShowAdvanced(!showAdvanced);
- }}
+ onClick={() => setShowAdvanced(!showAdvanced)}
  className={`w-10 h-6 rounded-full transition-colors relative ${showAdvanced ? 'bg-indigo-600' : 'bg-gray-200'}`}
 >
  <span className={`absolute top-1 left-1 bg-white/65 w-4 h-4 rounded-full transition-transform ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
@@ -210,38 +204,12 @@ export default function AgentsPage() {
 
  {/* Main Content */}
  <main className="flex-1 p-5 overflow-y-auto pb-24 bg-gray-50">
- {showSoftPaywall && (
- <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
- <div className="w-full max-w-sm rounded-[16px] bg-white p-6 shadow-2xl">
- <h2 className="text-2xl font-bold font-outfit text-gray-900">Upgrade to Pro</h2>
- <p className="mt-2 text-sm text-gray-600">Unlock Pro Mode for advanced automation controls.</p>
- <a href="/pricing" className="mt-4 block rounded-[8px] bg-indigo-600 px-4 py-3 text-center text-sm font-bold text-white">
- Upgrade to Pro
- </a>
- <button
- type="button"
- onClick={() => {
- setHasPro(true);
- setShowAdvanced(true);
- setShowSoftPaywall(false);
- }}
- className="mt-3 w-full rounded-[8px] border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-bold text-indigo-700"
- >
- Share on X to get 7 Days Free
- </button>
- <button type="button" onClick={() => setShowSoftPaywall(false)} className="mt-3 w-full text-sm font-semibold text-gray-500">
- Close
- </button>
- </div>
- </div>
- )}
  {activeTab === 'departments' ? (
  <div className="space-y-4">
  {departments.map((dept) => (
- <button
- type="button"
+ <div
  key={dept.id}
- className="w-full text-left shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
+ className="shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
 >
  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
  {dept.icon}
@@ -250,7 +218,6 @@ export default function AgentsPage() {
  <h3 className="font-bold text-gray-900 font-outfit text-lg">{dept.name}</h3>
  <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">{dept.role}</p>
  <p className="text-sm text-gray-600 leading-relaxed">{dept.description}</p>
- <p className="mt-2 text-xs font-semibold text-green-700">Active and running</p>
 
  {showAdvanced && (
  <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4 text-xs text-gray-500">
@@ -261,15 +228,8 @@ export default function AgentsPage() {
  </div>
  )}
  </div>
- </button>
- ))}
- <button type="button" className="w-full rounded-[16px] border border-indigo-200 bg-indigo-50 p-4 text-left font-bold text-indigo-700">
- Hire Agent
- </button>
- <div className="rounded-[16px] border border-gray-100 bg-white/65 p-4 text-sm text-gray-700">
- <div className="font-bold">Marketing Pro</div>
- <div className="font-bold">Create Workflow</div>
  </div>
+ ))}
  </div>
 
  ) : activeTab === 'workflows' ? (

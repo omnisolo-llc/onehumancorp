@@ -12,8 +12,14 @@ test.describe('Autonomous Voice AI Phone Attendant Engine', () => {
         await page.goto('/agents');
         await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
 
-        await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible();
-        await expect(page.getByRole('button', { name: /The Manager/ }).first()).toBeVisible();
+        // Assert the voice config card exists in the UI
+        const aiReceptionistConfig = page.locator('#voice-ai-config');
+        await expect(aiReceptionistConfig).toBeVisible();
+        await page.getByLabel('Activate AI Receptionist').check();
+        await page.getByLabel('Allow AI to book appointments').check();
+        await page.getByLabel('Allow AI to text callers links').check();
+        await page.getByRole('button', { name: 'Save Voice Settings' }).click();
+        await expect(page.getByText('Voice settings updated successfully')).toBeVisible();
     });
 
     currentAppSmoke('voice_attendant_regression_check');

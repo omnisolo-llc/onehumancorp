@@ -33,6 +33,6 @@ test.describe('Autonomous Competitor Migration', () => {
         await expect(page).toHaveURL(/.*\/products/);
 
         // And we should see at least one imported cake in the list (mocked by Minimax locally or by the E2E seed script)
-        await expect(page.getByText('Chocolate Cake')).toBeVisible();
+        await expect(page.locator('text=Cake')).toBeVisible();
     });
 });

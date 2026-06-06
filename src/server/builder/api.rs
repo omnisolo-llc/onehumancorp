@@ -178,11 +178,7 @@ use super::jobs;
 fn default_builder_tenant_id() -> Uuid {
     let raw = std::env::var("OHC_DEFAULT_TENANT_ID")
         .unwrap_or_else(|_| "e2e-tenant".to_string());
-    Uuid::parse_str(&raw).unwrap_or_else(|_| {
-        // Keep string tenant defaults stable across requests so generate/publish
-        // flows can read the same records under Bazel and local dev.
-        Uuid::parse_str("00000000-0000-0000-0000-000000000001").expect("static UUID")
-    })
+    Uuid::parse_str(&raw).unwrap_or_else(|_| Uuid::new_v4())
 }
 
 async fn ensure_builder_claims(

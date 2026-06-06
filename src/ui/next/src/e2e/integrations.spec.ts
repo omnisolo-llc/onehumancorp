@@ -18,8 +18,8 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
 
         // Let's connect Mercado Pago
-        const mercadoCard = page.locator('h3', { hasText: 'Mercado Pago' }).locator('..');
-        const connectMercadoPagoButton = mercadoCard.getByRole('button', { name: 'Connect' });
+        const mercadoCard = page.locator('div').filter({ hasText: 'Mercado Pago' }).first();
+        const connectMercadoPagoButton = mercadoCard.locator('button:has-text("Connect")');
 
         // Mock window alert
         page.on('dialog', dialog => dialog.accept());
@@ -29,8 +29,8 @@ test.describe('Integrations Loop', () => {
         await expect(mercadoCard.locator('button:has-text("Manage")')).toBeVisible();
 
         // Let's connect Zoom
-        const zoomCard = page.locator('h3', { hasText: 'Zoom' }).locator('..');
-        const connectZoomButton = zoomCard.getByRole('button', { name: 'Connect' });
+        const zoomCard = page.locator('div').filter({ hasText: 'ZoomAutomated' }).first();
+        const connectZoomButton = zoomCard.locator('button:has-text("Connect")');
         await connectZoomButton.click();
 
         // Verify state changed
@@ -46,7 +46,7 @@ test.describe('Integrations Loop', () => {
 
     test('Calendar page displays Join Meeting for appointments with link', async ({ page }) => {
         await page.goto('/calendar');
-        await expect(page.getByRole('heading', { name: 'Calendar & Bookings' })).toBeVisible();
-        await expect(page.getByText(/Upcoming Appointments|Join Meeting/).first()).toBeVisible();
+        const joinMeetingButton = page.locator('a:has-text("Join Meeting")');
+        await expect(joinMeetingButton).toBeVisible();
     });
 });

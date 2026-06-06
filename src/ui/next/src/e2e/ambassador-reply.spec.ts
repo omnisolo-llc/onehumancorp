@@ -15,8 +15,8 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // Mock window alert for OAuth connect
     page.on('dialog', dialog => dialog.accept());
 
-    const metaCard = page.getByRole('heading', { name: 'Meta Graph API' }).locator('xpath=ancestor::div[contains(@class, "rounded")][1]');
-    const connectMetaButton = metaCard.getByRole('button', { name: 'Connect' });
+    const metaCard = page.locator('div').filter({ hasText: 'Meta Graph API' }).first();
+    const connectMetaButton = metaCard.locator('button:has-text("Connect")');
     await connectMetaButton.click();
 
     // Verify state changed
@@ -24,15 +24,14 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
 
     // 2. Trigger the Ambassador's draft reply via a real API call (no mocks)
     // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
-    const tenantId = 'e2e-tenant';
+    const tenantId = 'team-default'; // Use the default tenant id or extract it
     const webhookPayload = {
       tenant_id: tenantId,
       message: 'Do you have vegan chocolate cake available for Saturday?',
       source: 'instagram'
     };
 
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const response = await request.post(`${apiBase}/api/agents/webhook`, {
+    const response = await request.post('http://localhost:8080/api/agents/webhook', {
       data: webhookPayload,
     });
 
