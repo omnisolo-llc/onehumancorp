@@ -18,6 +18,7 @@ pub struct Order {
     pub status: String, // Preparing, ReadyForPickup, Shipped, Delivered
     pub customer_name: String,
     pub items: Vec<String>,
+    pub tracking_number: Option<String>,
     pub organization_id: String,
 }
 
@@ -29,7 +30,8 @@ pub struct QueueResponse {
 
 #[derive(Deserialize)]
 pub struct ExecuteActionRequest {
-    pub action: String, // e.g. "print_label", "mark_ready", "hand_off"
+    pub action: String,
+    pub tracking_number: Option<String>, // e.g. "print_label", "mark_ready", "hand_off"
 }
 
 struct AppState {
@@ -48,6 +50,7 @@ where
             status: "Preparing".to_string(),
             customer_name: "John Doe".to_string(),
             items: vec!["2 Summer Dresses".to_string()],
+            tracking_number: None,
             organization_id: "default".to_string(),
         },
         Order {
@@ -56,6 +59,7 @@ where
             status: "Preparing".to_string(),
             customer_name: "Jane Smith".to_string(),
             items: vec!["Chocolate Cake".to_string()],
+            tracking_number: None,
             organization_id: "default".to_string(),
         },
         Order {
@@ -64,6 +68,7 @@ where
             status: "ReadyForPickup".to_string(),
             customer_name: "Alice Johnson".to_string(),
             items: vec!["Coffee and Bagel".to_string()],
+            tracking_number: None,
             organization_id: "default".to_string(),
         },
     ];
@@ -132,6 +137,7 @@ async fn execute_action(
                     // Simulate ops agent printing label and shipping
                     if order.fulfillment_mode == "Shipping" {
                         order.status = "Shipped".to_string();
+                        order.tracking_number = payload.tracking_number.clone();
                     }
                 }
                 "mark_ready" => {

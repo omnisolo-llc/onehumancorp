@@ -57,6 +57,12 @@ export default function OrderDetailsPage() {
         setTrackingNumber(data.trackingNumber);
         setCarrier(data.carrier);
         setStatus('shipped');
+        // update backend fulfillment status
+        await fetch(`/api/fulfillment/execute/${orderId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'print_label', tracking_number: data.trackingNumber })
+        });
       }
     } catch (e) {
       console.error(e);
