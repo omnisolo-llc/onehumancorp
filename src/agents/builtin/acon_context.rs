@@ -35,8 +35,13 @@ impl AconStrategy {
             for i in 0..threshold {
                 if messages[i].role == Role::Tool {
                     for tr in &mut messages[i].tool_results {
-                        if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
-                            tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
+                        if tr.error.is_empty()
+                            && !tr.content.starts_with("[ACON:")
+                            && !tr.content.is_empty()
+                        {
+                            tr.content =
+                                "[ACON: Tool output omitted to prioritize reasoning traces.]"
+                                    .to_string();
                         }
                     }
                 }
@@ -62,13 +67,11 @@ mod tests {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "call_1".to_string(),
-                        content: "Massive log output".to_string(),
-                        error: String::new(),
-                    }
-                ],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "Massive log output".to_string(),
+                    error: String::new(),
+                }],
                 response_id: None,
                 previous_response_id: None,
             },
@@ -84,13 +87,11 @@ mod tests {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "call_2".to_string(),
-                        content: "Another tool result".to_string(),
-                        error: String::new(),
-                    }
-                ],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_2".to_string(),
+                    content: "Another tool result".to_string(),
+                    error: String::new(),
+                }],
                 response_id: None,
                 previous_response_id: None,
             },
@@ -104,14 +105,22 @@ mod tests {
             },
         ];
 
-        let config = AconConfig { preserve_recent_messages_count: 2 };
+        let config = AconConfig {
+            preserve_recent_messages_count: 2,
+        };
         apply_acon_strategy(&mut messages, &config);
 
         // First tool message should be masked (it is outside the preserved count)
-        assert_eq!(messages[0].tool_results[0].content, "[ACON: Tool output omitted to prioritize reasoning traces.]");
+        assert_eq!(
+            messages[0].tool_results[0].content,
+            "[ACON: Tool output omitted to prioritize reasoning traces.]"
+        );
 
         // Assistant message reasoning is preserved
-        assert_eq!(messages[1].content, "I'm thinking about the massive log output...");
+        assert_eq!(
+            messages[1].content,
+            "I'm thinking about the massive log output..."
+        );
 
         // Second tool message is within the recent preserved count
         assert_eq!(messages[2].tool_results[0].content, "Another tool result");

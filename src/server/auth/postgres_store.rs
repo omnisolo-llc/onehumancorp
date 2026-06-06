@@ -265,13 +265,29 @@ impl UserRepository for PgUserRepository {
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at";
+        let is_multitenant = ::server_config::get().multitenant;
+        let is_system = org_id.trim() == "system";
+        let should_bypass = !is_multitenant && is_system;
+        if is_multitenant && is_system {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
+        let query = if should_bypass {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
 
-        let rows = sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
+        let rows = if should_bypass {
+            sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         let mut users = Vec::new();
         for row in rows {
@@ -334,13 +350,29 @@ impl UserRepository for PgUserRepository {
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let query = "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id";
+        let is_multitenant = ::server_config::get().multitenant;
+        let is_system = org_id.trim() == "system";
+        let should_bypass = !is_multitenant && is_system;
+        if is_multitenant && is_system {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
+        let query = if should_bypass {
+            "DELETE FROM users WHERE id = $1 RETURNING id"
+        } else {
+            "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
 
-        let res = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let res = if should_bypass {
+            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -426,8 +458,11 @@ mod security_tests {
 
         // Cloud multitenant mode should NOT allow bypassing.
         let is_multitenant = true;
-        let org_id = "system";
-        let should_bypass = !is_multitenant && org_id == "system";
+        let is_system = org_id.trim() == "system";
+        let should_bypass = !is_multitenant && is_system;
+        if is_multitenant && is_system {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+        }
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");

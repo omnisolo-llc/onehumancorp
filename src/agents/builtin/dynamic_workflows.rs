@@ -4,9 +4,8 @@
 /// Limits implemented:
 /// - Up to 16 concurrent agents.
 /// - Up to 1,000 agents total per run.
-
 use std::sync::Arc;
-use tokio::sync::{mpsc, Semaphore};
+use tokio::sync::{Semaphore, mpsc};
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
@@ -81,14 +80,18 @@ impl DynamicWorkflow {
             match res {
                 Ok(r) => results.push(r),
                 Err(e) => {
-                    for handle in &handles { handle.abort(); }
+                    for handle in &handles {
+                        handle.abort();
+                    }
                     return Err(e);
                 }
             }
         }
 
         for handle in handles {
-            let _ = handle.await.map_err(|e| format!("Task failed to join: {}", e))?;
+            handle
+                .await
+                .map_err(|e| format!("Task failed to join: {}", e))?;
         }
 
         Ok(results)
@@ -113,7 +116,12 @@ mod tests {
             // update max observed
             let mut max = self.max_active_observed.load(Ordering::SeqCst);
             while current > max {
-                match self.max_active_observed.compare_exchange_weak(max, current, Ordering::SeqCst, Ordering::SeqCst) {
+                match self.max_active_observed.compare_exchange_weak(
+                    max,
+                    current,
+                    Ordering::SeqCst,
+                    Ordering::SeqCst,
+                ) {
                     Ok(_) => break,
                     Err(x) => max = x,
                 }
@@ -139,8 +147,14 @@ mod tests {
         });
 
         let tasks = vec![
-            Task { id: "1".to_string(), instructions: "task 1".to_string() },
-            Task { id: "2".to_string(), instructions: "task 2".to_string() },
+            Task {
+                id: "1".to_string(),
+                instructions: "task 1".to_string(),
+            },
+            Task {
+                id: "2".to_string(),
+                instructions: "task 2".to_string(),
+            },
         ];
 
         let results = wf.run_workflow(tasks, agent.clone()).await.unwrap();
@@ -157,14 +171,21 @@ mod tests {
 
         let mut tasks = Vec::new();
         for i in 0..50 {
-            tasks.push(Task { id: i.to_string(), instructions: format!("task {}", i) });
+            tasks.push(Task {
+                id: i.to_string(),
+                instructions: format!("task {}", i),
+            });
         }
 
         let results = wf.run_workflow(tasks, agent.clone()).await.unwrap();
         assert_eq!(results.len(), 50);
 
         let max_observed = agent.max_active_observed.load(Ordering::SeqCst);
-        assert!(max_observed <= 16, "Should not exceed max_concurrent of 16, but got {}", max_observed);
+        assert!(
+            max_observed <= 16,
+            "Should not exceed max_concurrent of 16, but got {}",
+            max_observed
+        );
     }
 
     #[tokio::test]
@@ -177,7 +198,10 @@ mod tests {
 
         let mut tasks = Vec::new();
         for i in 0..1005 {
-            tasks.push(Task { id: i.to_string(), instructions: format!("task {}", i) });
+            tasks.push(Task {
+                id: i.to_string(),
+                instructions: format!("task {}", i),
+            });
         }
 
         let res = wf.run_workflow(tasks, agent).await;
