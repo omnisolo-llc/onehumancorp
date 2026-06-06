@@ -1,5 +1,11 @@
 use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
+
+// In a real module tree we would import this, but here we can just use super::super::marketplace::Marketplace if the structure allows.
+// Let's check how tools/mod.rs references it. Actually tools is a separate crate: `ohc_builtin_agent_tools`.
+// Therefore it cannot import from `ohc_builtin_agent` which causes a circular dependency.
+// So we must remove the LocalMarketplaceProvider from the `tools` crate, and put it in the `builtin` crate instead.
 
 /// AutoGPT Unique Harness Innovations: Agent Marketplace
 /// Pre-built agent distribution.
