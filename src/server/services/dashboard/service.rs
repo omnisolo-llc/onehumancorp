@@ -119,7 +119,7 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("organization_id").unwrap_or_default() },
+                            organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
@@ -141,7 +141,7 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("organization_id").unwrap_or_default() },
+                            organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
@@ -313,7 +313,7 @@ impl MyDashboardService {
                         created_at_unix: 0,
                         members: vec![],
                         role_profiles: vec![],
-                        tier: row.try_get("tier").unwrap_or_default(),
+                        tier: if mobile_optimized { String::new() } else { row.try_get("tier").unwrap_or_default() },
                     });
                 }
             }
@@ -327,7 +327,7 @@ impl MyDashboardService {
                         created_at_unix: 0,
                         members: vec![],
                         role_profiles: vec![],
-                        tier: row.try_get("tier").unwrap_or_default(),
+                        tier: if mobile_optimized { String::new() } else { row.try_get("tier").unwrap_or_default() },
                     });
                 }
             }

@@ -1,12 +1,14 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 
 // Benchmark Results from Optimization Run:
-// Parallel Fetch Dashboard: p50: 181 us, p95: 250 us, p99: 307 us
-// API Response Time Standalone Mode (Desktop): p50: 175 us, p95: 257 us, p99: 309 us
-// API Response Time Standalone Mode (Mobile): p50: 148 us, p95: 225 us, p99: 270 us
-// Database Query Time Standalone Mode (SQLite): p50: 230 us, p95: 336 us, p99: 405 us
-// AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 7 us, p95: 75 us, p99: 75 us
-// AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 5 us, p95: 24 us, p99: 24 us
+// Parallel Fetch Dashboard: p50: 168 us, p95: 240 us, p99: 299 us
+// API Response Time Standalone Mode (Desktop): p50: 168 us, p95: 230 us, p99: 266 us
+// API Response Time Standalone Mode (Mobile): p50: 147 us, p95: 208 us, p99: 237 us
+// Database Query Time Standalone Mode (SQLite): p50: 249 us, p95: 343 us, p99: 397 us
+// AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 5 us, p95: 19 us, p99: 94 us
+// AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 3 us, p95: 3 us, p99: 20 us
+// Advisory Insights Standalone (Parallel): p50: 362 us, p95: 509 us, p99: 625 us
+// get_analytics Hot Start (Cache): p50: 4 us, p95: 4 us, p99: 16 us
 
 use std::time::Instant;
 use std::sync::Arc;

@@ -104,15 +104,13 @@ impl OrgService for MyOrgService {
             return Ok(Response::new(cached));
         }
 
-        let hub_for_summary = self.hub.clone();
         let org_id_clone = org_id.clone();
-        let (agents, meetings, summary_res, quota_res) = tokio::join!(
+        let (agents, meetings, quota_res) = tokio::join!(
             self.hub.get_agents(),
             self.hub.get_meetings(),
-            tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary("system")),
             self.hub.tracker().check_agent_quota(&org_id_clone)
         );
-        let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
+        let summary = self.hub.tracker().summary("system");
         let quota_result = quota_res;
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
