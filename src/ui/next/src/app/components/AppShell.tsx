@@ -55,6 +55,7 @@ const secondaryNav: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: "calendar" },
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
+  { label: "My Plan", href: "/plan", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
 ];
 
