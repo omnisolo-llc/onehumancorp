@@ -127,10 +127,23 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     if trimmed.contains("..") || trimmed.contains("//") {
         return Err(Status::permission_denied(format!("invalid SPIFFE ID path: {}", id)));
     }
-    let parts: Vec<&str> = trimmed.splitn(6, '/').collect();
-    if parts.len() < 2 {
-        return Err(Status::permission_denied(format!("SPIFFE ID too short: {}", id)));
+
+    // Expected format: spiffe://<domain>/org/<org_id>/agent/<agent_id>
+    // Parts: ["<domain>", "org", "<org_id>", "agent", "<agent_id>"]
+    let parts: Vec<&str> = trimmed.split('/').collect();
+    if parts.len() < 5 {
+        return Err(Status::permission_denied(format!("SPIFFE ID too short, must match pattern spiffe://<domain>/org/<org_id>/agent/<agent_id>: {}", id)));
     }
+    if parts[1] != "org" || parts[3] != "agent" {
+        return Err(Status::permission_denied(format!("SPIFFE ID must contain /org/<org_id>/agent/<agent_id> structure: {}", id)));
+    }
+    if parts[2].is_empty() {
+        return Err(Status::permission_denied(format!("SPIFFE ID org_id cannot be empty: {}", id)));
+    }
+    if parts[4].is_empty() {
+        return Err(Status::permission_denied(format!("SPIFFE ID agent_id cannot be empty: {}", id)));
+    }
+
     let domain = parts[0];
     
     match domain {
@@ -157,14 +170,17 @@ mod tests {
 
     #[test]
     fn test_validate_spiffe_id() {
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org-1/agent-1").is_ok());
+        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/agent-1").is_ok());
         assert!(validate_spiffe_id("spiffe://ohc.local/org/org-2/agent/agent-2").is_ok());
-        assert!(validate_spiffe_id("spiffe://ohc.os/agent/agent-3").is_ok());
+        assert!(validate_spiffe_id("spiffe://ohc.os/org/org-3/agent/agent-3").is_ok());
         assert!(validate_spiffe_id("spiffe://us-east.ohc.global/org/org-4/agent/agent-4").is_ok());
 
         assert!(validate_spiffe_id("invalid").is_err());
         assert!(validate_spiffe_id("spiffe://invalid.com/x").is_err());
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/../bad").is_err());
+        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org-1/agent-1").is_err()); // Missing /org/ and /agent/ structure
+        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org//agent/agent-1").is_err()); // Empty org_id
+        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/").is_err()); // Empty agent_id
     }
 
     #[test]
