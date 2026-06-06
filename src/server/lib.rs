@@ -332,6 +332,8 @@ pub mod services {
     pub mod booking;
     pub mod pos;
     pub mod collective;
+    #[path = "docs/mod.rs"]
+    pub mod docs;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
