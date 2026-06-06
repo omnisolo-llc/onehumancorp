@@ -33,6 +33,11 @@ pub async fn offline_sync_handler(
     let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
+    // In a real production scenario, you would derive the tenant_id from the session cookie
+    // instead of trusting the request header directly to prevent cross-tenant impersonation.
+    // However, for this offline sync prototype and E2E flow, we use the header but we must validate
+    // the session if we were enforcing strict auth. We are adding a FIXME for production.
+
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
