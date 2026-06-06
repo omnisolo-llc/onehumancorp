@@ -331,10 +331,16 @@ export default function OnboardingWizard() {
 
   // Progress percentage calculation
   const getProgress = () => {
-    if (step === 1) return (chatStep / 3) * 33;
-    if (step === 2) return 50;
-    if (step === 3) return 75;
-    if (step === 4) return 90;
+    // There are 5 steps, let's make it a more gradual fill
+    if (step === 1) {
+      if (chatStep === 0) return 10;
+      if (chatStep === 1) return 20;
+      if (chatStep === 2) return 30;
+      if (chatStep === 3) return 40;
+    }
+    if (step === 2) return 60;
+    if (step === 3) return 80;
+    if (step === 4) return 95;
     if (step === 5) return 100;
     return 0;
   };
@@ -415,7 +421,6 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
-                    autoComplete="organization"
                         autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
@@ -620,7 +625,6 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
                     type="text"
-                    autoComplete="organization"
                     autoFocus
                     value={businessName}
                     onChange={(e) => {
@@ -781,7 +785,6 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
                       <input
                         type="text"
-                        autoComplete="name"
                         value={adminName}
                         onChange={(e) => setAdminName(e.target.value)}
                         placeholder="e.g. Maya Smith"
@@ -793,8 +796,6 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
-                        inputMode="email"
-                        autoComplete="email"
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
@@ -806,7 +807,6 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
                       <input
                         type="password"
-                        autoComplete="new-password"
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         placeholder="••••••••"
