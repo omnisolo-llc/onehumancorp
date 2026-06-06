@@ -371,50 +371,22 @@ impl DashboardService for MyDashboardService {
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_cost_summary(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_products(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_orders(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_bookings(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
-            }
+            self.fetch_agents(&org_id, mobile_optimized),
+            self.fetch_meetings(&org_id),
+            self.fetch_cost_summary(&org_id, mobile_optimized),
+            self.fetch_products(&org_id, mobile_optimized),
+            self.fetch_orders(&org_id, mobile_optimized),
+            self.fetch_bookings(&org_id, mobile_optimized),
+            self.fetch_org(&org_id, mobile_optimized),
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
 
 
