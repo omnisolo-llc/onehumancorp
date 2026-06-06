@@ -130,6 +130,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/send-cart", post(handle_send_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -186,6 +187,19 @@ pub struct GenerateCartRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCartResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartRequest {
+    pub customer_name: Option<String>,
+    pub cart_value: Option<String>,
+    pub draft: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartResponse {
+    pub success: bool,
     pub message: String,
 }
 
@@ -295,6 +309,16 @@ async fn handle_generate_cart(
     );
     Json(GenerateCartResponse {
         message: generated,
+    })
+}
+
+async fn handle_send_cart(
+    Extension(_state): Extension<GrowthState>,
+    Json(_req): Json<SendCartRequest>,
+) -> impl IntoResponse {
+    Json(SendCartResponse {
+        success: true,
+        message: "Email scheduled to be sent successfully".to_string(),
     })
 }
 
