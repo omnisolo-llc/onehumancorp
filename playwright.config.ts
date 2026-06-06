@@ -42,4 +42,9 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+  webServer: {
+    command: 'npm run dev --prefix src/ui/next',
+    url: 'http://localhost:3000',
+    reuseExistingServer: true,
+  },
 });
