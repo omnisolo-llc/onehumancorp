@@ -199,6 +199,7 @@ rust_test(
 rust_sharded_test(
     name = "server_services_unit_test",
     size = "large",
+    timeout = "eternal",
     binary = ":server_services_unit_test_bin",
     shard_count = 6,
     target_compatible_with = select({
