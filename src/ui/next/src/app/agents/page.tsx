@@ -68,6 +68,29 @@ export default function AgentsPage() {
  fetchWorkflows();
  }, []);
 
+ useEffect(() => {
+ if (typeof EventSource === 'undefined') return;
+
+ const events = new EventSource('/api/agents/events');
+ events.onmessage = (event) => {
+ try {
+ const item = JSON.parse(event.data);
+ if (!item?.id || !item?.description) return;
+ setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+ if (String(item.status || '').toLowerCase().includes('draft')) {
+ setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+ }
+ } catch (e) {
+ console.error('Failed to parse agent event:', e);
+ }
+ };
+ events.onerror = () => {
+ events.close();
+ };
+
+ return () => events.close();
+ }, []);
+
  const createWorkflow = async (event: React.FormEvent<HTMLFormElement>) => {
  event.preventDefault();
  setWorkflowError('');
