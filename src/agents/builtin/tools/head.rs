@@ -1,36 +1,41 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::fs::File;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+// Pydantic-first tool schema validation: HeadArgs
+#[derive(Deserialize)]
+struct HeadArgs {
+    path: String,
+    lines: Option<u64>,
+}
 
 struct HeadExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for HeadExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("head: path is required".to_string()))?;
+impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
+    async fn execute_typed(&self, args: HeadArgs) -> Result<String, ToolError> {
+        let path = args.path.clone();
 
         // Basic path sanitization: disallow relative path traversal
         if path.contains("..") {
             return Err(ToolError::LlmRecoverable("head: path traversal via '..' is not allowed".to_string()));
         }
 
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
 
         let file = File::open(&actual_path)
             .await
             .map_err(|e| format!("head: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
-        let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
+        let lines_to_read = args.lines.unwrap_or(10) as usize;
         if lines_to_read > 1000 {
             return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
         }
@@ -72,7 +77,7 @@ pub fn head_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(HeadExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(HeadExecutor { working_dir })),
     }
 }
 
@@ -88,10 +93,10 @@ mod tests {
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "line1\nline2\nline3\nline4\n").await.unwrap();
 
-        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let tool = head_tool(Some(dir.path().to_path_buf()));
 
         let args = json!({ "path": "test.txt", "lines": 2 });
-        let result = executor.execute(args).await.unwrap();
+        let result = tool.execute.execute(args).await.unwrap();
         assert_eq!(result, "line1\nline2");
     }
 
@@ -102,10 +107,10 @@ mod tests {
         let content = (1..=15).map(|i| format!("line{}", i)).collect::<Vec<_>>().join("\n");
         fs::write(&file_path, content).await.unwrap();
 
-        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let tool = head_tool(Some(dir.path().to_path_buf()));
 
         let args = json!({ "path": "test.txt" });
-        let result = executor.execute(args).await.unwrap();
+        let result = tool.execute.execute(args).await.unwrap();
         let result_lines: Vec<&str> = result.split('\n').collect();
         assert_eq!(result_lines.len(), 10);
         assert_eq!(result_lines[0], "line1");
@@ -114,9 +119,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_head_path_traversal() {
-        let executor = HeadExecutor { working_dir: None };
+        let tool = head_tool(None);
         let args = json!({ "path": "../../../etc/passwd" });
-        let result = executor.execute(args).await;
+        let result = tool.execute.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("path traversal"));
@@ -127,12 +132,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_head_jit_limit() {
-        let executor = HeadExecutor { working_dir: None };
+        let tool = head_tool(None);
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "test").await.unwrap();
         let args = json!({ "path": file_path.to_str().unwrap(), "lines": 1001 });
-        let result = executor.execute(args).await;
+        let result = tool.execute.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Cannot read more than 1000 lines"), "msg was: {}", msg);
