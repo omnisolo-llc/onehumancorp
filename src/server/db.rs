@@ -359,9 +359,9 @@ impl DB {
 
         match &self.store {
             DbStore::Postgres => {
-                sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
+                let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
                     .execute(&self.pool)
-                    .await?;
+                    .await;
 
                 let migrator =
                     sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
