@@ -13,13 +13,14 @@ export default function GrowthReferralWidget() {
     setError(null);
     try {
       const res = await fetch('/api/v1/growth/team-invites', {
+        body: JSON.stringify({ team_id: 'test-team', inviter_id: 'test-user' }),
         method: 'POST',
       });
       if (!res.ok) {
         throw new Error('Failed to generate invite');
       }
       const data = await res.json();
-      setReferralLink(data.invite_url);
+      setReferralLink(data.invite_link);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
