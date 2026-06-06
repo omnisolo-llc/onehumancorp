@@ -6,6 +6,7 @@ describe('useOnboardingStore', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
+      businessDescription: '',
       isLoading: false,
       error: '',
       startResult: null,
@@ -15,6 +16,7 @@ describe('useOnboardingStore', () => {
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
+    expect(state.businessDescription).toBe('');
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
     expect(state.startResult).toBeNull();
@@ -22,7 +24,12 @@ describe('useOnboardingStore', () => {
 
   it('should update step', () => {
     useOnboardingStore.getState().setStep(2);
+    expect(useOnboardingStore.getState().step).toBe(2);
+  });
 
+  it('should update businessDescription', () => {
+    useOnboardingStore.getState().setBusinessDescription('Test Description');
+    expect(useOnboardingStore.getState().businessDescription).toBe('Test Description');
   });
 
   it('should update isLoading', () => {
@@ -61,11 +68,13 @@ describe('useOnboardingStore', () => {
 
   it('should persist state to localStorage', () => {
     useOnboardingStore.getState().setStep(3);
+    useOnboardingStore.getState().setBusinessDescription('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
 
     // The state is persisted in localStorage under 'onboarding-storage-v3'
     const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
     expect(storedState.state.step).toBe(3);
+    expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
   });
 });
