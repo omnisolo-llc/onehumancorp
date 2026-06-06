@@ -92,8 +92,8 @@ SET name = EXCLUDED.name,
 
 INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
 VALUES
-  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb),
-  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb)
+  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e", "name_ar": "كعكة احتفال نباتية"}'::jsonb),
+  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e", "name_ar": "فصل تزيين الكيك"}'::jsonb)
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
@@ -114,6 +114,14 @@ SET customer_id = EXCLUDED.customer_id,
     total_amount = EXCLUDED.total_amount,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price)
+VALUES
+  ('e2e-order-item-1', 'e2e-tenant', 'e2e-order-1', 'e2e-product-cake', 1, 39.99),
+  ('e2e-order-item-2', 'e2e-tenant', 'e2e-order-2', 'e2e-product-class', 1, 75.00)
+ON CONFLICT (id) DO UPDATE
+SET quantity = EXCLUDED.quantity,
+    price = EXCLUDED.price;
 
 INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status)
 VALUES

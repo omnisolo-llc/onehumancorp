@@ -1,110 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-
-// Offline storage helper for KDS data
-const OfflineStore = {
-  getEvents: () => JSON.parse(localStorage.getItem('ohc_kds_events') || '[]'),
-  addEvent: (event: any) => {
-    const events = OfflineStore.getEvents();
-    events.push(event);
-    localStorage.setItem('ohc_kds_events', JSON.stringify(events));
-  },
-  clearEvents: () => localStorage.setItem('ohc_kds_events', '[]'),
-};
+import { useSyncManager } from '../../../lib/useSyncManager';
 
 export default function KDSPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [language, setLanguage] = useState<'en' | 'ar'>('en');
-  const [isOffline, setIsOffline] = useState(false);
-  const [syncing, setSyncing] = useState(false);
 
-  // Network listener
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    // Set initial state safely
-    setIsOffline(!navigator.onLine);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const { queueMutation, isOffline, syncing } = useSyncManager('ohc_kds_events', '/api/v1/sync/kds');
 
   // Initial Data Load
   useEffect(() => {
-    fetch('/api/pos/orders').then(res => res.json()).then(setOrders).catch(console.error);
-    fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
-  }, []);
-
-  // Background sync
-  useEffect(() => {
-    const syncInterval = setInterval(async () => {
-      const events = OfflineStore.getEvents();
-      if (events.length > 0 && navigator.onLine) {
-        setSyncing(true);
-        try {
-          const orderEvents = events.filter((e: any) => e.type === 'UPDATE_ORDER_STATUS');
-          const inventoryEvents = events.filter((e: any) => e.type === 'TOGGLE_SOLD_OUT');
-
-          if (orderEvents.length > 0) {
-            await fetch('/api/pos/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(orderEvents)
-            });
-          }
-
-          if (inventoryEvents.length > 0) {
-            await fetch('/api/pos/inventory', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(inventoryEvents)
-            });
-          }
-
-          OfflineStore.clearEvents();
-        } catch (e) {
-          console.error("Sync failed", e);
-        } finally {
-          setSyncing(false);
-        }
-      }
-    }, 5000); // Try syncing every 5 seconds
-
-    return () => clearInterval(syncInterval);
+    fetch('/api/v1/pos/orders').then(res => res.json()).then(setOrders).catch(console.error);
+    fetch('/api/v1/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
   }, []);
 
   const handleUpdateOrderStatus = (orderId: string, newStatus: string) => {
     // Optimistic UI Update
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-
-    const event = {
-      type: 'UPDATE_ORDER_STATUS',
-      payload: { order_id: orderId, status: newStatus },
-      timestamp: new Date().toISOString(),
-    };
-
-    OfflineStore.addEvent(event);
+    queueMutation('UPDATE_ORDER_STATUS', { order_id: orderId, status: newStatus });
   };
 
   const handleToggleSoldOut = (itemId: string, isSoldOut: boolean) => {
     // Optimistic UI Update
     setInventory(prev => prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i));
-
-    const event = {
-      type: 'TOGGLE_SOLD_OUT',
-      payload: { item_id: itemId, is_sold_out: isSoldOut },
-      timestamp: new Date().toISOString(),
-    };
-
-    OfflineStore.addEvent(event);
+    queueMutation('TOGGLE_SOLD_OUT', { item_id: itemId, is_sold_out: isSoldOut });
   };
 
   const toggleLanguage = () => {
@@ -167,20 +88,20 @@ export default function KDSPage() {
             {orders.map(order => (
               <div key={order.id} className="bg-white/65 backdrop-blur-[30px] rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg text-gray-900">#{order.id} - {order.customer_name}</h3>
+                  <h3 className="font-bold text-lg text-gray-900">#{order.id.slice(0, 8)} - {order.customer_name}</h3>
                   <span className={`px-2 py-1 rounded text-xs font-bold ${
-                    order.status === 'Ready' ? 'bg-green-100 text-green-700' :
-                    order.status === 'Preparing' ? 'bg-yellow-100 text-yellow-700' :
+                    order.status === 'Ready' || order.status === 'ready' ? 'bg-green-100 text-green-700' :
+                    order.status === 'Preparing' || order.status === 'preparing' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-blue-100 text-blue-700'
                   }`}>
-                    {order.status === 'Ready' ? texts.ready : order.status === 'Preparing' ? texts.preparing : texts.received}
+                    {order.status === 'Ready' || order.status === 'ready' ? texts.ready : order.status === 'Preparing' || order.status === 'preparing' ? texts.preparing : texts.received}
                   </span>
                 </div>
                 <ul className="mb-4 text-gray-700 font-medium">
                   {order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
                 </ul>
                 <div className="grid grid-cols-2 gap-2">
-                   {order.status === 'Received' && (
+                   {(order.status === 'Received' || order.status === 'pending' || order.status === 'received') && (
                       <button
                         onClick={() => handleUpdateOrderStatus(order.id, 'Preparing')}
                         className="col-span-2 w-full py-4 bg-yellow-500 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
@@ -189,7 +110,7 @@ export default function KDSPage() {
                         {texts.preparing}
                       </button>
                    )}
-                   {order.status === 'Preparing' && (
+                   {(order.status === 'Preparing' || order.status === 'preparing') && (
                       <button
                         onClick={() => handleUpdateOrderStatus(order.id, 'Ready')}
                         className="col-span-2 w-full py-4 bg-green-500 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
@@ -198,7 +119,7 @@ export default function KDSPage() {
                         {texts.ready}
                       </button>
                    )}
-                   {order.status === 'Ready' && (
+                   {(order.status === 'Ready' || order.status === 'ready') && (
                       <button
                          className="col-span-2 w-full py-4 bg-gray-300 text-gray-600 font-bold text-lg rounded-xl"
                          disabled

@@ -47,8 +47,6 @@ const knownLegacyRealDataDebt = new Set<string>([
   'src/ui/next/src/app/api/integrations/manychat/send/route.ts',
   'src/ui/next/src/app/api/marketplace/route.ts',
   'src/ui/next/src/app/api/mesh/v2/broadcast/route.ts',
-  'src/ui/next/src/app/api/pos/inventory/route.ts',
-  'src/ui/next/src/app/api/pos/orders/route.ts',
   'src/ui/next/src/app/api/staff/route.ts',
   'src/ui/next/src/app/api/staff/timecard/route.ts',
   'src/ui/next/src/app/api/storefront/edge-personalization/route.ts',

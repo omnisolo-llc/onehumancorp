@@ -5,17 +5,17 @@ test.describe('KDS Offline & Multilingual', () => {
   test('KDS Order Sync & Multilingual Display', async ({ page }) => {
     await page.goto('/pos/kds');
 
-    // Wait for mock data to load
+    // Wait for data to load
     await expect(page.locator('text=Active Orders')).toBeVisible();
-    await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
-    await expect(page.getByText('Chicken Over Rice', { exact: true })).toBeVisible();
+    await expect(page.getByText('Ava Customer')).toBeVisible();
+    await expect(page.getByText('Vegan Celebration Cake')).toBeVisible();
 
     // Toggle language
     await page.getByTestId('lang-toggle').click();
 
     // Check Arabic translations
     await expect(page.locator('text=الطلبات النشطة')).toBeVisible();
-    await expect(page.locator('text=دجاج فوق الرز')).toBeVisible();
+    await expect(page.locator('text=كعكة احتفال نباتية')).toBeVisible();
 
     // Check RTL
     const dir = await page.locator('div[dir="rtl"]').count();
@@ -24,7 +24,7 @@ test.describe('KDS Offline & Multilingual', () => {
 
   test('KDS Offline Actions & Background Sync', async ({ page, context }) => {
     await page.goto('/pos/kds');
-    await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
+    await expect(page.getByText('Ava Customer')).toBeVisible();
 
     // Set network to offline
     await context.setOffline(true);
@@ -34,13 +34,16 @@ test.describe('KDS Offline & Multilingual', () => {
     // Wait for UI to reflect offline state
     await expect(page.locator('text=Offline Mode')).toBeVisible();
 
-    // Perform optimistic action 1: Update order status
-    await page.getByTestId('btn-prepare-1').click();
-    await expect(page.getByTestId('btn-ready-1')).toBeVisible();
+    // The seeded order 'e2e-order-2' is 'pending' and for 'Ben Buyer'
+    await expect(page.getByText('Ben Buyer')).toBeVisible();
+
+    // Perform optimistic action 1: Update order status for pending order
+    await page.getByTestId('btn-prepare-e2e-order-2').click();
+    await expect(page.getByTestId('btn-ready-e2e-order-2')).toBeVisible();
 
     // Perform optimistic action 2: Toggle sold out
-    await page.getByTestId('toggle-soldout-inv_1').click();
-    await expect(page.getByTestId('toggle-soldout-inv_1')).toHaveText('Sold Out');
+    await page.getByTestId('toggle-soldout-e2e-product-cake').click();
+    await expect(page.getByTestId('toggle-soldout-e2e-product-cake')).toHaveText('Sold Out');
 
     // Verify localStorage queued events
     const events = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_kds_events') || '[]'));

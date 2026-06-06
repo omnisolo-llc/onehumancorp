@@ -3595,6 +3595,9 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
+        .route("/api/v1/sync/kds", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::KdsSyncRequest>| async move { api::offline_sync::kds_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
+        .route("/api/v1/pos/orders", axum::routing::get({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap| async move { api::offline_sync::kds_orders_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers).await } }))
+        .route("/api/v1/pos/inventory", axum::routing::get({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap| async move { api::offline_sync::kds_inventory_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
