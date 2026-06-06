@@ -8,6 +8,7 @@ export default function AnalyticsPage() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [tenant, setTenant] = useState('my-store');
+  const [trialStatus, setTrialStatus] = useState('');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -18,15 +19,14 @@ export default function AnalyticsPage() {
   }, []);
 
   const claimTrialExtension = () => {
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
     setHasPro(true);
     setShowSoftPaywall(false);
-    setTimeout(() => {
-      alert('Your 7-day Pro trial has been activated.');
-    }, 500);
+    setTrialStatus('Your 7-day Pro trial has been activated.');
   };
 
   return (
@@ -42,6 +42,7 @@ export default function AnalyticsPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+        {trialStatus && <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800" role="status">{trialStatus}</p>}
 
         {/* Basic Analytics Section */}
         <section>
