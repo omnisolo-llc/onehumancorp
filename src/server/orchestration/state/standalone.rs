@@ -236,7 +236,7 @@ impl StateManager for StandaloneStateManager {
         {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") {
+                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") || e.contains("database is locked") || e.contains("Timeout") {
                     tracing::warn!(
                         "Lock timeout or unavailable in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
                     );
