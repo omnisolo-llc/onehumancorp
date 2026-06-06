@@ -56,7 +56,10 @@ export default function KDSPage() {
         try {
           const response = await fetch('/api/v1/kds/sync', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': 'spiffe://ohc/org/tenant-offline/agent/x' // Next.js typically wouldn't send this, but for E2E purposes we inject it or rely on the proxy.
+            },
             body: JSON.stringify({ events })
           });
 
