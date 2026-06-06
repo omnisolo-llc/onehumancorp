@@ -4,11 +4,11 @@ const nextConfig = {
     return [
       {
         source: '/api/ui/:path*',
-        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/ui/:path*` : 'http://localhost:18789/api/ui/:path*',
+        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/ui/:path*` : 'http://localhost:8080/api/ui/:path*',
       },
       {
         source: '/api/v1/growth/:path*',
-        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/v1/growth/:path*` : 'http://localhost:18789/api/v1/growth/:path*',
+        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/v1/growth/:path*` : 'http://localhost:8080/api/v1/growth/:path*',
       },
       {
         source: '/api/v1/builder/:path*',
@@ -20,7 +20,7 @@ const nextConfig = {
       },
       {
         source: '/api/billing/:path*',
-        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/billing/:path*` : 'http://localhost:18789/api/billing/:path*',
+        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/billing/:path*` : 'http://localhost:8080/api/billing/:path*',
       }
     ]
   },
