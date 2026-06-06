@@ -6,7 +6,7 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     await page.goto('/dashboard');
 
     // Wait for the Milestone Growth Loop component to appear
-    await page.locator('text=Milestone Unlocked').first().waitFor();
+    await page.locator('text=Milestone Unlocked!').first().waitFor();
 
     // Verify the share button is visible
     const shareBtn = page.locator('text=Share & Claim Reward');
