@@ -637,10 +637,8 @@ export default function WebsiteBuilderPage() {
                             setProductName(data.initial_products?.[0]?.name || 'First Product');
                             setProductPrice(data.initial_products?.[0]?.price || '10.00');
 
-                            // Let the debounce save it
-                            setTimeout(() => {
-                              setStatus('live');
-                            }, 2000);
+                            // Actually perform the launch step
+                            await handleLaunch();
                           } else {
                             console.error('Failed to generate storefront:', data);
                             finishWithFallback();
