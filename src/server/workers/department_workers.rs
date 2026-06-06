@@ -1025,20 +1025,63 @@ impl PromoterWorker {
         // Handle product creation for social auto-posting
 
         tokio::spawn(async move {
+            let pool = _db.pool.clone();
             while let Ok(event) = product_rx.recv().await {
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
+                            let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("New Product");
+
                             if let Some(product_id) = payload_json.get("product_id").and_then(|p| p.as_str()) {
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
                             }
+
+                            let prompt = format!("You are The Promoter. A new product '{}' was added to the catalog. Generate 3 short, punchy social media post variants (TikTok, Instagram, Twitter) to promote this product. Return JSON with keys 'tiktok_variant', 'instagram_variant', 'twitter_variant'.", product_name);
+                            let mut drafted_msg = r#"{"tiktok_variant": "Check out our new product!", "instagram_variant": "New arrival!", "twitter_variant": "Just launched!"}"#.to_string();
+
+                            let mut attempts = 0;
+                            while attempts < MAX_RETRIES {
+                                let ai_op = async {
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            prompt: prompt.clone(),
+                                            from_agent_id: "The Promoter".into(),
+                                        };
+                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                            return Ok(res.into_inner().content);
+                                        }
+                                    }
+                                    Err("AI call failed".to_string())
+                                };
+                                match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    Ok(Ok(content)) => {
+                                        drafted_msg = content;
+                                        break;
+                                    },
+                                    _ => {
+                                        attempts += 1;
+                                        tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                    }
+                                }
+                            }
+
+                            let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                "tiktok_variant": "Check out our new product!", "instagram_variant": "New arrival!", "twitter_variant": "Just launched!"
+                            }));
+                            let approval_id = uuid::Uuid::new_v4().to_string();
+                            let payload = serde_json::json!({ "action_type": "schedule_social_post", "social_variants": parsed, "product_name": product_name });
+                            let description = format!("New product detected! Schedule a post for '{}' to drive sales?", product_name);
+                            let now = Utc::now();
+                            let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
+                                .bind(&approval_id).bind(&org_id).bind("marketing").bind(&description).bind("DRAFT").bind("HIGH")
+                                .bind(serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string())).bind(now).bind(now)
+                                .execute(&pool).await;
                         }
                     }
                 }
-
             }
         });
 

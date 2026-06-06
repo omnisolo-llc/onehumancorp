@@ -217,13 +217,42 @@ export function UnifiedAgentFeed() {
                   )}
                 </div>
 
+                  {approval.payload?.social_variants && (
+                    <div className="mt-2 flex flex-col gap-2 p-3 bg-white/5 dark:bg-black/20 rounded-lg border border-white/10">
+                      {approval.payload.social_variants.tiktok_variant && (
+                        <div className="flex flex-col gap-1 text-sm">
+                          <span className="text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1">
+                            <span className="text-[#000000] dark:text-[#FFFFFF] text-xs px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700">TikTok</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 italic">"{approval.payload.social_variants.tiktok_variant}"</span>
+                        </div>
+                      )}
+                      {approval.payload.social_variants.instagram_variant && (
+                        <div className="flex flex-col gap-1 text-sm">
+                          <span className="text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1">
+                            <span className="text-pink-600 dark:text-pink-400 text-xs px-1 py-0.5 rounded bg-pink-100 dark:bg-pink-900/30">Instagram</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 italic">"{approval.payload.social_variants.instagram_variant}"</span>
+                        </div>
+                      )}
+                      {approval.payload.social_variants.twitter_variant && (
+                        <div className="flex flex-col gap-1 text-sm">
+                          <span className="text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1">
+                            <span className="text-blue-500 dark:text-blue-400 text-xs px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30">Twitter</span>
+                          </span>
+                          <span className="text-gray-900 dark:text-gray-100 italic">"{approval.payload.social_variants.twitter_variant}"</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 <div className="flex flex-col gap-3 w-full mt-2">
                   <button
                     onClick={() => handleDecision(approval.id, true)}
                     className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
                     aria-label="Approve proposal"
                   >
-                    Approve
+                    {approval.payload?.action_type === 'schedule_social_post' ? 'Schedule' : 'Approve'}
                   </button>
                   <div className="flex gap-3 w-full">
                     <button
