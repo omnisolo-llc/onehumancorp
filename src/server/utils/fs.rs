@@ -25,7 +25,9 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
         .map(char::from)
         .collect();
     
-    let tmp_name = dir.join(format!("{}.{}.tmp", base_name_str, random_suffix));
+    // Use env::temp_dir() to avoid unbound tmp files in the same dir
+    let mut tmp_name = std::env::temp_dir();
+    tmp_name.push(format!("{}.{}.tmp", base_name_str, random_suffix));
     
     let mut options = fs::OpenOptions::new();
     options.write(true).create_new(true);
@@ -40,6 +42,14 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
     drop(file); // Close file
 
     if let Err(e) = fs::rename(&tmp_name, filename) {
+        if e.raw_os_error() == Some(18) { // EXDEV
+            if let Err(e2) = fs::copy(&tmp_name, filename) {
+                let _ = fs::remove_file(&tmp_name);
+                return Err(e2);
+            }
+            let _ = fs::remove_file(&tmp_name);
+            return Ok(());
+        }
         let _ = fs::remove_file(&tmp_name); // Try to clean up
         return Err(e);
     }
