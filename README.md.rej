@@ -1,0 +1,20 @@
+--- README.md
++++ README.md
+@@ -107,6 +107,17 @@
+
+ * **Observe:** OpenTelemetry traces and Prometheus metrics capture every API call, agent execution loop, and database transaction.
+
++## Built-in Agent Harness
++
++The OneHumanCorp platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code.
++
++### Visual/Low-Code Orchestration
++
++The harness provides a **Block-based Visual Workflow** engine (`visual_workflow.rs`) allowing no-code agent assembly.
++
++- **Parallel Fan-out/Fan-in**: Use `ParallelFork` to run multiple execution branches concurrently, and `ParallelJoin` to merge the state values.
++- **Client API endpoint**: Workflows can be submitted and run dynamically through the `/api/workflow/run` endpoint using the Visual Workflow Client API.
++
+ ## Local Development
+
+ ### Prerequisites

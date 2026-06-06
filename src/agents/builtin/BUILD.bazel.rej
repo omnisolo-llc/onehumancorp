@@ -1,0 +1,10 @@
+--- src/agents/builtin/BUILD.bazel
++++ src/agents/builtin/BUILD.bazel
+@@ -140,6 +141,7 @@
+         "registry",
+         "gpt_researcher",
+         "local_provider",
+         "sona_patterns",
+         "visual_workflow",
++        "visual_workflow_client",
+ ]

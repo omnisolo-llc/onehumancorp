@@ -241,7 +241,6 @@ AGENT_UNIT_TEST_FILTERS = [
     "local_provider",
     "sona_patterns",
     "visual_workflow",
-    "visual_workflow_client",
 ]
 
 rust_test(

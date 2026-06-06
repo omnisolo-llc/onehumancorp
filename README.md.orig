@@ -3,17 +3,6 @@
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
-## Built-in Agent Harness
-
-The OneHumanCorp platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code.
-
-### Visual/Low-Code Orchestration
-
-The harness provides a **Block-based Visual Workflow** engine (`visual_workflow.rs`) allowing no-code agent assembly.
-
-- **Parallel Fan-out/Fan-in**: Use `ParallelFork` to run multiple execution branches concurrently, and `ParallelJoin` to merge the state values.
-- **Client API endpoint**: Workflows can be submitted and run dynamically through the `/api/workflow/run` endpoint using the Visual Workflow Client API (`visual_workflow_client.rs`).
-
 ## Getting Started (Day 1 Onboarding)
 
 To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
