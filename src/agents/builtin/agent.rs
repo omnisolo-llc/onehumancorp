@@ -99,6 +99,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub enable_deerflow_subagent_orchestration: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -160,6 +161,7 @@ enable_llmcompiler_plan_and_execute: false,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
+            enable_deerflow_subagent_orchestration: false,
         }
     }
 }
@@ -2017,6 +2019,18 @@ impl Agent {
                     }
                 }
             }
+        }
+
+        if final_cfg.enable_deerflow_subagent_orchestration {
+            let tools_clone = self_with_memory.tools.clone();
+            let llm_clone = self_with_memory.llm.clone();
+
+            let factory = move |_name: String| {
+                Arc::new(Agent::new(llm_clone.clone(), tools_clone.clone()))
+            };
+
+            let orchestrator = crate::deerflow_subagents::DeerFlowOrchestrator::new(self_with_memory.llm.clone(), factory);
+            return orchestrator.execute_task(initial_message, &final_cfg).await;
         }
 
         if final_cfg.enable_actor_model_message_passing {
@@ -7626,5 +7640,50 @@ mod guardrail_tests {
 
         let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
         assert!(has_tripped_event);
+    }
+
+    #[tokio::test]
+    async fn test_enable_deerflow_subagent_orchestration_flag() {
+        struct DeerLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for DeerLlm {
+            async fn chat(&self, req: crate::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                let response_text = if *count == 1 {
+                    r#"["Subtask 1"]"#.to_string()
+                } else if req.messages.last().unwrap().content.contains("synthesize these results") {
+                    "Synthesized DeerFlow Result".to_string()
+                } else {
+                    "Subagent executed subtask".to_string()
+                };
+
+                Ok(ChatResponse {
+                    message: Message::assistant(response_text),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+
+        let llm = Arc::new(DeerLlm {
+            call_count: tokio::sync::Mutex::new(0),
+        });
+
+        let agent = Agent::new(llm, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_deerflow_subagent_orchestration = true;
+        cfg.enable_observation_masking = false;
+
+        let mut on_event = |_| {};
+
+        let result = agent.run(&cfg, "Complex task", &mut on_event).await.unwrap();
+        assert_eq!(result, "Synthesized DeerFlow Result");
     }
 }
