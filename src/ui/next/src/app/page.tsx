@@ -2,7 +2,10 @@
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function Home() {
+import { Suspense } from 'react';
+
+function HomeContent() {
+
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -21,4 +24,12 @@ export default function Home() {
   }, [router, searchParams]);
 
   return null;
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
+  );
 }

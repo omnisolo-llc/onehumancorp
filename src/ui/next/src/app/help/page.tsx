@@ -45,7 +45,7 @@ export default function HelpCenterPage() {
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <p className="text-center text-gray-500 font-medium bg-white/40 backdrop-blur-[20px] saturate-200 py-8 rounded-2xl border border-white/30 w-full">
+          <p className="text-center text-gray-600 font-medium bg-white/60 backdrop-blur-[20px] saturate-200 py-8 rounded-2xl border border-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.02)] w-full">
             No results found matching "{searchQuery}"
           </p>
         ) : (
