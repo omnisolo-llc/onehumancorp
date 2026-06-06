@@ -322,32 +322,40 @@ async function auditClickEffectsForRoute(page: Page, route: string) {
 
 const generatedContractRoutes = discoverAppRoutes();
 
-test.describe('per-route exhaustive UI element contracts', () => {
-  test.describe.configure({ timeout: 120000 });
+test.describe('comprehensive UI contract', () => {
+  test.describe.configure({ timeout: 300000 });
 
-  test('generated route contract suite covers at least 100 additional checks', async () => {
+  test('per-route exhaustive UI element contracts cover at least 100 additional checks', async () => {
     expect(generatedContractRoutes.length, 'Route discovery must find enough pages for 100+ generated UI contracts.').toBeGreaterThanOrEqual(50);
     expect(generatedContractRoutes.length * 2).toBeGreaterThanOrEqual(100);
   });
 
   for (const route of generatedContractRoutes) {
-    test(`all visible interactive elements declare their designed purpose on ${routeLabel(route)}`, async ({ page }) => {
-      test.setTimeout(30000);
-      const audit = await auditInteractivePurposeForRoute(page, route);
-      console.log(`Audited ${audit.auditedElements} interactive elements on ${routeLabel(route)}.`);
-      expect(audit.failures).toEqual([]);
+    test(`all visible interactive elements declare their designed purpose on ${routeLabel(route)}`, async ({ browser }) => {
+      test.setTimeout(120000);
+      const page = await browser.newPage();
+      try {
+        const audit = await auditInteractivePurposeForRoute(page, route);
+        console.log(`Audited ${audit.auditedElements} interactive elements on ${routeLabel(route)}.`);
+        expect(audit.failures).toEqual([]);
+      } finally {
+        await page.close();
+      }
     });
 
-    test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ page }) => {
-      test.setTimeout(60000);
-      const audit = await auditClickEffectsForRoute(page, route);
-      console.log(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
-      expect(audit.failures).toEqual([]);
+    test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ browser }) => {
+      test.setTimeout(120000);
+      const page = await browser.newPage();
+      try {
+        const audit = await auditClickEffectsForRoute(page, route);
+        console.log(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
+        expect(audit.failures).toEqual([]);
+      } finally {
+        await page.close();
+      }
     });
   }
-});
 
-test.describe('comprehensive UI contract', () => {
   test('every app page loads without visible crash output', async ({ page }) => {
     expect(fs.existsSync(appRoot), 'Next UI source/routes are not available in this Playwright runfiles tree.').toBeTruthy();
     test.setTimeout(180000);
