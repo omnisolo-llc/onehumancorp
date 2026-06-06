@@ -58,12 +58,12 @@ test.describe('Agents Page', () => {
 
 test.describe('Business Setup Page', () => {
   test('should display setup page', async ({ page }) => {
-    await page.goto('/website-builder');
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await page.goto('/business-setup');
+    await expect(page.getByRole('heading', { name: 'OneHuman' })).toBeVisible();
   });
 
   test('should show setup wizard text', async ({ page }) => {
-    await page.goto('/website-builder');
+    await page.goto('/business-setup');
     await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
   });
 });

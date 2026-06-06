@@ -130,7 +130,6 @@ rust_library(
 rust_test(
     name = "server_domain_unit_test",
     size = "large",
-    timeout = "eternal",
     crate = ":server_domain",
     edition = "2024",
     env = {

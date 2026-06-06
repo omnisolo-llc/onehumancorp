@@ -1,9 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, devices } from '@playwright/test';
 
 test.use({
-  viewport: { width: 390, height: 844 },
-  isMobile: true,
-  hasTouch: true,
+  ...devices['iPhone 13'],
 });
 
 test('Maya the baker journey storefront v2', async ({ page }) => {
@@ -44,8 +42,10 @@ test('Maya the baker journey storefront v2', async ({ page }) => {
   await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('I bake custom cakes for weddings and parties.');
   await page.click('id=generate-btn');
 
-  // Screen 2: Selection. The mocked API can resolve before the transient
-  // generating screen is observable, so assert the stable next state.
+  // Screen 2: Generating
+  await expect(page.getByText('AI Architect')).toBeVisible();
+
+  // Screen 2.5: Selection
   await expect(page.getByText('Pick your draft')).toBeVisible();
   await page.click('text=Customize Selected Draft');
 

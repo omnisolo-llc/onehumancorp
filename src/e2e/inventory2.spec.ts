@@ -5,7 +5,9 @@ test.describe('Autonomous Predictive Inventory Dismiss', () => {
         await page.goto('/dashboard');
         await page.goto('/inventory');
 
-        await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
-        await expect(page.locator('body')).toContainText(/No raw material rows found|Loading inventory|Low Stock|Healthy/);
+        await expect(page.locator('text=⚠️ Running low: Medium Red Dress')).toBeVisible();
+
+        await page.click('button:has-text("Dismiss")');
+        await expect(page.locator("text=No active restock proposals. You're all set!")).toBeVisible();
     });
 });

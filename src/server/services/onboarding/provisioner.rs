@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_check_environment_local() {
-        if std::path::Path::new(".ohc-local-data").exists() { fs::remove_dir_all(".ohc-local-data").unwrap(); }
+        let _ = fs::remove_dir_all(".ohc-local-data");
 
         let res = check_environment(false);
         assert!(res.is_err());
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_check_environment_cloud() {
-        if std::path::Path::new(".ohc-cloud-data").exists() { fs::remove_dir_all(".ohc-cloud-data").unwrap(); }
+        let _ = fs::remove_dir_all(".ohc-cloud-data");
 
         let res = check_environment(true);
         assert!(res.is_err());

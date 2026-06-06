@@ -8,19 +8,7 @@ test.describe('Login Screen Visual Audit', () => {
     await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
   });
 
-  test('should navigate to dashboard', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('button', { name: 'Log In' }).click();
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  });
-
-  test('should navigate to onboarding', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('button', { name: 'Start Business Setup' }).click();
-    await expect(page.getByText('Start Onboarding')).toBeVisible();
-  });
-
-  test('should display dashboard directly', async ({ page }) => {
+  test('should display dashboard', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });

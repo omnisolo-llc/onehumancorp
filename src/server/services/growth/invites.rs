@@ -81,28 +81,6 @@ impl InviteRepository {
         Ok(count)
     }
 
-    pub async fn get_invite(&self, invite_id: &str) -> Result<Option<TeamInvite>, String> {
-        let row = sqlx::query("SELECT id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE id = $1")
-            .bind(invite_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if let Some(row) = row {
-            Ok(Some(TeamInvite {
-                id: row.get("id"),
-                team_id: row.get("team_id"),
-                inviter_id: row.get("inviter_id"),
-                invitee_id: row.get("invitee_id"),
-                status: row.get("status"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-
     pub async fn accept_invite(&self, invite_id: &str) -> Result<(), String> {
         let result = sqlx::query("UPDATE team_invites SET status = 'ACCEPTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(invite_id)

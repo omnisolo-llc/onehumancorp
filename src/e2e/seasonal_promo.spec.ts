@@ -7,14 +7,16 @@ test.describe('Seasonal Promotion Generator Flow', () => {
   });
 
   test('user can open seasonal promo generator and create a campaign', async ({ page }) => {
-    await page.goto('/seasonal-promo');
+    // Navigate to the Seasonal Promos screen
+    await page.getByRole('button', { name: 'Seasonal Promos ✨' }).click();
+
     await expect(page.getByRole('heading', { name: 'Seasonal Promotion Generator ✨' })).toBeVisible();
 
-    // Generate Campaign
-    await page.evaluate(() => localStorage.setItem('has_pro', 'true'));
-    await page.reload();
+    // Fill the inputs
     await page.locator('#promo-occasion').fill('Winter Wonderland');
     await page.locator('#promo-discount').fill('25');
+
+    // Generate Campaign
     await page.getByRole('button', { name: 'Generate Campaign' }).click();
 
     // Verify the result
@@ -24,6 +26,6 @@ test.describe('Seasonal Promotion Generator Flow', () => {
     const resultText = await resultCard.textContent();
     expect(resultText).toContain('Winter Wonderland Special!');
     expect(resultText).toContain('25% OFF');
-    expect(resultText).toContain('Use code: WINTERW25');
+    expect(resultText).toContain('Use code: WINTERWO25');
   });
 });

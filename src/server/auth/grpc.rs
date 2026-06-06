@@ -3,6 +3,7 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum AuthMode {
     Disabled,
     Token(Vec<u8>), // HMAC-SHA256 of expected token
@@ -10,10 +11,12 @@ enum AuthMode {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AuthConfig {
     mode: AuthMode,
 }
 
+#[allow(dead_code)]
 impl AuthConfig {
     pub fn from_env() -> Self {
         if let Ok(tok) = std::env::var("OHC_AGENT_TOKEN") {
@@ -96,6 +99,7 @@ impl AuthConfig {
     }
 }
 
+#[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
     let app_key = std::env::var("JWT_SECRET")
         .map(|s| s.into_bytes())
@@ -115,6 +119,7 @@ fn hmac_token(tok: &str) -> Vec<u8> {
     mac.finalize().into_bytes().to_vec()
 }
 
+#[allow(dead_code)]
 fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let lower = id.to_lowercase();
     if lower.contains("%2f") || lower.contains("%25") {
@@ -142,6 +147,7 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn interceptor(cfg: AuthConfig) -> impl Fn(Request<()>) -> Result<Request<()>, Status> + Clone {
     move |req: Request<()>| {
         cfg.authenticate(&req)?;

@@ -16,9 +16,20 @@ test.describe('Offline POS Sync', () => {
       ]
     };
 
-    expect(payload.mutations).toHaveLength(1);
+    const response = await request.post('/api/v1/pos/sync', {
+      data: payload,
+      headers: {
+        'x-spiffe-id': 'spiffe://ohc/org/test-tenant/agent/frontend'
+      }
+    });
 
-    const health = await request.get('/api/health');
-    expect([200, 404]).toContain(health.status());
+    // We expect the API to return 200 OK immediately and enqueue the job.
+    // Note: in a real environment, we'd setup the database via seed scripts
+    // or test framework helpers and authenticate. Assuming the test harness
+    // sets up `test-tenant` correctly, we expect 200.
+    expect(response.status()).toBe(200);
+
+    const body = await response.json();
+    expect(body.success).toBe(true);
   });
 });

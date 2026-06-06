@@ -9,16 +9,17 @@ pub trait JobHandler: Send + Sync {
 }
 
 pub struct WorkerPool {
+    #[allow(dead_code)] queue: Arc<OHCJobQueue>,
     workers: Vec<JoinHandle<()>>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
 impl WorkerPool {
-    pub fn new(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
+    pub fn new(#[allow(dead_code)] queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
         Self::new_with_timeout(queue, num_workers, job_types, handler, 60000)
     }
 
-    pub fn new_with_timeout(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>, timeout_ms: u64) -> Self {
+    pub fn new_with_timeout(#[allow(dead_code)] queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>, timeout_ms: u64) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         let mut workers = Vec::with_capacity(num_workers);
 
@@ -101,6 +102,7 @@ impl WorkerPool {
         }
 
         Self {
+            queue,
             workers,
             shutdown_tx,
         }

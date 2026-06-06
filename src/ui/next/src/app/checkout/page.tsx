@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
-import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -11,13 +10,6 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
-  const [tenant, setTenant] = useState("my-store");
-
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-      setTenant(localStorage.getItem('tenant') || 'my-store');
-    }
-  }, []);
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
@@ -65,10 +57,12 @@ export default function CheckoutPage() {
       if (data && data.referral_link) {
         setReferralLink(data.referral_link);
       } else {
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
       setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     }
 
@@ -202,7 +196,6 @@ export default function CheckoutPage() {
               Cancel
             </button>
           </WithTooltip>
-          <PoweredByOHC tenantId={tenant} />
         </div>
       </main>
 

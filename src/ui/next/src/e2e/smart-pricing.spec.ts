@@ -5,7 +5,8 @@ test.describe('Smart Pricing Feature CUJ', () => {
     // 1. Owner starts at dashboard
     await page.goto('/dashboard');
 
-    await page.goto('/smart-pricing');
+    // 2. Navigate to smart pricing via the new dashboard link
+    await page.getByText('Configure Smart Pricing').click();
 
     // 3. Verify page loads
     await expect(page.getByText('Smart Pricing', { exact: true }).first()).toBeVisible();

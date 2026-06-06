@@ -20,8 +20,6 @@ export default function OrderDetailsPage() {
   const [selectedRate, setSelectedRate] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [labelUrl, setLabelUrl] = useState<string | null>(null);
-  const [sendingReceipt, setSendingReceipt] = useState(false);
-  const [receiptSent, setReceiptSent] = useState(false);
 
   const fetchRates = async () => {
     setLoadingRates(true);
@@ -65,30 +63,6 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const sendReceipt = async () => {
-    setSendingReceipt(true);
-    try {
-      const tenantId = typeof window !== 'undefined' && localStorage.getItem('tenant') ? localStorage.getItem('tenant') : 'my-store';
-      const response = await fetch('/api/v1/growth/campaign/send-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_email: 'alice.j@example.com',
-          order_id: orderId,
-          amount: '$45.00',
-          tenant_id: tenantId
-        })
-      });
-      if (response.ok) {
-        setReceiptSent(true);
-      }
-    } catch (e) {
-      console.error('Failed to send receipt', e);
-    } finally {
-      setSendingReceipt(false);
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
@@ -124,16 +98,6 @@ export default function OrderDetailsPage() {
             <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-lg font-bold text-gray-900">
               <span>Total</span>
               <span>$45.00</span>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={sendReceipt}
-                disabled={sendingReceipt || receiptSent}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${receiptSent ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                {sendingReceipt ? 'Sending...' : receiptSent ? 'Receipt Sent' : 'Send Email Receipt'}
-              </button>
             </div>
           </div>
 
@@ -287,10 +251,6 @@ export default function OrderDetailsPage() {
           </div>
         </div>
       </main>
-
-      <div className="mt-8 text-center pb-8">
-        <a href="https://ohc.store/join?ref=my-store" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity">⚡ Powered by OHC - Start your business today</a>
-      </div>
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

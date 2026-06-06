@@ -45,7 +45,7 @@ test.describe('Help Components', () => {
     await startTourBtn.click();
 
     // Verify the first walkthrough step appears
-    const firstStepTitle = page.getByRole('dialog').getByText('Business Analytics');
+    const firstStepTitle = page.locator('text=Business Analytics');
     await expect(firstStepTitle).toBeVisible();
 
     // Advance to the next step
@@ -54,7 +54,7 @@ test.describe('Help Components', () => {
     await nextBtn.click();
 
     // Verify the second walkthrough step appears
-    const secondStepTitle = page.getByRole('dialog').getByText('Operations Map');
+    const secondStepTitle = page.locator('text=Operations Map');
     await expect(secondStepTitle).toBeVisible();
 
     // Finish the walkthrough

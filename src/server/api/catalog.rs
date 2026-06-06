@@ -9,10 +9,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::sync::Arc;
-use std::sync::OnceLock;
-use crate::utils::cache::HybridCache;
-
-pub static CATALOG_CACHE: OnceLock<HybridCache<i64>> = OnceLock::new();
 
 #[derive(Deserialize)]
 pub struct CreateProductRequest {
@@ -91,44 +87,33 @@ async fn handle_create_product(
         .unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
 
     if let Some(limit) = tier.max_products() {
-        let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
-        let count_opt = cache.get(&tenant_id).await;
-
-        let total_products = if let Some(count) = count_opt {
-            count
-        } else {
-            match count_tenant_products(&mut conn, &tenant_id).await {
-                Ok(c) => {
-                    cache.set(&tenant_id, c, std::time::Duration::from_secs(30)).await;
-                    c
-                }
-                Err(e) => {
-                    ::server_telemetry::record_error_signal("Failed to count products for quota check");
-                    tracing::error!("Failed to count products for tenant {}: {}", tenant_id, e);
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ErrorResponse {
-                            error: "DATABASE_ERROR".to_string(),
-                            message: "Failed to verify product limit".to_string(),
-                        }),
-                    )
-                        .into_response();
-                }
+        match count_tenant_products(&mut conn, &tenant_id).await {
+            Ok(total_products) if total_products >= limit as i64 => {
+                return (
+                    StatusCode::PAYMENT_REQUIRED,
+                    Json(ErrorResponse {
+                        error: "LIMIT_EXCEEDED".to_string(),
+                        message: format!(
+                            "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
+                            plan_name(&tier),
+                            limit
+                        ),
+                    }),
+                ).into_response();
             }
-        };
-
-        if total_products >= limit as i64 {
-            return (
-                StatusCode::PAYMENT_REQUIRED,
-                Json(ErrorResponse {
-                    error: "LIMIT_EXCEEDED".to_string(),
-                    message: format!(
-                        "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
-                        plan_name(&tier),
-                        limit
-                    ),
-                }),
-            ).into_response();
+            Ok(_) => {}
+            Err(e) => {
+                ::server_telemetry::record_error_signal("Failed to count products for quota check");
+                tracing::error!("Failed to count products for tenant {}: {}", tenant_id, e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "DATABASE_ERROR".to_string(),
+                        message: "Failed to verify product limit".to_string(),
+                    }),
+                )
+                    .into_response();
+            }
         }
     }
 
@@ -157,10 +142,6 @@ async fn handle_create_product(
         )
             .into_response();
     }
-
-    // Invalidate cache
-    let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
-    cache.invalidate(&tenant_id).await;
 
     if let Err(e) = hub.tracker().record_product_added(&tenant_id).await {
         tracing::warn!(

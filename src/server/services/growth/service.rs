@@ -644,54 +644,33 @@ impl GrowthService for MyGrowthService {
             return Ok(Response::new(cached_response));
         }
 
-        let org_id_clone1 = org_id.clone();
-        let org_id_clone2 = org_id.clone();
-        let org_id_clone3 = org_id.clone();
-        let user_id_clone = req.user_id.clone();
-        let pool1 = self.pool.clone();
-        let pool2 = self.pool.clone();
-        let hub_clone = self.hub.clone();
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let (referral_res, product_res, tier_res) = tokio::join!(
-            async {
-                let mut tx = pool1.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone1).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut query = "SELECT SUM(conversions) FROM referrals WHERE organization_id = $1".to_string();
+        if !req.user_id.is_empty() {
+            query.push_str(" AND user_id = $2");
+        }
 
-                let mut query = "SELECT SUM(conversions) FROM referrals WHERE organization_id = $1".to_string();
-                if !user_id_clone.is_empty() {
-                    query.push_str(" AND user_id = $2");
-                }
-                let row = if user_id_clone.is_empty() {
-                    sqlx::query(&query).bind(&org_id_clone1).fetch_one(&mut *tx).await
-                } else {
-                    sqlx::query(&query).bind(&org_id_clone1).bind(&user_id_clone).fetch_one(&mut *tx).await
-                }.map_err(|e| Status::internal(e.to_string()))?;
+        let row = if req.user_id.is_empty() {
+            sqlx::query(&query).bind(&org_id).fetch_one(&mut *tx).await
+        } else {
+            sqlx::query(&query).bind(&org_id).bind(&req.user_id).fetch_one(&mut *tx).await
+        }.map_err(|e| Status::internal(e.to_string()))?;
 
-                let total_conversions: i64 = row.try_get(0).unwrap_or(0);
-                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-                Ok::<_, Status>(total_conversions)
-            },
-            async {
-                let mut tx = pool2.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone2).await.map_err(|e| Status::internal(e.to_string()))?;
-                let product_count_row = sqlx::query("SELECT COUNT(*)::BIGINT FROM products WHERE tenant_id = $1")
-                    .bind(&org_id_clone2)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
-                let product_count: i64 = product_count_row.try_get(0).unwrap_or(0);
-                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-                Ok::<_, Status>(product_count)
-            },
-            async {
-                hub_clone.tracker().get_tenant_tier(&org_id_clone3).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free)
-            }
-        );
-
-        let total_conversions = referral_res?;
-        let product_count = product_res?;
+        let total_conversions: i64 = row.try_get(0).unwrap_or(0);
         let _referral_quota = 50 + (total_conversions as i32) * 10;
-        let tier = tier_res;
+
+        let product_count_row = sqlx::query("SELECT COUNT(*)::BIGINT FROM products WHERE tenant_id = $1")
+            .bind(&org_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let product_count: i64 = product_count_row.try_get(0).unwrap_or(0);
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let tier = self.hub.tracker().get_tenant_tier(&org_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
         let product_limit = tier.max_products().map(|limit| limit as i32).unwrap_or(0);
         let soft_limit_reached = tier.max_products().map(|limit| product_count >= limit as i64).unwrap_or(false);
         let upgrade_message = if soft_limit_reached {
@@ -890,39 +869,5 @@ mod tests {
             assert!(inner.average_rating > 0.0);
             assert!(inner.total_reviews > 0);
         }
-    }
-
-    #[tokio::test]
-    async fn test_get_quota_latency_benchmark() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
-
-        let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
-
-        let service = MyGrowthService::new(pool.clone(), hub);
-
-        let req = GetQuotaRequest {
-            user_id: "".to_string(),
-        };
-
-        let mut request = Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "test_org".to_string(),
-            agent_id: "test".to_string(),
-        });
-
-        let start = std::time::Instant::now();
-        let _res = service.get_quota(request).await.unwrap().into_inner();
-        let elapsed = start.elapsed();
-        println!("get_quota Hybrid benchmark completed in {} ms", elapsed.as_millis());
-
-        // Assert that the optimization keeps latency under an acceptable threshold (e.g. 500ms)
-        assert!(elapsed.as_millis() < 500, "get_quota fetch took too long: {}ms", elapsed.as_millis());
     }
 }

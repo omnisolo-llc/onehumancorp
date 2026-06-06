@@ -7,7 +7,6 @@ use std::sync::OnceLock;
 
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
-static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Booking>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> = OnceLock::new();
@@ -214,72 +213,6 @@ impl MyDashboardService {
         Ok(results)
     }
 
-    async fn fetch_bookings(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
-        let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
-        let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-
-        if let Some(bookings) = cache.get(&cache_key).await {
-            return Ok(bookings);
-        }
-
-        let q = if mobile_optimized {
-            "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, '' as status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
-        } else {
-            "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
-        };
-
-        use sqlx::Row;
-        use chrono::{DateTime, Utc};
-        let mut results = Vec::new();
-        match &self.db.store {
-            crate::db::DbStore::Postgres => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
-                    for r in rows {
-                        let start_time: DateTime<Utc> = r.try_get("start_time").unwrap_or_else(|_| Utc::now());
-                        let end_time: Option<DateTime<Utc>> = r.try_get("end_time").ok();
-                        let b = ::server_ohc::app::Booking {
-                            id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
-                            customer_id: r.try_get("customer_id").unwrap_or_default(),
-                            product_id: r.try_get("product_id").unwrap_or_default(),
-                            start_time_unix: start_time.timestamp(),
-                            end_time_unix: end_time.map(|t| t.timestamp()).unwrap_or(0),
-                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
-                        };
-                        results.push(b);
-                    }
-                }
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
-                    for r in rows {
-                        // For sqlite, datetime might come back as string depending on setup, but typically we handle it in sqlite specific way or parse it.
-                        // Assuming it matches what orders table handles, which doesn't query dates in sqlite branch for some reason.
-                        // For safety we'll use a string fallback and parse
-                        let start_time_str: String = r.try_get("start_time").unwrap_or_default();
-                        let start_time = DateTime::parse_from_rfc3339(&start_time_str).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now());
-                        let end_time_str: Option<String> = r.try_get("end_time").ok();
-                        let end_time = end_time_str.and_then(|s| DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&Utc)).ok());
-
-                        let b = ::server_ohc::app::Booking {
-                            id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
-                            customer_id: r.try_get("customer_id").unwrap_or_default(),
-                            product_id: r.try_get("product_id").unwrap_or_default(),
-                            start_time_unix: start_time.timestamp(),
-                            end_time_unix: end_time.map(|t| t.timestamp()).unwrap_or(0),
-                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
-                        };
-                        results.push(b);
-                    }
-                }
-            }
-        }
-
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
-        Ok(results)
-    }
-
     async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
         let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
@@ -362,7 +295,7 @@ impl DashboardService for MyDashboardService {
         let org_id = std::sync::Arc::new(req.organization_id);
         let mobile_optimized = req.mobile_optimized;
 
-        let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
+        let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             {
                 let s = self.clone();
                 let o = org_id.clone();
@@ -391,11 +324,6 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_bookings(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
                 tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
             }
         );
@@ -405,7 +333,6 @@ impl DashboardService for MyDashboardService {
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
 
 
@@ -560,7 +487,6 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
-            bookings,
         }))
     }
 

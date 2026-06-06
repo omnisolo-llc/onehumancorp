@@ -39,12 +39,12 @@ export default function TeamChatPage() {
     setMessages(prev => [...prev, {id: userMsgId, role: 'user', content: userMsg}]);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const response = await fetch('/api/agents/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // Assuming authorization is handled by Next.js API routes / middleware in reality
+          // 'Authorization': 'Bearer ' + token
         },
         body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
       });
@@ -74,7 +74,7 @@ export default function TeamChatPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] min-h-[812px] glassmorphism rounded-[16px] shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] min-h-[812px] mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
         <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">

@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct AiProvider {
     pub name: String,
     pub api_key: Option<String>,
@@ -13,6 +14,7 @@ pub struct AiProvider {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct AppSettings {
     pub listen_addr: String,
     pub db_path: Option<String>,
@@ -31,6 +33,7 @@ pub struct AppSettings {
     pub delivery_fee: Option<f64>,
 }
 
+#[allow(dead_code)]
 impl AppSettings {
     pub fn default() -> Self {
         AppSettings {
@@ -53,11 +56,13 @@ impl AppSettings {
     }
 }
 
+#[allow(dead_code)]
 pub struct Store {
     data: RwLock<AppSettings>,
     path: Option<PathBuf>,
 }
 
+#[allow(dead_code)]
 impl Store {
     pub fn new() -> Self {
         Store {

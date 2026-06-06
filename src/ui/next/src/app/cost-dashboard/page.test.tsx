@@ -42,8 +42,6 @@ describe('CostDashboardPage', () => {
       payment_fees: 5000,
       network_cost: 16000,
       bandwidth_savings: 5000,
-      cache_hit_rate: 85.5,
-      cost_per_1k_tokens: 0.0015,
       period_start: "2023-10-01",
       period_end: "2023-10-31",
       trend: [
@@ -74,11 +72,10 @@ describe('CostDashboardPage', () => {
 
     // Specific cost breakdowns
     expect(screen.getByText('$200.00')).toBeDefined(); // llm
-    expect(screen.getByText('Efficiency: 85.5% cache hit rate, $0.0015/1k tokens')).toBeDefined(); // llm efficiency
     expect(screen.getByText('$100.00')).toBeDefined(); // storage
-    expect(screen.getAllByText('$50.00').length).toBeGreaterThan(0); // payment fees
+    expect(screen.getByText('$50.00')).toBeDefined(); // payment fees
     expect(screen.getByText('$160.00')).toBeDefined(); // network
-    expect(screen.getAllByText('-$50.00').length).toBeGreaterThan(0); // bandwidth savings
+    expect(screen.getByText('-$50.00')).toBeDefined(); // bandwidth savings
 
     // 7-Day Trend
     expect(screen.getByText('7-Day Trend')).toBeDefined();

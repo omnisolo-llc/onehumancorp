@@ -3,6 +3,7 @@ use tokio::sync::Mutex;
 use async_trait::async_trait;
 
 #[derive(Clone, prost::Message)]
+#[allow(dead_code)]
 pub struct Message {
     #[prost(string, tag = "1")]
     pub topic: String,
@@ -17,16 +18,19 @@ pub trait DistributedLock: Send + Sync {
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
+#[allow(dead_code)]
 pub struct MemoryBus {
     subs: Mutex<std::collections::HashMap<String, broadcast::Sender<Message>>>,
     locks: Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>,
 }
 
+#[allow(dead_code)]
 impl MemoryBus {
     pub fn new() -> Self {
         MemoryBus {
@@ -110,11 +114,13 @@ impl DistributedLock for MemoryBus {
     }
 }
 
+#[allow(dead_code)]
 pub struct RedisBus {
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
 }
 
+#[allow(dead_code)]
 impl RedisBus {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
@@ -184,11 +190,13 @@ impl Bus for RedisBus {
     }
 }
 
+#[allow(dead_code)]
 pub struct IpcBus {
     pool: sqlx::SqlitePool,
     subs: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>>>,
 }
 
+#[allow(dead_code)]
 impl IpcBus {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -347,11 +355,13 @@ impl Bus for IpcBus {
     }
 }
 
+#[allow(dead_code)]
 pub struct NatsBus {
     client: async_nats::Client,
     kv: async_nats::jetstream::kv::Store,
 }
 
+#[allow(dead_code)]
 impl NatsBus {
     pub async fn new(nats_url: &str) -> Result<Self, String> {
         let client = async_nats::connect(nats_url).await.map_err(|e| e.to_string())?;
@@ -510,7 +520,7 @@ impl DistributedLock for RedisBus {
 impl DistributedLock for IpcBus {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
-        let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at <= cast(strftime('%s', 'now') as integer) RETURNING resource")
+        let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at < cast(strftime('%s', 'now') as integer) RETURNING resource")
             .bind(resource)
             .bind(owner)
             .bind(expires_at)

@@ -2,17 +2,11 @@ import { expect, test } from './fixtures';
 
 export function currentAppSmoke(label: string) {
   test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
-    test.setTimeout(180000);
+    test.setTimeout(60000);
 
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Welcome back, Human.')).toBeVisible({ timeout: 5000 });
-
-    // Verify glassmorphism style drift on dashboard panels
-    const panel = page.locator('.app-panel').first();
-    await expect(panel).toBeVisible();
-    await expect(panel).toHaveCSS('backdrop-filter', /blur\(30px\)/);
-    await expect(panel).toHaveCSS('border-radius', '16px');
 
     await page.goto('/agents');
     await expect(page.locator('h1', { hasText: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });

@@ -22,9 +22,6 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
     },
-    alias: {
-      '^swagger-ui-react.*css$': path.resolve(__dirname, './src/mocks/empty.css'),
-    },
   },
   resolve: {
     preserveSymlinks: true,
