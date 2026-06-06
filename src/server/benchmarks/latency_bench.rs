@@ -713,3 +713,4 @@ pub async fn bench_advisory_insights_latency() {
         fetch_times_sqlite[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
     );
 }
+// Trigger push
