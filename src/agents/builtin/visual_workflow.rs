@@ -18,6 +18,8 @@ pub enum NodeType {
     Output,
     SubAgent { agent_name: String, task_template: String },
     Merge { state_keys: Vec<String>, output_key: String },
+    ParallelFork { targets: Vec<String> },
+    ParallelJoin { state_keys: Vec<String>, output_key: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +82,60 @@ impl WorkflowExecutor {
             visited.insert(current_node_id.clone());
 
             match &node.node_type {
+                NodeType::ParallelFork { targets } => {
+                    let mut handles = Vec::new();
+                    for target in targets {
+                        let target_clone = target.clone();
+                        let state_clone = state.clone();
+
+                        let agent_clone = self.agent.clone();
+                        let tools_clone = self.tools.clone();
+                        let sub_agents_clone = self.sub_agents.clone();
+                        let config_clone = self.config.clone();
+                        let graph_clone = self.graph.clone();
+
+                        let handle = tokio::spawn(async move {
+                            let sub_executor = WorkflowExecutor::new(graph_clone, agent_clone, tools_clone, sub_agents_clone, config_clone);
+                            sub_executor.execute_from_node(target_clone, state_clone).await
+                        });
+                        handles.push(handle);
+                    }
+
+                    let results = futures::future::join_all(handles).await;
+
+                    let mut join_node_opt = None;
+                    for res in results {
+                        match res {
+                            Ok(Ok((final_state, stopped_at))) => {
+                                for (k, v) in final_state {
+                                    state.insert(k, v);
+                                }
+                                if let Some(join) = stopped_at {
+                                    join_node_opt = Some(join);
+                                }
+                            }
+                            Ok(Err(e)) => return Err(format!("Parallel branch failed: {}", e)),
+                            Err(e) => return Err(format!("Task join failed: {}", e)),
+                        }
+                    }
+
+                    if let Some(join_node) = join_node_opt {
+                        current_node_id = join_node;
+                        continue;
+                    } else {
+                        return Ok("Parallel execution completed without reaching a join or output".to_string());
+                    }
+                }
+                NodeType::ParallelJoin { state_keys, output_key } => {
+                    let mut merged_data = Vec::new();
+                    for key in state_keys {
+                        if let Some(val) = state.get(key) {
+                            merged_data.push(val.clone());
+                        }
+                    }
+                    let merged_string = serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
+                    state.insert(output_key.clone(), merged_string);
+                }
                 NodeType::Input { name: _ } => {
                     // Start execution
                 }
@@ -179,6 +235,127 @@ impl WorkflowExecutor {
         }
 
         Ok("Execution halted without reaching output".to_string())
+    }
+
+    pub async fn execute_from_node(&self, start_node_id: String, mut state: HashMap<String, String>) -> Result<(HashMap<String, String>, Option<String>), String> {
+        let mut current_node_id = start_node_id;
+
+        let nodes_map: HashMap<String, Node> = self.graph.nodes.iter()
+            .map(|n| (n.id.clone(), n.clone()))
+            .collect();
+
+        let mut outgoing_edges: HashMap<String, Vec<String>> = HashMap::new();
+        for edge in &self.graph.edges {
+            outgoing_edges.entry(edge.source.clone()).or_default().push(edge.target.clone());
+        }
+
+        let mut visited = std::collections::HashSet::new();
+
+        loop {
+            let node = nodes_map.get(&current_node_id).ok_or_else(|| format!("Node not found: {}", current_node_id))?;
+
+            if visited.contains(&current_node_id) {
+                return Err("Visual Orchestrator cycle detected".to_string());
+            }
+            visited.insert(current_node_id.clone());
+
+            match &node.node_type {
+                NodeType::ParallelJoin { .. } => {
+                    return Ok((state, Some(current_node_id)));
+                }
+                NodeType::Output => {
+                    return Ok((state, Some(current_node_id)));
+                }
+                NodeType::Input { name: _ } => {
+                }
+                NodeType::Llm { prompt_template } => {
+                    let mut prompt = prompt_template.clone();
+                    for (k, v) in &state {
+                        prompt = prompt.replace(&format!("{{{{{}}}}}", k), v);
+                    }
+
+                    let mut on_event = |_| {};
+                    let result = self.agent.run(&self.config, &prompt, &mut on_event).await
+                        .map_err(|e| format!("LLM node {} failed: {}", node.id, e))?;
+
+                    state.insert(node.id.clone(), result);
+                }
+                NodeType::Tool { tool_name, args_template } => {
+                    let mut args_json = args_template.clone();
+                    for (k, v) in &state {
+                        args_json = args_json.replace(&format!("{{{{{}}}}}", k), v);
+                    }
+
+                    let args: serde_json::Value = serde_json::from_str(&args_json)
+                        .map_err(|e| format!("Tool node {} failed to parse args: {}", node.id, e))?;
+
+                    let tool = self.tools.iter().find(|t| &t.name == tool_name)
+                        .ok_or_else(|| format!("Tool {} not found", tool_name))?;
+
+                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await
+                        .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
+
+                    state.insert(node.id.clone(), result);
+                }
+                NodeType::Condition { condition_expression, true_target, false_target } => {
+                    let mut expr = condition_expression.clone();
+                    for (k, v) in &state {
+                        expr = expr.replace(&format!("{{{{{}}}}}", k), v);
+                    }
+
+                    let parts: Vec<&str> = expr.split("==").collect();
+                    let is_true = if parts.len() == 2 {
+                        parts[0].trim() == parts[1].trim()
+                    } else {
+                        false
+                    };
+
+                    current_node_id = if is_true { true_target.clone() } else { false_target.clone() };
+                    continue;
+                }
+                NodeType::SubAgent { agent_name, task_template } => {
+                    let mut task = task_template.clone();
+                    for (k, v) in &state {
+                        task = task.replace(&format!("{{{{{}}}}}", k), v);
+                    }
+
+                    let sub_agent = self.sub_agents.get(agent_name)
+                        .ok_or_else(|| format!("SubAgent {} not found", agent_name))?;
+
+                    let mut on_event = |_| {};
+                    let result = sub_agent.run(&self.config, &task, &mut on_event).await
+                        .map_err(|e| format!("SubAgent node {} failed: {}", node.id, e))?;
+
+                    state.insert(node.id.clone(), result);
+                }
+                NodeType::Merge { state_keys, output_key } => {
+                    let mut merged_data = Vec::new();
+                    for key in state_keys {
+                        if let Some(val) = state.get(key) {
+                            merged_data.push(val.clone());
+                        }
+                    }
+                    let merged_string = serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
+                    state.insert(output_key.clone(), merged_string);
+                }
+                NodeType::ParallelFork { .. } => {
+                    return Err("Nested ParallelFork not supported".to_string());
+                }
+            }
+
+            let next_nodes = outgoing_edges.get(&current_node_id);
+            if let Some(nexts) = next_nodes {
+                if !nexts.is_empty() {
+                    current_node_id = nexts[0].clone();
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        Ok((state, None))
     }
 }
 
@@ -382,5 +559,41 @@ mod tests {
 
         let result = executor.execute(inputs).await.unwrap();
         assert_eq!(result, "Processed: Merged is [\"val1\",\"val2\"]");
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_parallel_fork_join() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
+                Node { id: "fork1".to_string(), node_type: NodeType::ParallelFork { targets: vec!["pathA".to_string(), "pathB".to_string()] } },
+                Node { id: "pathA".to_string(), node_type: NodeType::Llm { prompt_template: "A Processed: {{in}}".to_string() } },
+                Node { id: "pathB".to_string(), node_type: NodeType::Llm { prompt_template: "B Processed: {{in}}".to_string() } },
+                Node { id: "join1".to_string(), node_type: NodeType::ParallelJoin { state_keys: vec!["pathA".to_string(), "pathB".to_string()], output_key: "joined".to_string() } },
+                Node { id: "out_llm".to_string(), node_type: NodeType::Llm { prompt_template: "Final: {{joined}}".to_string() } },
+                Node { id: "out".to_string(), node_type: NodeType::Output },
+            ],
+            edges: vec![
+                Edge { source: "in".to_string(), target: "fork1".to_string() },
+                Edge { source: "pathA".to_string(), target: "join1".to_string() },
+                Edge { source: "pathB".to_string(), target: "join1".to_string() },
+                Edge { source: "join1".to_string(), target: "out_llm".to_string() },
+                Edge { source: "out_llm".to_string(), target: "out".to_string() },
+            ],
+        };
+
+        let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "init_data".to_string());
+
+        let result = executor.execute(inputs).await.unwrap();
+
+        assert!(result.contains("Processed: Final: [\"Processed: A Processed: init_data\",\"Processed: B Processed: init_data\"]") ||
+                result.contains("Processed: Final: [\"Processed: B Processed: init_data\",\"Processed: A Processed: init_data\"]"),
+                "Result was: {}", result);
     }
 }
