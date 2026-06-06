@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, ReactNode } from 'react';
 
-type Step = {
+export type Step = {
   targetId: string;
-  title: string;
+  title?: string;
   content: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
 };
@@ -12,16 +12,16 @@ type Step = {
 type WalkthroughProps = {
   steps: Step[];
   isOpen: boolean;
+  currentStepIndex: number;
+  onNext: () => void;
   onClose: () => void;
-  onComplete?: () => void;
 };
 
-export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: WalkthroughProps) {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+export function InteractiveWalkthrough({ steps, isOpen, currentStepIndex, onNext, onClose }: WalkthroughProps) {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
-    if (!isOpen || steps.length === 0) return;
+    if (!isOpen || steps.length === 0 || currentStepIndex < 0 || currentStepIndex >= steps.length) return;
 
     const currentStep = steps[currentStepIndex];
     const targetElement = document.getElementById(currentStep.targetId);
@@ -51,7 +51,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
     }
   }, [isOpen, currentStepIndex, steps]);
 
-  if (!isOpen || steps.length === 0) return null;
+  if (!isOpen || steps.length === 0 || currentStepIndex < 0 || currentStepIndex >= steps.length) return null;
   const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
   const forceWalkthrough = typeof window !== 'undefined' && (window.localStorage.getItem('TEST_WALKTHROUGH') === 'true' || window.location.search.includes('test_walkthrough=true'));
   if (isE2E && !forceWalkthrough) return null;
@@ -60,12 +60,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   const isLastStep = currentStepIndex === steps.length - 1;
 
   const handleNext = () => {
-    if (isLastStep) {
-      onComplete?.();
-      onClose();
-    } else {
-      setCurrentStepIndex(i => i + 1);
-    }
+    onNext();
   };
 
   const handleSkip = () => {
@@ -136,6 +131,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Speech Bubble */}
       <div
         role="dialog"
+        data-testid="walkthrough-bubble"
         aria-label={`${currentStep.title} walkthrough step`}
         className="fixed z-[1000] bg-white/90 backdrop-blur-[30px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] font-inter animate-pop-in"
         style={bubbleStyle}
@@ -145,7 +141,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         )}
 
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h3>
+          <h3 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title || "Quick Guide"}</h3>
           <button onClick={handleSkip} className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>

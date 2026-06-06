@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
-import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import { WalkthroughTarget } from "../../components/Walkthrough";
+import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -79,7 +80,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
-  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const { startWalkthrough } = useWalkthrough();
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
@@ -168,21 +169,6 @@ export default function Dashboard() {
     { label: "Growth", value: "Active", tone: "good" as const },
   ];
 
-  const walkthroughSteps = [
-    {
-      targetId: "sales-card-target",
-      title: "Business Analytics",
-      content: "This panel reads sales and customer counts from the database-backed dashboard endpoint.",
-      position: "bottom" as const,
-    },
-    {
-      targetId: "operations-map-target",
-      title: "Operations Map",
-      content: "Use this area to see the live state of orders, inbox, and inventory from your database.",
-      position: "bottom" as const,
-    },
-  ];
-
   return (
     <AppShell
       title="Dashboard"
@@ -199,12 +185,6 @@ export default function Dashboard() {
 
       <NeighborhoodPulseCard tenant={tenantId} />
 
-      <InteractiveWalkthrough
-        steps={walkthroughSteps}
-        isOpen={isWalkthroughOpen}
-        onClose={() => setIsWalkthroughOpen(false)}
-      />
-
       <div className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
@@ -214,7 +194,20 @@ export default function Dashboard() {
             } catch {
               // ignore storage failures
             }
-            setIsWalkthroughOpen(true);
+            startWalkthrough([
+              {
+                targetId: "agent-feed-refresh-btn-tooltip",
+                title: "Meet your workforce!",
+                content: "Your AI agents work 24/7 to support customers.",
+                position: "top",
+              },
+              {
+                targetId: "help-btn-tooltip",
+                title: "AI Support Agent",
+                content: "Activate your AI Support Agent to automatically reply to Instagram DMs and emails while you sleep.",
+                position: "top",
+              },
+            ]);
           }}
           className="app-button"
         >

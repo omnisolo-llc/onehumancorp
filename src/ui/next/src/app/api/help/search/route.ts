@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 
 const ARTICLES = [
-    { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-  { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" },
-  { title: "Getting Paid", desc: "Set up how you get paid, view deposits, and handle simple taxes.", link: "/help/payments" },
-  { title: "Your AI Helpers", desc: "Learn how to hire AI helpers and give them tasks to do.", link: "/help/ai-agents" },
-  { title: "Finding Customers", desc: "Send emails to customers and grow your business easily.", link: "/help/marketing" },
-  { title: "Account & Billing", desc: "View your bills, manage your plan, and invite team members.", link: "/help/account-billing" }
+  { title: "Getting Started", desc: "Learn how Maya the baker goes from cake idea to a live store in under 10 minutes.", link: "/help/getting-started-1" },
+  { title: "My Store", desc: "Add products like Carlos the handyman or Fatima the food cart owner. Track stock easily.", link: "/help/my-store" },
+  { title: "Payments", desc: "How Priya uses Stripe Terminal for in-person tap-to-pay and online checkouts.", link: "/help/payments" },
+  { title: "Your AI Helpers", desc: "Meet your workforce. Agents that reply to DMs, optimize SEO, and manage Maya's inventory.", link: "/help/ai-agents" },
+  { title: "Finding Customers", desc: "Automated Instagram posts and Google SEO so customers find your local business.", link: "/help/marketing" },
+  { title: "Account & Billing", desc: "Simple plan management and team invites for your growing business.", link: "/help/account-billing" }
 ];
 
 export async function GET(request: Request) {

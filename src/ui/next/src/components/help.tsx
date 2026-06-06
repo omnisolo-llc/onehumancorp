@@ -2,15 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
-import { InteractiveWalkthrough } from './Walkthrough';
-
 // --- Walkthrough System ---
-type Step = {
-  targetId: string;
-  message: string;
-};
+import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 type HelpArticle = { title: string; desc: string; link?: string };
 type HelpVideo = { id: number; title: string; duration: string };
@@ -65,6 +60,8 @@ type WalkthroughContextType = {
   startWalkthrough: (steps: Step[]) => void;
   nextStep: () => void;
   endWalkthrough: () => void;
+  steps: Step[];
+  currentStepIndex: number;
 };
 
 const WalkthroughContext = createContext<WalkthroughContextType | undefined>(undefined);
@@ -72,65 +69,60 @@ const WalkthroughContext = createContext<WalkthroughContextType | undefined>(und
 export function WalkthroughProvider({ children }: { children: ReactNode }) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+  const pathname = usePathname();
 
-  const startWalkthrough = (newSteps: Step[]) => {
+  const startWalkthrough = React.useCallback((newSteps: Step[]) => {
     setSteps(newSteps);
     setCurrentStepIndex(0);
-  };
+  }, []);
 
-  const nextStep = () => {
-    if (currentStepIndex < steps.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
-    } else {
-      endWalkthrough();
-    }
-  };
+  const nextStep = React.useCallback(() => {
+    setCurrentStepIndex(prev => {
+      if (prev < steps.length - 1) {
+        return prev + 1;
+      } else {
+        // We can't call endWalkthrough here directly to update other state safely in one go
+        // without potentially hitting closure issues if not careful,
+        // but we can just set index to -1.
+        setSteps([]);
+        return -1;
+      }
+    });
+  }, [steps.length]);
 
-  const endWalkthrough = () => {
+  const endWalkthrough = React.useCallback(() => {
     setSteps([]);
     setCurrentStepIndex(-1);
-  };
+  }, []);
 
   useEffect(() => {
-    if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
-      const step = steps[currentStepIndex];
-      const el = document.getElementById(step.targetId);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (typeof window !== "undefined") {
+      const pending = window.localStorage.getItem("OHC_PENDING_WALKTHROUGH");
+      if (pending) {
+        try {
+          const parsed = JSON.parse(pending);
+          // If the parsed steps use 'message' instead of 'content' (from old local tours), map them
+          const normalized = parsed.map((s: any) => ({
+            ...s,
+            content: s.content || s.message
+          }));
+          window.localStorage.removeItem("OHC_PENDING_WALKTHROUGH");
+          startWalkthrough(normalized);
+        } catch (e) {}
       }
     }
-  }, [currentStepIndex, steps]);
-
-  const activeStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
-
-  const [highlightStyle, setHighlightStyle] = useState({});
-
-  useEffect(() => {
-    if (activeStep) {
-      const el = document.getElementById(activeStep.targetId);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        setHighlightStyle({
-          top: rect.top - 8,
-          left: rect.left - 8,
-          width: rect.width + 16,
-          height: rect.height + 16,
-        });
-      }
-    }
-  }, [activeStep]);
+  }, [pathname, startWalkthrough]);
 
   return (
-    <WalkthroughContext.Provider value={{ startWalkthrough, nextStep, endWalkthrough }}>
+    <WalkthroughContext.Provider value={{ startWalkthrough, nextStep, endWalkthrough, steps, currentStepIndex }}>
       {children}
-      {steps.length > 0 && (
-        <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
-          isOpen={steps.length > 0}
-          onClose={endWalkthrough}
-          onComplete={endWalkthrough}
-        />
-      )}
+      <InteractiveWalkthrough
+        steps={steps}
+        isOpen={steps.length > 0}
+        currentStepIndex={currentStepIndex}
+        onNext={nextStep}
+        onClose={endWalkthrough}
+      />
     </WalkthroughContext.Provider>
   );
 }
@@ -206,6 +198,12 @@ export function HelpWidget() {
     }
   };
 
+  const queueWalkthrough = (steps: Step[], path: string) => {
+    window.localStorage.setItem("OHC_PENDING_WALKTHROUGH", JSON.stringify(steps));
+    router.push(path);
+    setOpen(false);
+  };
+
   return (
     <>
       <div className="fixed bottom-6 right-6 z-[90]">
@@ -260,17 +258,30 @@ export function HelpWidget() {
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => queueWalkthrough([
+                      { targetId: "bio-input", title: "Welcome Maya!", content: "Start by describing your business. E.g., 'I bake custom vegan cakes in Brooklyn.'", position: "top" },
+                      { targetId: "generate-btn", title: "AI Generation", content: "Click Build Store and our AI helpers will design your store layout and write product copy automatically.", position: "top" },
+                      { targetId: "launch-btn", title: "Go Live!", content: "Once it looks perfect, hit Launch to go live! Your store is now ready for customers.", position: "top" }
+                    ], "/builder")} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
-                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => queueWalkthrough([
+                      { targetId: "checkout-pay-btn", title: "Online Payments", content: "Connect your bank via Stripe to accept online payments securely.", position: "top" },
+                      { targetId: "checkout-terminal-btn", title: "In-Person Sales", content: "Selling in person? Use Stripe Terminal for tap-to-pay directly on your phone.", position: "top" }
+                    ], "/checkout")} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => queueWalkthrough([
+                      { targetId: "agent-feed-refresh-btn-tooltip", title: "Agent Workforce", content: "Meet your workforce! Your AI agents work 24/7 to support customers.", position: "top" },
+                      { targetId: "help-btn-tooltip", title: "AI Support Agent", content: "Activate your AI Support Agent to automatically reply to Instagram DMs and emails while you sleep.", position: "top" }
+                    ], "/dashboard")} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => startWalkthrough([
+                    { targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks.", position: "top" },
+                    { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol).", position: "top" }
+                  ])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                   <button

@@ -170,7 +170,7 @@ export function UnifiedAgentFeed() {
               </div>
             )}
             {!loading && approvals.length === 0 && (
-              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
+              <div className="w-full p-6 glassmorphism rounded-[16px] text-center" id="agent-feed-refresh-btn-tooltip">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -185,7 +185,9 @@ export function UnifiedAgentFeed() {
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                    <span
+                      className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md"
+                    >
                       {approval.department.replace('_', ' ')}
                     </span>
                     {approval.action_risk === 'HIGH' && (

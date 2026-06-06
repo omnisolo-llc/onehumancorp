@@ -7,13 +7,13 @@ export default function ChangelogPage() {
       version: "Version 1.0 (Latest)",
       contentLines: [
         "### 🌟 New Features",
-        "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
-        "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
-        "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
+        "- **Persona-Driven Help Center:** Documentation now features examples specifically for home bakers (Maya), handymen (Carlos), and boutique owners (Priya).",
+        "- **Contextual Tooltips:** Helpful hints on every major button, like 'Launch Site' and 'Tap to Pay', using zero technical jargon.",
+        "- **Interactive Walkthroughs:** Step-by-step guided tours for setting up your store, accepting payments, and hiring your first AI agent.",
         "### 🛠️ Improvements",
-        "- Faster loading times for product images.",
-        "- Simplified checkout process for your customers.",
-        "This is a plain paragraph test line."
+        "- **Plain-Language Reporting:** Financial and inventory reports now use simple terms business owners understand.",
+        "- **Mobile-First Checkout:** Refined tap-to-pay and online checkout flows for 375px screens.",
+        "Our mission is to empower everyone to launch and grow their business with zero technical knowledge."
       ]
     }
   ];

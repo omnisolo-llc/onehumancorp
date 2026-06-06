@@ -95,7 +95,7 @@ export function HelpChat() {
   };
 
   const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
-  const forceChat = typeof window !== 'undefined' && window.location.search.includes('test_chat=true');
+  const forceChat = typeof window !== 'undefined' && (window.location.search.includes('test_chat=true') || window.localStorage.getItem('TEST_CHAT') === 'true');
   if (isE2E && !forceChat) {
     return null; // Disable in E2E
   }

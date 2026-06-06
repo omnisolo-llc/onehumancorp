@@ -131,6 +131,7 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
             <button
+              id="checkout-pay-btn"
               onClick={() => handlePayment(false)}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
@@ -141,6 +142,7 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-subscribe-tooltip" defaultText="Start a monthly subscription using saved wallet payment for frictionless vaulting.">
             <button
+              id="checkout-subscribe-btn"
               onClick={() => handlePayment(true)}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
@@ -151,6 +153,7 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
+              id="checkout-terminal-btn"
               onClick={() => {
                 const amount = prompt("Enter amount to charge:");
                 if (!amount) return;

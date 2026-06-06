@@ -13,8 +13,8 @@ describe('ChangelogPage', () => {
     expect(screen.getByText('Version 1.0 (Latest)')).toBeInTheDocument();
 
     // Check for some content points
-    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeInTheDocument();
-    expect(screen.getByText(/Smart Tooltips:/)).toBeInTheDocument();
+    expect(screen.getByText(/Persona-Driven Help Center:/)).toBeInTheDocument();
+    expect(screen.getByText(/Contextual Tooltips:/)).toBeInTheDocument();
   });
 
   it('renders paragraph strings', () => {
@@ -25,7 +25,7 @@ describe('ChangelogPage', () => {
 
   it('renders paragraph elements for random text', () => {
     render(<ChangelogPage />);
-    expect(screen.getByText(/Faster loading times for product images/)).toBeInTheDocument();
+    expect(screen.getByText(/Our mission is to empower everyone/)).toBeInTheDocument();
   });
 
   it('covers the line 36 paragraph fallback', () => {

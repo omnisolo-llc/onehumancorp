@@ -17,20 +17,20 @@ export default function GettingStartedArticle() {
             Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.
           </p>
 
-          <div className="space-y-6 mb-10">
+          <div className="space-y-8 mb-10">
             <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-              <h3 className="font-bold font-outfit text-blue-900 text-xl mb-2">1. Set up your basic info</h3>
-              <p className="text-blue-800/80">Add your store name and a short bio so customers know who you are.</p>
+              <h3 className="font-bold font-outfit text-blue-900 text-xl mb-2">1. Tell us about your business</h3>
+              <p className="text-blue-800/80">Start by telling us what you sell and who your customers are. Maya, our home baker persona, might say: "I sell custom vegan cakes for birthday parties in Brooklyn."</p>
             </div>
 
             <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-              <h3 className="font-bold font-outfit text-blue-900 text-xl mb-2">2. Add your first product</h3>
-              <p className="text-blue-800/80">Upload a photo, set a price, and describe what you're selling.</p>
+              <h3 className="font-bold font-outfit text-blue-900 text-xl mb-2">2. Let AI build your store</h3>
+              <p className="text-blue-800/80">Once you describe your business, click "Generate". Our AI agents will pick a beautiful design, write your first product descriptions, and organize your layout.</p>
             </div>
 
             <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-              <h3 className="font-bold font-outfit text-blue-900 text-xl mb-2">3. Start accepting payments</h3>
-              <p className="text-blue-800/80">Connect your bank securely to get paid directly when customers buy.</p>
+              <h3 className="font-bold font-outfit text-blue-900 text-xl mb-2">3. Launch to the world</h3>
+              <p className="text-blue-800/80">When you're happy with the preview, click "Launch". Your store is now live at your own unique URL, ready for Maya's first cake order!</p>
             </div>
           </div>
 

@@ -3654,16 +3654,16 @@ async fn create_ui_bom_item_handler(
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
-            { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
-            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
-            { "id": 4, "title": "Adding staff to your account", "duration": "1:05" },
-            { "id": 5, "title": "Review an order", "duration": "1:10" },
-            { "id": 6, "title": "Send a campaign", "duration": "1:25" },
-            { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
-            { "id": 8, "title": "Manage inventory", "duration": "1:00" },
-            { "id": 9, "title": "View analytics", "duration": "0:45" },
-            { "id": 10, "title": "Update your profile", "duration": "0:55" }
+            { "id": 1, "title": "Getting Started: Maya's 10-Minute Store Setup", "duration": "1:20" },
+            { "id": 2, "title": "Accepting Payments with Stripe and Apple Pay", "duration": "1:15" },
+            { "id": 3, "title": "Hiring Your First AI Support Agent", "duration": "0:50" },
+            { "id": 4, "title": "Team Invites: Adding Helpers and Partners", "duration": "1:05" },
+            { "id": 5, "title": "Order Management for Home Bakers and Handymen", "duration": "1:10" },
+            { "id": 6, "title": "Automated Marketing: Instagram & Google SEO", "duration": "1:25" },
+            { "id": 7, "title": "Tap to Pay: Using Stripe Terminal on Mobile", "duration": "1:30" },
+            { "id": 8, "title": "Inventory Tracking and 'Sold Out' Toggles", "duration": "1:00" },
+            { "id": 9, "title": "Plain-Language Financial Reports", "duration": "0:45" },
+            { "id": 10, "title": "Custom Orders and Deposit Payments", "duration": "0:55" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
