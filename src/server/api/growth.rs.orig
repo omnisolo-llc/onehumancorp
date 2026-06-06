@@ -130,7 +130,6 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
-        .route("/campaign/start-lead-gen", post(handle_start_lead_gen))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -355,45 +354,6 @@ async fn handle_track_visitor(
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
-}
-
-#[derive(Deserialize)]
-pub struct StartLeadGenRequest {
-    pub tenant_id: String,
-    pub budget: i64,
-    pub service_radius: String,
-}
-
-#[derive(Serialize)]
-pub struct StartLeadGenResponse {
-    pub campaign: serde_json::Value,
-}
-
-async fn handle_start_lead_gen(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<StartLeadGenRequest>,
-) -> impl IntoResponse {
-    let id = uuid::Uuid::new_v4().to_string();
-
-    let payload = serde_json::json!({
-        "campaign_id": id,
-        "budget": req.budget,
-        "service_radius": req.service_radius
-    });
-
-    let job_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query(
-        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'lead_gen', $3, 'PENDING')"
-    )
-    .bind(&job_id)
-    .bind(&req.tenant_id)
-    .bind(&payload)
-    .execute(&state.pool)
-    .await;
-
-    Json(StartLeadGenResponse {
-        campaign: payload,
-    })
 }
 
 async fn handle_affiliate_generate_link(

@@ -1,4 +1,4 @@
-use crate::domain::repository::models::{Campaign, CampaignAsset, ChannelExecution, PromotionCode};
+use crate::domain::repository::models::{Campaign, CampaignAsset, ChannelExecution, PromotionCode, LeadGenCampaign};
 use sqlx::{PgPool, Error};
 
 pub struct CampaignRepository {
@@ -87,5 +87,41 @@ impl CampaignRepository {
         .bind(campaign_id)
         .fetch_all(&self.pool)
         .await
+    }
+
+    pub async fn create_lead_gen_campaign(&self, campaign: &LeadGenCampaign) -> Result<(), Error> {
+        sqlx::query(
+            r#"
+            INSERT INTO lead_gen_campaigns (id, tenant_id, budget, service_radius, status, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            "#,
+        )
+        .bind(&campaign.id)
+        .bind(&campaign.tenant_id)
+        .bind(&campaign.budget)
+        .bind(&campaign.service_radius)
+        .bind(&campaign.status)
+        .bind(&campaign.created_at)
+        .bind(&campaign.updated_at)
+        .execute(&self.pool)
+        .await?;
+
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let payload = serde_json::json!({
+            "campaign_id": campaign.id,
+            "budget": campaign.budget,
+            "service_radius": campaign.service_radius
+        });
+
+        sqlx::query(
+            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'lead_gen', $3, 'PENDING')"
+        )
+        .bind(&job_id)
+        .bind(&campaign.tenant_id)
+        .bind(&payload)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 }

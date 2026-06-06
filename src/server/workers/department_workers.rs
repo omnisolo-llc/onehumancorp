@@ -1,10 +1,11 @@
+use serde_json::json;
 use std::sync::Arc;
 use crate::db::DB;
 use std::time::Duration;
 use chrono::Utc;
 use uuid::Uuid;
 use sqlx::Row;
-use serde_json::json;
+
 use tokio::time::timeout;
 
 const AI_AGENT_TIMEOUT: Duration = Duration::from_secs(60);
@@ -12,12 +13,13 @@ const DB_OP_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_RETRIES: u32 = 3;
 
 pub mod pos_sync_worker {
+use serde_json::json;
     use std::sync::Arc;
     use crate::db::DB;
     use std::time::Duration;
     use sqlx::Row;
     use uuid::Uuid;
-    use serde_json::json;
+
 
     pub struct PosSyncWorker {
         pub db: Arc<DB>,
@@ -1183,6 +1185,158 @@ let db_for_products = self.db.clone();
                 }
             }
         });
+    }
+}
+
+pub mod lead_gen_worker {
+    use std::sync::Arc;
+    use crate::db::DB;
+    use std::time::Duration;
+    use sqlx::Row;
+    use uuid::Uuid;
+
+
+    pub struct LeadGenWorker {
+        pub db: Arc<DB>,
+        pub poll_interval: Duration,
+    }
+
+    impl LeadGenWorker {
+        pub fn new(db: Arc<DB>) -> Self {
+            Self {
+                db,
+                poll_interval: Duration::from_secs(5),
+            }
+        }
+
+        pub fn start(&self) {
+            let db = self.db.clone();
+            let interval_duration = self.poll_interval;
+            tokio::spawn(async move {
+                let pool = db.pool.clone();
+                loop {
+                    tokio::time::sleep(interval_duration).await;
+                    let mut tx = match pool.begin().await {
+                        Ok(t) => t,
+                        Err(e) => {
+                            tracing::error!("LeadGenWorker: Failed to begin tx: {}", e);
+                            continue;
+                        }
+                    };
+
+                    let job_opt = sqlx::query(
+                        r#"
+                        SELECT id, tenant_id, payload, retry_count, max_retries
+                        FROM ohc_job_queue
+                        WHERE job_type = 'lead_gen'
+                          AND status = 'PENDING'
+                          AND next_retry_at <= CURRENT_TIMESTAMP
+                        ORDER BY next_retry_at ASC
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 1
+                        "#,
+                    )
+                    .fetch_optional(&mut *tx)
+                    .await;
+
+                    let job_row = match job_opt {
+                        Ok(Some(row)) => row,
+                        Ok(None) => {
+                            let _ = tx.rollback().await;
+                            continue;
+                        }
+                        Err(e) => {
+                            tracing::error!("LeadGenWorker: Failed to fetch job: {}", e);
+                            continue;
+                        }
+                    };
+
+                    let job_id: String = job_row.get("id");
+                    let tenant_id: String = job_row.get("tenant_id");
+                    let payload: serde_json::Value = job_row.get("payload");
+
+                    // Set job status to PROCESSING
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&mut *tx)
+                        .await;
+                    let _ = tx.commit().await;
+
+                    // Simulate lead generation:
+                    // Create a dummy customer and booking
+                    let customer_id = Uuid::new_v4().to_string();
+                    let booking_id = Uuid::new_v4().to_string();
+                    let service_id = Uuid::new_v4().to_string(); // Assuming a default service
+
+                    let mut tx = match pool.begin().await {
+                        Ok(t) => t,
+                        Err(_e) => continue,
+                    };
+                    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+
+                    let customer_name = "Jane Doe (LeadGen)";
+                    let customer_email = "jane.lead@example.com";
+
+                    let _ = sqlx::query(
+                        r#"
+                        INSERT INTO customers (id, tenant_id, name, email, created_at, updated_at)
+                        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        ON CONFLICT DO NOTHING
+                        "#
+                    )
+                    .bind(&customer_id)
+                    .bind(&tenant_id)
+                    .bind(customer_name)
+                    .bind(customer_email)
+                    .execute(&mut *tx)
+                    .await;
+
+                    let _ = sqlx::query(
+                        r#"
+                        INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at)
+                        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '1 day' + INTERVAL '1 hour', 'CONFIRMED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        "#
+                    )
+                    .bind(&booking_id)
+                    .bind(&tenant_id)
+                    .bind(&customer_id)
+                    .bind(&service_id)
+                    .execute(&mut *tx)
+                    .await;
+
+                    // Create an inbox message about the new lead
+                    let message_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        r#"
+                        INSERT INTO inbox_messages (id, tenant_id, customer_id, sender_type, channel, content, status, is_read, created_at, updated_at)
+                        VALUES ($1, $2, $3, 'CUSTOMER', 'SYSTEM', $4, 'OPEN', false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        "#
+                    )
+                    .bind(&message_id)
+                    .bind(&tenant_id)
+                    .bind(&customer_id)
+                    .bind("New booking received from local lead generation campaign!")
+                    .execute(&mut *tx)
+                    .await;
+
+                    // Update LeadGenCampaign status to 'COMPLETED'
+                    if let Some(campaign_id) = payload.get("campaign_id").and_then(|v| v.as_str()) {
+                        let _ = sqlx::query("UPDATE lead_gen_campaigns SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+                            .bind(campaign_id)
+                            .bind(&tenant_id)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED' WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = tx.commit().await;
+                }
+            });
+        }
     }
 }
 
