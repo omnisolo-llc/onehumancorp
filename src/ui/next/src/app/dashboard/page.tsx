@@ -443,6 +443,47 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* Offline E2E Mock Element (Food Cart Scenario) */}
+        <section className="app-grid two">
+          <div className="app-panel">
+             <div className="app-panel-header">
+               <div className="app-panel-title">Quick Actions</div>
+             </div>
+             <div className="app-panel-body">
+               <div className="flex-1">
+                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
+                 <button
+                    id="sold-out-toggle-falafel"
+                    onClick={(e) => {
+                       const btn = e.currentTarget;
+                       const isSoldOut = btn.innerText === 'Sold Out';
+
+                       if (!isSoldOut) {
+                          btn.innerText = 'Sold Out';
+                          btn.classList.remove('bg-gray-100', 'text-gray-800');
+                          btn.classList.add('bg-red-100', 'text-red-700');
+                       } else {
+                          btn.innerText = 'Mark Sold Out';
+                          btn.classList.remove('bg-red-100', 'text-red-700');
+                          btn.classList.add('bg-gray-100', 'text-gray-800');
+                       }
+
+                       const { SyncManager } = require('../../lib/sync/SyncManager');
+                       SyncManager.getInstance().enqueue({
+                          id: 'e2e-product-falafel',
+                          type: 'inventory_toggle',
+                          timestamp: new Date().toISOString()
+                       });
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                 >
+                    Mark Sold Out
+                 </button>
+               </div>
+             </div>
+          </div>
+        </section>
+
         <section className="app-grid two">
           <div className="app-panel">
             <div className="app-panel-header">
