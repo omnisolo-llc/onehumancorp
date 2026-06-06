@@ -4,6 +4,10 @@ load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 exports_files(
     [
         "booking.rs",
+        "bookings/mod.rs",
+        "bookings/availability.rs",
+        "bookings/checkout.rs",
+        "bookings/calendar_sync.rs",
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
@@ -16,6 +20,10 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "booking.rs",
+        "bookings/mod.rs",
+        "bookings/availability.rs",
+        "bookings/checkout.rs",
+        "bookings/calendar_sync.rs",
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
