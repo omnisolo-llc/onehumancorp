@@ -68,9 +68,8 @@ test --build_tests_only
 # Keep the default wildcard suite complete: `bazel test //...` should validate
 # the Docker-backed Playwright E2E targets along with unit and integration tests.
 test --test_timeout=60,120,300,600
-# Limit concurrent local test jobs to prevent disk exhaustion and avoid
-# oversubscribing heavyweight local tests such as Playwright E2E shards.
-test --local_test_jobs=HOST_CPUS*.75
+# Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
+test --local_test_jobs=HOST_CPUS
 
 test --sandbox_add_mount_pair=/var/run/docker.sock
 test --test_output=errors
