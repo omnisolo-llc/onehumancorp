@@ -125,7 +125,7 @@ pub async fn bench_api_response_time() {
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
-    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let fallback_pg = crate::db::get_pool();
     let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
@@ -170,7 +170,7 @@ pub async fn bench_agent_snapshot() {
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = crate::db::get_pool();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -256,7 +256,7 @@ pub async fn bench_dashboard_snapshot() {
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = crate::db::get_pool();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -431,7 +431,7 @@ pub async fn bench_get_analytics() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = crate::db::get_pool();
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()

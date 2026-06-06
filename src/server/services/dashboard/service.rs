@@ -741,7 +741,7 @@ mod tests {
         sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'test_org', 50.0, 'completed')").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.unwrap();
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = crate::db::get_pool();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
