@@ -19,6 +19,8 @@ interface OnboardingState {
   adminPassword: string;
   aiAgents: string[];
   aiAutoRespond: boolean;
+  isInstantBuild: boolean;
+  instantBio: string;
   isLoading: boolean;
   error: string;
   startResult: any;
@@ -39,6 +41,8 @@ interface OnboardingState {
   setAdminPassword: (password: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
+  setIsInstantBuild: (isInstant: boolean) => void;
+  setInstantBio: (bio: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
@@ -64,6 +68,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       adminPassword: '',
       aiAgents: [],
       aiAutoRespond: true,
+      isInstantBuild: false,
+      instantBio: '',
       isLoading: false,
       error: '',
       startResult: null,
@@ -84,6 +90,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       setAdminPassword: (adminPassword) => set({ adminPassword }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
+      setIsInstantBuild: (isInstantBuild) => set({ isInstantBuild }),
+      setInstantBio: (instantBio) => set({ instantBio }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),

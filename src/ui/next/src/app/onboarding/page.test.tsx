@@ -459,23 +459,23 @@ describe('OnboardingWizard', () => {
     await user.click(customOption);
 
     // Verify initial state
-    const salesAgent = screen.getByText('Sales Agent');
-    expect(salesAgent).toBeInTheDocument();
+    const marketingAgent = screen.getByText('Marketing');
+    expect(marketingAgent).toBeInTheDocument();
 
     // Check toggle
     // Checkbox might be hidden by sr-only or similar, use label text instead or get by id
     const toggle = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(toggle).toBeChecked();
 
-    // Select Sales Agent
-    await user.click(salesAgent);
+    // Select Marketing Agent
+    await user.click(marketingAgent);
 
     // Toggle auto respond
     await user.click(toggle);
 
     await waitFor(() => {
       const state = useOnboardingStore.getState();
-      expect(state.aiAgents).toContain('Sales Agent');
+      expect(state.aiAgents).toContain('Marketing');
       expect(state.aiAutoRespond).toBe(false);
       expect(state.domainChoice).toBe('custom');
     });
@@ -496,6 +496,54 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+    });
+  });
+
+  it('Step 1: Handles Instant Build flow', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock intake success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    useOnboardingStore.setState({ chatStep: 0 });
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <OnboardingWizard />
+        </TooltipProvider>
+      );
+    });
+
+    // Start screen - click Instant Build
+    const instantBuildBtn = screen.getByText('Instant Build');
+    await user.click(instantBuildBtn);
+
+    // Should be on 30-Second Setup
+    expect(screen.getByText('The 30-Second Setup')).toBeInTheDocument();
+
+    const bioInput = screen.getByPlaceholderText(/Maya Bakery in Portland/i);
+    await user.type(bioInput, 'Maya Bakery in NY selling cakes.');
+
+    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
+    await user.click(generateBtn);
+
+    // Verify it transitions to Step 2: Review Details
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
     });
   });
 

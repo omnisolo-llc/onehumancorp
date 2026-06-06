@@ -48,6 +48,8 @@ export default function OnboardingWizard() {
     adminPassword, setAdminPassword,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
+    isInstantBuild, setIsInstantBuild,
+    instantBio, setInstantBio,
     isLoading, setIsLoading,
     error, setError,
     startResult, setStartResult
@@ -208,7 +210,9 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      const combinedDescription = isInstantBuild
+        ? instantBio
+        : `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -376,22 +380,57 @@ export default function OnboardingWizard() {
               </div>
 
               {chatStep === 0 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in text-center">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in text-center w-full">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                    Let's get your business online in under 10 minutes.
+                    Choose how you want to build your business.
                   </p>
-                  <button
-                    role="link"
-                    onClick={() => setChatStep(1)}
-                    className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
-                  >
-                    Start Onboarding
-                  </button>
+
+                  <div className="grid grid-cols-1 gap-4 w-full">
+                    <button
+                      onClick={() => {
+                        setIsInstantBuild(true);
+                        setChatStep(1);
+                      }}
+                      className="group p-6 rounded-[16px] border border-white/20 glassmorphism text-left hover:border-[#0066FF] transition-all duration-250"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-[#0066FF]/10 rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                        </div>
+                        <h3 className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">Instant Build</h3>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">
+                        Paste your Instagram link or write one paragraph. We'll handle the rest in 30 seconds.
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsInstantBuild(false);
+                        setChatStep(1);
+                      }}
+                      className="group p-6 rounded-[16px] border border-white/20 glassmorphism text-left hover:border-[#0066FF] transition-all duration-250"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </div>
+                        <h3 className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">Step-by-Step</h3>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">
+                        A guided walk-through to fine-tune your brand, products, and AI team.
+                      </p>
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {chatStep > 0 && (
+              {chatStep > 0 && !isInstantBuild && (
                 <>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
@@ -400,8 +439,71 @@ export default function OnboardingWizard() {
                 </>
               )}
 
-              {chatStep === 1 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+              {chatStep === 1 && isInstantBuild && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in w-full">
+                  <button onClick={() => setChatStep(0)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">The 30-Second Setup</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                      Tell us everything at once (bio, location, products).
+                    </p>
+                    <button
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                    >
+                      <IconLabel icon="save">Save Draft</IconLabel>
+                    </button>
+                  </div>
+
+                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+
+                  <div className="space-y-4 flex-1 w-full">
+                    <div>
+                      <textarea
+                        autoFocus
+                        value={instantBio}
+                        onChange={(e) => setInstantBio(e.target.value)}
+                        placeholder="e.g. Maya Bakery in Portland. We sell vegan wedding cakes. Check us out at instagram.com/mayacakes..."
+                        className="w-full p-3 sm:p-4 rounded-[12px] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-48 resize-none transition-all shadow-inner border border-white/20"
+                      />
+                    </div>
+                  </div>
+
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+                  <div className="mt-auto pt-6 w-full">
+                    <button
+                      onClick={() => {
+                        if (instantBio.trim().length < 10) {
+                          setValidationError('Please provide a bit more detail (at least 10 characters).');
+                          return;
+                        }
+                        setValidationError('');
+                        handleIntake();
+                      }}
+                      disabled={!instantBio.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Analyzing...
+                        </span>
+                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 1 && !isInstantBuild && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in w-full">
+                  <button onClick={() => setChatStep(0)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
@@ -817,26 +919,47 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
-                  <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
+                <div className="pt-4 border-t border-white/50 dark:border-white/10">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">Onboard Your AI Departments</label>
+                  <p className="text-[11px] text-gray-500 dark:text-[#A1A1A6] mb-4">
+                    Every business needs these functions. Our AI agents act as your dedicated department heads.
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { name: 'Operations', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', desc: 'Handles orders, bookings, and inventory.' },
+                      { name: 'Marketing', icon: 'M11 5.882V19.297A1.705 1.705 0 019.297 21H8.703A1.705 1.705 0 017 19.297V5.882a1.705 1.705 0 011.703-1.703h.594A1.705 1.705 0 0111 5.882zm7 0V19.297A1.705 1.705 0 0116.297 21h-.594A1.705 1.705 0 0114 19.297V5.882a1.705 1.705 0 011.703-1.703h.594A1.705 1.705 0 0118 5.882zM7 10h4M14 10h4', desc: 'Designs your site and manages social media.' },
+                      { name: 'Sales', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.407 2.63 1m-2.63-1c-.48 0-.916.15-1.28.4M12 8v10m0-10V7m0 11v1m6-3H6', desc: 'Finds customers and follows up on leads.' },
+                      { name: 'Customer Success', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', desc: 'Friendly replies to customer messages.' },
+                      { name: 'Finance', icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', desc: 'Manages payments, revenue, and reports.' },
+                      { name: 'Legal', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', desc: 'Drafts policies and keeps you compliant.' },
+                      { name: 'Business Advisory', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6', desc: 'Suggests how to grow your business.' },
+                    ].map(dept => {
+                       const isSelected = aiAgents.includes(dept.name);
                        return (
                          <div
-                           key={agent}
+                           key={dept.name}
                            onClick={() => {
                              if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
+                               setAiAgents(aiAgents.filter(a => a !== dept.name));
                              } else {
-                               setAiAgents([...aiAgents, agent]);
+                               setAiAgents([...aiAgents, dept.name]);
                              }
                            }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white'}`}
+                           className={`p-4 rounded-[12px] border cursor-pointer flex items-start gap-4 transition-all duration-200 ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/5' : 'border-white/20 glassmorphism hover:border-white/40'}`}
                          >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
-                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                           <div className={`mt-1 w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#0066FF] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-[#A1A1A6]'}`}>
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={dept.icon} />
+                             </svg>
+                           </div>
+                           <div className="flex-1 min-w-0">
+                             <div className="flex items-center justify-between mb-0.5">
+                               <h4 className={`font-bold text-sm ${isSelected ? 'text-[#0066FF]' : 'text-[#1D1D1F] dark:text-[#F5F5F7]'}`}>{dept.name}</h4>
+                               <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-300 dark:border-white/20'}`}>
+                                 {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                               </div>
+                             </div>
+                             <p className="text-[11px] text-gray-500 dark:text-[#A1A1A6] leading-tight">{dept.desc}</p>
                            </div>
                          </div>
                        );
@@ -844,17 +967,22 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] glassmorphism text-[#1D1D1F] dark:text-white">
-                    <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={aiAutoRespond}
-                      onChange={(e) => setAiAutoRespond(e.target.checked)}
-                    />
-                    <div className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? 'bg-[#34C759]' : 'bg-gray-300 dark:bg-gray-600'} relative`}>
-                       <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${aiAutoRespond ? 'translate-x-5' : 'translate-x-1'}`}></div>
+                <div className="pt-4 border-t border-white/50 dark:border-white/10">
+                  <label className="flex items-center justify-between cursor-pointer p-4 rounded-[12px] glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-white/40 transition-all border border-white/20">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm">Allow AI to Auto-Respond</span>
+                      <span className="text-[10px] text-gray-500 dark:text-[#A1A1A6]">Instant replies to DMs and emails.</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={aiAutoRespond}
+                        onChange={(e) => setAiAutoRespond(e.target.checked)}
+                      />
+                      <div className={`w-12 h-6 rounded-full transition-colors duration-250 ${aiAutoRespond ? 'bg-[#34C759]' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                         <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform duration-250 ${aiAutoRespond ? 'translate-x-6.5' : 'translate-x-0.5'}`}></div>
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -881,17 +1009,33 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-[16px] border border-white/20 p-8 shadow-2xl">
-               <div className="w-24 h-24 relative mb-8">
-                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
-                 <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-[24px] border border-white/20 p-12 shadow-2xl overflow-hidden relative">
+               <div className="absolute inset-0 overflow-hidden">
+                 <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#0066FF]/20 blur-3xl rounded-full animate-pulse"></div>
+                 <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-[#34C759]/20 blur-3xl rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
                </div>
-               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
-               <div className="space-y-2">
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+
+               <div className="w-32 h-32 relative mb-10 z-10">
+                 <div className="absolute inset-0 border-[6px] border-[#0066FF]/10 rounded-full"></div>
+                 <div className="absolute inset-0 border-[6px] border-[#0066FF] rounded-full border-t-transparent animate-spin" style={{ animationDuration: '0.8s' }}></div>
+                 <div className="absolute inset-4 border-[4px] border-[#34C759]/20 rounded-full"></div>
+                 <div className="absolute inset-4 border-[4px] border-[#34C759] rounded-full border-b-transparent animate-spin" style={{ animationDuration: '1.2s', animationDirection: 'reverse' }}></div>
+               </div>
+
+               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-6 z-10">Building Your Vision</h2>
+
+               <div className="space-y-4 z-10 w-full max-w-xs">
+                 {[
+                   { label: 'Synthesizing business model', delay: '0s' },
+                   { label: 'Designing premium storefront', delay: '0.4s' },
+                   { label: 'Provisioning AI departments', delay: '0.8s' },
+                   { label: 'Securing payment gateway', delay: '1.2s' }
+                 ].map((item, i) => (
+                   <div key={i} className="flex items-center gap-3 animate-fade-in" style={{ animationDelay: item.delay }}>
+                     <div className="w-2 h-2 rounded-full bg-[#0066FF] animate-ping"></div>
+                     <p className="text-sm font-semibold text-gray-600 dark:text-[#A1A1A6]">{item.label}</p>
+                   </div>
+                 ))}
                </div>
              </div>
           )}
