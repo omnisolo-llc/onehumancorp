@@ -33,7 +33,7 @@ test.describe('Onboarding Wizard CUJ', () => {
   async function startOnboarding(page: import('@playwright/test').Page) {
     await page.goto('/onboarding');
     await expect(page.getByRole('heading', { name: 'Welcome' })).toBeVisible();
-    await page.getByRole('link', { name: 'Start Onboarding' }).click();
+    await page.locator('button:has-text("Start Onboarding")').click();
     await expect(page.getByText('Tell us about your business')).toBeVisible();
   }
 
