@@ -43,6 +43,7 @@ use crate::memory_store::{VectorRepository, EmbeddingRecord};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
+    ResolveInterventionRequest, ResolveInterventionResponse,
 };
 use crate::tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
@@ -55,6 +56,8 @@ use crate::consolidation_worker::ConsolidationWorker;
 use serde_json::Value;
 use std::path::PathBuf;
 use std::time::Duration;
+use dashmap::DashMap;
+use tokio::sync::oneshot;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
 const AGENT_VERSION: &str = "1.0.0";
@@ -82,6 +85,7 @@ pub struct AgentServiceImpl {
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
+    pub active_interventions: Arc<DashMap<String, oneshot::Sender<Result<String, String>>>>,
 }
 
 
@@ -155,6 +159,26 @@ async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Op
     combined
 }
 
+pub struct InterventionDispatcher {
+    pub active_interventions: Arc<DashMap<String, oneshot::Sender<Result<String, String>>>>,
+}
+
+#[async_trait::async_trait]
+impl crate::agent::InterventionHandler for InterventionDispatcher {
+    async fn wait_for_intervention(&self, task_id: String, tool_call_id: String, reason: String) -> Result<String, String> {
+        let (tx, rx) = oneshot::channel();
+        let key = format!("{}:{}", task_id, tool_call_id);
+        self.active_interventions.insert(key.clone(), tx);
+
+        tracing::info!("Agent suspended: waiting for intervention on {}. Reason: {}", key, reason);
+
+        match rx.await {
+            Ok(result) => result,
+            Err(_) => Err("Intervention channel closed unexpectedly".to_string()),
+        }
+    }
+}
+
 impl AgentServiceImpl {
     pub fn new(agent_id: impl Into<String>, cfg: AgentConfig, auth: AuthMode) -> Self {
         Self {
@@ -165,6 +189,7 @@ impl AgentServiceImpl {
             llm_override: None,
             anthropic_memory: None,
             worker_handle: None,
+            active_interventions: Arc::new(DashMap::new()),
         }
     }
 
@@ -609,6 +634,10 @@ impl AgentServiceImpl {
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
             enable_tao_orchestration_loop: req.enable_tao_orchestration_loop,
+            task_id: if req.task_id.is_empty() { None } else { Some(req.task_id.clone()) },
+            intervention_handler: Some(Arc::new(InterventionDispatcher {
+                active_interventions: self.active_interventions.clone(),
+            })),
         }
     }
 
@@ -747,6 +776,34 @@ impl AgentServiceImpl {
             tracing::error!("Ralph Loop error: {}", e);
         }
     }
+
+    async fn resolve_intervention(
+        &self,
+        req: Request<ResolveInterventionRequest>,
+    ) -> Result<Response<ResolveInterventionResponse>, Status> {
+        self.check_auth(&req)?;
+        let r = req.into_inner();
+        let key = format!("{}:{}", r.task_id, r.tool_call_id);
+
+        if let Some((_, tx)) = self.active_interventions.remove(&key) {
+            let res = if r.resolution_type == "abort" {
+                Err("User aborted intervention".to_string())
+            } else {
+                Ok(r.input)
+            };
+
+            let _ = tx.send(res);
+            Ok(Response::new(ResolveInterventionResponse {
+                success: true,
+                error: String::new(),
+            }))
+        } else {
+            Ok(Response::new(ResolveInterventionResponse {
+                success: false,
+                error: format!("No active intervention found for task {} and tool call {}", r.task_id, r.tool_call_id),
+            }))
+        }
+    }
 }
 
 impl Drop for AgentServiceImpl {
@@ -883,8 +940,14 @@ impl AgentService for AgentServiceImpl {
                         ..Default::default()
                     },
                     AgentEvent::UserInterventionRequired { error } => RunTaskEvent {
-                        r#type: EventType::TaskError as i32,
-                        error: format!("USER INTERVENTION REQUIRED: {}", error),
+                        r#type: EventType::UserInterventionRequired as i32,
+                        error,
+                        ..Default::default()
+                    },
+                    AgentEvent::InterventionResolved { tool_call_id, input } => RunTaskEvent {
+                        r#type: EventType::InterventionResolved as i32,
+                        tool_name: tool_call_id,
+                        content: input,
                         ..Default::default()
                     },
                     AgentEvent::Handoff { target_agent } => RunTaskEvent {
@@ -1161,6 +1224,13 @@ impl AgentService for SharedAgentService {
         req: tonic::Request<SubAgentRequest>,
     ) -> Result<tonic::Response<SubAgentResponse>, tonic::Status> {
         self.0.dispatch_to_sub_agent(req).await
+    }
+
+    async fn resolve_intervention(
+        &self,
+        req: tonic::Request<ResolveInterventionRequest>,
+    ) -> Result<tonic::Response<ResolveInterventionResponse>, tonic::Status> {
+        self.0.resolve_intervention(req).await
     }
 }
 

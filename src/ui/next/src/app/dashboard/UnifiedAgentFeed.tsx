@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { InterventionPanel } from "@/components/InterventionPanel";
 
 type ApprovalRequest = {
   id: string;
@@ -19,6 +20,11 @@ type ApprovalsResponse = {
 
 export function UnifiedAgentFeed() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [activeIntervention, setActiveIntervention] = useState<{
+    taskId: string;
+    toolCallId: string;
+    reason: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
@@ -95,6 +101,18 @@ export function UnifiedAgentFeed() {
   }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
+    const approval = approvals.find(a => a.id === id);
+
+    // Check if this is a user intervention request (stored as a special status or payload)
+    if (approval?.status === "USER_INTERVENTION_REQUIRED" || approval?.payload?.is_intervention) {
+        setActiveIntervention({
+            taskId: approval.payload?.task_id || id,
+            toolCallId: approval.payload?.tool_call_id || "unknown",
+            reason: approval.description
+        });
+        return;
+    }
+
     // Optimistic UI update
     setApprovals(prev => prev.filter(app => app.id !== id));
 
@@ -126,6 +144,39 @@ export function UnifiedAgentFeed() {
     }
   };
 
+  const handleResolveIntervention = async (input: string, type: string) => {
+    if (!activeIntervention) return;
+
+    try {
+      const res = await fetch("/api/agents/approvals/resolve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId(),
+        },
+        body: JSON.stringify({
+          task_id: activeIntervention.taskId,
+          tool_call_id: activeIntervention.toolCallId,
+          input,
+          resolution_type: type
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to send response to agent");
+      }
+
+      // Success! Clear the intervention and the approval item
+      setApprovals(prev => prev.filter(app =>
+        !(app.payload?.task_id === activeIntervention.taskId &&
+          app.payload?.tool_call_id === activeIntervention.toolCallId)
+      ));
+      setActiveIntervention(null);
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
 
 
   if (error) {
@@ -138,6 +189,15 @@ export function UnifiedAgentFeed() {
 
   return (
     <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+      {activeIntervention && (
+        <InterventionPanel
+          taskId={activeIntervention.taskId}
+          toolCallId={activeIntervention.toolCallId}
+          reason={activeIntervention.reason}
+          onResolve={handleResolveIntervention}
+          onClose={() => setActiveIntervention(null)}
+        />
+      )}
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}

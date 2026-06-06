@@ -67,6 +67,8 @@ enum EventType {
   // A new ReAct iteration began.
   ITERATION_STARTED = 6;
   HANDOFF = 7;
+  USER_INTERVENTION_REQUIRED = 8;
+  INTERVENTION_RESOLVED = 9;
 }
 
 // RunTaskEvent is a single streamed event from the agent back to the server.
@@ -188,6 +190,18 @@ message ToolsetConfig {
   repeated SkillConfig skills = 3;
 }
 
+message ResolveInterventionRequest {
+  string task_id = 1;
+  string tool_call_id = 2;
+  string input = 3;
+  string resolution_type = 4; // e.g., "input", "approve", "abort"
+}
+
+message ResolveInterventionResponse {
+  bool success = 1;
+  string error = 2;
+}
+
 // AgentService is exposed by every agent process.
 // The main Go server connects as a client; agents connect to sub-agent
 // processes as clients as well.
@@ -200,6 +214,8 @@ service AgentService {
   // When sub_agent_address is empty the agent runs the work in-process via
   // a goroutine and communicates with it over a channel.
   rpc DispatchToSubAgent(SubAgentRequest) returns (SubAgentResponse);
+
+  rpc ResolveIntervention(ResolveInterventionRequest) returns (ResolveInterventionResponse);
 }
 
 // ── Protobuf pub/sub messages for agent lifecycle ─────────────────────────────

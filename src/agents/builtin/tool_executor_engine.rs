@@ -75,15 +75,10 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.
-                    warn!("User-fixable error encountered, prompting user: {}", msg);
-                    let input = Self::prompt_user(&msg).await;
-                    if input.is_empty() || input.to_lowercase() == "abort" {
-                        warn!("User aborted resolution for: {}", msg);
-                        return Err(ToolError::UserFixable(format!("User aborted. Original error: {}", msg)));
-                    } else {
-                        info!("User provided resolution input");
-                        return Ok(format!("User provided input to resolve the issue: {}", input));
-                    }
+                    // This is handled by the higher-level Orchestration Loop if an InterventionHandler is present.
+                    // If we reach here, we return the error to the loop.
+                    warn!("User-fixable error encountered: {}", msg);
+                    return Err(ToolError::UserFixable(msg));
                 }
                 Err(ToolError::Fatal(msg)) => {
                     // 4) Fatal: bubbles up to debug/halt immediately.

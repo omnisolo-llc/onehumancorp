@@ -22,6 +22,11 @@ pub(crate) fn agent_task_timeout() -> std::time::Duration {
 
 /// Default computational guide using bash commands
 /// Default visual verifier using bash commands
+#[async_trait::async_trait]
+pub trait InterventionHandler: Send + Sync {
+    async fn wait_for_intervention(&self, task_id: String, tool_call_id: String, reason: String) -> Result<String, String>;
+}
+
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
@@ -31,6 +36,7 @@ pub enum AgentEvent {
     TaskComplete { content: String },
     TaskError { error: String },
     UserInterventionRequired { error: String },
+    InterventionResolved { tool_call_id: String, input: String },
     IterationStarted { iteration: i32, message_count: usize },
     CheckpointSaved { iteration: i32, path: String },
     Handoff { target_agent: String },
@@ -99,6 +105,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub task_id: Option<String>,
+    pub intervention_handler: Option<Arc<dyn InterventionHandler>>,
 }
 
 impl Default for AgentRunConfig {
@@ -160,6 +168,8 @@ enable_llmcompiler_plan_and_execute: false,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
+            task_id: None,
+            intervention_handler: None,
         }
     }
 }
@@ -417,6 +427,31 @@ impl Agent {
                             error: self_correct_msg,
                         };
                     }
+                    Err(ToolError::UserFixable(err_msg)) => {
+                        if let (Some(handler), Some(task_id)) = (&cfg.intervention_handler, &cfg.task_id) {
+                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                            match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), err_msg.clone()).await {
+                                Ok(user_input) => {
+                                    on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: user_input,
+                                        error: String::new(),
+                                    };
+                                }
+                                Err(e) => {
+                                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Intervention failed: {}", e))));
+                                }
+                            }
+                        } else {
+                            let err_str = format!("Error: {}", err_msg);
+                            tool_results[idx] = crate::types::ToolResult {
+                                tool_call_id: tc.id.clone(),
+                                content: err_str,
+                                error: String::new(),
+                            };
+                        }
+                    }
                     Err(e) => {
                         let err_str = format!("Error: {:?}", e);
                         on_event(AgentEvent::ToolCall {
@@ -460,6 +495,31 @@ impl Agent {
                             content: r,
                             error: String::new(),
                         };
+                    }
+                    Err(ToolError::UserFixable(err_msg)) => {
+                        if let (Some(handler), Some(task_id)) = (&cfg.intervention_handler, &cfg.task_id) {
+                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                            match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), err_msg.clone()).await {
+                                Ok(user_input) => {
+                                    on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: user_input,
+                                        error: String::new(),
+                                    };
+                                }
+                                Err(e) => {
+                                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Intervention failed: {}", e))));
+                                }
+                            }
+                        } else {
+                            let err_str = format!("Error: {}", err_msg);
+                            tool_results[idx] = crate::types::ToolResult {
+                                tool_call_id: tc.id.clone(),
+                                content: err_str,
+                                error: String::new(),
+                            };
+                        }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
@@ -677,7 +737,21 @@ impl Agent {
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
                         }
                         Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (UserFixable): {}", err_msg))));
+                            // SOTA Mechanic: User-fixable (interrupt execution and ask user for input)
+                            if let (Some(handler), Some(task_id)) = (&cfg.intervention_handler, &cfg.task_id) {
+                                on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                                match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), err_msg.clone()).await {
+                                    Ok(user_input) => {
+                                        on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                        tool_results[i].content = user_input;
+                                    }
+                                    Err(e) => {
+                                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Intervention failed or aborted: {}", e))));
+                                    }
+                                }
+                            } else {
+                                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (UserFixable): {}", err_msg))));
+                            }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                             let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", err_msg);
@@ -1048,6 +1122,17 @@ impl Agent {
                             return Err(format!("Unexpected tool error: Transient error: {}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
+                            // SOTA Mechanic: User-fixable (interrupt execution and ask user for input)
+                            if let (Some(handler), Some(task_id)) = (&cfg_arc_clone.intervention_handler, &cfg_arc_clone.task_id) {
+                                match handler.wait_for_intervention(task_id.clone(), id.clone(), msg.clone()).await {
+                                    Ok(user_input) => {
+                                        return (id, Ok(user_input));
+                                    }
+                                    Err(e) => {
+                                        return (id, Err(ToolError::Fatal(format!("Intervention failed: {}", e))));
+                                    }
+                                }
+                            }
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
                         Err(crate::types::ToolError::Fatal(msg)) => {
@@ -1150,6 +1235,22 @@ impl Agent {
                                 return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
+                                // SOTA Mechanic: User-fixable (interrupt execution and ask user for input)
+                                if let (Some(handler), Some(task_id)) = (&cfg_arc_node.intervention_handler, &cfg_arc_node.task_id) {
+                                    match handler.wait_for_intervention(task_id.clone(), id.to_string(), msg.clone()).await {
+                                        Ok(user_input) => {
+                                            tool_results_json[idx] = serde_json::json!({
+                                                "tool_call_id": id,
+                                                "content": user_input,
+                                                "error": ""
+                                            });
+                                            continue;
+                                        }
+                                        Err(e) => {
+                                            return Err(format!("Intervention failed: {}", e));
+                                        }
+                                    }
+                                }
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
                             Err(crate::types::ToolError::Fatal(msg)) => {
@@ -1518,6 +1619,19 @@ impl Agent {
             let res = match &results[idx] {
                 Ok(r) => r.clone(),
                 Err(crate::types::ToolError::UserFixable(msg)) => {
+                    // SOTA Mechanic: User-fixable (interrupt execution and ask user for input)
+                    if let (Some(handler), Some(task_id)) = (&cfg.intervention_handler, &cfg.task_id) {
+                        on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                        match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), msg.clone()).await {
+                            Ok(user_input) => {
+                                on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                break Ok(user_input);
+                            }
+                            Err(e) => {
+                                break Err(ToolError::Fatal(format!("Intervention failed: {}", e)));
+                            }
+                        }
+                    }
                     let err = format!("USER_FIXABLE: {}", msg);
                     on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                     return Err(err.into());
@@ -1580,6 +1694,19 @@ impl Agent {
                         break self_correct_msg;
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
+                        // SOTA Mechanic: User-fixable (interrupt execution and ask user for input)
+                        if let (Some(handler), Some(task_id)) = (&cfg.intervention_handler, &cfg.task_id) {
+                            on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                            match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), msg.clone()).await {
+                                Ok(user_input) => {
+                                    on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                    break user_input;
+                                }
+                                Err(e) => {
+                                    return Err(format!("Intervention failed: {}", e).into());
+                                }
+                            }
+                        }
                         let err = format!("USER_FIXABLE: {}", msg);
                         on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
@@ -2594,10 +2721,27 @@ impl Agent {
                             error: self_correct_msg,
                         };
                     }
-                    Err(ToolError::UserFixable(msg)) => {
-                        let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
+                    Err(ToolError::UserFixable(err_msg)) => {
+                        if let (Some(handler), Some(task_id)) = (&cfg.intervention_handler, &cfg.task_id) {
+                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                            match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), err_msg.clone()).await {
+                                Ok(user_input) => {
+                                    on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                    tool_results[idx] = ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: user_input,
+                                        error: String::new(),
+                                    };
+                                }
+                                Err(e) => {
+                                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Intervention failed: {}", e))));
+                                }
+                            }
+                        } else {
+                            let err = format!("USER_FIXABLE: {}", err_msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                            return Err(err.into());
+                        }
                     }
                     Err(ToolError::Fatal(msg)) => {
                         let err = format!("Fatal tool error: {}", msg);
@@ -2651,10 +2795,27 @@ impl Agent {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, false, &final_cfg) {
                     match e {
-                        ToolError::UserFixable(msg) => {
-                            let err = format!("USER_FIXABLE: {}", msg);
-                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                            return Err(err.into());
+                        ToolError::UserFixable(err_msg) => {
+                            if let (Some(handler), Some(task_id)) = (&cfg.intervention_handler, &cfg.task_id) {
+                                on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                                match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), err_msg.clone()).await {
+                                    Ok(user_input) => {
+                                        on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                        tool_results[idx] = ToolResult {
+                                            tool_call_id: tc.id.clone(),
+                                            content: user_input,
+                                            error: String::new(),
+                                        };
+                                    }
+                                    Err(e) => {
+                                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Intervention failed: {}", e))));
+                                    }
+                                }
+                            } else {
+                                let err = format!("USER_FIXABLE: {}", err_msg);
+                                on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                                return Err(err.into());
+                            }
                         }
                         ToolError::Fatal(msg) => {
                             let err = format!("Fatal tool error: {}", msg);
@@ -2786,6 +2947,21 @@ impl Agent {
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
+                            // SOTA Mechanic: User-fixable (interrupt execution and ask user for input)
+                            if let (Some(handler), Some(task_id)) = (&final_cfg.intervention_handler, &final_cfg.task_id) {
+                                on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                                match handler.wait_for_intervention(task_id.clone(), tc.id.clone(), msg.clone()).await {
+                                    Ok(user_input) => {
+                                        on_event(AgentEvent::InterventionResolved { tool_call_id: tc.id.clone(), input: user_input.clone() });
+                                        content = user_input;
+                                        error = String::new();
+                                        break;
+                                    }
+                                    Err(e) => {
+                                        return Err(format!("Intervention failed or aborted: {}", e).into());
+                                    }
+                                }
+                            }
                             let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
