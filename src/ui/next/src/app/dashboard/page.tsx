@@ -8,6 +8,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { AgentFeedWidget } from "./AgentFeedWidget";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
 type DashboardMetrics = {
@@ -334,6 +335,7 @@ export default function Dashboard() {
       )}
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+        <AgentFeedWidget />
         <UnifiedAgentFeed />
 
         <section>
