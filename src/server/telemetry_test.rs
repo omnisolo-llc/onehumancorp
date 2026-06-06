@@ -276,8 +276,45 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        // Enforced via static code analysis rather than unit tests to prevent Bazel caching/sandbox limitations
-        assert!(true, "Verified code does not emit any sensitive strings in its logging layer");
+        use std::process::Command;
+        use std::path::Path;
+
+        // Ensure we run from the workspace root or src/server dir so we can find `src/server` files
+        let search_path = if Path::new("src/server").exists() {
+            "src/server"
+        } else if Path::new("server").exists() {
+            "server"
+        } else {
+            "."
+        };
+
+        // Static code analysis: check for tracing statements that log variables known to contain PII
+        // We look for patterns like `tracing::info!(..., payload)` or `tracing::info!(... "{}", message)`
+        let output = Command::new("grep")
+            .arg("-rnE")
+            .arg(r#"tracing::(info|debug|warn|error|trace)!\(.*(message|payload|email|password|credit_card|token|key|phone|ssn|name).*\)"#)
+            .arg("--exclude-dir=tests")
+            .arg("--exclude=telemetry_test.rs")
+            .arg(search_path)
+            .output()
+            .expect("Failed to execute grep for static PII logging analysis");
+
+        let matches = String::from_utf8_lossy(&output.stdout);
+        let mut violations = Vec::new();
+
+        for line in matches.lines() {
+            // Filter out safe usages if there are any known false positives, or just report all matches
+            // We want to be strict, but we can ignore lines where the variable is explicitly redacted
+            if !line.contains("[REDACTED]") && !line.contains("sanitized_props") && !line.contains("redacted_payload") && !line.contains("redact_interface_pii") && !line.contains("redacted") {
+                violations.push(line.to_string());
+            }
+        }
+
+        assert!(
+            violations.is_empty(),
+            "Found potential PII leakage in logging statements:\n{}",
+            violations.join("\n")
+        );
     }
 
     #[test]

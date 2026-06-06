@@ -51,7 +51,7 @@ impl Department for CustomerSuccessAgent {
             } else {
                 "Unknown response"
             };
-            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
+            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: [REDACTED]");
 
             let content = format!("Sent response to customer: {}", message);
 
