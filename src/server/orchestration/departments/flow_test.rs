@@ -251,6 +251,101 @@ mod tests {
         assert!(has_ops_auto, "Msgbus integration should map system:order_received to an Operations task");
     }
     #[tokio::test]
+    async fn test_maya_baker_workflow() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        use crate::orchestration::departments::operations_agent::OperationsAgent;
+        use crate::orchestration::departments::marketing_agent::MarketingAgent;
+        use crate::orchestration::departments::finance_agent::FinanceAgent;
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
+        orchestrator.register_department(ops_agent.clone()).await;
+
+        let marketing_agent = Arc::new(RwLock::new(MarketingAgent::new(orchestrator.clone())));
+        orchestrator.register_department(marketing_agent.clone()).await;
+
+        let finance_agent = Arc::new(RwLock::new(FinanceAgent::new(orchestrator.clone())));
+        orchestrator.register_department(finance_agent.clone()).await;
+
+        let tenant_id = "test-tenant-maya-baker".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Maya Bakery', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Maya Bakery', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        use crate::msgbus::MemoryBus;
+        use crate::services::agent::department::service::DepartmentService;
+
+        let memory_bus = Arc::new(MemoryBus::new());
+        let department_service = DepartmentService::new(memory_bus.clone(), orchestrator.clone());
+
+        department_service.start().await.unwrap();
+
+        // 1. Maya uploads a photo of a new cake from her phone.
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.photo.uploaded".to_string(),
+            payload: serde_json::json!({
+                "name": "Vegan Chocolate Cake",
+                "price": 25.0,
+                "image_url": "https://example.com/cake.jpg"
+            }),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_ops_catalog = false;
+        let mut has_marketing_post = false;
+        let mut has_finance_revenue = false;
+
+        for _ in 0..20 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+
+            for req in pending.iter() {
+                if req.description.contains("Add it to the catalog") {
+                    has_ops_catalog = true;
+                }
+                if req.description.contains("Draft Instagram post for Vegan Chocolate Cake") {
+                    has_marketing_post = true;
+                }
+                if req.description.contains("Update expected monthly revenue projection based on price: $25") {
+                    has_finance_revenue = true;
+                }
+            }
+
+            if has_ops_catalog && has_marketing_post && has_finance_revenue {
+                break;
+            }
+        }
+
+        assert!(has_ops_catalog, "Operations Agent should add it to the catalog.");
+        assert!(has_marketing_post, "Marketing Agent should draft an Instagram post.");
+        assert!(has_finance_revenue, "Finance Agent should update the expected monthly revenue projection.");
+    }
+
+    #[tokio::test]
     async fn test_marketing_job_completed_case_study() {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;

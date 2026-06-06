@@ -22,6 +22,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.photo.uploaded".to_string(),
         ]
     }
 
@@ -36,6 +37,33 @@ impl Department for OperationsAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "tenant.photo.uploaded" {
+            self.orchestrator.execute_action(
+                DepartmentType::Operations,
+                "Add it to the catalog".to_string(),
+                event.tenant_id.clone(),
+                risk.clone(),
+                event.payload.clone(),
+            ).await?;
+
+            let image_url = event.payload.get("image_url").and_then(|v| v.as_str()).unwrap_or("");
+            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Item");
+            let price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(15.0);
+
+            let product_event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.product.created".to_string(),
+                payload: serde_json::json!({
+                    "name": product_name,
+                    "description": format!("A beautiful {}", product_name),
+                    "price": price,
+                    "images": [image_url],
+                }),
+            };
+            return self.orchestrator.dispatch_event(product_event).await;
+        }
 
         let action_description = if event.event_type == "tenant.order.created" {
             "Process Order & Update Inventory".to_string()
