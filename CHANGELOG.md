@@ -1,3 +1,11 @@
+## v0.4.48 (Cloud) / v0.4.48+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Optimize Multi-Environment Promotion capabilities for multi-tenant K8s to better support high-load environments.
+
+### Privacy/Offline Improvements
+- Enforce Multi-Environment Promotion behavior for Local desktop beta builds ensuring stricter local offline usage and privacy guarantees.
+
 ## v0.4.47 (Cloud) / v0.4.47+1 (Standalone)
 
 ### Cloud Scaling Improvements
