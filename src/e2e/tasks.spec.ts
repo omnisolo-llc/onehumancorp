@@ -22,8 +22,14 @@ test.describe('Task List Page', () => {
   });
 
   test('should display business setup', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.localStorage.setItem('tenant_id', `tasks-${Date.now()}`);
+      window.localStorage.setItem('user_id', `tasks-${Date.now()}`);
+    });
     await page.goto('/onboarding');
-    await expect(page.getByText('Welcome')).toBeVisible();
+    await expect(page.locator('#setup-screen')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Setup' })).toBeVisible();
   });
 });
 
