@@ -1,0 +1,17 @@
+--- customer_success_agent.rs
++++ customer_success_agent.rs
+@@ -127,8 +138,13 @@
+                 "original_message": message,
+                 "generated_response": generated_response,
+                 "context_used": context_summary,
+-                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
++                "inbox_message_id": inbox_message_id,
+             });
++
++            // Update the draft reply in inbox_messages
++            if !inbox_message_id.is_empty() {
++                let _ = self.orchestrator.update_inbox_message_draft(inbox_message_id, &event.tenant_id, generated_response).await;
++            }
+
+             self.orchestrator.execute_action(
+                 DepartmentType::CustomerSuccess,
