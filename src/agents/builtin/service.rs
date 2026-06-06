@@ -324,7 +324,7 @@ impl AgentServiceImpl {
         }
     }
 
-    fn resolve_llm(
+    pub fn resolve_llm(
         &self,
         req_provider: &str,
         req_model: &str,

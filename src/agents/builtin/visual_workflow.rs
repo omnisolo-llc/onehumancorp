@@ -182,6 +182,26 @@ impl WorkflowExecutor {
     }
 }
 
+pub fn export_workflow_to_json(graph: &WorkflowGraph) -> Result<String, String> {
+    serde_json::to_string_pretty(graph)
+        .map_err(|e| format!("Failed to serialize workflow to JSON: {}", e))
+}
+
+pub async fn run_headless_workflow_from_json(
+    json_data: &str,
+    input_vars: HashMap<String, String>,
+    agent: Arc<Agent>,
+    tools: Vec<crate::tools::Tool>,
+    sub_agents: HashMap<String, Arc<Agent>>,
+    config: AgentRunConfig,
+) -> Result<String, String> {
+    let graph: WorkflowGraph = serde_json::from_str(json_data)
+        .map_err(|e| format!("Failed to parse workflow JSON: {}", e))?;
+
+    let executor = WorkflowExecutor::new(graph, agent, tools, sub_agents, config);
+    executor.execute(input_vars).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,5 +402,54 @@ mod tests {
 
         let result = executor.execute(inputs).await.unwrap();
         assert_eq!(result, "Processed: Merged is [\"val1\",\"val2\"]");
+    }
+
+    #[tokio::test]
+    async fn test_headless_workflow_json_execution() {
+        let json_data = r#"{
+            "nodes": [
+                { "id": "in", "node_type": { "type": "Input", "name": "input_var" } },
+                { "id": "llm1", "node_type": { "type": "Llm", "prompt_template": "Headless: {{in}}" } },
+                { "id": "out", "node_type": { "type": "Output" } }
+            ],
+            "edges": [
+                { "source": "in", "target": "llm1" },
+                { "source": "llm1", "target": "out" }
+            ]
+        }"#;
+
+        let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "json_test".to_string());
+
+        let result = run_headless_workflow_from_json(
+            json_data,
+            inputs,
+            main_agent,
+            vec![],
+            HashMap::new(),
+            config,
+        ).await.unwrap();
+
+        assert_eq!(result, "Processed: Headless: json_test");
+    }
+
+    #[test]
+    fn test_export_workflow_to_json() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "in".to_string(), node_type: NodeType::Input { name: "test_input".to_string() } },
+            ],
+            edges: vec![],
+        };
+
+        let json_result = export_workflow_to_json(&graph);
+        assert!(json_result.is_ok());
+        let json_string = json_result.unwrap();
+        assert!(json_string.contains("\"id\": \"in\""));
+        assert!(json_string.contains("\"type\": \"Input\""));
+        assert!(json_string.contains("\"name\": \"test_input\""));
     }
 }

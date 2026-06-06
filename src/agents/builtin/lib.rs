@@ -140,12 +140,26 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     let mut worktree = None;
     let mut mailbox = None;
     let mut ralph_loop = false;
+    let mut run_headless_workflow = None;
+    let mut export_workflow = None;
 
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
             "--ralph-loop" => {
                 ralph_loop = true;
+            }
+            "--run-headless-workflow" => {
+                if i + 1 < args.len() {
+                    run_headless_workflow = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--export-workflow" => {
+                if i + 1 < args.len() {
+                    export_workflow = Some(args[i + 1].clone());
+                    i += 1;
+                }
             }
             "--task" => {
                 if i + 1 < args.len() {
@@ -203,6 +217,73 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut svc_impl = service::AgentServiceImpl::new(agent_id.clone(), cfg.clone(), auth);
     svc_impl.init_memory().await;
+
+    if let Some(path) = run_headless_workflow {
+        let json_data = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| {
+                tracing::error!("Failed to read workflow JSON file: {}", e);
+                std::process::exit(1);
+            });
+
+        // Construct a basic agent directly using resolve_llm
+        let llm_client = svc_impl.resolve_llm(
+            &cfg.llm_provider,
+            &cfg.model,
+            &cfg.llm_endpoint
+        );
+        let agent = std::sync::Arc::new(crate::agent::Agent::new(llm_client, vec![]));
+
+        let config = crate::agent::AgentRunConfig::default(); // Simplified for CLI
+
+        let res = crate::visual_workflow::run_headless_workflow_from_json(
+            &json_data,
+            std::collections::HashMap::new(),
+            agent,
+            vec![], // No tools provided via CLI wrapper for now
+            std::collections::HashMap::new(),
+            config,
+        ).await;
+
+        match res {
+            Ok(output) => {
+                println!("{}", output);
+                return Ok(());
+            }
+            Err(e) => {
+                eprintln!("Workflow Error: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    if let Some(path) = export_workflow {
+        // Here we just create a dummy workflow for demonstration of the export
+        let graph = crate::visual_workflow::WorkflowGraph {
+            nodes: vec![
+                crate::visual_workflow::Node { id: "in".to_string(), node_type: crate::visual_workflow::NodeType::Input { name: "input_var".to_string() } },
+                crate::visual_workflow::Node { id: "out".to_string(), node_type: crate::visual_workflow::NodeType::Output },
+            ],
+            edges: vec![
+                crate::visual_workflow::Edge { source: "in".to_string(), target: "out".to_string() },
+            ],
+        };
+
+        match crate::visual_workflow::export_workflow_to_json(&graph) {
+            Ok(json_data) => {
+                std::fs::write(&path, json_data)
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Failed to write workflow JSON file: {}", e);
+                        std::process::exit(1);
+                    });
+                println!("Workflow exported to {}", path);
+                return Ok(());
+            }
+            Err(e) => {
+                eprintln!("Export Error: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
 
     if let Some(t) = task {
         // Run as a subagent (Fork, Worktree, Teammate)
