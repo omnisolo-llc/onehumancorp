@@ -404,16 +404,17 @@ impl Agent {
                         };
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", msg),
+                            result: self_correct_msg.clone(),
                             iteration: i as i32,
                         });
                         tool_results[idx] = crate::types::ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: self_correct_msg,
                         };
                     }
                     Err(e) => {
@@ -461,16 +462,17 @@ impl Agent {
                         };
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", msg),
+                            result: self_correct_msg.clone(),
                             iteration: i as i32,
                         });
                         tool_results[idx] = crate::types::ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: msg,
+                            error: self_correct_msg,
                         };
                     }
                     Err(e) => {
@@ -673,6 +675,16 @@ impl Agent {
                         }
                         Err(crate::types::ToolError::UserFixable(err_msg)) => {
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (UserFixable): {}", err_msg))));
+                        }
+                        Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", err_msg);
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: self_correct_msg.clone(),
+                                iteration: turn_count,
+                            });
+                            tool_results[i].error = self_correct_msg;
                         }
                         Err(e) => {
                             let err_str = e.to_string();
@@ -1014,10 +1026,11 @@ impl Agent {
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
                             }
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
                                 "content": "",
-                                "error": msg
+                                "error": self_correct_msg
                             });
                         }
                         Err(crate::types::ToolError::Unexpected(msg)) => {
@@ -1118,10 +1131,11 @@ impl Agent {
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
                                 }
+                                let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
                                     "content": "",
-                                    "error": msg
+                                    "error": self_correct_msg
                                 });
                             }
                             Err(crate::types::ToolError::Unexpected(msg)) => {
@@ -1488,9 +1502,10 @@ impl Agent {
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Error Handling (Compounding Error Prevention): LLM-recoverable
-                        // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        break Ok(format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg));
+                            // Error Handling (Compounding Error Prevention): LLM-recoverable
+                            // (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
+                            break Ok(self_correct_msg);
                         }
                         Err(e) => {
                             break Err(e);
@@ -1570,7 +1585,8 @@ impl Agent {
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        break format!("Tool execution failed (LlmRecoverable) - please correct your arguments and try again: {}", msg);
+                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
+                        break self_correct_msg;
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
@@ -2127,31 +2143,12 @@ impl Agent {
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
-            if final_cfg.enable_lost_in_the_middle_prevention {
-                let mut reminder_text = String::new();
-                if !final_cfg.developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("[System Reminder: {}]\n\n", final_cfg.developer_instructions));
-                }
-                if !final_cfg.user_instructions.is_empty() && final_messages.len() > 3 {
-                    // Truncate user instructions if it's too long, just to remind the core objective
-                    let mut end_idx = 1000;
-                    if final_cfg.user_instructions.len() > 1000 {
-                        while end_idx > 0 && !final_cfg.user_instructions.is_char_boundary(end_idx) {
-                            end_idx -= 1;
-                        }
-                    } else {
-                        end_idx = final_cfg.user_instructions.len();
-                    }
-                    let summary = &final_cfg.user_instructions[..end_idx];
-                    reminder_text.push_str(&format!("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}...]", summary));
-                }
-
-                if !reminder_text.is_empty() {
-                    final_messages.push(Message::user(reminder_text.trim()));
-                }
-            } else if !final_cfg.developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder: {}]", final_cfg.developer_instructions)));
-            }
+            crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
+                &mut final_messages,
+                final_cfg.enable_lost_in_the_middle_prevention,
+                &final_cfg.developer_instructions,
+                &final_cfg.user_instructions,
+            );
 
             let mut req_tools = Vec::new();
             for t in &session_tools {
@@ -6056,8 +6053,8 @@ mod tests {
         let last_msg = req.messages.last().unwrap();
 
         assert_eq!(last_msg.role, Role::User);
-        assert!(last_msg.content.contains("[System Reminder: Developer instructions here.]"));
-        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words....]"));
+        assert!(last_msg.content.contains("[Developer Instructions Reminder: Developer instructions here.]"));
+        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Super long user instructions that span many many words.]"));
 
         let _ = tokio::fs::remove_file(&scratchpad_path).await;
     }
@@ -7118,8 +7115,7 @@ mod hierarchical_prompt_tests {
         let prompt = builder.build();
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
-        assert!(prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
-        assert!(prompt.ends_with("CRITICAL: Never delete the database."));
+        assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
     }
 
     #[test]

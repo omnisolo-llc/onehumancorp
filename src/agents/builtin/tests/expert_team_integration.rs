@@ -1,5 +1,5 @@
-use ohc_builtin_agent::expert_team::{ExpertTeamManager, DomainExpert, ExpertTeamLlmClient, QualityGates, SkillTrace};
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use ohc_builtin_agent_core::expert_team::{ExpertTeamManager, DomainExpert, ExpertTeamLlmClient, QualityGates, SkillTrace};
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
 use std::sync::Arc;
 
 struct MockExpertLlm {

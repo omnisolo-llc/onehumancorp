@@ -192,7 +192,6 @@ body {
   grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.8fr);
 }
 
-.app-panel,
 .app-card {
   background: #fff;
   border: 1px solid #dce2ea;
@@ -201,7 +200,20 @@ body {
 }
 
 .app-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-panel {
+    background: rgba(22, 22, 26, 0.7);
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
 }
 
 .app-panel-header {
@@ -210,15 +222,27 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e7ecf2;
-  background: #fbfcfd;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-panel-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
 }
 
 .app-panel-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: #263244;
+  color: #1D1D1F;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-panel-title {
+    color: #F5F5F7;
+  }
 }
 
 .app-panel-body {

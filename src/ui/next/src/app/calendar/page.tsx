@@ -6,20 +6,24 @@ export default function CalendarPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('/api/meetings')
+    const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+    fetch(`/api/ui/bookings?tenant_id=${tenantId}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          setAppointments(data.map((m: any) => ({
-            id: m.id,
-            customer: m.participants ? m.participants.join(', ') : 'Customer',
-            service: 'Meeting',
-            time: 'Scheduled',
-            date: 'Upcoming',
-            status: 'confirmed',
-            ai_scheduled: false,
-            link: m.id ? `https://zoom.us/j/${m.id}` : ''
-          })));
+          setAppointments(data.map((b: any) => {
+            const startDate = new Date(b.start_time);
+            return {
+              id: b.id,
+              customer: b.customer_name || 'Customer',
+              service: b.product_title || 'Service Booking',
+              time: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              date: startDate.toLocaleDateString(),
+              status: b.status || 'pending',
+              ai_scheduled: true, // Assuming OHC Operations AI manages these
+              link: '' // No link for physical bookings by default, could add if it's a virtual service
+            };
+          }));
         }
       })
       .catch(console.error);
