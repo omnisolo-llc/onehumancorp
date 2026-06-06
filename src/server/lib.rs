@@ -2281,6 +2281,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
+    let finance_worker = crate::workers::department_workers::finance_worker::FinanceAgentWorker::new(db.clone());
+    finance_worker.start();
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();

@@ -225,7 +225,7 @@ pub async fn stripe_webhook_handler(
 
             StatusCode::OK.into_response()
         },
-        "checkout.session.completed" | "customer.subscription.updated" => {
+        "checkout.session.completed" | "customer.subscription.updated" | "customer.subscription.created" => {
             let obj = &payload.data.object;
 
             // Extract tenant ID. Depending on your Stripe setup, this might be in metadata
@@ -289,6 +289,42 @@ pub async fn stripe_webhook_handler(
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
+                // Push a CRDT Delta to ensure offline sync picks up the subscription update
+                let crdt_delta_id = uuid::Uuid::new_v4().to_string();
+                let crdt_data = serde_json::json!({
+                    "subscription_status": tier_string,
+                    "updated_at": chrono::Utc::now().to_rfc3339()
+                }).to_string();
+
+                let crdt_res: Result<(), String> = match &webhook_state.db.store {
+                    DbStore::Sqlite(pool) => {
+                        sqlx::query("INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, true)")
+                            .bind(&tenant_id)
+                            .bind(&crdt_delta_id)
+                            .bind(format!("subscription_state_{}", tenant_id))
+                            .bind(&crdt_data)
+                            .execute(pool)
+                            .await
+                            .map(|_| ())
+                            .map_err(|e| e.to_string())
+                    }
+                    DbStore::Postgres => {
+                        sqlx::query("INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, true)")
+                            .bind(&tenant_id)
+                            .bind(&crdt_delta_id)
+                            .bind(format!("subscription_state_{}", tenant_id))
+                            .bind(&crdt_data)
+                            .execute(&webhook_state.db.pool)
+                            .await
+                            .map(|_| ())
+                            .map_err(|e| e.to_string())
+                    }
+                };
+
+                if let Err(e) = crdt_res {
+                    tracing::error!("Failed to insert CRDT delta for subscription update: {:?}", e);
+                }
+
                 StatusCode::OK.into_response()
             } else {
                 StatusCode::BAD_REQUEST.into_response()
@@ -337,15 +373,41 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
-        "invoice.payment_failed" => {
+        "invoice.payment_failed" | "charge.failed" => {
             let obj = &payload.data.object;
             let tenant_id_opt = obj.get("customer")
-                .and_then(|id| id.as_str());
+                .and_then(|id| id.as_str())
+                .or_else(|| obj.get("metadata").and_then(|m| m.get("tenant_id")).and_then(|id| id.as_str()));
 
-            if let Some(_tenant_id) = tenant_id_opt {
-                // Trigger SMS notification
+            if let Some(tenant_id) = tenant_id_opt {
+                let tenant_id = tenant_id.to_string();
+                let invoice_id = obj.get("id").and_then(|id| id.as_str()).unwrap_or("unknown").to_string();
+
+                let pool = webhook_state.db.pool.clone();
                 tokio::spawn(async move {
                     let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
+
+                    // Enqueue job for Finance Agent to handle autonomous dunning
+                    let job_id = uuid::Uuid::new_v4().to_string();
+                    let payload = serde_json::json!({
+                        "event": "payment_failed",
+                        "invoice_id": invoice_id,
+                        "action_required": "dunning_workflow"
+                    });
+
+                    let res = sqlx::query(
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
+                         VALUES ($1, $2, 'finance_agent_dunning', $3, 'PENDING', CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&job_id)
+                    .bind(&tenant_id)
+                    .bind(payload)
+                    .execute(&pool)
+                    .await;
+
+                    if let Err(e) = res {
+                        tracing::error!("Failed to enqueue dunning job for Finance AI agent: {:?}", e);
+                    }
                 });
             }
             StatusCode::OK.into_response()

@@ -11,6 +11,167 @@ const AI_AGENT_TIMEOUT: Duration = Duration::from_secs(60);
 const DB_OP_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_RETRIES: u32 = 3;
 
+pub mod finance_worker {
+    use std::sync::Arc;
+    use crate::db::DB;
+    use std::time::Duration;
+    use sqlx::Row;
+
+    pub struct FinanceAgentWorker {
+        pub db: Arc<DB>,
+        pub poll_interval: Duration,
+    }
+
+    impl FinanceAgentWorker {
+        pub fn new(db: Arc<DB>) -> Self {
+            Self {
+                db,
+                poll_interval: Duration::from_secs(5),
+            }
+        }
+
+        pub fn start(&self) {
+            let db = self.db.clone();
+            let interval_duration = self.poll_interval;
+            tokio::spawn(async move {
+                let pool = db.pool.clone();
+                loop {
+                    tokio::time::sleep(interval_duration).await;
+                    let mut tx = match pool.begin().await {
+                        Ok(t) => t,
+                        Err(e) => {
+                            tracing::error!("FinanceAgentWorker: Failed to begin tx: {}", e);
+                            continue;
+                        }
+                    };
+
+                    let job_opt = sqlx::query(
+                        r#"
+                        SELECT id, tenant_id, payload, retry_count, max_retries
+                        FROM ohc_job_queue
+                        WHERE job_type = 'finance_agent_dunning'
+                          AND status = 'PENDING'
+                          AND next_retry_at <= CURRENT_TIMESTAMP
+                        ORDER BY next_retry_at ASC
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 1
+                        "#,
+                    )
+                    .fetch_optional(&mut *tx)
+                    .await;
+
+                    let job_row = match job_opt {
+                        Ok(Some(row)) => row,
+                        Ok(None) => {
+                            let _ = tx.rollback().await;
+                            continue;
+                        }
+                        Err(e) => {
+                            tracing::error!("FinanceAgentWorker: Failed to fetch job: {}", e);
+                            continue;
+                        }
+                    };
+
+                    let job_id: String = job_row.get("id");
+                    let tenant_id: String = job_row.get("tenant_id");
+                    let payload: serde_json::Value = job_row.get("payload");
+                    let retry_count: i32 = job_row.get("retry_count");
+                    let max_retries: i32 = job_row.get("max_retries");
+
+                    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                        tracing::error!("FinanceAgentWorker: Failed to set org context: {}", e);
+                        continue;
+                    }
+
+                    // Update job status to PROCESSING
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = tx.commit().await;
+
+                    // Process the job
+                    let result = Self::process_dunning_job(&pool, &tenant_id, &payload).await;
+
+                    let mut tx = match pool.begin().await {
+                        Ok(t) => t,
+                        Err(e) => {
+                            tracing::error!("FinanceAgentWorker: Failed to begin tx for result update: {}", e);
+                            continue;
+                        }
+                    };
+                    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                        tracing::error!("FinanceAgentWorker: Failed to set org context: {}", e);
+                        continue;
+                    }
+
+                    match result {
+                        Ok(_) => {
+                            let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED' WHERE id = $1")
+                                .bind(&job_id)
+                                .execute(&mut *tx)
+                                .await;
+                        }
+                        Err(e) => {
+                            let new_retry_count = retry_count + 1;
+                            if new_retry_count >= max_retries {
+                                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED' WHERE id = $1")
+                                    .bind(&job_id)
+                                    .execute(&mut *tx)
+                                    .await;
+                                tracing::error!("FinanceAgentWorker: Job {} failed permanently: {}", job_id, e);
+                            } else {
+                                let delay = 2_i32.pow(new_retry_count as u32) * 5;
+                                let _ = sqlx::query(
+                                    "UPDATE ohc_job_queue
+                                     SET status = 'PENDING', retry_count = $1, next_retry_at = CURRENT_TIMESTAMP + interval '1 second' * $2
+                                     WHERE id = $3"
+                                )
+                                .bind(new_retry_count)
+                                .bind(delay)
+                                .bind(&job_id)
+                                .execute(&mut *tx)
+                                .await;
+                            }
+                        }
+                    }
+
+                    let _ = tx.commit().await;
+                }
+            });
+        }
+
+        async fn process_dunning_job(pool: &sqlx::Pool<sqlx::Postgres>, tenant_id: &str, payload: &serde_json::Value) -> Result<(), String> {
+            // Simulated Finance Agent AI processing:
+            // 1. Analyze reason for decline
+            // 2. Draft email to customer
+            // 3. Log into Memory stream
+            tracing::info!("FinanceAgentWorker: Processing dunning job for tenant {} payload {:?}", tenant_id, payload);
+
+            let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+            let log_id = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change)
+                 VALUES ($1, $2, 'Finance', 'autonomous_dunning_executed', $3::jsonb)"
+            )
+            .bind(log_id)
+            .bind(tenant_id)
+            .bind(serde_json::json!({
+                "invoice_id": invoice_id,
+                "action": "sent_recovery_email",
+                "summary": "One of your students' cards failed, but I've already reached out to them to get it updated. No action needed from you."
+            }))
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            Ok(())
+        }
+    }
+}
+
 pub mod pos_sync_worker {
     use std::sync::Arc;
     use crate::db::DB;

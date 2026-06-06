@@ -158,6 +158,133 @@ async fn test_stripe_webhook_handler_deleted() {
 }
 
 #[tokio::test]
+async fn test_stripe_webhook_payment_failed() {
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let webhook_state = WebhookState {
+        rate_limiter,
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db.clone()),
+    };
+
+    // Ensure job queue is ready
+    let _ = sqlx::query("DELETE FROM ohc_job_queue WHERE tenant_id = 'test_tenant'").execute(&db.pool).await;
+
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .with_state(webhook_state.clone());
+
+    let payload = json!({
+        "id": "evt_test_failed",
+        "type": "invoice.payment_failed",
+        "data": {
+            "object": {
+                "id": "in_test123",
+                "customer": "test_tenant"
+            }
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let client_req = reqwest::Client::new();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .json(&payload).send().await.unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+
+    // Sleep briefly so async task can run
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    // Check ohc_job_queue
+    let row: (String,) = sqlx::query_as("SELECT job_type FROM ohc_job_queue WHERE tenant_id = 'test_tenant'")
+        .fetch_one(&db.pool)
+        .await
+        .expect("job row not found");
+    assert_eq!(row.0, "finance_agent_dunning");
+}
+
+#[tokio::test]
+async fn test_stripe_webhook_subscription_crdt() {
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let webhook_state = WebhookState {
+        rate_limiter,
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db.clone()),
+    };
+
+    let _ = sqlx::query("INSERT INTO tenants (tenant_id, tier) VALUES ('test_tenant', 'Free') ON CONFLICT DO NOTHING").execute(&db.pool).await;
+
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .with_state(webhook_state.clone());
+
+    let payload = json!({
+        "id": "evt_test_created",
+        "type": "customer.subscription.created",
+        "data": {
+            "object": {
+                "id": "sub_123",
+                "metadata": {
+                    "tenant_id": "test_tenant",
+                    "tier": "Pro"
+                }
+            }
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    let client_req = reqwest::Client::new();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .json(&payload).send().await.unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+
+    // Check crdt_deltas
+    let row: (String,) = sqlx::query_as("SELECT data FROM crdt_deltas WHERE tenant_id = 'test_tenant' AND entity_id = 'subscription_state_test_tenant'")
+        .fetch_one(&db.pool)
+        .await
+        .expect("crdt delta not found");
+    assert!(row.0.contains("Pro"));
+}
+
+#[tokio::test]
 async fn test_mercadopago_webhook_handler_payment_created() {
     use axum::http::StatusCode;
     use axum::extract::{State, Json};
