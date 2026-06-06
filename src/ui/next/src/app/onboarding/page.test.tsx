@@ -420,7 +420,7 @@ describe('OnboardingWizard', () => {
     await user.click(customOption);
 
     // Verify initial state
-    const salesAgent = screen.getByText('Sales Agent');
+    const salesAgent = screen.getByText('The Closer');
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle

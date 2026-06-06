@@ -814,23 +814,33 @@ export default function OnboardingWizard() {
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
                   <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
+                    {[
+                      { id: 'Sales Agent', name: 'The Closer', role: 'Sales', desc: 'Generates quotes and follows up on leads' },
+                      { id: 'Support Agent', name: 'The Ambassador', role: 'Customer Success', desc: 'Responds to customer inquiries and builds loyalty' },
+                      { id: 'Marketing Agent', name: 'The Promoter', role: 'Marketing', desc: 'Creates social posts and promotional campaigns' }
+                    ].map(agent => {
+                       const isSelected = aiAgents.includes(agent.id);
                        return (
                          <div
-                           key={agent}
+                           key={agent.id}
                            onClick={() => {
                              if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
+                               setAiAgents(aiAgents.filter(a => a !== agent.id));
                              } else {
-                               setAiAgents([...aiAgents, agent]);
+                               setAiAgents([...aiAgents, agent.id]);
                              }
                            }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white'}`}
+                           className={`p-4 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/40 dark:border-white/10 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-white shadow-sm'}`}
                          >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
-                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                           <div className="flex flex-col">
+                             <div className="flex items-center gap-2">
+                               <span className="font-bold text-sm">{agent.name}</span>
+                               <span className="text-[10px] uppercase font-semibold bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded">{agent.role}</span>
+                             </div>
+                             <span className="text-xs text-gray-500 dark:text-[#a1a1a6] mt-1">{agent.desc}</span>
+                           </div>
+                           <div className={`w-5 h-5 rounded-full border flex flex-none items-center justify-center transition-colors ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-300 dark:border-gray-600'}`}>
+                              {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                            </div>
                          </div>
                        );
