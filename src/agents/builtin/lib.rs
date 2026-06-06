@@ -25,6 +25,7 @@ pub mod scalable_multi_agent;
 pub use ohc_builtin_agent_core::*;
 
 pub mod observation_masking;
+pub mod caveman;
 pub mod observability;
 pub mod verification_loops;
 pub mod agent;
