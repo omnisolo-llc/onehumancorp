@@ -39,7 +39,8 @@ test('Verify onboarding UI', async ({ page }) => {
     });
   });
 
-  await page.goto('http://localhost:3000/onboarding');
+  await page.goto('/onboarding');
+  await page.getByText('Start Onboarding').click();
   await page.waitForTimeout(1000);
   await page.screenshot({ path: 'onboarding-step1.png' });
 

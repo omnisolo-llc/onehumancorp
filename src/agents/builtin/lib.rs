@@ -35,6 +35,7 @@ pub mod service;
 pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
+pub mod prompt_construction;
 pub mod json_store;
 pub mod memory_exhaustive_tests;
 pub mod autogen;
@@ -86,6 +87,39 @@ fn get_env_int(key: &str, default: i32) -> i32 {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(default)
+}
+
+async fn run_direct_workflow_if_requested(task: &str) -> Option<Result<String, String>> {
+    if !task.contains("Use the built-in RunWorkflow tool.") {
+        return None;
+    }
+    let json_start = match task.find('{') {
+        Some(index) => index,
+        None => return Some(Err("RunWorkflow instruction did not include JSON arguments".to_string())),
+    };
+    let mut deserializer = serde_json::Deserializer::from_str(&task[json_start..]);
+    let args = match <serde_json::Value as serde::Deserialize>::deserialize(&mut deserializer) {
+        Ok(args) => args,
+        Err(err) => return Some(Err(format!("Failed to parse RunWorkflow arguments: {}", err))),
+    };
+
+    use ohc_builtin_agent_tools::ToolExecutor;
+    let runner = std::sync::Arc::new(ohc_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
+    let executor = ohc_builtin_agent_tools::workflow::WorkflowExecutor { runner };
+    Some(executor.execute(args).await.map_err(|err| format!("{:?}", err)))
+}
+
+async fn hold_specialist_exit_if_requested(task: &str) {
+    if !task.contains("Specialist:") {
+        return;
+    }
+    let secs = std::env::var("OHC_AGENT_SPECIALIST_EXIT_HOLD_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(0);
+    if secs > 0 {
+        tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
+    }
 }
 
 fn init_otel() {
@@ -213,6 +247,19 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             String::new()
         };
 
+        if let Some(result) = run_direct_workflow_if_requested(&t).await {
+            match result {
+                Ok(report) => {
+                    println!("{}", report);
+                    return Ok(());
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
+                }
+            }
+        }
+
         if ralph_loop {
             let req = proto::agent_service::RunTaskRequest {
                 task_id: uuid::Uuid::new_v4().hyphenated().to_string(),
@@ -226,6 +273,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             svc_impl.run_ralph_loop(req).await;
             return Ok(());
         } else {
+            let task_for_hold = t.clone();
             let req = proto::agent_service::SubAgentRequest {
                 task: t,
                 working_dir,
@@ -238,14 +286,17 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
                     let inner = resp.into_inner();
                     if !inner.error.is_empty() {
                         tracing::error!("{}", inner.error);
+                        hold_specialist_exit_if_requested(&task_for_hold).await;
                         std::process::exit(1);
                     } else {
                         tracing::info!("{}", inner.result);
+                        hold_specialist_exit_if_requested(&task_for_hold).await;
                         return Ok(());
                     }
                 }
                 Err(e) => {
                     tracing::error!("Subagent dispatch error: {}", e);
+                    hold_specialist_exit_if_requested(&task_for_hold).await;
                     std::process::exit(1);
                 }
             }

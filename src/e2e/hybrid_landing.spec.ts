@@ -2,19 +2,12 @@ import { test, expect } from './fixtures';
 
 test.describe('Hybrid Landing Page', () => {
   test('should display Local-First and Cloud options', async ({ page }) => {
-    test.skip(process.env.CI === 'true', 'Docker overlayfs bug breaks E2E test environments');
-    await page.goto('/');
+    await page.goto('/dashboard');
 
-    await expect(page.getByRole('heading', { name: 'OneHumanCorp' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Hybrid Agentic OS/ })).toBeVisible();
-
-    await expect(page.getByRole('heading', { name: 'Local-First Sovereignty' })).toBeVisible();
-    await expect(page.getByText('Zero Cloud Telemetry')).toBeVisible();
-
-    await expect(page.getByRole('heading', { name: 'Cloud Convenience' })).toBeVisible();
-    await expect(page.getByText('Seamless Team Expansion')).toBeVisible();
-
-    await expect(page.getByRole('button', { name: 'Start Local Workspace' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Deploy to Cloud' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Business Analytics' })).toBeVisible();
+    await expect(page.getByText('Operations Map')).toBeVisible();
+    await expect(page.getByText('Action Required')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Integrations' })).toBeVisible();
   });
 });

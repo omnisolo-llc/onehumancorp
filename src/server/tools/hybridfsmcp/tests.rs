@@ -5,7 +5,6 @@ use tempfile::tempdir;
 use ::server_ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
-#[ignore] // Pre-existing issue: fails due to permissions/setup issues
 async fn test_local_fs_provider() {
     let dir = tempdir().unwrap();
     let provider = LocalFSProvider::new(dir.path().to_path_buf());
@@ -30,10 +29,12 @@ async fn test_cloud_fs_provider() {
     let tenant_id = "tenant-123".to_string();
     let provider = CloudFSProvider::new(tenant_id.clone(), dir.path().to_path_buf());
 
+    tokio::fs::create_dir_all(dir.path().join(&tenant_id)).await.unwrap();
+
     // Test write and read
     provider.write_file("test.txt", b"cloud content").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"cloud content");
+    assert_eq!(content, b"cloud content".to_vec());
 
     // Verify it was written to tenant dir
     let tenant_file = dir.path().join(&tenant_id).join("test.txt");
@@ -65,6 +66,9 @@ async fn test_hybrid_fs_mcp_server() {
     let resp = server.invoke_tool(&req, None).await.unwrap();
     let payload: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
     assert_eq!(payload["status"], "success");
+
+    // Important: Wait for the file system to actually sync before reading it back
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // Test fs_read_file tool
     let req = McpInvokeRequest {

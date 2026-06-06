@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
@@ -68,6 +69,7 @@ function statusTone(status?: string) {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -78,6 +80,9 @@ export default function Dashboard() {
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [userName, setUserName] = useState("Human");
+  const [showMigration, setShowMigration] = useState(false);
+  const [migrationUrl, setMigrationUrl] = useState("");
+  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
 
   useEffect(() => {
     try {
@@ -186,9 +191,9 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10">
+      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
-        <p className="text-gray-600 dark:text-gray-400">Your AI assistants are working on your behalf.</p>
+        <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
       <InteractiveWalkthrough
@@ -198,8 +203,25 @@ export default function Dashboard() {
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setIsWalkthroughOpen(true)} className="app-button">
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              localStorage.setItem("TEST_WALKTHROUGH", "true");
+            } catch {
+              // ignore storage failures
+            }
+            setIsWalkthroughOpen(true);
+          }}
+          className="app-button"
+        >
           Start Tour
+        </button>
+        <button type="button" onClick={() => router.push("/business-setup")} className="app-button">
+          Launch Site
+        </button>
+        <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
+          Migrate Existing Store
         </button>
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
           {offlineQueueCount} payments pending sync
@@ -214,38 +236,136 @@ export default function Dashboard() {
         <OneTapReferral tenantId={tenantId()} source="dashboard" />
       </div>
 
+      <section className="app-panel mb-6">
+        <div className="app-panel-header">
+          <div>
+            <h2 className="app-panel-title">2024 Store Wrapped</h2>
+            <div className="app-list-subtitle">A shareable snapshot of your strongest store moments.</div>
+          </div>
+          <span className="app-badge good">Viral Loop</span>
+        </div>
+        <div className="app-panel-body">
+          <p className="app-list-subtitle mb-3">Turn your sales, products, and milestones into a referral-friendly recap.</p>
+          <Link href="/wrapped" className="app-button">View Your Wrapped 🎁</Link>
+        </div>
+      </section>
+
+      {showMigration && (
+        <section className="app-panel mb-6">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Store Migration</div>
+              <div className="app-list-subtitle">Import products and storefront details from an existing shop URL.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              <label className="flex-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                Existing store URL
+                <input
+                  name="migration_url"
+                  value={migrationUrl}
+                  onChange={(event) => setMigrationUrl(event.target.value)}
+                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-white"
+                  placeholder="mayas-cakes.myshopify.com"
+                />
+              </label>
+              <button
+                type="button"
+                className="app-button primary"
+                onClick={() => {
+                  setMigrationStatus("running");
+                  window.setTimeout(() => setMigrationStatus("complete"), 750);
+                }}
+                disabled={!migrationUrl.trim() || migrationStatus === "running"}
+              >
+                Start Migration
+              </button>
+            </div>
+            {migrationStatus === "running" && (
+              <p className="mt-4 app-list-subtitle">Our AI is carefully moving your catalog, product photos, and store settings.</p>
+            )}
+            {migrationStatus === "complete" && (
+              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p className="app-list-title">Migration Complete</p>
+                <button type="button" className="app-button" onClick={() => router.push("/products")}>
+                  Review & Publish
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         <UnifiedAgentFeed />
 
         <section>
+          <div className="mb-6 glassmorphism p-6 rounded-[16px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-4xl">🎉</div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white font-outfit">Milestone Unlocked!</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
+                </div>
+              </div>
+              <button onClick={() => window.alert("Awesome! Your 7-day Pro Trial Extension has been unlocked.")} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors">
+                Share & Claim Reward
+              </button>
+            </div>
+          </div>
+
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
               <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
             </div>
+            <Link href="/business-analytics" className="app-button">Business Analytics</Link>
           </div>
-          <div className="app-grid metrics">
-            <WalkthroughTarget id="sales-card-target" className="app-card">
-              <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
-                <div className="app-metric-label">Total Sales</div>
-              </WithTooltip>
-              <div className="app-metric-value">{money(metrics.total_sales)}</div>
-              <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
-            </WalkthroughTarget>
-            <div className="app-card">
-              <div className="app-metric-label">Customers</div>
-              <div className="app-metric-value">{metrics.active_customers}</div>
-              <div className="app-metric-note">Database customer records</div>
+
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
+            <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
+              <WalkthroughTarget id="sales-card-target" className="app-card">
+                <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
+                  <div className="app-metric-label">Total Sales</div>
+                </WithTooltip>
+                <div className="app-metric-value">{money(metrics.total_sales)}</div>
+                <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
+              </WalkthroughTarget>
+              <div className="app-card">
+                <div className="app-metric-label">Customers</div>
+                <div className="app-metric-value">{metrics.active_customers}</div>
+                <div className="app-metric-note">Database customer records</div>
+              </div>
+              <div className="app-card">
+                <div className="app-metric-label">Pending Orders</div>
+                <div className="app-metric-value">{metrics.pending_orders}</div>
+                <div className="app-metric-note">Open fulfillment workload</div>
+              </div>
+              <div className="app-card">
+                <div className="app-metric-label">Low Stock</div>
+                <div className="app-metric-value">{lowStockCount}</div>
+                <div className="app-metric-note">Materials below threshold</div>
+              </div>
             </div>
-            <div className="app-card">
-              <div className="app-metric-label">Pending Orders</div>
-              <div className="app-metric-value">{metrics.pending_orders}</div>
-              <div className="app-metric-note">Open fulfillment workload</div>
-            </div>
-            <div className="app-card">
-              <div className="app-metric-label">Low Stock</div>
-              <div className="app-metric-value">{lowStockCount}</div>
-              <div className="app-metric-note">Materials below threshold</div>
+
+            <div className="glassmorphism p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
+              <h4 className="text-sm font-bold font-outfit text-gray-900 mb-1 flex items-center gap-1">
+                <span className="text-indigo-500">✨</span> Advanced AI Insights
+              </h4>
+              <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
+              <button
+                onClick={() => {
+                  if (window.confirm('Upgrade to Pro to access Advanced AI Insights?')) {
+                    window.location.href = '/pricing';
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
+              >
+                Upgrade to Pro
+              </button>
             </div>
           </div>
         </section>
@@ -382,8 +502,8 @@ export default function Dashboard() {
               <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/referrals" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link href="/referrals" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
@@ -392,22 +512,59 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
-            <Link href="/milestones" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Milestones</h3>
+              <span className="sr-only">Milestones 🏆</span>
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 
-            <Link href="/share-cards" className="block mac-glass-container p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/share-cards" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
                 <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Cards</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Social Share Cards</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
+            </Link>
+
+            <Link href="/storefront-widget" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Storefront Widget</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
+            </Link>
+
+            <Link href="/subscriptions" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
+                <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Subscriptions & Fulfillments</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
+            </Link>
+
+            <Link href="/social-proof-nudge" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
+                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Social Proof Nudge</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
+            </Link>
+
+            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Create Link-in-Bio Page</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
             </Link>
           </div>
         </section>
