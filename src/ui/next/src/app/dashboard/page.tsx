@@ -8,7 +8,6 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
-import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -196,8 +195,6 @@ export default function Dashboard() {
         <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
-
-      <NeighborhoodPulseCard tenant={tenantId} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}

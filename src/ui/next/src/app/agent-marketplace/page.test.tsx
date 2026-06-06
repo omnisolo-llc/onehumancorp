@@ -85,7 +85,7 @@ describe('Agent Marketplace Page', () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch agents/)).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch agents')).toBeInTheDocument();
     });
   });
 });
