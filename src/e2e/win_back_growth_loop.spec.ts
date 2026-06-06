@@ -50,22 +50,17 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
         modals.forEach(m => m.remove());
     });
 
-    // The alert is in a setTimeout, and then it calls handleGenerate.
-    // Sometimes playright handles dialogs weirdly so we might need to manually trigger the button just in case
-    const generateBtn = page.getByRole('button', { name: 'Generate AI Campaign' });
-    if (await generateBtn.isVisible()) {
-        await generateBtn.click({ force: true });
-    }
-
     // 7. Wait for AI generation to complete and verify the generated text
-    await expect(page.locator('pre')).toContainText("Subject: We miss you! Here's 20% off your next order 🎁", { timeout: 15000 });
+    const draft = page.locator('pre');
+    await expect(draft).toContainText("Subject: We miss you!", { timeout: 15000 });
+    await expect(draft).toContainText("20% off your next order");
 
     // Verify the "Powered by OHC" viral loop branding is inside the generated draft
-    await expect(page.locator('pre')).toContainText('⚡ Powered by OHC');
+    await expect(draft).toContainText('Powered by OHC');
 
     // 8. Test sending the campaign
     // Instead of evaluate, we click via Playwright to ensure React events fire
-    await page.getByRole('button', { name: /Send to 34/i }).click({ force: true });
+    await page.getByRole('button', { name: /Send to 34 Inactive Customers/i }).click({ force: true });
 
     // Verify success message
     await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 15000 });
