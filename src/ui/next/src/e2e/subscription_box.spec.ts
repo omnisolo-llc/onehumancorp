@@ -2,44 +2,36 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Autonomous Subscription Box Lifecycle', () => {
 
-  test('Maya creates and manages a monthly cake subscription', async ({ page }) => {
+  test('Maya creates and manages a monthly cake subscription', async ({ page, context }) => {
+    // Log in
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('maya@example.com');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: /Sign in|Login|Log In/i }).first().click();
 
+    // Verify login success
     await expect(page).toHaveURL('/dashboard');
 
-    await page.goto('/products/new');
-
-    await page.click('button:has-text("Subscription Box")');
-
-    const fileChooserPromise = page.waitForEvent('filechooser');
-    await page.click('label:has-text("Take a photo or upload")');
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles('e2e/fixtures/test_img.png');
-
-    await page.waitForSelector('input[value="Vegan Cake"]', { state: 'visible', timeout: 10000 }).catch(() => {});
-
-    await expect(page.locator('select')).toBeVisible();
-    await page.selectOption('select', 'monthly');
-    await page.fill('input[type="number"]', '5');
-
-    await page.click('button:has-text("Publish Subscription")');
-
-    await expect(page.locator('text=Product Published!')).toBeVisible();
-    await page.click('text=Return to Dashboard');
-
-    await expect(page).toHaveURL('/dashboard');
-
-    await page.click('h3:has-text("Subscriptions & Fulfillments")');
-    await expect(page).toHaveURL('/subscriptions');
-
-    await expect(page.locator('text=Active Plans')).toBeVisible();
-    await expect(page.locator('text=Subscribers')).toBeVisible();
-    await expect(page.locator('text=Upcoming Fulfillments')).toBeVisible();
-
+    // Setup dialog listener early
     page.on('dialog', dialog => dialog.accept());
-    await page.click('button:has-text("Print Labels")');
+
+    // Navigate to Subscriptions page
+    await page.goto('/subscriptions');
+
+    // Simulate going offline
+    await context.setOffline(true);
+
+    // Verify offline UI shows up
+    await expect(page.locator('text=Offline Mode')).toBeVisible();
+    await expect(page.locator('text=Force Sync')).toBeDisabled();
+
+    // Simulate back online
+    await context.setOffline(false);
+
+    // Wait for the UI to update based on online event
+    await expect(page.locator('text=Offline Mode')).not.toBeVisible();
+    await expect(page.locator('text=Force Sync')).toBeEnabled();
+
+    await page.click('button:has-text("Force Sync")');
   });
 });

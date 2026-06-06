@@ -53,4 +53,24 @@ pub struct FulfillmentBatch {
     pub created_at: i64,
 }
 
-// Dummy comment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Entitlement {
+    pub id: String,
+    pub tenant_id: String,
+    pub subscription_id: String,
+    pub credit_balance: i32,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionEvent {
+    pub id: String,
+    pub tenant_id: String,
+    pub subscription_id: String,
+    pub event_type: String,
+    pub event_payload: serde_json::Value,
+    pub clock: i32,
+    pub signature: Option<String>,
+    pub created_at: i64,
+}

@@ -199,11 +199,39 @@ async fn handle_magic_link(
     }
 }
 
+#[derive(Deserialize)]
+pub struct SyncOfflineEventsRequest {
+    pub events: Vec<::server_domain::subscription::SubscriptionEvent>,
+}
+
+#[derive(Serialize)]
+pub struct SyncOfflineEventsResponse {
+    pub success: bool,
+}
+
+async fn sync_offline_events(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<SyncOfflineEventsRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "system".to_string());
+    let service = crate::services::subscription::service::SubscriptionService::new(hub.pool.clone());
+
+    match service.sync_offline_events(&tenant_id, payload.events).await {
+        Ok(_) => (StatusCode::OK, Json(SyncOfflineEventsResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to sync offline events: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Sync Error").into_response()
+        }
+    }
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/plans", get(get_plans))
         .route("/subscribers", get(get_subscribers))
         .route("/fulfillment-batches", get(get_fulfillment_batches))
         .route("/magic-link", post(handle_magic_link))
+        .route("/sync-offline", post(sync_offline_events))
         .layer(Extension(hub))
 }

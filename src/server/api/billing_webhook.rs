@@ -19,14 +19,14 @@ pub struct WebhookState {
     pub db: std::sync::Arc<crate::db::DB>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub struct StripeEvent {
     pub id: String,
     pub r#type: String,
     pub data: StripeEventData,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub struct StripeEventData {
     pub object: Value,
 }
@@ -342,11 +342,33 @@ pub async fn stripe_webhook_handler(
             let tenant_id_opt = obj.get("customer")
                 .and_then(|id| id.as_str());
 
-            if let Some(_tenant_id) = tenant_id_opt {
+            if let Some(tenant_id) = tenant_id_opt {
+                let tenant_id = tenant_id.to_string();
+                let payload_clone = serde_json::to_value(&payload).unwrap_or_default();
+
                 // Trigger SMS notification
                 tokio::spawn(async move {
                     let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
                 });
+
+                // Insert directly to job queue for Finance Agent
+                // Stripe webhooks happen in background, so enqueueing works perfectly.
+                let pool = &webhook_state.db.pool;
+                let event = serde_json::json!({
+                    "id": uuid::Uuid::new_v4().to_string(),
+                    "tenant_id": tenant_id,
+                    "event_type": "invoice.payment_failed",
+                    "payload": payload_clone,
+                });
+
+                let _ = sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_event', $3)"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id)
+                .bind(event)
+                .execute(pool)
+                .await;
             }
             StatusCode::OK.into_response()
         },

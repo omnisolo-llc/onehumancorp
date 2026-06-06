@@ -1,4 +1,4 @@
-use ::server_domain::subscription::{SubscriptionPlan, Subscriber, FulfillmentBatch, FulfillmentStatus, SubscriptionStatus};
+use ::server_domain::subscription::{SubscriptionPlan, Subscriber, FulfillmentBatch, FulfillmentStatus, SubscriptionStatus, Entitlement, SubscriptionEvent};
 use sqlx::PgPool as DbPool;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -117,7 +117,97 @@ impl SubscriptionService {
         .await
         .map_err(|e| e.to_string())?;
 
+        // Initialize entitlement and log event
+        sqlx::query("
+            INSERT INTO entitlements (id, tenant_id, subscription_id, credit_balance)
+            VALUES ($1, $2, $3, $4)
+        ")
+        .bind(Uuid::new_v4().to_string())
+        .bind(&subscriber.tenant_id)
+        .bind(&subscriber.id)
+        .bind(4) // e.g. 4 credits per month
+        .execute(&*db)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let event_payload = serde_json::json!({"action": "subscribe", "initial_credits": 4});
+        self.log_subscription_event(&subscriber.tenant_id, &subscriber.id, "subscribed", event_payload).await?;
+
         Ok(subscriber)
+    }
+
+    pub async fn log_subscription_event(&self, tenant_id: &str, subscription_id: &str, event_type: &str, payload: serde_json::Value) -> Result<SubscriptionEvent, String> {
+        let event = SubscriptionEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            subscription_id: subscription_id.to_string(),
+            event_type: event_type.to_string(),
+            event_payload: payload,
+            clock: 1, // simplified CRDT clock
+            signature: None,
+            created_at: Utc::now().timestamp(),
+        };
+
+        let db = self.db.clone();
+
+        sqlx::query("
+            INSERT INTO subscription_events (id, tenant_id, subscription_id, event_type, event_payload, clock, signature, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ")
+        .bind(&event.id)
+        .bind(&event.tenant_id)
+        .bind(&event.subscription_id)
+        .bind(&event.event_type)
+        .bind(&event.event_payload)
+        .bind(event.clock)
+        .bind(&event.signature)
+        .bind(event.created_at)
+        .execute(&*db)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(event)
+    }
+
+    pub async fn sync_offline_events(&self, tenant_id: &str, events: Vec<SubscriptionEvent>) -> Result<(), String> {
+        let db = self.db.clone();
+        let mut tx = db.begin().await.map_err(|e| e.to_string())?;
+
+        for event in events {
+            sqlx::query("
+                INSERT INTO subscription_events (id, tenant_id, subscription_id, event_type, event_payload, clock, signature, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (id) DO NOTHING
+            ")
+            .bind(&event.id)
+            .bind(tenant_id)
+            .bind(&event.subscription_id)
+            .bind(&event.event_type)
+            .bind(&event.event_payload)
+            .bind(event.clock)
+            .bind(&event.signature)
+            .bind(event.created_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            if event.event_type == "credit_redeemed" {
+                // Apply CRDT logic (decrement credit balance based on event)
+                sqlx::query("
+                    UPDATE entitlements
+                    SET credit_balance = credit_balance - 1
+                    WHERE tenant_id = $1 AND subscription_id = $2 AND credit_balance > 0
+                ")
+                .bind(tenant_id)
+                .bind(&event.subscription_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(())
     }
 
     pub async fn trigger_dunning(&self, subscriber_id: &str) -> Result<(), String> {

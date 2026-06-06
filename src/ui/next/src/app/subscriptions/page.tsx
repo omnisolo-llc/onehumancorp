@@ -8,25 +8,94 @@ export default function SubscriptionsPage() {
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    fetch('/api/subscriptions')
-      .then(res => res.json())
-      .then(data => {
-        if (data.plans) setPlans(data.plans);
-        if (data.subscribers) setSubscribers(data.subscribers);
-        if (data.batches) setBatches(data.batches);
-      })
-      .catch(err => console.error('Failed to fetch subscriptions:', err))
-      .finally(() => setLoading(false));
+    // Basic offline detection
+    setIsOffline(!navigator.onLine);
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        if (!navigator.onLine) {
+           // Load from indexedDB or local storage
+           const cached = localStorage.getItem('ohc_subscriptions_cache');
+           if (cached) {
+               const data = JSON.parse(cached);
+               setPlans(data.plans || []);
+               setSubscribers(data.subscribers || []);
+               setBatches(data.batches || []);
+           }
+        } else {
+           const res = await fetch('/api/subscriptions');
+           const data = await res.json();
+           setPlans(data.plans || []);
+           setSubscribers(data.subscribers || []);
+           setBatches(data.batches || []);
+           // Update cache
+           localStorage.setItem('ohc_subscriptions_cache', JSON.stringify(data));
+        }
+      } catch (err) {
+        console.error('Failed to fetch subscriptions:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
+
+  const handleSync = async () => {
+      setSyncing(true);
+      try {
+          const res = await fetch('/api/subscriptions/sync-offline', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ events: [] }) // In a real app, pull pending events from local cache
+          });
+          if (res.ok) {
+              alert('Sync complete!');
+          } else {
+              alert('Sync failed!');
+          }
+      } catch (e) {
+          console.error(e);
+          alert('Sync failed!');
+      } finally {
+          setSyncing(false);
+      }
+  };
 
   return (
     <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col font-inter pb-20">
-      <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
-        <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
-        <h1 className="text-xl font-bold font-outfit text-gray-900">Subscriptions</h1>
+      <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
+        <div className="flex items-center">
+            <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
+            <h1 className="text-xl font-bold font-outfit text-gray-900">Subscriptions</h1>
+        </div>
+        {isOffline && <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-700">Offline Mode</span>}
+      </div>
+
+      <div className="mb-6 flex justify-end">
+          <button
+              onClick={handleSync}
+              disabled={isOffline || syncing}
+              className={`px-4 py-2 rounded-xl font-bold text-sm shadow-sm transition-colors ${
+                  isOffline ? 'bg-gray-200 text-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+          >
+              {syncing ? 'Syncing...' : 'Force Sync'}
+          </button>
       </div>
 
       <div className="mb-6">

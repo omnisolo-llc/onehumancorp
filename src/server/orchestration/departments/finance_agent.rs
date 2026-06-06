@@ -19,7 +19,7 @@ impl Department for FinanceAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.payment.received".to_string()]
+        vec!["tenant.payment.received".to_string(), "invoice.payment_failed".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -33,6 +33,40 @@ impl Department for FinanceAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "invoice.payment_failed" {
+            // Trigger autonomous dunning workflow
+            let description = "Draft dunning SMS/email for failed subscription payment".to_string();
+
+            // In a full implementation, we'd query pgvector memory for the customer profile to set tone.
+            // Here, we queue the action.
+            self.orchestrator.execute_action(
+                DepartmentType::Finance,
+                description,
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute, // Let agent auto-dispatch friendly reminders
+                serde_json::json!({
+                    "action": "send_dunning_message",
+                    "payload": event.payload.clone(),
+                    "follow_up_in_hours": 48
+                }),
+            ).await.map(|_| ())?;
+
+            // Push to job queue to follow up in 48 hours
+            let pool = crate::db::get_pool();
+            let _ = sqlx::query(
+                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, next_retry_at)
+                 VALUES ($1, $2, $3, $4, NOW() + INTERVAL '48 hours')"
+            )
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&event.tenant_id)
+            .bind("check_dunning_status")
+            .bind(&event.payload)
+            .execute(&pool)
+            .await;
+
+            return Ok(());
+        }
 
         self.orchestrator.execute_action(
             DepartmentType::Finance,
