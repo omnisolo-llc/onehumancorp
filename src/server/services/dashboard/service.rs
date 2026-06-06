@@ -43,8 +43,8 @@ impl MyDashboardService {
         Ok(agents)
     }
 
-    async fn fetch_meetings(&self, org_id: &str) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
-        let cache_key = format!("hub:meetings:{}", org_id);
+    async fn fetch_meetings(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+        let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
         let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
         if let Some(meetings) = cache.get(&cache_key).await {
@@ -54,10 +54,19 @@ impl MyDashboardService {
         let all_meetings = self.hub.get_meetings().await;
         let mut filtered = Vec::new();
         for m in all_meetings.iter() {
+            let mut include = false;
             if m.id.starts_with(org_id) || m.id.contains(org_id) {
-                filtered.push(m.clone());
+                include = true;
             } else if m.participants.iter().any(|p| p.starts_with(org_id) || p.contains(org_id)) {
-                filtered.push(m.clone());
+                include = true;
+            }
+
+            if include {
+                let mut m_clone = m.clone();
+                if mobile_optimized {
+                    m_clone.transcript.clear();
+                }
+                filtered.push(m_clone);
             }
         }
         let meetings = Arc::new(filtered);
@@ -371,7 +380,7 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o).await })
+                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
             },
             {
                 let s = self.clone();
