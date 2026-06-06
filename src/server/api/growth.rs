@@ -747,13 +747,20 @@ async fn handle_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
-        .bind(&query.team_id)
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+    let pool_clone = state.pool.clone();
+    let team_id = query.team_id.clone();
+    let active_referrals_fut = async {
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+            .bind(&team_id)
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
+    };
 
-    match tracker.get_team_invites_count(&query.team_id).await {
+    let invites_count_fut = tracker.get_team_invites_count(&query.team_id);
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
+
+    match invites_count_res {
         Ok(total_invites) => {
             let resp = TeamInvitesMetricsResponse {
                 total_invites,
@@ -1241,12 +1248,18 @@ async fn handle_aggregated_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+    let pool_clone = state.pool.clone();
+    let active_referrals_fut = async {
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
+    };
 
-    match tracker.get_total_invites_count().await {
+    let invites_count_fut = tracker.get_total_invites_count();
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
+
+    match invites_count_res {
         Ok(total_invites) => {
             let resp = TeamInvitesMetricsResponse {
                 total_invites,
