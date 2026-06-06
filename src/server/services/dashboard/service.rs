@@ -435,7 +435,7 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+        let final_meetings = if req.mobile_optimized { Vec::new() } else { out_meetings };
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
@@ -784,9 +784,7 @@ mod tests {
             assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
             assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
         }
-        if !res_mobile.meetings.is_empty() {
-            assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
-        }
+        assert!(res_mobile.meetings.is_empty(), "Mobile optimization should clear meetings");
         if !res_mobile.products.is_empty() {
             assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
             assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");

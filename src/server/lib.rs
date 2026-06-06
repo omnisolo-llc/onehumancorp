@@ -45,6 +45,7 @@ static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
+static COST_DASHBOARD_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<::server_ohc::orchestration::CostDashboardResponse>> = std::sync::OnceLock::new();
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -1200,6 +1201,13 @@ impl HubService for MyHubService {
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
+        let cache_key = format!("hub:cost_dashboard:{}", tenant_id);
+        let cache = COST_DASHBOARD_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(cached_res) = cache.get(&cache_key).await {
+            return Ok(tonic::Response::new(cached_res));
+        }
+
         let auditor = self.hub.get_cost_auditor();
         let tenant_id_clone = tenant_id.clone();
 
@@ -1227,7 +1235,7 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + network_cost_f64;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
+        let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
@@ -1237,7 +1245,11 @@ impl HubService for MyHubService {
             period_end: "2024-05-31".to_string(),
             bandwidth_savings: (bandwidth_savings_f64 * 100.0) as i64,
             network_cost: (network_cost_f64 * 100.0) as i64,
-        }))
+        };
+
+        cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(tonic::Response::new(response))
     }
 
     async fn select_plan(
