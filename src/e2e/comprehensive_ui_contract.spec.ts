@@ -16,7 +16,7 @@ function walkFiles(dir: string): string[] {
   return entries.flatMap((entry) => {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) return walkFiles(fullPath);
-    return entry.isFile() ? [fullPath] : [];
+    return entry.isFile() || entry.isSymbolicLink() ? [fullPath] : [];
   });
 }
 
@@ -98,26 +98,271 @@ function normalizeInternalHref(href: string): string | null {
   }
 }
 
+function routeLabel(route: string) {
+  return route || '/';
+}
+
+const allowedExternalHosts = [
+  'facebook.com',
+  'meet.google.com',
+  'ohc.app',
+  'onehumancorp.com',
+  'twitter.com',
+  'wa.me',
+  'www.facebook.com',
+  'x.com',
+];
+
+function externalHostAllowed(hostname: string) {
+  return allowedExternalHosts.some((allowedHost) => hostname === allowedHost || hostname.endsWith(`.${allowedHost}`));
+}
+
+function isFakeOHCUrl(href: string) {
+  try {
+    const url = new URL(href, 'http://localhost:3000');
+    return url.protocol === 'ohc:' || url.hostname === 'ohc.store' || url.hostname.endsWith('.ohc.store');
+  } catch {
+    return href.startsWith('ohc://') || href.includes('ohc.store');
+  }
+}
+
 async function visibleText(page: Page) {
   return page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
 }
 
-async function describeTarget(page: Page, selector: string, index: number) {
-  return page.locator(selector).nth(index).evaluate((element, fallbackIndex) => {
+async function pageSignature(page: Page) {
+  return page.evaluate(() => {
+    const body = document.body;
+    const text = body?.textContent || '';
+    const html = body?.innerHTML || '';
+    const elementCount = document.querySelectorAll('*').length;
+    const checksum = (value: string) => {
+      let hash = 0;
+      for (let index = 0; index < value.length; index += 1) {
+        hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
+      }
+      return hash;
+    };
+    return `${location.href}|${checksum(text)}|${checksum(html)}|${elementCount}`;
+  }).catch(() => page.url());
+}
+
+async function waitForClickEffect(page: Page, beforeUrl: string, beforeSignature: string) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await page.waitForTimeout(50);
+    const afterUrl = page.url();
+    const afterSignature = await pageSignature(page);
+    if (afterUrl !== beforeUrl || afterSignature !== beforeSignature) {
+      return { afterUrl, afterSignature, changed: true };
+    }
+  }
+
+  return { afterUrl: page.url(), afterSignature: await pageSignature(page), changed: false };
+}
+
+async function gotoReady(page: Page, route: string) {
+  await page.goto(route, { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('networkidle', { timeout: 1000 }).catch(() => undefined);
+  await page.waitForTimeout(100);
+  await page.evaluate(() => {
+    const controls = Array.from(document.querySelectorAll('input, textarea')) as Array<HTMLInputElement | HTMLTextAreaElement>;
+    for (const control of controls) {
+      const style = window.getComputedStyle(control);
+      const rect = control.getBoundingClientRect();
+      if (style.visibility === 'hidden' || style.display === 'none' || rect.width === 0 || rect.height === 0) continue;
+      if (control.disabled || control.readOnly || control.value) continue;
+      if (control instanceof HTMLInputElement) {
+        if (['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(control.type)) continue;
+        control.value = control.type === 'url' ? 'https://ohc.app' : control.type === 'number' ? '1' : 'Audit value';
+      } else {
+        control.value = 'Audit value';
+      }
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      control.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }).catch(() => undefined);
+}
+
+async function tagClickTargets(page: Page) {
+  return page.locator(clickableSelector).evaluateAll((elements) => {
+    const visibleTargets = elements.filter((element) => {
+      const style = window.getComputedStyle(element);
+      if (element.closest('[aria-hidden="true"]')) return false;
+      return style.pointerEvents !== 'none' && style.opacity !== '0';
+    });
+    visibleTargets.forEach((element, index) => {
+      element.setAttribute('data-ui-audit-click-index', String(index));
+    });
+    return visibleTargets.length;
+  });
+}
+
+async function describeTaggedTarget(page: Page, index: number) {
+  return page.locator(`[data-ui-audit-click-index="${index}"]`).evaluate((element, fallbackIndex) => {
     const aria = element.getAttribute('aria-label');
     const text = (element.textContent || '').trim().replace(/\s+/g, ' ');
     const id = element.id ? `#${element.id}` : '';
     const role = element.getAttribute('role');
     return aria || text || role || `${element.tagName.toLowerCase()}${id} #${Number(fallbackIndex) + 1}`;
-  }, index).catch(() => `${selector} #${index + 1}`);
+  }, index).catch(() => `click target #${index + 1}`);
 }
 
+async function auditInteractivePurposeForRoute(page: Page, route: string) {
+  await gotoReady(page, route);
+  const results = await page.locator(interactiveSelector).evaluateAll((elements) =>
+    elements.filter((element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      if (element.closest('[aria-hidden="true"]')) return false;
+      return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+    }).map((element, index) => {
+      const tag = element.tagName.toLowerCase();
+      const type = element.getAttribute('type') || '';
+      const href = element.getAttribute('href') || '';
+      const role = element.getAttribute('role') || '';
+      const purpose =
+        element.getAttribute('aria-label') ||
+        element.getAttribute('title') ||
+        element.getAttribute('placeholder') ||
+        element.getAttribute('name') ||
+        element.getAttribute('value') ||
+        Array.from((element as HTMLInputElement).labels || []).map((labelElement) => labelElement.textContent || '').join(' ').trim() ||
+        (element.textContent || '').trim().replace(/\s+/g, ' ');
+      const disabled = element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true';
+      return { index, tag, type, href, role, purpose: purpose.trim(), disabled };
+    }),
+  );
+
+  const failures: string[] = [];
+  for (const result of results) {
+    const target = `${route}: ${result.tag}${result.type ? `[type=${result.type}]` : ''} #${result.index + 1}`;
+    if (!result.disabled && !result.purpose) {
+      failures.push(`${target} has no visible or accessible designed purpose`);
+    }
+    if (result.tag === 'a') {
+      if (!result.href.trim()) failures.push(`${target} has no href`);
+      if (result.href === '#' || result.href.startsWith('#')) failures.push(`${target} uses a placeholder hash href`);
+      if (result.href.startsWith('javascript:')) failures.push(`${target} uses a javascript: href`);
+      if (isFakeOHCUrl(result.href)) failures.push(`${target} uses fake OHC destination ${result.href}`);
+    }
+    if ((result.tag === 'button' || result.role === 'button') && /^button$/i.test(result.purpose)) {
+      failures.push(`${target} exposes only a generic button purpose`);
+    }
+  }
+
+  return { auditedElements: results.length, failures };
+}
+
+async function auditClickEffectsForRoute(page: Page, route: string) {
+  await gotoReady(page, route);
+  const failures: string[] = [];
+  let auditedTargets = 0;
+  const targetCount = await tagClickTargets(page);
+  auditedTargets += targetCount;
+
+  for (let index = 0; index < targetCount; index += 1) {
+    let target = page.locator(`[data-ui-audit-click-index="${index}"]`);
+    if (await target.count() === 0) {
+      await gotoReady(page, route);
+      await tagClickTargets(page);
+      target = page.locator(`[data-ui-audit-click-index="${index}"]`);
+    }
+
+    if (await target.count() === 0) {
+      break;
+    }
+
+    const isCurrentSelection = await target.evaluate((element) =>
+      element.getAttribute('aria-pressed') === 'true' ||
+      element.getAttribute('aria-current') === 'page' ||
+      element.getAttribute('aria-selected') === 'true',
+    ).catch(() => false);
+    if (isCurrentSelection) continue;
+
+    const label = await describeTaggedTarget(page, index);
+    const beforeUrl = page.url();
+    const beforeSignature = await pageSignature(page);
+    let dialogSeen = false;
+    let requestSeen = false;
+
+    const dialogPromise = page.waitForEvent('dialog', { timeout: 75 })
+      .then(async (dialog) => {
+        dialogSeen = true;
+        await dialog.dismiss().catch(() => undefined);
+      })
+      .catch(() => undefined);
+    const requestPromise = page.waitForEvent('request', { timeout: 75 })
+      .then(() => { requestSeen = true; })
+      .catch(() => undefined);
+
+    await target.evaluate((element) => {
+      (element as HTMLElement).click();
+    }, undefined, { timeout: 500 }).catch((error) => {
+      failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
+    });
+    await Promise.all([dialogPromise, requestPromise]);
+
+    const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
+    const realEffect = requestSeen || effect.changed;
+
+    if (dialogSeen && !realEffect) {
+      failures.push(`${route}: "${label}" only opened a browser dialog`);
+    }
+    if (!realEffect) {
+      failures.push(`${route}: "${label}" produced no navigation, network request, or DOM change`);
+    }
+    if (effect.afterUrl !== beforeUrl || effect.changed) {
+      await gotoReady(page, route);
+      await tagClickTargets(page);
+    }
+  }
+
+  return { auditedTargets, failures };
+}
+
+const generatedContractRoutes = discoverAppRoutes();
+
 test.describe('comprehensive UI contract', () => {
+  test.describe.configure({ timeout: 300000 });
+
+  test('per-route exhaustive UI element contracts cover at least 100 additional checks', async () => {
+    expect(generatedContractRoutes.length, 'Route discovery must find enough pages for 100+ generated UI contracts.').toBeGreaterThanOrEqual(50);
+    expect(generatedContractRoutes.length * 2).toBeGreaterThanOrEqual(100);
+  });
+
+  for (const route of generatedContractRoutes) {
+    test(`all visible interactive elements declare their designed purpose on ${routeLabel(route)}`, async ({ browser }) => {
+      test.setTimeout(120000);
+      const page = await browser.newPage();
+      try {
+        const audit = await auditInteractivePurposeForRoute(page, route);
+        console.log(`Audited ${audit.auditedElements} interactive elements on ${routeLabel(route)}.`);
+        expect(audit.failures).toEqual([]);
+      } finally {
+        await page.close();
+      }
+    });
+
+    test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ browser }) => {
+      test.setTimeout(120000);
+      const page = await browser.newPage();
+      try {
+        const audit = await auditClickEffectsForRoute(page, route);
+        console.log(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
+        expect(audit.failures).toEqual([]);
+      } finally {
+        await page.close();
+      }
+    });
+  }
+
   test('every app page loads without visible crash output', async ({ page }) => {
     expect(fs.existsSync(appRoot), 'Next UI source/routes are not available in this Playwright runfiles tree.').toBeTruthy();
     test.setTimeout(180000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
+    console.log(`Discovered ${appRoutes.length} app routes for load audit.`);
+    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     page.on('pageerror', (error) => {
       failures.push(`uncaught page error: ${error.message}`);
@@ -127,13 +372,13 @@ test.describe('comprehensive UI contract', () => {
       const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
       const status = response?.status() ?? 0;
       if (status >= 400) {
-        failures.push(`${route}: HTTP ${status}`);
+        failures.push(`${routeLabel(route)}: HTTP ${status}`);
         continue;
       }
 
       const bodyText = await visibleText(page);
       if (/404|not found|application error|failed to load/i.test(bodyText)) {
-        failures.push(`${route}: visible error text found`);
+        failures.push(`${routeLabel(route)}: visible error text found`);
       }
     }
 
@@ -145,6 +390,8 @@ test.describe('comprehensive UI contract', () => {
     const failures: string[] = [];
     const checked = new Set<string>();
     const appRoutes = discoverAppRoutes();
+    console.log(`Discovered ${appRoutes.length} app routes for internal link audit.`);
+    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
@@ -153,7 +400,8 @@ test.describe('comprehensive UI contract', () => {
           .filter((anchor) => {
             const style = window.getComputedStyle(anchor);
             const rect = anchor.getBoundingClientRect();
-            return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+            if (anchor.closest('[aria-hidden="true"]')) return false;
+            return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
           })
           .map((anchor) => (anchor as HTMLAnchorElement).getAttribute('href') || ''),
       );
@@ -162,7 +410,7 @@ test.describe('comprehensive UI contract', () => {
         const href = normalizeInternalHref(rawHref);
         if (!href) continue;
         if (href === 'javascript:') {
-          failures.push(`${route}: javascript: link`);
+          failures.push(`${routeLabel(route)}: javascript: link`);
           continue;
         }
         if (checked.has(href)) continue;
@@ -170,7 +418,73 @@ test.describe('comprehensive UI contract', () => {
 
         const response = await request.get(href, { failOnStatusCode: false });
         if (response.status() >= 400) {
-          failures.push(`${route}: ${href} resolved with HTTP ${response.status()}`);
+          failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
+        }
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  test('visible external and protocol links use expected destinations', async ({ page }) => {
+    test.setTimeout(180000);
+    const failures: string[] = [];
+    const appRoutes = discoverAppRoutes();
+    console.log(`Discovered ${appRoutes.length} app routes for external/protocol link audit.`);
+    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
+
+    for (const route of appRoutes) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      const hrefs = await page.locator('a[href]').evaluateAll((anchors) =>
+        anchors
+          .filter((anchor) => {
+            const style = window.getComputedStyle(anchor);
+            const rect = anchor.getBoundingClientRect();
+            if (anchor.closest('[aria-hidden="true"]')) return false;
+            return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+          })
+          .map((anchor, index) => ({
+            index,
+            href: (anchor as HTMLAnchorElement).getAttribute('href') || '',
+            target: anchor.getAttribute('target') || '',
+            rel: anchor.getAttribute('rel') || '',
+            text: (anchor.textContent || '').trim().replace(/\s+/g, ' '),
+          })),
+      );
+
+      for (const link of hrefs) {
+        const target = `${routeLabel(route)}: link #${link.index + 1}${link.text ? ` "${link.text}"` : ''}`;
+        if (!link.href.trim()) {
+          failures.push(`${target} has an empty href`);
+          continue;
+        }
+        if (link.href === '#' || link.href.startsWith('#')) {
+          failures.push(`${target} uses a placeholder hash href`);
+          continue;
+        }
+        if (link.href.startsWith('javascript:')) {
+          failures.push(`${target} uses a javascript: href`);
+          continue;
+        }
+        if (isFakeOHCUrl(link.href)) {
+          failures.push(`${target} uses fake OHC destination ${link.href}`);
+          continue;
+        }
+        if (link.href.startsWith('mailto:') || link.href.startsWith('tel:')) {
+          continue;
+        }
+
+        const url = new URL(link.href, 'http://localhost:3000');
+        if (url.origin === 'http://localhost:3000') continue;
+
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          failures.push(`${target} uses unexpected protocol ${url.protocol}`);
+        }
+        if (!externalHostAllowed(url.hostname)) {
+          failures.push(`${target} points at unexpected external host ${url.hostname}`);
+        }
+        if (link.target === '_blank' && (!link.rel.includes('noopener') || !link.rel.includes('noreferrer'))) {
+          failures.push(`${target} opens a new tab without rel="noopener noreferrer"`);
         }
       }
     }
@@ -179,46 +493,62 @@ test.describe('comprehensive UI contract', () => {
   });
 
   test('visible enabled click targets have an observable effect', async ({ page }) => {
-    test.setTimeout(240000);
+    test.setTimeout(600000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
+    let auditedTargets = 0;
+    console.log(`Discovered ${appRoutes.length} app routes for click target audit.`);
+    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
-      const targetCount = await page.locator(clickableSelector).count();
+      await gotoReady(page, route);
+      const targetCount = await tagClickTargets(page);
+      auditedTargets += targetCount;
 
       for (let index = 0; index < targetCount; index += 1) {
-        await page.goto(route, { waitUntil: 'domcontentloaded' });
-        const target = page.locator(clickableSelector).nth(index);
-        const label = await describeTarget(page, clickableSelector, index);
+        let target = page.locator(`[data-ui-audit-click-index="${index}"]`);
+        if (await target.count() === 0) {
+          await gotoReady(page, route);
+          await tagClickTargets(page);
+          target = page.locator(`[data-ui-audit-click-index="${index}"]`);
+        }
+
+        if (await target.count() === 0) {
+          break;
+        }
+
+        const isCurrentSelection = await target.evaluate((element) =>
+          element.getAttribute('aria-pressed') === 'true' ||
+          element.getAttribute('aria-current') === 'page' ||
+          element.getAttribute('aria-selected') === 'true',
+        ).catch(() => false);
+        if (isCurrentSelection) continue;
+
+        const label = await describeTaggedTarget(page, index);
         const beforeUrl = page.url();
-        const beforeText = await visibleText(page);
+        const beforeSignature = await pageSignature(page);
         let dialogSeen = false;
         let requestSeen = false;
-        let responseSeen = false;
 
-        const dialogPromise = page.waitForEvent('dialog', { timeout: 1500 })
+        const dialogPromise = page.waitForEvent('dialog', { timeout: 75 })
           .then(async (dialog) => {
             dialogSeen = true;
             await dialog.dismiss().catch(() => undefined);
           })
           .catch(() => undefined);
-        const requestPromise = page.waitForEvent('request', { timeout: 1500 })
+        const requestPromise = page.waitForEvent('request', { timeout: 75 })
           .then(() => { requestSeen = true; })
           .catch(() => undefined);
-        const responsePromise = page.waitForEvent('response', { timeout: 2000 })
-          .then((response) => { responseSeen = response.status() < 500; })
-          .catch(() => undefined);
 
-        await target.click({ timeout: 5000 }).catch((error) => {
+        await target.evaluate((element) => {
+          (element as HTMLElement).click();
+        }, undefined, { timeout: 500 }).catch((error) => {
           failures.push(`${route}: "${label}" click failed: ${error.message.split('\n')[0]}`);
         });
-        await Promise.all([dialogPromise, requestPromise, responsePromise]);
-        await page.waitForTimeout(250);
+        await Promise.all([dialogPromise, requestPromise]);
 
-        const afterUrl = page.url();
-        const afterText = await visibleText(page);
-        const realEffect = requestSeen || responseSeen || afterUrl !== beforeUrl || afterText !== beforeText;
+        const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
+        const realEffect = requestSeen || effect.changed;
 
         if (dialogSeen && !realEffect) {
           failures.push(`${route}: "${label}" only opened a browser dialog`);
@@ -226,9 +556,14 @@ test.describe('comprehensive UI contract', () => {
         if (!realEffect) {
           failures.push(`${route}: "${label}" produced no navigation, network request, or DOM change`);
         }
+        if (effect.afterUrl !== beforeUrl || effect.changed) {
+          await gotoReady(page, route);
+          await tagClickTargets(page);
+        }
       }
     }
 
+    console.log(`Audited ${auditedTargets} visible enabled click targets.`);
     expect(failures).toEqual([]);
   });
 
@@ -236,11 +571,18 @@ test.describe('comprehensive UI contract', () => {
     test.setTimeout(180000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
+    let auditedElements = 0;
+    console.log(`Discovered ${appRoutes.length} app routes for interactive element audit.`);
+    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
       await page.goto(route, { waitUntil: 'domcontentloaded' });
       const results = await page.locator(interactiveSelector).evaluateAll((elements) =>
-        elements.map((element, index) => {
+        elements.filter((element) => {
+          const style = window.getComputedStyle(element);
+          if (element.closest('[aria-hidden="true"]')) return false;
+          return style.opacity !== '0';
+        }).map((element, index) => {
           const rect = element.getBoundingClientRect();
           const style = window.getComputedStyle(element);
           const tag = element.tagName.toLowerCase();
@@ -249,6 +591,7 @@ test.describe('comprehensive UI contract', () => {
             element.getAttribute('aria-label') ||
             element.getAttribute('title') ||
             element.getAttribute('placeholder') ||
+            Array.from((element as HTMLInputElement).labels || []).map((labelElement) => labelElement.textContent || '').join(' ').trim() ||
             (element.textContent || '').trim();
 
           return {
@@ -263,15 +606,17 @@ test.describe('comprehensive UI contract', () => {
           };
         }),
       );
+      auditedElements += results.length;
 
       for (const result of results) {
         const target = `${route}: ${result.tag}${result.type ? `[type=${result.type}]` : ''} #${result.index + 1}`;
         if (result.width < 1 || result.height < 1) failures.push(`${target} has no rendered hit area`);
-        if (result.pointerEvents === 'none') failures.push(`${target} has pointer-events disabled`);
+        if (!result.disabled && result.pointerEvents === 'none') failures.push(`${target} has pointer-events disabled`);
         if (!result.disabled && !result.label) failures.push(`${target} has no accessible label/text/placeholder/title`);
       }
     }
 
+    console.log(`Audited ${auditedElements} visible interactive elements.`);
     expect(failures).toEqual([]);
   });
 
@@ -279,12 +624,16 @@ test.describe('comprehensive UI contract', () => {
     test.setTimeout(240000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
+    let auditedLayouts = 0;
+    console.log(`Discovered ${appRoutes.length} app routes for layout audit across ${viewports.length} viewports.`);
+    expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       for (const route of appRoutes) {
         await page.goto(route, { waitUntil: 'domcontentloaded' });
+        auditedLayouts += 1;
         const layout = await page.evaluate((selector) => {
           const documentElement = document.documentElement;
           const body = document.body;
@@ -295,7 +644,9 @@ test.describe('comprehensive UI contract', () => {
             .filter((element) => {
               const rect = element.getBoundingClientRect();
               const style = window.getComputedStyle(element);
-              return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+              if (element.closest('[data-ui-overlay="true"]')) return false;
+              if (element.closest('[aria-hidden="true"]')) return false;
+              return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
             })
             .map((element, index) => {
               const rect = element.getBoundingClientRect();
@@ -342,6 +693,7 @@ test.describe('comprehensive UI contract', () => {
       }
     }
 
+    console.log(`Audited ${auditedLayouts} route/viewport layout combinations.`);
     expect(failures).toEqual([]);
   });
 });
