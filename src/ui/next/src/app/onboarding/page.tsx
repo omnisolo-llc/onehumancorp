@@ -422,6 +422,8 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
@@ -485,6 +487,8 @@ export default function OnboardingWizard() {
                     <div>
                       <textarea
                         autoFocus
+                        enterKeyHint="next"
+                        autoCapitalize="sentences"
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         onKeyDown={(e) => {
@@ -549,6 +553,8 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
@@ -626,6 +632,8 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoFocus
+                    enterKeyHint="next"
+                    autoCapitalize="words"
                     value={businessName}
                     onChange={(e) => {
                       setBusinessName(e.target.value);
@@ -643,6 +651,8 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
                   <input
                     type="text"
+                    enterKeyHint="next"
+                    autoCapitalize="words"
                     value={businessType}
                     onChange={(e) => {
                       setBusinessType(e.target.value);
@@ -660,6 +670,8 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
                     type="text"
+                    enterKeyHint="next"
+                    autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
                     className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -670,6 +682,8 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
                       <input
                         type="text"
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
                         className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -785,6 +799,8 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
                       <input
                         type="text"
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={adminName}
                         onChange={(e) => setAdminName(e.target.value)}
                         placeholder="e.g. Maya Smith"
@@ -796,6 +812,8 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
+                        enterKeyHint="next"
+                        autoCapitalize="none"
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
@@ -807,6 +825,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
                       <input
                         type="password"
+                        enterKeyHint="done"
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         placeholder="••••••••"

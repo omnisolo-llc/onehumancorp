@@ -107,7 +107,7 @@ async fn test_config_sync_push_and_get() {
     let push_res = server.invoke_tool(&push_req).await.unwrap();
     let push_json: serde_json::Value = serde_json::from_str(&push_res.payload).unwrap();
     assert_eq!(push_json["status"], "success");
-    assert!(push_json["merged"]);
+    assert_eq!(push_json["merged"], true);
 
     // Get Hash
     let get_req = McpInvokeRequest {
