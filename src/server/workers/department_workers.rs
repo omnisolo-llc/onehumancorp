@@ -156,20 +156,21 @@ pub mod pos_sync_worker {
                 let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
                 if product_id.is_empty() { continue; }
 
-                let current_stock = sqlx::query("SELECT count FROM inventory WHERE product_id = $1 FOR UPDATE")
+                let current_stock = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 FOR UPDATE")
                     .bind(product_id)
                     .fetch_optional(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
 
                 if let Some(row) = current_stock {
-                    let stock: i64 = row.get("count");
-                    if stock < qty {
+                    let stock: i32 = row.try_get("inventory_count").unwrap_or(0);
+                    let stock_i64 = stock as i64;
+                    if stock_i64 < qty {
                         tracing::warn!("Inventory discrepancy for {}: expected at least {}, had {}", product_id, qty, stock);
                         let adj_job_id = Uuid::new_v4().to_string();
                         let adj_payload = json!({
                             "product_id": product_id,
-                            "adjustment": stock - qty,
+                            "adjustment": stock_i64 - qty,
                             "reason": format!("Offline POS sync discrepancy for tx {}", tx_id)
                         }).to_string();
 
@@ -183,8 +184,8 @@ pub mod pos_sync_worker {
                         .await;
                     }
 
-                    let new_stock = std::cmp::max(0, stock - qty);
-                    let _ = sqlx::query("UPDATE inventory SET count = $1 WHERE product_id = $2")
+                    let new_stock = std::cmp::max(0, stock_i64 - qty) as i32;
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2")
                         .bind(new_stock)
                         .bind(product_id)
                         .execute(&mut *tx)
