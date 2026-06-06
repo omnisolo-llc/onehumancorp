@@ -12,27 +12,45 @@ export default function ReviewCampaignsPage() {
   const [isSent, setIsSent] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [audienceCounts, setAudienceCounts] = useState<{recent: number, loyal: number, all: number} | null>(null);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
+
+    const fetchAudience = async () => {
+      try {
+        const res = await fetch('/api/v1/growth/audience');
+        const data = await res.json();
+        setAudienceCounts(data);
+      } catch (e) {
+        console.error("Failed to fetch audience", e);
+      }
+    };
+    fetchAudience();
   }, []);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setGeneratedDraft(
-      `Subject: How are you loving your ${productName || 'recent purchase'}?\n\n` +
-      `Hi [Customer Name],\n\n` +
-      `Thank you so much for shopping with us! We noticed you recently received your ${productName || 'order'} and we hope you are absolutely loving it.\n\n` +
-      `As a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.\n\n` +
-      `Click here to leave a review: [Review Link]\n\n` +
-      `To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!\n\n` +
-      `Warmly,\n` +
-      `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team`
-    );
-    setIsGenerating(false);
-    setIsSent(false);
+    try {
+      const res = await fetch('/api/v1/growth/campaign/generate-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_name: productName,
+          customer_name: '[Customer Name]'
+        })
+      });
+      const data = await res.json();
+      setGeneratedDraft(data.message);
+    } catch (e) {
+      console.error("Failed to generate draft", e);
+      setGeneratedDraft("Failed to generate draft via AI. Please try again.");
+    } finally {
+      setIsGenerating(false);
+      setIsSent(false);
+    }
   };
 
   const handleSend = () => {
@@ -43,6 +61,8 @@ export default function ReviewCampaignsPage() {
     // Simulate sending
     setIsSent(true);
   };
+
+  const currentAudienceCount = audienceCounts ? audienceCounts[customerSegment as keyof typeof audienceCounts] : '...';
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
@@ -135,7 +155,7 @@ export default function ReviewCampaignsPage() {
 
                 {isSent ? (
                   <div className="w-full py-3 bg-green-50 text-green-700 font-bold rounded-xl text-center border border-green-200">
-                    ✅ Campaign sent to {customerSegment === 'recent' ? '48' : customerSegment === 'loyal' ? '12' : '156'} customers!
+                    ✅ Campaign sent to {currentAudienceCount} customers!
                   </div>
                 ) : (
                   <button
@@ -148,7 +168,7 @@ export default function ReviewCampaignsPage() {
                       </span>
                     )}
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                    Send to Audience ({customerSegment === 'recent' ? '48' : customerSegment === 'loyal' ? '12' : '156'} Customers)
+                    Send to Audience ({currentAudienceCount} Customers)
                   </button>
                 )}
               </div>
