@@ -87,7 +87,7 @@ impl Department for CustomerSuccessAgent {
         }
 
         if event.event_type == "tenant.message.received" {
-            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let message = event.payload.get("original_message").or_else(|| event.payload.get("message")).and_then(|v| v.as_str()).unwrap_or("");
 
             // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
@@ -99,11 +99,15 @@ impl Department for CustomerSuccessAgent {
                 "No relevant memory found.".to_string()
             };
 
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
-                "Yes, we do vegan cakes!"
-            } else {
-                "Thank you for your message. We will get back to you shortly."
-            };
+            let mut generated_response = event.payload.get("generated_response").or_else(|| event.payload.get("draft_reply")).and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+            if generated_response.is_empty() {
+                generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
+                    "Yes, we do vegan cakes!".to_string()
+                } else {
+                    "Thank you for your message. We will get back to you shortly.".to_string()
+                };
+            }
 
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
