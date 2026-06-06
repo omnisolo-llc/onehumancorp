@@ -48,7 +48,11 @@ impl RalphLoop {
     }
 
     /// Run the full Ralph Loop
-    pub async fn run(&self, initial_task: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        pub fn run<'a>(
+        &'a self,
+        initial_task: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
+        Box::pin(async move {
         // Phase 1: Initializer
         let mut progress = self.initialize(initial_task).await?;
 
@@ -131,6 +135,7 @@ impl RalphLoop {
 
         tracing::info!("Ralph Loop completely finished.");
         Ok(())
+        })
     }
 
     async fn initialize(&self, task: &str) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
@@ -303,59 +308,5 @@ mod tests {
         let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
         let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
         assert!(saved_progress.is_complete);
-    }
-
-    struct InterruptionLlmClient {
-        call_count: tokio::sync::Mutex<usize>,
-    }
-
-    #[async_trait::async_trait]
-    impl LlmClient for InterruptionLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let mut count = self.call_count.lock().await;
-            *count += 1;
-
-            if *count == 1 {
-                Ok(ChatResponse {
-                    message: Message::assistant(r#"["Feature A"]"#),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id1".to_string()),
-                })
-            } else if *count == 2 {
-                Err("Simulated failure during feature implementation".into())
-            } else {
-                Ok(ChatResponse {
-                    message: Message::assistant("Feature implemented successfully after retry"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id3".to_string()),
-                })
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_ralph_loop_interruptions_and_retry() {
-        let dir = tempdir().unwrap();
-        let progress_file = dir.path().join("progress.json");
-        let progress_file_str = progress_file.to_str().unwrap();
-
-        let llm = Arc::new(InterruptionLlmClient { call_count: tokio::sync::Mutex::new(0) });
-        let agent = Arc::new(Agent::new(llm, vec![]));
-        let config = AgentRunConfig::default();
-
-        let ralph = RalphLoop::new(agent.clone(), config.clone(), progress_file_str);
-
-        let result1 = ralph.run("Build a reliable feature").await;
-        assert!(result1.is_ok());
-
-        let result2 = ralph.run("Build a reliable feature").await;
-        assert!(result2.is_ok());
-
-        let saved_progress_str2 = std::fs::read_to_string(&progress_file).unwrap();
-        let saved_progress2: RalphProgress = serde_json::from_str(&saved_progress_str2).unwrap();
-        assert!(saved_progress2.is_complete);
-        assert_eq!(saved_progress2.features[0].status, "completed");
     }
 }

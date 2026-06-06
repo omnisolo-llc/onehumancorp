@@ -83,6 +83,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
     pub thread_id: Option<String>,
+    pub enable_ralph_loop: bool,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
     pub enable_vercel_tool_scoping_metric: bool,
@@ -144,6 +145,7 @@ enable_llmcompiler_plan_and_execute: false,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
             thread_id: None,
+            enable_ralph_loop: false,
             resume_from_checkpoint_id: None,
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
@@ -243,6 +245,7 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
 
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
+#[derive(Clone)]
 pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
@@ -1941,6 +1944,12 @@ impl Agent {
         }
         if final_cfg.enable_gpt_researcher {
             return self.run_gpt_researcher(&final_cfg, initial_message, on_event).await;
+        }
+        if final_cfg.enable_ralph_loop {
+            let self_arc = std::sync::Arc::new((*self).clone());
+            let ralph = crate::ralph_loop::RalphLoop::new(self_arc, final_cfg.clone(), ".ralph_progress.json");
+            ralph.run(initial_message).await?;
+            return Ok("Ralph loop completed".to_string());
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));

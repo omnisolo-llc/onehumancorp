@@ -594,6 +594,7 @@ impl AgentServiceImpl {
             state_scratchpad_path: None,
             workspace_path: Some(Self::workspace_path().to_string_lossy().to_string()),
             thread_id: None,
+            enable_ralph_loop: false,
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
@@ -1038,6 +1039,7 @@ impl AgentService for AgentServiceImpl {
                     sub_req.working_dir.clone()
                 }),
                 thread_id: None,
+            enable_ralph_loop: false,
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
