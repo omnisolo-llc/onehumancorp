@@ -181,3 +181,16 @@ ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Seed omni_inbox data
+INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status)
+VALUES ('inbox_msg_test_1', 't_demo_org_1', 'instagram', 'Do you do vegan cakes?', 'Yes, we do vegan cakes!', 'pending')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+VALUES ('approval_inbox_test_1', 't_demo_org_1', 'customer_success', 'Draft email for review', 'DRAFT', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you do vegan cakes?", "generated_response": "Yes, we do vegan cakes!", "inbox_message_id": "inbox_msg_test_1"}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content)
+VALUES ('timeline_inbox_test_1', 't_demo_org_1', 'sarah123', 'message_received', 'instagram', 'Do you do vegan cakes?')
+ON CONFLICT (id) DO NOTHING;

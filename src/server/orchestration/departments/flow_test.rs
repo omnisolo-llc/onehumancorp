@@ -153,11 +153,27 @@ mod tests {
             agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0 });
         }
 
+        let inbox_id = Uuid::new_v4().to_string();
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')")
+                .bind(&inbox_id)
+                .bind(&tenant_id)
+                .bind("instagram")
+                .bind("Do you do vegan cakes?")
+                .execute(pool)
+                .await;
+        }
+
         let event = DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             event_type: "tenant.message.received".to_string(),
-            payload: serde_json::json!({"message": "Do you do vegan cakes?"}),
+            payload: serde_json::json!({
+                "source": "instagram",
+                "message": "Do you do vegan cakes?",
+                "sender_id": "sarah123",
+                "inbox_message_id": inbox_id
+            }),
         };
 
         let res = orchestrator.dispatch_event(event).await;
@@ -175,6 +191,27 @@ mod tests {
             }
         }
         assert!(has_draft, "Should generate a draft for review");
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        if let crate::db::DbStore::Sqlite(pool) = &db.store {
+            let row_res: Result<(String, String), _> = sqlx::query_as("SELECT COALESCE(draft_reply, ''), COALESCE(status, '') FROM inbox_messages WHERE id = ?")
+                .bind(&inbox_id)
+                .fetch_one(pool)
+                .await;
+
+            if let Ok((draft, status)) = row_res {
+                assert!(draft.contains("Yes, we do vegan cakes"));
+                assert_eq!(status, "pending");
+            }
+
+            let timeline_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM customer_timeline WHERE tenant_id = ? AND customer_id = 'sarah123'")
+                .bind(&tenant_id)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(0);
+            assert!(timeline_count >= 1, "Timeline should have the received message");
+        }
 
         // 2. Approve the draft
         let decide_res = orchestrator.decide_approval(&draft_request_id, &tenant_id, true).await;

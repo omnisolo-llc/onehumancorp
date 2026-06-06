@@ -64,6 +64,25 @@ impl Department for CustomerSuccessAgent {
                 });
             }
 
+            let customer_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("unknown_customer").to_string();
+            let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("system").to_string();
+
+            let timeline_event = crate::orchestration::departments::types::TimelineEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                customer_id,
+                event_type: "message_sent".to_string(),
+                source,
+                content: message.to_string(),
+                metadata: None,
+                created_at: None,
+            };
+
+            let orchestrator_clone = self.orchestrator.clone();
+            tokio::spawn(async move {
+                let _ = orchestrator_clone.append_to_timeline(timeline_event).await;
+            });
+
             // Log the action in the agent's memory, handling errors and using proper defaults
             // Assuming we don't have an embedding service here, we use a zero vector
             // but properly await and map the error.
@@ -88,10 +107,35 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown_customer").to_string();
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("system").to_string();
+
+            let timeline_event = crate::orchestration::departments::types::TimelineEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                customer_id: sender_id.clone(),
+                event_type: "message_received".to_string(),
+                source: source.clone(),
+                content: message.to_string(),
+                metadata: None,
+                created_at: None,
+            };
+
+            let orchestrator_clone = self.orchestrator.clone();
+            tokio::spawn(async move {
+                let _ = orchestrator_clone.append_to_timeline(timeline_event).await;
+            });
 
             // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
+
+            // Also append customer timeline history to memories context
+            let timeline_history = self.orchestrator.get_customer_timeline(&event.tenant_id, &sender_id, 10).await.unwrap_or_default();
+            let mut memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
+
+            for t in timeline_history {
+                memories.push(format!("[{}] {}: {}", t.source, t.event_type, t.content));
+            }
 
             let context_summary = if !memories.is_empty() {
                 memories.join("\n")
@@ -118,6 +162,18 @@ impl Department for CustomerSuccessAgent {
                 "context_used": context_summary,
                 "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
             });
+
+            if let Some(inbox_id) = event.payload.get("inbox_message_id").and_then(|v| v.as_str()) {
+                if !inbox_id.is_empty() {
+                    let orchestrator_clone = self.orchestrator.clone();
+                    let id_clone = inbox_id.to_string();
+                    let tenant_id_clone = event.tenant_id.clone();
+                    let draft_clone = generated_response.to_string();
+                    tokio::spawn(async move {
+                        let _ = orchestrator_clone.update_inbox_message_draft(&id_clone, &tenant_id_clone, &draft_clone).await;
+                    });
+                }
+            }
 
             self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
