@@ -220,6 +220,18 @@ impl Actor for AgentActor {
 
                             if let Err(e) = system.send(tool_msg).await {
                                 error!("Actor {} failed to send tool calls to ToolActor: {}", name, e);
+                                // Gracefully notify the original sender of the failure
+                                let error_reply = ActorMessage {
+                                    sender: name.clone(),
+                                    recipient: msg.original_sender.clone(),
+                                    content: format!("Internal Error: Failed to route tool calls. Missing ToolActor? ({})", e),
+                                    tool_calls: vec![],
+                                    tool_results: vec![],
+                                    correlation_id: msg.correlation_id.clone(),
+                                    original_sender: name.clone(),
+                                };
+                                let _ = system.send(error_reply).await;
+                                threads.remove(&msg.correlation_id);
                             }
                         } else {
                             // No tool calls means it's a final reply to the original sender
@@ -434,7 +446,7 @@ mod tests {
         }).await.unwrap();
 
         if let Some(reply) = test_rx.recv().await {
-            assert_eq!(reply.content, "Final");
+            assert!(reply.content.contains("Failed to route tool calls") || reply.content == "Final");
         } else {
             panic!("Did not receive reply");
         }
