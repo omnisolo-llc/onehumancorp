@@ -3175,6 +3175,9 @@ async fn create_ui_bom_item_handler(
         ),
     );
     let app = axum::Router::new()
+        .route("/api/v1/localization/pricing-rules", axum::routing::get(crate::api::localization::get_pricing_rules).with_state(db.pool.clone().into()))
+        .route("/api/v1/localization/fx-rates", axum::routing::get(crate::api::localization::get_fx_rates).with_state(db.pool.clone().into()))
+        .route("/api/v1/localization/translations/:locale", axum::routing::get(crate::api::localization::get_translations).with_state(db.pool.clone().into()))
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
