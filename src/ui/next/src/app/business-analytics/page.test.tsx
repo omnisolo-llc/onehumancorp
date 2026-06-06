@@ -16,15 +16,28 @@ beforeEach(() => {
   global.window.open = vi.fn();
   // Mock alert
   global.alert = vi.fn();
+  // Mock fetch
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      active_customers: 10,
+      pending_orders: 5,
+      total_sales: 100.5,
+      total_campaigns_sent: 0
+    })
+  });
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('renders Business Analytics heading', () => {
+test('renders Business Analytics heading and fetched metrics', async () => {
   render(<BusinessAnalytics />);
   expect(screen.getByRole('heading', { name: /Business Analytics/i })).toBeInTheDocument();
+  expect(await screen.findByText('$100.50')).toBeInTheDocument();
+  expect(await screen.findByText('10')).toBeInTheDocument();
+  expect(await screen.findByText('5')).toBeInTheDocument();
 });
 
 test('navigates back to dashboard', () => {

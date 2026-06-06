@@ -7,6 +7,12 @@ export default function BusinessAnalytics() {
   const router = useRouter();
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
+  const [metrics, setMetrics] = useState({
+    active_customers: 0,
+    pending_orders: 0,
+    total_sales: 0
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const isPro = localStorage.getItem('pro_plan') === 'true';
@@ -14,6 +20,21 @@ export default function BusinessAnalytics() {
     if (isPro || trialActive) {
       setHasPro(true);
     }
+
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch('/api/ui/dashboard/metrics?tenant_id=test_tenant');
+        if (res.ok) {
+          const data = await res.json();
+          setMetrics(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch metrics", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMetrics();
   }, []);
 
   const claimTrialExtension = () => {
@@ -42,39 +63,39 @@ export default function BusinessAnalytics() {
         <section>
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Core Performance (Last 30 Days)</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Total Revenue</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900">$8,450.00</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900">${metrics.total_sales.toFixed(2)}</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                 15% from last month
+                 Live Data
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-              <div className="text-sm font-medium text-gray-500 mb-1">Average Order Value</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900">$45.50</div>
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
+              <div className="text-sm font-medium text-gray-500 mb-1">Customers</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900">{metrics.active_customers}</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                 2% from last month
+                 Live Data
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-              <div className="text-sm font-medium text-gray-500 mb-1">Orders</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900">185</div>
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
+              <div className="text-sm font-medium text-gray-500 mb-1">Pending Orders</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900">{metrics.pending_orders}</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                 10% from last month
+                 Live Data
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="glassmorphism p-5 rounded-[16px] shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Conversion Rate</div>
               <div className="text-2xl font-bold font-outfit text-gray-900">4.2%</div>
-              <div className="text-xs font-semibold text-red-500 mt-2 flex items-center gap-1">
-                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                 -1.5% from last month
+              <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
+                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                 Estimated
               </div>
             </div>
           </div>
