@@ -40,4 +40,16 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.powersync.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.powersync.service.targetPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.powersync.service.targetPort }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
 {{- end }}
