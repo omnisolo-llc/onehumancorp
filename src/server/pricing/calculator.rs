@@ -57,10 +57,13 @@ pub fn get_pricing(model: &str) -> ModelPricing {
 
 pub fn calculate_cost(model: &str, prompt_tokens: i64, completion_tokens: i64, cached_tokens: i64) -> f64 {
     let pricing = get_pricing(model);
-
-    (prompt_tokens as f64 * pricing.input_cost / 1_000_000.0) +
-    (completion_tokens as f64 * pricing.output_cost / 1_000_000.0) +
-    (cached_tokens as f64 * pricing.cached_cost / 1_000_000.0)
+    let config = CostConfig {
+        cost_per_input_token: pricing.input_cost / 1_000_000.0,
+        cost_per_output_token: pricing.output_cost / 1_000_000.0,
+        cost_per_cached_input_token: pricing.cached_cost / 1_000_000.0,
+        ..Default::default()
+    };
+    return calculate_cost_with_config(prompt_tokens, completion_tokens, cached_tokens, 0, &config);
 }
 
 pub fn calculate_cost_cents(model: &str, prompt_tokens: i64, completion_tokens: i64, cached_tokens: i64) -> i64 {

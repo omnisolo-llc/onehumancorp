@@ -12,6 +12,7 @@ pub struct AuditEvent {
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cached_input_tokens: i64,
+    pub cache_savings_cents: i64,
     pub local_embedding_tokens: i64,
 }
 
@@ -100,6 +101,11 @@ impl CostAuditor {
             &self.config,
         );
 
+        if event.cache_savings_cents > 0 {
+            let mut caching_savings = self.caching_savings.lock().unwrap();
+            *caching_savings += event.cache_savings_cents as f64 / 100.0;
+        }
+
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let mut total_cost = self.total_cost.lock().unwrap();
 
@@ -171,11 +177,14 @@ impl CostAuditor {
         (*agent_costs.get(agent_id).unwrap_or(&0.0) * 100.0).round() as i64
     }
 
+    pub fn get_tenant_caching_savings(&self, _tenant_id: &str) -> f64 {
+        let caching_savings = self.caching_savings.lock().unwrap();
+        *caching_savings // Fallback to global for single tenant local dev logic
+    }
     pub fn get_total_savings(&self) -> f64 {
         let caching_savings = self.caching_savings.lock().unwrap();
         *caching_savings
     }
-
     pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> f64 {
         let savings = calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
         
@@ -462,6 +471,7 @@ mod tests {
             input_tokens: 1000,
             output_tokens: 500,
             cached_input_tokens: 0,
+            cache_savings_cents: 0,
             local_embedding_tokens: 0,
         };
         
@@ -501,6 +511,7 @@ mod tests {
             input_tokens: 100,
             output_tokens: 50,
             cached_input_tokens: 100,
+            cache_savings_cents: 0,
             local_embedding_tokens: 0,
         };
 

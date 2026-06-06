@@ -35,6 +35,8 @@ impl BillingService for MyBillingService {
             input_tokens: req.prompt_tokens,
             output_tokens: req.completion_tokens,
             cached_input_tokens: req.cached_tokens,
+            cache_savings_cents: 0,
+
             local_embedding_tokens: 0,
         };
 
