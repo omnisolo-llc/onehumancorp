@@ -12,8 +12,8 @@ describe('PoweredByOHC Component', () => {
     const linkElement = screen.getByRole('link', { name: /powered by ohc/i });
 
     expect(linkElement).toBeInTheDocument();
-    expect(linkElement).toHaveAttribute('href', `https://ohc.store/join?ref=${testTenantId}&source=footer_widget`);
-    expect(linkElement).toHaveAttribute('target', '_blank');
-    expect(linkElement).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(linkElement).toHaveAttribute('href', `/onboarding?ref=${testTenantId}&source=footer_widget`);
+    expect(linkElement).not.toHaveAttribute('target');
+    expect(linkElement).not.toHaveAttribute('rel');
   });
 });
