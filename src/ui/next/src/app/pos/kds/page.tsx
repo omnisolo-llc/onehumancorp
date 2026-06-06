@@ -43,42 +43,55 @@ export default function KDSPage() {
     fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
   }, []);
 
-  // Background sync
+  // Background sync with Exponential Backoff
   useEffect(() => {
-    const syncInterval = setInterval(async () => {
+    let timeoutId: NodeJS.Timeout;
+    let syncIntervalMs = 5000;
+    const maxIntervalMs = 60000; // Cap at 1 minute
+
+    const syncLoop = async () => {
       const events = OfflineStore.getEvents();
       if (events.length > 0 && navigator.onLine) {
         setSyncing(true);
         try {
-          const orderEvents = events.filter((e: any) => e.type === 'UPDATE_ORDER_STATUS');
-          const inventoryEvents = events.filter((e: any) => e.type === 'TOGGLE_SOLD_OUT');
+          const response = await fetch('/api/v1/kds/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ events })
+          });
 
-          if (orderEvents.length > 0) {
-            await fetch('/api/pos/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(orderEvents)
-            });
-          }
-
-          if (inventoryEvents.length > 0) {
-            await fetch('/api/pos/inventory', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(inventoryEvents)
-            });
+          if (!response.ok) {
+            throw new Error('Sync endpoint returned error status');
           }
 
           OfflineStore.clearEvents();
+          syncIntervalMs = 5000; // Reset backoff on success
         } catch (e) {
           console.error("Sync failed", e);
+          syncIntervalMs = Math.min(syncIntervalMs * 2, maxIntervalMs); // Exponential backoff
         } finally {
           setSyncing(false);
         }
+      } else if (navigator.onLine) {
+        syncIntervalMs = 5000; // Reset backoff if online but no events
       }
-    }, 5000); // Try syncing every 5 seconds
+      timeoutId = setTimeout(syncLoop, syncIntervalMs);
+    };
 
-    return () => clearInterval(syncInterval);
+    timeoutId = setTimeout(syncLoop, syncIntervalMs);
+
+    const handleOnline = () => {
+      clearTimeout(timeoutId);
+      syncIntervalMs = 5000;
+      syncLoop();
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('online', handleOnline);
+    };
   }, []);
 
   const handleUpdateOrderStatus = (orderId: string, newStatus: string) => {

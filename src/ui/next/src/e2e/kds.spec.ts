@@ -23,6 +23,7 @@ test.describe('KDS Offline & Multilingual', () => {
   });
 
   test('KDS Offline Actions & Background Sync', async ({ page, context }) => {
+    await page.route('/api/v1/kds/sync', route => route.fulfill({ status: 200, json: { success: true } }));
     await page.goto('/pos/kds');
     await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
 
