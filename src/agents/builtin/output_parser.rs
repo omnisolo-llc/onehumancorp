@@ -29,7 +29,7 @@ impl<T> StructuredOutputParser<T> {
 
 impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
-        let _completion = msg.content.clone();
+        let completion = msg.content.clone();
 
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty() {
@@ -56,6 +56,33 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                     return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
+                }
+            }
+        }
+
+        // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
+        let trimmed = completion.trim();
+        if trimmed.starts_with("```json") && trimmed.ends_with("```") {
+            let json_str = trimmed.trim_start_matches("```json").trim_end_matches("```").trim();
+            if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
+                return Ok(parsed);
+            }
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
+                if let Some(data) = val.get("data") {
+                    if let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
+                        return Ok(parsed);
+                    }
+                }
+            }
+        } else if trimmed.starts_with("{") && trimmed.ends_with("}") {
+            if let Ok(parsed) = serde_json::from_str::<T>(trimmed) {
+                return Ok(parsed);
+            }
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) {
+                if let Some(data) = val.get("data") {
+                    if let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
+                        return Ok(parsed);
+                    }
                 }
             }
         }
@@ -291,17 +318,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_structured_output_markdown_wrapper_fallback() {
-        // Now, raw text fails first, then we retry and hopefully get a tool call
+        // Fallback mechanic now seamlessly extracts the JSON without an extra LLM roundtrip
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
                 create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```"),
-                create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success_markdown_tool_call"}})),
             ]),
         });
 
         let req = create_test_req();
         let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
-        assert_eq!(result.result, "success_markdown_tool_call");
+        assert_eq!(result.result, "success_markdown");
     }
 
     #[tokio::test]
