@@ -2281,10 +2281,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
-    // Start Maintenance Worker
-    let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
-    maintenance_worker.start();
-
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
