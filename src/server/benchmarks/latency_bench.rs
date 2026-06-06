@@ -421,32 +421,79 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     tracing::info!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
 
-#[cfg(test)]
 pub async fn bench_get_analytics() {
     tracing::info!("Benchmarking MyOrgService get_analytics...");
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-
-    let db = if database_url.starts_with("sqlite") {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
-    } else {
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
-    };
+    let iterations = 50;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
-    let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    // Pre-populate some agents and meetings for the analytics calculation
+    // Cloud setup
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
+        let hub_cloud = std::sync::Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
+
+        let org_id = "benchmark_org";
+        for i in 0..10 {
+            hub_cloud.register_agent(::server_ohc::orchestration::Agent {
+                id: format!("agent-{}", i),
+                name: format!("Agent {}", i),
+                role: "test".to_string(),
+                organization_id: org_id.to_string(),
+                status: "IDLE".to_string(),
+                provider_type: "builtin".to_string(),
+            });
+        }
+        let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
+        hub_cloud.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
+
+        let org_service_cloud = crate::services::org::service::MyOrgService::new(hub_cloud);
+
+        // Cold start
+        let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+        request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+        let _start_cold = std::time::Instant::now();
+        use ::server_ohc::orchestration::org_service_server::OrgService;
+        let _ = org_service_cloud.get_analytics(request_cold).await;
+        // let cold_time = start_cold.elapsed().as_micros();
+        // tracing::info!("get_analytics Cold Start (Cloud): {} us", cold_time);
+
+        // Warm runs
+        let mut fetch_times = Vec::new();
+        for _ in 0..iterations {
+            let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
+            request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
+
+            let start = std::time::Instant::now();
+            let _ = org_service_cloud.get_analytics(request).await;
+            fetch_times.push(start.elapsed().as_micros());
+        }
+
+        fetch_times.sort();
+        tracing::info!("get_analytics Hot Start Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us",
+            fetch_times[iterations / 2],
+            fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+            fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+        );
+    }
+
+    // Standalone setup
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(1))
+        .connect("sqlite::memory:").await.unwrap_or_else(|e| panic!("Failed to connect to SQLite in memory: {}", e));
+    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+
+    let hub_standalone = std::sync::Arc::new(crate::hub::Hub::new(tx.clone(), db_standalone.pool.clone()));
+
     let org_id = "benchmark_org";
     for i in 0..10 {
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub_standalone.register_agent(::server_ohc::orchestration::Agent {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
@@ -457,37 +504,38 @@ pub async fn bench_get_analytics() {
     }
 
     let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
-    hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
+    hub_standalone.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
 
-    let org_service = crate::services::org::service::MyOrgService::new(hub);
-    let iterations = 50;
+    let org_service_standalone = crate::services::org::service::MyOrgService::new(hub_standalone);
 
-    // First run (cold start, no cache)
+    // Cold start
     let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
     request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
-    let start_cold = std::time::Instant::now();
+    let _start_cold = std::time::Instant::now();
     use ::server_ohc::orchestration::org_service_server::OrgService;
-    let _ = org_service.get_analytics(request_cold).await;
-    tracing::info!("get_analytics Cold Start: {} us", start_cold.elapsed().as_micros());
+    let _ = org_service_standalone.get_analytics(request_cold).await;
+    // let cold_time = start_cold.elapsed().as_micros();
+    // tracing::info!("get_analytics Cold Start (Standalone): {} us", cold_time);
 
-    // Warm runs (hot start, hits hybrid cache)
-    let mut fetch_times = Vec::new();
+    // Warm runs
+    let mut fetch_times_sqlite = Vec::new();
     for _ in 0..iterations {
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
         request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap());
 
         let start = std::time::Instant::now();
-        let _ = org_service.get_analytics(request).await;
-        fetch_times.push(start.elapsed().as_micros());
+        let _ = org_service_standalone.get_analytics(request).await;
+        fetch_times_sqlite.push(start.elapsed().as_micros());
     }
 
-    fetch_times.sort();
-    tracing::info!("get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
-        fetch_times[iterations / 2],
-        fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-        fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    fetch_times_sqlite.sort();
+    tracing::info!("get_analytics Hot Start Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times_sqlite[iterations / 2],
+        fetch_times_sqlite[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        fetch_times_sqlite[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
     );
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -594,6 +642,9 @@ pub async fn bench_hybrid_latency() {
 
     tracing::info!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
+
+    tracing::info!("4. Analytics Hot Start (get_analytics)");
+    bench_get_analytics().await;
 
     tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }
