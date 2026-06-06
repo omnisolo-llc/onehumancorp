@@ -218,7 +218,8 @@ impl QualityGates {
                 let set_j = &token_sets[j];
 
                 let intersection = set_i.intersection(set_j).count() as f64;
-                let union = set_i.union(set_j).count() as f64;
+                // Optimize union calculation: |A U B| = |A| + |B| - |A n B|
+                let union = (set_i.len() + set_j.len()) as f64 - intersection;
 
                 if union > 0.0 {
                     let jaccard_similarity = intersection / union;
@@ -336,6 +337,50 @@ mod tests {
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
         assert!(matches!(res, Err(e) if e.contains("High similarity detected")));
+    }
+
+    #[test]
+    fn test_pre_merge_exact_similarity_threshold() {
+        // Words: A B C D E F G H I J (10 words)
+        // Set 1: A B C D E F G X Y Z
+        // Set 2: A B C D E F G U V W
+        // Intersection = 7
+        // Union = 10 + 10 - 7 = 13
+        // Jaccard = 7 / 13 = 0.538 (< 0.75) -> Should PASS
+        let pass_summaries = vec![
+            "A B C D E F G X Y Z Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+            "A B C D E F G U V W Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+        ];
+        assert!(QualityGates::pre_merge(&pass_summaries).is_ok());
+
+        // Exact 75% similarity:
+        // Set 1: 1 2 3 4 5 6 7 8 9
+        // Set 2: 1 2 3 4 5 6 7 8 A
+        // Int = 8, Union = 9 + 9 - 8 = 10
+        // Jaccard = 8 / 10 = 0.8 (> 0.75) -> Should FAIL
+        let fail_summaries = vec![
+            "1 2 3 4 5 6 7 8 9 Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+            "1 2 3 4 5 6 7 8 A Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+        ];
+        let res = QualityGates::pre_merge(&fail_summaries);
+        assert!(res.is_err());
+        assert!(matches!(res, Err(e) if e.contains("High similarity detected")));
+
+        // Try exactly 75%:
+        // Int = 3, Union = 4
+        // Set 1: 1 2 3 4
+        // Set 2: 1 2 3 5
+        // Int = 3. Union = 4 + 4 - 3 = 5. Jaccard = 3 / 5 = 0.6.
+
+        // To get exactly 0.75: Int = 3, Union = 4.
+        // Set 1: 1 2 3
+        // Set 2: 1 2 3 4
+        // Int = 3, Union = 3 + 4 - 3 = 4. Jaccard = 3/4 = 0.75. -> Should PASS
+        let exact_summaries = vec![
+            "1 2 3 Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+            "1 2 3 4 Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+        ];
+        assert!(QualityGates::pre_merge(&exact_summaries).is_ok());
     }
 
     #[test]
