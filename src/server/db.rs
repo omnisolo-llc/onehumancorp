@@ -1127,8 +1127,11 @@ impl DB {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
+                // SQLite natively stores dates as TEXT in "YYYY-MM-DD HH:MM:SS" format when using CURRENT_TIMESTAMP.
+                // We format the threshold explicitly to ensure a correct string comparison.
+                let threshold_str = threshold.format("%Y-%m-%d %H:%M:%S").to_string();
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
-                    .bind(threshold)
+                    .bind(threshold_str)
                     .execute(sqlite_pool)
                     .await?.rows_affected()
             },
@@ -1726,6 +1729,54 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
 mod e2e_cleanup_stagnant_missions_tests {
     use super::*;
     use sqlx::Row;
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_sqlite() {
+        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
+
+        let opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(opts).await.unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (
+            id TEXT PRIMARY KEY,
+            status TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            tenant_id TEXT NOT NULL DEFAULT 'system'
+        )").execute(&pool).await.unwrap();
+
+        let db = DB {
+            store: DbStore::Sqlite(pool.clone()),
+            pool: get_pool(),
+        };
+
+        let test_tenant = "test_tenant";
+
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_1', 'STUCK', '{}', CURRENT_TIMESTAMP, $1)")
+            .bind(test_tenant)
+            .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_2', 'PENDING', '{}', CURRENT_TIMESTAMP, $1)")
+            .bind(test_tenant)
+            .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', datetime('now', '-2 hours'), $1)")
+            .bind(test_tenant)
+            .execute(&pool).await.unwrap();
+
+        let _affected = db.cleanup_stagnant_missions(3600).await.unwrap();
+
+        use sqlx::Row;
+        let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1'").fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_1, "FAILED");
+
+        let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2'").fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_2, "PENDING");
+
+        let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3'").fetch_one(&pool).await.unwrap().get("status");
+        assert_eq!(status_3, "FAILED");
+    }
 
     #[tokio::test]
     async fn test_cleanup_stagnant_missions_postgres() {
