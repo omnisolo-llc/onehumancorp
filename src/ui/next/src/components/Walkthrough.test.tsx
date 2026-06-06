@@ -96,7 +96,7 @@ describe('Walkthrough Component', () => {
   it('calls onClose when skip button is clicked', async () => {
     const handleClose = vi.fn();
 
-    const { container } = render(
+    render(
       <InteractiveWalkthrough
         steps={[
           { targetId: 'test-target', title: 'Step 1', content: 'content 1' },
@@ -110,16 +110,31 @@ describe('Walkthrough Component', () => {
       expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
 
-    // SVG is inside a button, find the button by getting the closest button to the SVG
-    // Or we can query the skip button by its class name or hover state which we know from the component
-    // We can also query all buttons and pick the one with SVG inside.
-    const buttons = screen.getAllByRole('button');
-    const skipButton = buttons.find(btn => btn.querySelector('svg'));
-    if (skipButton) {
-      fireEvent.click(skipButton);
-    } else {
-      // Fallback if svg inside button isn't found, try clicking the generic skip button by text or class if we add it, or just call handleClose directly in extreme test isolation scenarios. Actually, wait, let's just make it robust.
-    }
+    const skipButton = screen.getByLabelText('Skip walkthrough');
+    fireEvent.click(skipButton);
+
+    expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('closes on Escape key press', async () => {
+    const handleClose = vi.fn();
+
+    render(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Step 1', content: 'content 1' },
+        ]}
+        isOpen={true}
+        onClose={handleClose}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Step 1')).toBeInTheDocument();
+    });
+
+    const dialog = screen.getByRole('dialog');
+    fireEvent.keyDown(dialog, { key: 'Escape', code: 'Escape' });
 
     expect(handleClose).toHaveBeenCalled();
   });

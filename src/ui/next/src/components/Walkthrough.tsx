@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode, useRef } from 'react';
 
 type Step = {
   targetId: string;
@@ -19,6 +19,9 @@ type WalkthroughProps = {
 export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: WalkthroughProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const focusTrapStartRef = useRef<HTMLDivElement>(null);
+  const focusTrapEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen || steps.length === 0) return;
@@ -50,6 +53,37 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       setTargetRect(null);
     }
   }, [isOpen, currentStepIndex, steps]);
+
+  // Focus management
+  useEffect(() => {
+    if (isOpen && dialogRef.current) {
+      dialogRef.current.focus();
+    }
+  }, [isOpen, currentStepIndex]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
+  const handleFocusTrapStart = () => {
+    if (focusTrapEndRef.current) {
+      const tabbable = dialogRef.current?.querySelectorAll('button');
+      if (tabbable && tabbable.length > 0) {
+        (tabbable[tabbable.length - 1] as HTMLElement).focus();
+      }
+    }
+  };
+
+  const handleFocusTrapEnd = () => {
+    if (focusTrapStartRef.current) {
+      const tabbable = dialogRef.current?.querySelectorAll('button');
+      if (tabbable && tabbable.length > 0) {
+        (tabbable[0] as HTMLElement).focus();
+      }
+    }
+  };
 
   if (!isOpen || steps.length === 0) return null;
   const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
@@ -137,16 +171,25 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       <div
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
-        className="fixed z-[1000] bg-white/90 backdrop-blur-[30px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] font-inter animate-pop-in"
-        style={bubbleStyle}
+        aria-modal="true"
+        tabIndex={-1}
+        ref={dialogRef}
+        onKeyDown={handleKeyDown}
+        className="fixed z-[1000] bg-white/90 backdrop-blur-[30px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in focus:outline-none focus:ring-2 focus:ring-blue-500"
+        style={{
+           ...bubbleStyle,
+           left: typeof window !== 'undefined' ? Math.max(16, Math.min(window.innerWidth - 316, Number(bubbleStyle.left) || 0)) : (bubbleStyle.left || 0) // Keep on screen
+        }}
       >
+        <div ref={focusTrapStartRef} tabIndex={0} onFocus={handleFocusTrapStart} />
+
         {targetRect && (
-           <div className={`absolute w-0 h-0 border-solid ${arrowClass}`}></div>
+           <div className={`absolute w-0 h-0 border-solid hidden sm:block ${arrowClass}`}></div>
         )}
 
         <div className="flex justify-between items-start mb-3">
           <h3 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h3>
-          <button onClick={handleSkip} className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
+          <button onClick={handleSkip} aria-label="Skip walkthrough" className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -154,22 +197,24 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         <p className="text-sm text-gray-700 mb-5 leading-relaxed">{currentStep.content}</p>
 
         <div className="flex justify-between items-center pt-2 border-t border-gray-100/80">
-          <span className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
+          <span className="text-xs font-semibold tracking-wide text-gray-400 uppercase" aria-live="polite">
             Step {currentStepIndex + 1} of {steps.length}
           </span>
           <button
             onClick={handleNext}
-            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95 transition-all"
+            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95 transition-all min-h-[44px]"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>
         </div>
+
+        <div ref={focusTrapEndRef} tabIndex={0} onFocus={handleFocusTrapEnd} />
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes pop-in {
-          0% { opacity: 0; transform: scale(0.9) ${bubbleStyle.transform}; }
-          100% { opacity: 1; transform: scale(1) ${bubbleStyle.transform}; }
+          0% { opacity: 0; transform: scale(0.9) ${bubbleStyle.transform || 'translate(0, 0)'}; }
+          100% { opacity: 1; transform: scale(1) ${bubbleStyle.transform || 'translate(0, 0)'}; }
         }
         .animate-pop-in { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
       `}} />
