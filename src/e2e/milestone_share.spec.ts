@@ -12,12 +12,6 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     const shareBtn = page.locator('text=Share & Claim Reward');
     await shareBtn.first().waitFor();
 
-    // Handle any window dialogs (e.g., window.alert for success message)
-    page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('Awesome! Your 7-day Pro Trial Extension has been unlocked.');
-      await dialog.accept();
-    });
-
     // Create a mock for window.open to prevent new tabs from opening and failing the test unexpectedly
     await page.addInitScript(() => {
         (window as any).open = function(url: string, target: string) {
@@ -26,10 +20,19 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
         };
     });
 
+    // Also handle navigator.clipboard mock since playwright tests may not have full clipboard permissions
+    await page.addInitScript(() => {
+        Object.assign(navigator, {
+            clipboard: {
+                writeText: () => Promise.resolve(),
+            },
+        });
+    });
+
     // Click the share button
     await shareBtn.first().click();
 
     // Verify the reward text updates on the frontend
-
+    await expect(page.locator('text=Reward claimed. Invite link copied.')).toBeVisible();
   });
 });
