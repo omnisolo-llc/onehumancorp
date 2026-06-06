@@ -2590,6 +2590,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
+        .route("/api/v1/oauth/meta/callback", axum::routing::get(api::oauth::meta::handle_meta_oauth_callback))
         .with_state(meta_webhook_state);
 
     let health_router = axum::Router::new()

@@ -185,7 +185,36 @@ pub async fn meta_webhook_post_handler(
 
 
                                       let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+
+                                      // Get phone_number_id from metadata
+                                      let phone_number_id = value.get("metadata").and_then(|m| m.get("phone_number_id")).and_then(|p| p.as_str()).unwrap_or("unknown");
+
+                                      // Lookup tenant_id from meta_integrations
+                                      let mut tenant_id = "default".to_string();
+                                      let pool = &state.db.pool;
+
+                                      match &state.db.store {
+                                          crate::db::DbStore::Postgres => {
+                                              if let Ok(row) = sqlx::query("SELECT tenant_id FROM meta_integrations WHERE phone_number_id = $1")
+                                                  .bind(phone_number_id)
+                                                  .fetch_one(pool)
+                                                  .await
+                                              {
+                                                  use sqlx::Row;
+                                                  tenant_id = row.get("tenant_id");
+                                              }
+                                          },
+                                          crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                              if let Ok(row) = sqlx::query("SELECT tenant_id FROM meta_integrations WHERE phone_number_id = ?")
+                                                  .bind(phone_number_id)
+                                                  .fetch_one(sqlite_pool)
+                                                  .await
+                                              {
+                                                  use sqlx::Row;
+                                                  tenant_id = row.get("tenant_id");
+                                              }
+                                          }
+                                      }
 
                                       let inbox_id = Uuid::new_v4().to_string();
                                       let source = "whatsapp".to_string();

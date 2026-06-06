@@ -18,9 +18,9 @@ test.describe('Tool Integrations UI', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    const card = integrationCard(page, 'Meta Graph API');
+    const card = integrationCard(page, 'Meta WhatsApp Cloud API');
     await expect(card).toBeVisible();
-    await expect(card.getByText('Central Instagram and Facebook Inbox.')).toBeVisible();
+    await expect(card.getByText('Central WhatsApp Business, Instagram and Facebook Inbox.')).toBeVisible();
     await expect(card.getByRole('button', { name: 'Connect' })).toBeVisible();
   });
 
@@ -67,6 +67,13 @@ test.describe('Tool Integrations UI', () => {
 
     await integrationCard(page, 'Mercado Pago').getByRole('button', { name: 'Connect' }).click();
     await expect(integrationCard(page, 'Mercado Pago').getByText('connected')).toBeVisible();
+  });
+
+  test('can connect Meta WhatsApp Cloud API', async ({ page }) => {
+    await integrationCard(page, 'Meta WhatsApp Cloud API').getByRole('button', { name: 'Connect' }).click();
+    await expect(page.getByRole('heading', { name: 'Connect Meta WhatsApp Cloud API' })).toBeVisible();
+    await page.getByRole('button', { name: 'Login with Meta to Connect' }).click();
+    await expect(page).toHaveURL(/\/integrations$/);
   });
 
   test('can connect Twilio Conversations and Whereby', async ({ page }) => {
