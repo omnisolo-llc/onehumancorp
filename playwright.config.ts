@@ -22,7 +22,7 @@ const actionTimeout = process.env.PLAYWRIGHT_ACTION_TIMEOUT
 const video = process.env.PLAYWRIGHT_VIDEO || 'on';
 
 export default defineConfig({
-  testDir: './src/ui/next/src/e2e',
+  testDir: './src/e2e',
   globalSetup: './src/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
