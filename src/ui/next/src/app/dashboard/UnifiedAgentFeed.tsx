@@ -215,6 +215,16 @@ export function UnifiedAgentFeed() {
                       )}
                     </div>
                   )}
+                  {approval.payload?.variants && (
+                    <div className="mt-2 flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Generated Captions:</p>
+                      {approval.payload.variants.map((variant: string, idx: number) => (
+                        <div key={idx} className="text-sm text-gray-600 dark:text-gray-400 p-2 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                          {variant}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
@@ -223,7 +233,7 @@ export function UnifiedAgentFeed() {
                     className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
                     aria-label="Approve proposal"
                   >
-                    Approve
+                    {approval.department === 'marketing' && approval.description.includes('New product detected') ? 'Schedule' : 'Approve'}
                   </button>
                   <div className="flex gap-3 w-full">
                     <button

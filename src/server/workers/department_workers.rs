@@ -1024,16 +1024,77 @@ impl PromoterWorker {
 
         // Handle product creation for social auto-posting
 
+        let db_clone_for_product = _db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
+                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("New Product");
+
                             if let Some(product_id) = payload_json.get("product_id").and_then(|p| p.as_str()) {
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
+                            }
+
+                            // Generate Social Media Variants
+                            let prompt = format!("Generate 3 variant captions for social media (TikTok short/punchy, Instagram visual/descriptive, Twitter brief/hashtagged) for a product named '{}'. Return a JSON array of strings.", product_name);
+
+                            let mut resolved_variants = serde_json::json!([
+                                format!("Exciting news! Our new {} is here. Grab yours today! #NewArrival #{}", product_name, product_name.replace(" ", "")),
+                                format!("Discover the beauty of the {}. Perfect for any occasion. ✨", product_name),
+                                format!("Just dropped: {}! Check it out now. 👇👇", product_name)
+                            ]);
+
+                            let mut attempts = 0;
+                            while attempts < MAX_RETRIES {
+                                let ai_op = async {
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            prompt: prompt.clone(),
+                                            from_agent_id: "promoter_worker".to_string(),
+                                        };
+                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
+                                                return Ok(v);
+                                            }
+                                        }
+                                    }
+                                    Err("AI call failed".to_string())
+                                };
+
+                                match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    Ok(Ok(v)) => {
+                                        resolved_variants = v;
+                                        break;
+                                    },
+                                    _ => {
+                                        attempts += 1;
+                                        tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                    }
+                                }
+                            }
+
+                            // Insert into agent_approvals
+                            let req_id = Uuid::new_v4().to_string();
+                            let payload = serde_json::json!({
+                                "variants": resolved_variants
+                            });
+
+                            if let Err(e) = sqlx::query(
+                                r#"
+                                INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                VALUES ($1, $2, 'marketing', 'New product detected! Schedule a post to drive sales?', 'DRAFT', 'HIGH', $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                "#
+                            )
+                            .bind(&req_id)
+                            .bind(&org_id)
+                            .bind(&payload)
+                            .execute(&db_clone_for_product.pool)
+                            .await {
+                                tracing::error!("PromoterWorker: Failed to insert agent approval: {}", e);
                             }
                         }
                     }
@@ -1042,9 +1103,22 @@ impl PromoterWorker {
             }
         });
 
+        let db_clone_for_promoter = _db.clone();
         tokio::spawn(async move {
             while let Ok(event) = promoter_rx.recv().await {
-                if event.action == "OnboardingStarted" {
+                if event.action == "SchedulePost" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let content = payload_json.get("content").and_then(|c| c.as_str()).unwrap_or("");
+
+                            // Mocking the social API dispatch here as instructed by the architecture
+                            tracing::info!("PromoterWorker: Dispatching post to social APIs for tenant {}: {}", org_id, content);
+
+                            // Typically, we would record the social post in a table, but for now we just log it as a success
+                        }
+                    }
+                } else if event.action == "OnboardingStarted" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let session_id = payload_json.get("session_id").and_then(|s| s.as_str()).unwrap_or("").to_string();
