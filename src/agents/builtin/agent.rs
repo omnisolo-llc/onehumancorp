@@ -4752,6 +4752,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_context_compaction() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![

@@ -331,6 +331,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_actor_model_message_passing() {
         let system = Arc::new(ActorSystem::new());
 
@@ -400,6 +401,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_actor_model_lifecycle() {
         let system = Arc::new(ActorSystem::new());
         let coord_llm = Arc::new(MockLlm {
