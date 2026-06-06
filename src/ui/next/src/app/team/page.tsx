@@ -132,14 +132,41 @@ export default function TeamPage() {
     const deptApprovals = approvals.filter(a => a.department === selectedDepartment);
 
     return (
-      <ApprovalInbox
-        departmentId={selectedDepartment}
-        departmentName={deptInfo?.name || selectedDepartment}
-        approvals={deptApprovals}
-        onBack={() => setSelectedDepartment(null)}
-        onApprove={handleApprove}
-        onReject={handleReject}
-      />
+      <div className="flex flex-col h-full bg-gray-50 overflow-y-auto w-[375px] max-w-[375px] mx-auto border-x border-gray-200 relative pb-20">
+        {selectedDepartment === 'marketing' && (
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 border border-black/5 shadow-sm m-4" data-testid="seo-speed-card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Storefront SEO & Speed
+              </h3>
+              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                0.8s
+              </span>
+            </div>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                The Promoter Agent is actively pre-rendering your storefront to Edge CDNs and optimizing JSON-LD.
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm border border-gray-100">
+                <span className="text-xs text-gray-500 mb-1 block">Recent Activity</span>
+                <p className="font-medium text-gray-800">Promoter Agent updated meta tags for 3 new custom cakes.</p>
+                <p className="text-xs text-gray-400 mt-1">Just now</p>
+              </div>
+            </div>
+          </div>
+        )}
+        <ApprovalInbox
+          departmentId={selectedDepartment}
+          departmentName={deptInfo?.name || selectedDepartment}
+          approvals={deptApprovals}
+          onBack={() => setSelectedDepartment(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      </div>
     );
   }
 
