@@ -95,7 +95,7 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
 
         // Since we modified the tenant ID to 'system' and the system is in multi-tenant mode,
         // the backend should have rejected the request (likely 401, 403, or 500), NOT 200.
-        expect(idorResponse.status()).not.toBe(200);
+        expect([401, 403, 500, 400]).toContain(idorResponse.status());
     });
 
     test('verifies standard authenticated queries succeed without system tampering', async ({ page }) => {
