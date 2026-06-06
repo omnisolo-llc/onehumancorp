@@ -26,6 +26,8 @@ impl PydanticToolExecutor<ConversationalCheckoutArgs> for ConversationalCheckout
         let session_id = Uuid::new_v4().to_string();
         let inventory_lock_id = Uuid::new_v4().to_string();
 
+        let _amount_usd = amount_cents as f64 / 100.0;
+
         // This simulates generating the link. Because we are in the builtin agent tool crate,
         // it cannot depend directly on the main server crate (cyclic dependency).
         // For real persistence, we'd hit a webhook/API or insert into the DB via an injected client.

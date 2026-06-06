@@ -259,6 +259,7 @@ service HubService {
   rpc ApproveTask(ApproveTaskRequest) returns (ApproveTaskResponse);
   rpc GetPendingApprovals(GetPendingApprovalsRequest) returns (GetPendingApprovalsResponse);
   rpc TriggerCustomOrder(TriggerCustomOrderRequest) returns (TriggerCustomOrderResponse);
+  rpc RouteSemantic(SemanticRoutingRequest) returns (SemanticRoutingResponse);
   rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
   rpc HandleConfigWizard(AgentConfig) returns (WizardResponse);
   rpc HandlePromptTuning(PromptTuningConfig) returns (WizardResponse);
@@ -808,6 +809,9 @@ message WaitlistResponse {
 }
 
 service GrowthService {
+  rpc SubmitReview(SubmitReviewRequest) returns (SubmitReviewResponse);
+  rpc GetReputation(GetReputationRequest) returns (GetReputationResponse);
+
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
   
@@ -1726,4 +1730,35 @@ message GenerateMeetingForBookingRequest {
 
 message GenerateMeetingForBookingResponse {
   string link = 1;
+}
+
+message SubmitReviewRequest {
+  string customer_id = 1;
+  string order_id = 2;
+  int32 rating = 3;
+  string comment = 4;
+}
+
+message SubmitReviewResponse {
+  string review_id = 1;
+  string generated_referral_link = 2;
+}
+
+message GetReputationRequest {}
+
+message GetReputationResponse {
+  double average_rating = 1;
+  int32 total_reviews = 2;
+}
+
+message SemanticRoutingRequest {
+  string tenant_id = 1;
+  string prompt = 2;
+  repeated float embedding = 3;
+}
+
+message SemanticRoutingResponse {
+  string tenant_id = 1;
+  string target_department = 2;
+  float confidence_score = 3;
 }

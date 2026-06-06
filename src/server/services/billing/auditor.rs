@@ -41,6 +41,7 @@ pub struct CostAuditor {
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
+    tenant_cached_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     llm_cost_counter: Counter<u64>,
@@ -76,6 +77,7 @@ impl CostAuditor {
             tenant_payment_fees: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
             tenant_tokens: Mutex::new(HashMap::new()),
+            tenant_cached_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
             telemetry_tx: None,
             llm_cost_counter,
@@ -122,6 +124,10 @@ impl CostAuditor {
         let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_tokens += event.output_tokens + event.input_tokens;
 
+        let mut tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
+        let current_tenant_cached_tokens = tenant_cached_tokens.entry(event.tenant_id.clone()).or_insert(0);
+        *current_tenant_cached_tokens += event.cached_input_tokens;
+
         let cost_cents = (cost * 100.0).round() as u64;
         self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
@@ -158,6 +164,11 @@ impl CostAuditor {
     pub fn get_agent_cost(&self, agent_id: &str) -> f64 {
         let agent_costs = self.agent_costs.lock().unwrap();
         *agent_costs.get(agent_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_agent_cost_cents(&self, agent_id: &str) -> i64 {
+        let agent_costs = self.agent_costs.lock().unwrap();
+        (*agent_costs.get(agent_id).unwrap_or(&0.0) * 100.0).round() as i64
     }
 
     pub fn get_total_savings(&self) -> f64 {
@@ -212,6 +223,11 @@ impl CostAuditor {
         *total_cost
     }
 
+    pub fn get_total_cost_cents(&self) -> i64 {
+        let total_cost = self.total_cost.lock().unwrap();
+        (*total_cost * 100.0).round() as i64
+    }
+
     pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
@@ -246,9 +262,19 @@ impl CostAuditor {
         *tenant_tokens.get(tenant_id).unwrap_or(&0)
     }
 
+    pub fn get_tenant_cached_tokens(&self, tenant_id: &str) -> i64 {
+        let tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
+        *tenant_cached_tokens.get(tenant_id).unwrap_or(&0)
+    }
+
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)
+    }
+
+    pub fn get_tenant_cost_cents(&self, tenant_id: &str) -> i64 {
+        let tenant_costs = self.tenant_costs.lock().unwrap();
+        (*tenant_costs.get(tenant_id).unwrap_or(&0.0) * 100.0).round() as i64
     }
 
     pub fn get_total_revenue(&self) -> f64 {
@@ -446,6 +472,9 @@ mod tests {
         auditor.record_revenue("agent1", "tenant1", 5.0);
 
         assert_eq!(auditor.get_agent_cost("agent1"), 2.0);
+        assert_eq!(auditor.get_agent_cost_cents("agent1"), 200);
+        assert_eq!(auditor.get_tenant_cost_cents("tenant1"), 200);
+        assert_eq!(auditor.get_total_cost_cents(), 200);
         assert_eq!(auditor.get_tenant_revenue("tenant1"), 5.0);
         assert_eq!(auditor.get_tenant_payment_fees("tenant1"), 5.0 * 0.029 + 0.30);
         

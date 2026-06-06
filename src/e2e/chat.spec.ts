@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Chat Page', () => {
   test('should display dashboard', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
@@ -13,7 +13,7 @@ test.describe('Chat Page', () => {
 
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should display business setup page', async ({ page }) => {
@@ -24,14 +24,14 @@ test.describe('Chat Page', () => {
 
 test.describe('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await page.goto('/dashboard');
+    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    await page.getByRole('link', { name: 'Agents' }).click();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should show welcome message on dashboard', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 });
