@@ -299,13 +299,14 @@ async fn handle_generate_cart(
 }
 
 async fn handle_send_receipt(
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Extension(state): Extension<GrowthState>,
     Json(req): Json<SendReceiptRequest>,
 ) -> impl IntoResponse {
     let email = req.customer_email.unwrap_or_else(|| "customer@example.com".to_string());
     let order_id = req.order_id.unwrap_or_else(|| "unknown_order".to_string());
     let amount = req.amount.unwrap_or_else(|| "$0.00".to_string());
-    let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
+    let tenant_id = auth_info.org_id;
 
     let generated = format!(
         "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
@@ -595,11 +596,12 @@ async fn handle_og_card(
 }
 
 async fn handle_check_milestones(
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
     use sqlx::Row;
-    let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
+    let tenant_id = auth_info.org_id;
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
     let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
@@ -647,10 +649,11 @@ pub struct MilestoneCardQuery {
 }
 
 async fn handle_get_milestone_card(
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>,
 ) -> impl IntoResponse {
-    let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
+    let tenant_id = &auth_info.org_id;
     let milestone_id = query.milestone_id.as_deref().unwrap_or("first_sale");
 
     // Fetch business name - handle "DEFAULT" and ID vs tenant_id

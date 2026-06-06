@@ -23,6 +23,7 @@ where
 
 async fn start_workflow(
     State(manager): State<Arc<DynamicWorkflowManager>>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(mut request): Json<DynamicWorkflowRequest>,
 ) -> axum::response::Response {
     if request.prompt.trim().is_empty() {
@@ -32,6 +33,7 @@ async fn start_workflow(
         )
             .into_response();
     }
+    request.tenant_id = auth_info.org_id;
     if request.tenant_id.trim().is_empty() {
         request.tenant_id = "default".to_string();
     }
