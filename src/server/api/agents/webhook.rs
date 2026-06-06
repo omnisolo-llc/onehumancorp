@@ -92,25 +92,8 @@ async fn handle_webhook(
         }
     }
 
-    let description = format!("Incoming message from {}: {}", payload.source, payload.message);
-
-    // We route external messages (like DMs) to the Customer Success department
-    let risk = ActionRisk::DraftForReview;
-
-    // Generate a draft reply
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let draft_reply = if !api_key.is_empty() {
-        let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
-        let prompt = format!(
-            "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
-            business_context, payload.message
-        );
-        let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
-        let client = crate::minimax::MinimaxClient::new(api_key);
-        client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
-    } else {
-        "Thank you for reaching out! We will get back to you shortly.".to_string()
-    };
+    // Create an empty draft_reply initially since it'll be drafted later
+    let draft_reply = String::new();
 
     // Save to inbox_messages
     let id = Uuid::new_v4().to_string();
@@ -133,19 +116,18 @@ async fn handle_webhook(
         }
     }
 
-    match orchestrator.execute_action(
-        DepartmentType::CustomerSuccess,
-        description,
-        payload.tenant_id,
-        risk,
-        serde_json::json!({
-            "source": payload.source,
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: payload.tenant_id.clone(),
+        event_type: "CustomerMessageReceived".to_string(),
+        payload: serde_json::json!({
             "message": payload.message,
-            "draft_reply": draft_reply,
             "inbox_message_id": id,
         }),
-    ).await {
-        Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
+    };
+
+    match orchestrator.dispatch_event(event).await {
+        Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
         Err(e) => {
             if e.contains("AI Budget exhausted") {
                 return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
