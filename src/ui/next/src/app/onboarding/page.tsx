@@ -346,8 +346,26 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] flex items-center justify-center p-4">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[24px] glassmorphism border border-white/20 shadow-2xl">
+    <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#111111] flex items-center justify-center p-0 sm:p-4 relative overflow-hidden">
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#0066FF] opacity-20 blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#34C759] opacity-20 blur-[100px] pointer-events-none"></div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @media (prefers-color-scheme: dark) {
+          #setup-screen {
+            --glass-bg: rgba(22, 22, 26, 0.7) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+          }
+        }
+      `}} />
+
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-screen sm:min-h-[812px] relative rounded-none sm:rounded-[24px] shadow-2xl z-10"
+           style={{
+             background: 'var(--glass-bg, rgba(255, 255, 255, 0.65))',
+             backdropFilter: 'blur(30px) saturate(210%)',
+             WebkitBackdropFilter: 'blur(30px) saturate(210%)',
+             border: '1px solid rgba(255, 255, 255, 0.4)'
+           }}>
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
           <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
