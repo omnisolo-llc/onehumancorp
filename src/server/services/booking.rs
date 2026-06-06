@@ -342,6 +342,7 @@ mod tests {
 }
 use tonic::{Request, Response, Status};
 use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+use ::server_ohc::app::{RequestQuoteWithImageRequest, RequestQuoteWithImageResponse};
 use ::server_ohc::app::{
     CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
     ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
@@ -584,6 +585,57 @@ impl BookingEngineService for NativeBookingService {
             expires_at_unix: expires_at.timestamp(),
         }))
     }
+
+    async fn request_quote_with_image(
+        &self,
+        request: Request<RequestQuoteWithImageRequest>,
+    ) -> Result<Response<RequestQuoteWithImageResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+
+        // Simulate AI Agent processing image + description
+        let quote_range = "$150 - $250".to_string();
+        let description = format!("Based on the image and description ({}...), this appears to be a standard issue.",
+            req.problem_description.chars().take(20).collect::<String>());
+
+        let session_id = Uuid::new_v4().to_string();
+        let deposit_stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
+
+        // Offer some available slots
+        let date_parsed = Utc::now().naive_utc().date() + chrono::Duration::days(1);
+
+        let mut available_slots = vec![];
+        for hour in [10, 14, 16] {
+            let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
+            let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
+            let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
+            let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
+
+            available_slots.push(TimeSlot {
+                start_time: st.to_rfc3339(),
+                end_time: et.to_rfc3339(),
+            });
+        }
+
+        Ok(Response::new(RequestQuoteWithImageResponse {
+            quote_range,
+            description,
+            deposit_stripe_link,
+            available_slots,
+        }))
+    }
 }
 
 
@@ -592,6 +644,7 @@ mod native_booking_tests {
     use super::*;
     use tonic::Request;
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+use ::server_ohc::app::{RequestQuoteWithImageRequest, RequestQuoteWithImageResponse};
     use ::server_ohc::app::{ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
 
     #[tokio::test]
@@ -656,5 +709,39 @@ mod native_booking_tests {
         assert_eq!(session.amount_cents, 1000);
         assert!(session.checkout_url.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert_eq!(session.status, "pending");
+    }
+}
+
+#[cfg(test)]
+mod booking_tests {
+    use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+    use ::server_ohc::app::RequestQuoteWithImageRequest;
+    use tonic::Request;
+    use super::NativeBookingService;
+
+    #[tokio::test]
+    async fn test_request_quote_with_image() {
+        let svc = NativeBookingService { redis_client: None };
+        let mut req = Request::new(RequestQuoteWithImageRequest {
+            tenant_id: "t1".to_string(),
+            customer_id: "c1".to_string(),
+            product_id: "p1".to_string(),
+            image_data: vec![],
+            problem_description: "broken pipe".to_string(),
+        });
+
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t1".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = svc.request_quote_with_image(req).await;
+        assert!(res.is_ok());
+        let res_inner = res.unwrap().into_inner();
+        assert_eq!(res_inner.quote_range, "$150 - $250");
+        assert!(res_inner.description.contains("broken pipe"));
+        assert!(!res_inner.deposit_stripe_link.is_empty());
+        assert_eq!(res_inner.available_slots.len(), 3);
     }
 }

@@ -197,6 +197,7 @@ service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
+  rpc RequestQuoteWithImage(RequestQuoteWithImageRequest) returns (RequestQuoteWithImageResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -225,6 +226,21 @@ message ReserveTimeSlotRequest {
 message ReserveTimeSlotResponse {
   string booking_id = 1;
   string deposit_stripe_link = 2;
+}
+
+message RequestQuoteWithImageRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string product_id = 3;
+  bytes image_data = 4;
+  string problem_description = 5;
+}
+
+message RequestQuoteWithImageResponse {
+  string quote_range = 1;
+  string description = 2;
+  string deposit_stripe_link = 3;
+  repeated TimeSlot available_slots = 4;
 }
 
 message CreateConversationalCheckoutRequest {
