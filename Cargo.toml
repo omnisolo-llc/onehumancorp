@@ -27,13 +27,7 @@ ed25519-dalek = "2"
 flate2 = "1"
 regex = "1"
 config = "0.15.22"
-glob = "0.3"
-walkdir = "2"
-once_cell = "1"
 async-trait = "0.1"
-urlencoding = "2"
-async-recursion = "1"
-tracing-opentelemetry = "0.28"
 tonic-build = "0.12"
 tokio-tungstenite = "0.29.0"
 dashmap = "5"
@@ -102,10 +96,6 @@ workspace = true
 [dependencies.futures-util]
 version = "0.3.32"
 
-[dependencies.qrcode]
-version = "0.14"
-default-features = false
-
 [dependencies.sqlx]
 version = "0.8"
 features = [ "postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros",]
@@ -114,26 +104,9 @@ features = [ "postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "ma
 version = "0.27"
 features = [ "metrics", "trace",]
 
-[dependencies.opentelemetry_sdk]
-version = "0.27"
-features = [ "rt-tokio",]
-
-[dependencies.opentelemetry-otlp]
-version = "0.27"
-features = [ "grpc-tonic",]
-
 [dependencies.axum]
 version = "0.8.1"
 features = [ "ws",]
-
-[dependencies.protoc-gen-prost]
-workspace = true
-
-[dependencies.protoc-gen-tonic]
-workspace = true
-
-[dependencies.prost-types]
-workspace = true
 
 [dependencies.server_pricing]
 path = "src/server/pricing"
@@ -171,12 +144,6 @@ path = "src/server/utils"
 [dependencies.server_integrations_pubsub]
 path = "src/server/integrations/pubsub"
 
-[dependencies.server_integrations_stripe]
-path = "src/server/integrations/stripe"
-
-[dependencies.server_integrations_buffer]
-path = "src/server/integrations/buffer"
-
 [dependencies.server_integrations_mailchimp]
 path = "src/server/integrations/mailchimp"
 
@@ -195,12 +162,6 @@ path = "src/server/integrations/doordash"
 [dependencies.server_integrations_chromadb]
 path = "src/server/integrations/chromadb"
 
-[dependencies.server_integrations_nylas]
-path = "src/server/integrations/nylas"
-
-[dependencies.server_integrations_mcp_config_sync]
-path = "src/server/integrations/mcp_config_sync"
-
 [dependencies.server_integrations_easypost]
 path = "src/server/integrations/easypost"
 
@@ -213,9 +174,6 @@ path = "src/server/integrations/twilio"
 [dependencies.server_integrations_listmonk]
 path = "src/server/integrations/listmonk"
 
-[dependencies.server_integrations_shipengine]
-path = "src/server/integrations/shipengine"
-
 [dependencies.server_integrations_restic]
 path = "src/server/integrations/restic"
 
@@ -225,26 +183,11 @@ path = "src/server/integrations/ayrshare"
 [dependencies.server_integrations_nats]
 path = "src/server/integrations/nats"
 
-[dependencies.server_integrations_meta]
-path = "src/server/integrations/meta"
-
 [dependencies.server_integrations_sendgrid]
 path = "src/server/integrations/sendgrid"
 
-[dependencies.server_integrations_teams]
-path = "src/server/integrations/teams"
-
-[dependencies.server_integrations_acuity]
-path = "src/server/integrations/acuity"
-
 [dependencies.server_integrations_razorpay]
 path = "src/server/integrations/razorpay"
-
-[dependencies.server_integrations_daily]
-path = "src/server/integrations/daily"
-
-[dependencies.server_integrations_alipay]
-path = "src/server/integrations/alipay"
 
 [dependencies.server_integrations_resend]
 path = "src/server/integrations/resend"
@@ -252,23 +195,14 @@ path = "src/server/integrations/resend"
 [dependencies.server_integrations_mercadopago]
 path = "src/server/integrations/mercadopago"
 
-[dependencies.server_integrations_convertkit]
-path = "src/server/integrations/convertkit"
-
 [dependencies.server_integrations_cal_com]
 path = "src/server/integrations/cal_com"
 
 [dependencies.server_integrations_calendly]
 path = "src/server/integrations/calendly"
 
-[dependencies.server_integrations_google_calendar]
-path = "src/server/integrations/google_calendar"
-
 [dependencies.server_integrations_jitsi]
 path = "src/server/integrations/jitsi"
-
-[dependencies.server_integrations_messagebird]
-path = "src/server/integrations/messagebird"
 
 [dependencies.server_integrations_zoom]
 path = "src/server/integrations/zoom"
