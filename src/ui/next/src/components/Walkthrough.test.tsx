@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { InteractiveWalkthrough } from './Walkthrough';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -77,7 +77,9 @@ describe('Walkthrough Component', () => {
     });
 
     const nextBtn = screen.getByText('Next');
-    fireEvent.click(nextBtn);
+    act(() => {
+      fireEvent.click(nextBtn);
+    });
 
     // Second step
     await waitFor(() => {
@@ -87,7 +89,9 @@ describe('Walkthrough Component', () => {
     });
 
     const finishBtn = screen.getByText('Finish');
-    fireEvent.click(finishBtn);
+    act(() => {
+      fireEvent.click(finishBtn);
+    });
 
     expect(handleComplete).toHaveBeenCalled();
     expect(handleClose).toHaveBeenCalled();
@@ -110,15 +114,12 @@ describe('Walkthrough Component', () => {
       expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
 
-    // SVG is inside a button, find the button by getting the closest button to the SVG
-    // Or we can query the skip button by its class name or hover state which we know from the component
-    // We can also query all buttons and pick the one with SVG inside.
     const buttons = screen.getAllByRole('button');
     const skipButton = buttons.find(btn => btn.querySelector('svg'));
     if (skipButton) {
-      fireEvent.click(skipButton);
-    } else {
-      // Fallback if svg inside button isn't found, try clicking the generic skip button by text or class if we add it, or just call handleClose directly in extreme test isolation scenarios. Actually, wait, let's just make it robust.
+      act(() => {
+        fireEvent.click(skipButton);
+      });
     }
 
     expect(handleClose).toHaveBeenCalled();
