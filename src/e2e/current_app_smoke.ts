@@ -1,9 +1,6 @@
-import { expect, test } from './fixtures';
+import { expect, Page, APIRequestContext } from '@playwright/test';
 
-export function currentAppSmoke(label: string) {
-  test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
-    test.setTimeout(180000);
-
+export async function currentAppSmoke(page: Page, request: APIRequestContext, label: string) {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Welcome back, Human.')).toBeVisible({ timeout: 5000 });
@@ -31,5 +28,4 @@ export function currentAppSmoke(label: string) {
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
-  });
 }

@@ -1,3 +1,4 @@
+import { test } from '@playwright/test';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('echo_ux_friction');
+test('currentAppSmoke: echo_ux_friction', async ({ page, request }) => { await currentAppSmoke(page, request, 'echo_ux_friction'); });

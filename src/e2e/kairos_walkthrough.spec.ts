@@ -1,3 +1,4 @@
+import { test } from '@playwright/test';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('kairos_walkthrough');
+test('currentAppSmoke: kairos_walkthrough', async ({ page, request }) => { await currentAppSmoke(page, request, 'kairos_walkthrough'); });

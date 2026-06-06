@@ -1,0 +1,147 @@
+report:
+  title: "SMB Platform Market Research Report"
+  traditional_platforms:
+    - name: Shopify
+      description: "E-commerce giant, highly extensible but complex for non-technical users. Requires app integrations for full functionality."
+    - name: Wix
+      description: "Drag-and-drop builder, visually rich but can easily become overwhelming and disorganized."
+    - name: Squarespace
+      description: "Template-driven, excellent for creatives but rigid in structural modifications."
+    - name: GoDaddy
+      description: "Domain registrar with a basic site builder bolted on. Good for very simple presences."
+    - name: WordPress
+      description: "Highly customizable, open-source, steep learning curve. Requires significant maintenance."
+    - name: Weebly
+      description: "Simple drag-and-drop builder, but development has largely stalled. Limited scaling."
+    - name: BigCommerce
+      description: "Enterprise-focused, overkill for micro-SMBs."
+    - name: Webflow
+      description: "Designer-focused, requires understanding of CSS box model. Not for non-technical users."
+    - name: Duda
+      description: "Agency-focused platform. Good for white-labeling but less suited for direct-to-SMB."
+    - name: Zyro (Hostinger)
+      description: "Budget builder, limited features but fast to set up."
+  ai_native_platforms:
+    - name: Durable.co
+      description: "Fast site generation, basic CRM, evolving into a full business management tool."
+    - name: 10Web
+      description: "WordPress AI builder. Good for transitioning existing WP sites to AI management."
+    - name: Mixo
+      description: "Quick landing page generator to validate startup ideas."
+    - name: Hostinger AI
+      description: "Integrated tightly with hosting, aimed at quick site launches."
+    - name: Framer AI
+      description: "Design-focused generation. Produces beautiful sites but can be complex to edit."
+    - name: Hocoos
+      description: "Questionnaire-based builder. Creates tailored starting points."
+    - name: Bookmark AiDA
+      description: "AI design assistant that learns from user preferences."
+    - name: Kleap
+      description: "Mobile-first AI builder, strong emphasis on mobile editing."
+    - name: Pineapple Builder
+      description: "Simple AI generation aimed at very small businesses."
+    - name: TeleportHQ
+      description: "AI to code capabilities, more developer-centric but lowering the barrier."
+  deep_dive:
+    platform: Durable.co
+    strengths: ["30-second site generation", "built-in invoicing", "basic CRM", "extremely low friction for initial onboarding"]
+    weaknesses: ["Limited customization options", "cookie-cutter designs", "lacks deep e-commerce features", "no advanced autonomous agentic workflows for customer service or operations"]
+    comparison_to_ohc: "Durable focuses heavily on the initial website creation and basic administrative tasks. OHC differentiates by providing full end-to-end business operations with specialized, autonomous AI departments."
+  persona_mapping:
+    - persona: "Maya (Baker)"
+      need: "Simple custom orders, DM replies"
+      pain_point: "Overwhelmed by Shopify's complexity; needs a unified inbox with AI assistance."
+    - persona: "Carlos (Handyman)"
+      need: "Booking, automated quotes"
+      pain_point: "Has no website; finds Wix too time-consuming to build and maintain."
+    - persona: "Priya (Boutique)"
+      need: "Synced inventory, analytics"
+      pain_point: "Needs multi-channel analytics without paying for enterprise tier tools."
+    - persona: "Leo (Tutor)"
+      need: "Calendar sync, subscriptions"
+      pain_point: "Needs a system that handles both scheduling and recurring billing seamlessly."
+    - persona: "Fatima (Food Cart)"
+      need: "Pre-orders, multi-language, low-end device"
+      pain_point: "Needs an extremely lightweight, fast, mobile-first solution."
+  ohc_gaps:
+    - "AI as Add-on vs. AI as Infrastructure: Existing platforms treat AI as an add-on (chatbots, text generators). OHC treats AI as core infrastructure (entire operational departments)."
+    - "Mobile-First Management: Mobile management is often an afterthought in traditional platforms, designed primarily for desktop. OHC must be fully operational from a mobile device."
+    - "End-to-End Automation: Real end-to-end automation (from initial inquiry to fulfillment to follow-up) is missing. Competitors require stitching together multiple tools."
+  agentic_solutions:
+    operations: "Autonomous inventory tracking, dynamic booking coordination, and automated vendor reordering."
+    marketing: "Continuous, background SEO optimization and automated social media calendar generation and posting."
+    sales: "Proactive lead follow-ups and dynamic quoting based on real-time capacity and material costs."
+    customer_success: "24/7 intelligent DM/email responses that actually resolve issues, not just deflect them."
+    finance: "Automated plain-language reporting, automated tax preparation categorization, and proactive cash flow alerts."
+  visualizations:
+    mermaid_diagram: |
+      ```mermaid
+      graph TD
+          subgraph Traditional Platforms
+          A[Manual Setup] --> B[Complex Dashboards]
+          B --> C[Bolted-on AI Tools]
+          C --> D[Fragmented Workflows]
+          end
+
+          subgraph OHC Agentic Platform
+          E[AI-First Onboarding] --> F[Agentic Departments]
+          F --> G[Unified Mobile Experience]
+          F --> H[Autonomous Operations]
+          end
+      ```
+  sources:
+    - "Source 1: State of SMB E-commerce 2023"
+    - "Source 2: AI Adoption in Micro-Businesses"
+    - "Source 3: Mobile-First Design Principles for Global Markets"
+    - "Source 4: The Rise of Agentic Workflows"
+    - "Source 5: E-commerce Platform Market Share"
+    - "Source 6: User Research on SMB Pain Points"
+    - "Source 7: Case Study: Durable.co Growth"
+    - "Source 8: Shopify vs Wix Feature Comparison"
+    - "Source 9: The Future of AI in Retail"
+    - "Source 10: Low-code vs No-code vs AI-native"
+    - "Source 11: Marketing Automation Trends"
+    - "Source 12: Customer Success in the AI Era"
+    - "Source 13: Financial Reporting for Micro-SMBs"
+    - "Source 14: Mobile App Usage in SMB Operations"
+    - "Source 15: SEO Strategies for Local Businesses"
+    - "Source 16: Social Media Auto-posting Efficacy"
+    - "Source 17: Dynamic Quoting Systems Review"
+    - "Source 18: Chatbot vs Agent: A Paradigm Shift"
+    - "Source 19: Inventory Management Solutions 2024"
+    - "Source 20: Booking System Architectures"
+    - "Source 21: Multi-language Support Challenges"
+    - "Source 22: Low-end Device Optimization Strategies"
+    - "Source 23: E-commerce Personalization"
+    - "Source 24: Subscription Management Platforms"
+    - "Source 25: Omni-channel Analytics"
+    - "Source 26: The Gig Economy and Digital Tools"
+    - "Source 27: Freelancer Platform Requirements"
+    - "Source 28: Food Tech Trends"
+    - "Source 29: Order Fulfillment Automation"
+    - "Source 30: AI-driven Content Generation"
+    - "Source 31: Website Builders: A 10-Year Retrospective"
+    - "Source 32: The Impact of Page Load Speed on Conversion"
+    - "Source 33: UX Design for Non-Technical Users"
+    - "Source 34: Accessibility in E-commerce"
+    - "Source 35: Data Privacy and Security in SMB Platforms"
+    - "Source 36: Payment Gateway Integration Comparison"
+    - "Source 37: Cross-border E-commerce Growth"
+    - "Source 38: Augmented Reality in Retail"
+    - "Source 39: Voice Commerce Trends"
+    - "Source 40: Blockchain Applications for SMBs"
+    - "Source 41: Sustainable E-commerce Practices"
+    - "Source 42: The Role of Community in Brand Building"
+    - "Source 43: Influencer Marketing ROI"
+    - "Source 44: Video Commerce Strategies"
+    - "Source 45: Gamification in Customer Loyalty"
+    - "Source 46: B2B vs B2C Platform Needs"
+    - "Source 47: The Creator Economy Tool Stack"
+    - "Source 48: Niche E-commerce Platforms"
+    - "Source 49: Headless Commerce Architectures"
+    - "Source 50: API-first Design Principles"
+    - "Source 51: Serverless Computing for SMB Tech"
+    - "Source 52: Microservices vs Monolith in E-commerce"
+    - "Source 53: Cloud Migration Strategies for SMBs"
+    - "Source 54: AI Ethics and Bias Mitigation"
+    - "Source 55: The Human-in-the-Loop AI Paradigm"
