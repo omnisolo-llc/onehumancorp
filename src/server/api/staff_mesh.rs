@@ -307,7 +307,7 @@ mod tests {
 
         let app = axum::Router::new()
             .route("/staff", axum::routing::post(create_staff_handler).get(get_staff_handler))
-            .route("/staff/:id/pin", axum::routing::post(set_staff_pin_handler))
+            .route("/staff/{id}/pin", axum::routing::post(set_staff_pin_handler))
             .route("/timecard", axum::routing::post(sync_timecard_handler))
             .with_state(db_arc);
 

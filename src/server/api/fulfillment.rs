@@ -74,7 +74,7 @@ where
 
     Router::new()
         .route("/", get(get_queue))
-        .route("/execute/:id", post(execute_action))
+        .route("/execute/{id}", post(execute_action))
         .with_state(state)
 }
 

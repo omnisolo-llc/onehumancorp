@@ -87,8 +87,8 @@ impl MeshTransport for InProcessTransport {
                 Ok(true)
             }
             Entry::Occupied(mut o) => {
-                let (stored_owner, stored_exp) = o.get();
-                if stored_owner == owner || *stored_exp <= chrono::Utc::now().timestamp_millis() {
+                let (ref stored_owner, stored_exp) = *o.get();
+                if stored_owner == owner || stored_exp <= chrono::Utc::now().timestamp_millis() {
                     o.insert((owner.to_string(), expires_at));
                     Ok(true)
                 } else {

@@ -83,6 +83,7 @@ sh_binary(
 define_playwright_tests(
     ci_specs = [
         "scribe_extra.spec.ts",
+        "unified_agent_feed.spec.ts",
     ],
     ci_shard_count = 16,
     data = [
