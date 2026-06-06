@@ -193,11 +193,12 @@ export default function Dashboard() {
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+        <h1 className="sr-only">Dashboard</h1>
         <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <NeighborhoodPulseCard tenant={tenantId} />
+      <NeighborhoodPulseCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}

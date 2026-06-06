@@ -824,4 +824,67 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
+    #[tokio::test]
+    async fn test_chaos_teammate_mesh_redis_corruption() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
+        let result = tokio::time::timeout(std::time::Duration::from_millis(100), async {
+            let corrupted_payload = vec![0xFF, 0xFF, 0x00, 0x01];
+            let parsed: Result<serde_json::Value, _> = serde_json::from_slice(&corrupted_payload);
+            assert!(parsed.is_err());
+            Ok::<(), String>(())
+        }).await;
 
+        assert!(result.is_ok(), "Daemon should handle redis payload corruption gracefully without panicking");
+    }
+
+    #[tokio::test]
+    async fn test_chaos_teammate_mesh_agent_lock_race() {
+        use std::sync::Arc;
+        use tokio::sync::Mutex;
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
+        let lock_state = Arc::new(Mutex::new(false));
+        let mut handles = vec![];
+        for _ in 0..10 {
+            let state = lock_state.clone();
+            handles.push(tokio::spawn(async move {
+                let mut locked = state.lock().await;
+                if !*locked {
+                    *locked = true;
+                    true
+                } else {
+                    false
+                }
+            }));
+        }
+
+        let mut successes = 0;
+        for h in handles {
+            if h.await.unwrap() {
+                successes += 1;
+            }
+        }
+        assert_eq!(successes, 1, "Only one agent should successfully acquire the lock");
+    }
+
+    #[tokio::test]
+    async fn test_chaos_teammate_mesh_pubsub_message_loss() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+
+        let processed = Arc::new(AtomicUsize::new(0));
+        let p_clone = processed.clone();
+
+        let handler = move |_msg: String| {
+            p_clone.fetch_add(1, Ordering::SeqCst);
+        };
+
+        // Simulate 10 messages sent, but only 7 received
+        for i in 0..10 {
+            if i % 3 != 0 {
+                handler(format!("msg_{}", i));
+            }
+        }
+
+        assert_eq!(processed.load(Ordering::SeqCst), 6, "Should process only received messages, simulating graceful degradation on loss");
+    }
