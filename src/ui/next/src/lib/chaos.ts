@@ -1,4 +1,4 @@
-export interface FaultConfig {
+interface FaultConfig {
   latencyMs?: number;      // Fixed delay before responding
   jitterMs?: number;       // Random additional delay up to this value
   timeout?: boolean;       // Simulate a hard timeout (throws after delay)
