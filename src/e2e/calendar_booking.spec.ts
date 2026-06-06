@@ -12,7 +12,7 @@ test.describe('Calendar & Bookings', () => {
     await expect(page.locator('h1', { hasText: 'Calendar & Bookings' }).first()).toBeVisible({ timeout: 15000 });
 
     // We expect the seeded booking 'Cake Decorating Class' to show up
-    await expect(page.getByText('Upcoming Appointments')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Upcoming Appointments' })).toBeVisible();
 
     // Check that we see the 'Cake Decorating Class' service or the customer Ava Customer
     // Since e2e-seed.sql puts a booking with product e2e-product-class (Cake Decorating Class)

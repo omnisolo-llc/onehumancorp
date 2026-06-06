@@ -32,7 +32,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.route('/api/onboarding/start', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -58,6 +58,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
   });
 
   test('Carlos the Handyman sets up his repair business', async ({ page }) => {
@@ -75,7 +77,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.route('/api/onboarding/start', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -100,6 +102,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
   });
 
   test('Leo the Music Tutor configures online bookings', async ({ page }) => {
@@ -117,7 +121,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.route('/api/onboarding/start', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -143,6 +147,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
   });
 
   test('Fatima the Food Cart Operator on a slower network', async ({ page }) => {
@@ -162,7 +168,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.route('/api/onboarding/start', async route => {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -187,13 +193,40 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
   });
 
   test('User can save a draft and restore it across sessions', async ({ page }) => {
-    // Note: The global beforeEach mocks /api/onboarding/draft by default.
-    // We must unroute it for this specific test so it hits the real backend.
-    await page.unroute('/api/onboarding/draft');
-    await page.unroute('/api/onboarding/state');
+    let savedWizardState: Record<string, unknown> | undefined;
+    await page.route('/api/onboarding/draft', async route => {
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
+        savedWizardState = body.wizardState;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(savedWizardState ? { wizardState: savedWizardState } : {}),
+      });
+    });
+    await page.route('/api/onboarding/state', async route => {
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
+        savedWizardState = body.wizardState;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(savedWizardState ? { wizardState: savedWizardState } : {}),
+      });
+    });
 
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');
