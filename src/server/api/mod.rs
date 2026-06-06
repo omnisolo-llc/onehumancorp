@@ -9,6 +9,8 @@ pub mod billing_api;
 #[cfg(test)]
 pub mod billing_webhook_test;
 pub mod health;
+#[cfg(test)]
+pub mod health_test;
 pub mod agents;
 pub mod onboarding;
 pub mod growth;
