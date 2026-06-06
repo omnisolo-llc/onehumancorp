@@ -1,9 +1,14 @@
 use axum::{extract::State, Json};
 use std::sync::Arc;
+use std::sync::OnceLock;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
+use crate::utils::cache::HybridCache;
 
-#[derive(serde::Serialize)]
+pub static MY_PLAN_CACHE: OnceLock<HybridCache<MyPlanResponse>> = OnceLock::new();
+pub static COST_DASHBOARD_CACHE: OnceLock<HybridCache<CostDashboardResponse>> = OnceLock::new();
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct MyPlanResponse {
     pub current_plan: String,
     pub ai_actions_used: i32,
@@ -13,7 +18,7 @@ pub struct MyPlanResponse {
     pub next_bill_estimated: i32,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
     pub total_costs: i64,
@@ -52,6 +57,11 @@ pub async fn my_plan_handler(
         None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
     };
 
+    let cache = MY_PLAN_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_resp) = cache.get(&tenant_id).await {
+        return Json(cached_resp);
+    }
+
     let tracker = hub.tracker();
     let tier_future = tracker.get_tenant_tier(&tenant_id);
     let ai_used_future = tracker.get_tenant_actions_used(&tenant_id);
@@ -89,14 +99,16 @@ pub async fn my_plan_handler(
 
     let next_bill_estimated = projected_cost as i32;
 
-    Json(MyPlanResponse {
+    let resp = MyPlanResponse {
         current_plan: plan_name,
         ai_actions_used: ai_used as i32,
         ai_actions_limit: ai_limit,
         storage_used_bytes,
         storage_limit_bytes: storage_limit,
         next_bill_estimated,
-    })
+    };
+    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    Json(resp)
 }
 
 pub async fn cost_dashboard_handler(
@@ -114,6 +126,11 @@ pub async fn cost_dashboard_handler(
         },
         None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![] })
     };
+
+    let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_resp) = cache.get(&tenant_id).await {
+        return Json(cached_resp);
+    }
 
     let now = chrono::Utc::now();
     use chrono::Datelike;
@@ -170,7 +187,7 @@ pub async fn cost_dashboard_handler(
     let pool = crate::db::get_pool();
     let trend = crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &tenant_id).await;
 
-    Json(CostDashboardResponse {
+    let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
         llm_cost: (llm_cost_f64 * 100.0).round() as i64,
@@ -183,5 +200,7 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
         trend,
-    })
+    };
+    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    Json(resp)
 }
