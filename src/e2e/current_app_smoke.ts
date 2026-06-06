@@ -5,7 +5,7 @@ export function currentAppSmoke(label: string) {
     test.setTimeout(180000);
 
     await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Welcome back, Human.')).toBeVisible({ timeout: 5000 });
 
     // Verify glassmorphism style drift on dashboard panels

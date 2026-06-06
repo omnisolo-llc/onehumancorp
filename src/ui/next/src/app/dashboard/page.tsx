@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { OneTapReferral } from "../components/OneTapReferral";
+import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -196,6 +197,8 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
+      <NeighborhoodPulseCard tenant={tenantId} />
+
       <InteractiveWalkthrough
         steps={walkthroughSteps}
         isOpen={isWalkthroughOpen}
@@ -233,7 +236,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mb-6">
-        <OneTapReferral tenantId={tenantId()} source="dashboard" />
+        <GrowthReferralWidget />
       </div>
 
       <section className="app-panel mb-6">

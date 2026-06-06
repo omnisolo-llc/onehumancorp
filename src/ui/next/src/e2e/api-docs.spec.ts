@@ -6,7 +6,7 @@ test.describe('API Documentation', () => {
     await page.goto('/api-docs');
 
     // Check for the "Advanced" warning banner
-    await expect(page.getByText('This section is for developers directly integrating')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Advanced: This section is for developers')).toBeVisible();
 
     // Check for the Swagger UI container and some basic swagger elements
     await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 10000 });
