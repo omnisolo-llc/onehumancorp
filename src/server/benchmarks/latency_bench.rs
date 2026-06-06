@@ -37,7 +37,7 @@ pub async fn bench_db_query_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    let iterations = 2;
+    let iterations = 500;
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
@@ -62,10 +62,12 @@ pub async fn bench_db_query_time() {
                     conn.execute("PRAGMA synchronous = NORMAL").await?;
                     conn.execute("PRAGMA temp_store = MEMORY").await?;
                     conn.execute("PRAGMA mmap_size = 3000000000").await?;
+                    conn.execute("PRAGMA cache_size = -20000").await?;
+                    conn.execute("PRAGMA busy_timeout = 5000").await?;
                     Ok(())
                 })
             })
-            .connect("sqlite::memory:").await.unwrap();
+            .connect_with(sqlx::sqlite::SqliteConnectOptions::new().in_memory(true).shared_cache(true)).await.unwrap();
     let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
@@ -79,7 +81,7 @@ pub async fn bench_db_query_time() {
 pub async fn bench_api_response_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 2;
+    let iterations = 500;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
@@ -117,10 +119,12 @@ pub async fn bench_api_response_time() {
                     conn.execute("PRAGMA synchronous = NORMAL").await?;
                     conn.execute("PRAGMA temp_store = MEMORY").await?;
                     conn.execute("PRAGMA mmap_size = 3000000000").await?;
+                    conn.execute("PRAGMA cache_size = -20000").await?;
+                    conn.execute("PRAGMA busy_timeout = 5000").await?;
                     Ok(())
                 })
             })
-            .connect("sqlite::memory:").await.unwrap();
+            .connect_with(sqlx::sqlite::SqliteConnectOptions::new().in_memory(true).shared_cache(true)).await.unwrap();
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
@@ -181,7 +185,7 @@ pub async fn bench_agent_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 10;
+    let iterations = 500;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -267,7 +271,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 50;
+    let iterations = 500;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -361,7 +365,7 @@ pub async fn bench_dashboard_snapshot() {
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
-    let iterations = 2;
+    let iterations = 500;
 
     let run_id = Uuid::new_v4().to_string();
 
@@ -460,7 +464,7 @@ pub async fn bench_get_analytics() {
     hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
 
     let org_service = crate::services::org::service::MyOrgService::new(hub);
-    let iterations = 50;
+    let iterations = 500;
 
     // First run (cold start, no cache)
     let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
@@ -600,7 +604,7 @@ pub async fn bench_hybrid_latency() {
 
 pub async fn bench_advisory_insights_latency() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 2; // Few iterations due to Minimax API
+    let iterations = 500; // Few iterations due to Minimax API
 
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
