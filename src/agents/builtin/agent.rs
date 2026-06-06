@@ -623,6 +623,9 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
                     }
                 }
+                if let Some(store) = &self.memory_store {
+                    let _ = store.store_session_message(&cfg.agent_id, "assistant", &msg.content).await;
+                }
                 return Ok(msg.content);
             }
 
@@ -2173,6 +2176,18 @@ impl Agent {
                 max_tokens: final_cfg.max_tokens,
                 temperature: final_cfg.temperature,
             };
+
+            // FTS5 Session Messages tracking: log the user request if it's the first iteration
+            if iteration == 0 {
+                if let Some(store) = &self.memory_store {
+                    // Extract the latest user message.
+                    if let Some(msg) = messages.last() {
+                        if msg.role == Role::User {
+                            let _ = store.store_session_message(&final_cfg.agent_id, "user", &msg.content).await;
+                        }
+                    }
+                }
+            }
 
             // Intelligent Context Truncation to save tokens
             let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
