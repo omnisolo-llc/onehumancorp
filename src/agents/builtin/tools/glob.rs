@@ -1,23 +1,28 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use serde::Deserialize;
+
+
+// Pydantic-first tool schema validation: GlobArgs
+#[derive(Deserialize)]
+struct GlobArgs {
+    pattern: String,
+    path: Option<String>,
+}
 
 struct GlobExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for GlobExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let pattern = args["pattern"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("glob: pattern is required".to_string()))?;
-        let base_dir = args["path"].as_str().unwrap_or(".");
+impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
+    async fn execute_typed(&self, args: GlobArgs) -> Result<String, ToolError> {
+        let pattern = &args.pattern;
+        let default_dir = String::from(".");
+        let base_dir = args.path.as_ref().unwrap_or(&default_dir);
 
         let safe_base = base_dir.strip_prefix("/").unwrap_or(base_dir);
         let safe_pattern = pattern.strip_prefix("/").unwrap_or(pattern);
@@ -80,6 +85,6 @@ pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["pattern"]
         }),
-        execute: Arc::new(GlobExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(GlobExecutor { working_dir })),
     }
 }

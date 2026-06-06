@@ -1,23 +1,30 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use serde::Deserialize;
+
+
+// Pydantic-first tool schema validation: ReadArgs
+#[derive(Deserialize)]
+struct ReadArgs {
+    path: String,
+    start_line: Option<u64>,
+    end_line: Option<u64>,
+}
 
 struct ReadExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for ReadExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+impl PydanticToolExecutor<ReadArgs> for ReadExecutor {
+    async fn execute_typed(&self, args: ReadArgs) -> Result<String, ToolError> {
+        let path = args.path.clone();
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
         // Just-in-Time (JIT) Retrieval Mechanic:
         // "Never load full files." We enforce a strict token/line limit and stream the file to prevent loading it entirely into memory.
         let file = fs::File::open(&actual_path)
@@ -30,8 +37,8 @@ impl ToolExecutor for ReadExecutor {
         let mut result_lines = Vec::new();
         let mut line_count = 0;
 
-        let req_start = args["start_line"].as_u64().map(|n| n.saturating_sub(1) as usize);
-        let req_end = args["end_line"].as_u64().map(|n| n as usize);
+        let req_start = args.start_line.map(|n| n.saturating_sub(1) as usize);
+        let req_end = args.end_line.map(|n| n as usize);
 
         if let (Some(s), Some(e)) = (req_start, req_end) {
             if s >= e {
@@ -103,7 +110,7 @@ pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(ReadExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(ReadExecutor { working_dir })),
     }
 }
 
@@ -111,6 +118,7 @@ pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
 mod tests {
     use super::*;
     use std::io::Write;
+    use crate::ToolExecutor;
 
     #[tokio::test]
     async fn test_read_large_file_streaming() {
@@ -123,7 +131,7 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = ReadExecutor { working_dir: None };
+        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
 
         let args = json!({
             "path": test_file.to_string_lossy().to_string(),
@@ -149,7 +157,7 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = ReadExecutor { working_dir: None };
+        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
 
         // 1. Try reading the whole file - should fail
         let args = json!({ "path": test_file.to_string_lossy().to_string() });
