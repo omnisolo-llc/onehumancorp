@@ -1482,3 +1482,104 @@ mod yield_worker_tests {
         assert_eq!(discount, 20);
     }
 }
+
+pub struct FinanceYieldWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: Duration,
+}
+
+impl FinanceYieldWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self {
+            db,
+            poll_interval: Duration::from_secs(3600), // Check every hour
+        }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let interval_duration = self.poll_interval;
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(interval_duration).await;
+                if let Err(e) = Self::poll(&db).await {
+                    tracing::error!("FinanceYieldWorker poll error: {}", e);
+                }
+            }
+        });
+    }
+
+    pub async fn poll(db: &Arc<DB>) -> Result<usize, String> {
+        let pool = db.pool.clone();
+
+        // 1. Find tenants that have booking services
+        let tenants_result = sqlx::query(
+            "SELECT DISTINCT tenant_id FROM products WHERE type = 'booking'"
+        )
+        .fetch_all(&pool)
+        .await;
+
+        let tenants = match tenants_result {
+            Ok(rows) => rows,
+            Err(e) => return Err(format!("Failed to fetch tenants with booking services: {}", e)),
+        };
+
+        let mut processed = 0;
+        let tomorrow = Utc::now() + chrono::Duration::days(1);
+        let tomorrow_str = tomorrow.format("%Y-%m-%d").to_string();
+
+        for row in tenants {
+            use sqlx::Row;
+            let tenant_id: String = row.get("tenant_id");
+
+            // For each tenant, query booking capacity for tomorrow.
+            // In a real system, we would query the actual availability schedule, but here
+            // we will approximate by checking if there are very few bookings for tomorrow.
+            let bookings_tomorrow_result = sqlx::query(
+                "SELECT count(*) as cnt FROM bookings WHERE tenant_id = $1 AND DATE(start_time) = $2"
+            )
+            .bind(&tenant_id)
+            .bind(&tomorrow_str)
+            .fetch_one(&pool)
+            .await;
+
+            let bookings_count: i64 = match bookings_tomorrow_result {
+                Ok(r) => r.get("cnt"),
+                Err(_) => continue,
+            };
+
+            // Heuristic: if less than 2 bookings tomorrow, we have "empty slots"
+            if bookings_count < 2 {
+                let empty_slots = 3; // Arbitrary number for this exercise
+
+                // Check if we already have an opportunity created for this date and tenant
+                let existing = sqlx::query(
+                    "SELECT id FROM yield_opportunities WHERE tenant_id = $1 AND target_date = $2"
+                )
+                .bind(&tenant_id)
+                .bind(&tomorrow_str)
+                .fetch_optional(&pool)
+                .await;
+
+                if let Ok(None) = existing {
+                    // Create an opportunity
+                    let opp_id = format!("yield-{}", Uuid::new_v4());
+                    let _ = sqlx::query(
+                        "INSERT INTO yield_opportunities (id, tenant_id, service_id, target_date, empty_slots, proposed_discount, status)
+                         VALUES ($1, $2, 'all', $3, $4, 20, 'PENDING')"
+                    )
+                    .bind(&opp_id)
+                    .bind(&tenant_id)
+                    .bind(&tomorrow_str)
+                    .bind(empty_slots)
+                    .execute(&pool)
+                    .await;
+
+                    processed += 1;
+                }
+            }
+        }
+
+        Ok(processed)
+    }
+}
