@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server';
 
-let inventoryItems: any[] = [
-  { id: 'inv_1', name_en: 'Chicken Over Rice', name_ar: 'دجاج فوق الرز', is_sold_out: false },
-  { id: 'inv_2', name_en: 'Lamb Combo', name_ar: 'كومبو لحم ضأن', is_sold_out: false }
-];
+let inventoryItems: any[] = [];
+
+const resetInventory = () => {
+  inventoryItems = [
+    { id: 'inv_1', name_en: 'Chicken Over Rice', name_ar: 'دجاج فوق الرز', is_sold_out: false },
+    { id: 'inv_2', name_en: 'Lamb Combo', name_ar: 'كومبو لحم ضأن', is_sold_out: false }
+  ];
+};
+resetInventory();
 
 export async function GET() {
   return NextResponse.json(inventoryItems);
+}
+
+export async function DELETE() {
+  resetInventory();
+  return NextResponse.json({ success: true });
 }
 
 export async function POST(request: Request) {

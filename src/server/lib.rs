@@ -2281,10 +2281,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
-    // Start Maintenance Worker
-    let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
-    maintenance_worker.start();
-
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
@@ -3619,6 +3615,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
 
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
