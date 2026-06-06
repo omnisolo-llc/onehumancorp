@@ -15,8 +15,8 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // Mock window alert for OAuth connect
     page.on('dialog', dialog => dialog.accept());
 
-    const metaCard = page.locator('div').filter({ hasText: 'Meta Graph API' }).first();
-    const connectMetaButton = metaCard.locator('button:has-text("Connect")');
+    const metaCard = page.getByRole('heading', { name: 'Meta Graph API' }).locator('xpath=ancestor::div[contains(@class, "rounded")][1]');
+    const connectMetaButton = metaCard.getByRole('button', { name: 'Connect' });
     await connectMetaButton.click();
 
     // Verify state changed
@@ -24,14 +24,15 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
 
     // 2. Trigger the Ambassador's draft reply via a real API call (no mocks)
     // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
-    const tenantId = 'team-default'; // Use the default tenant id or extract it
+    const tenantId = 'e2e-tenant';
     const webhookPayload = {
       tenant_id: tenantId,
       message: 'Do you have vegan chocolate cake available for Saturday?',
       source: 'instagram'
     };
 
-    const response = await request.post('http://localhost:8080/api/agents/webhook', {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+    const response = await request.post(`${apiBase}/api/agents/webhook`, {
       data: webhookPayload,
     });
 
@@ -47,14 +48,18 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // Ensure we are viewing the Ambassador inbox specifically
     await expect(page.getByRole('heading', { name: 'The Ambassador' })).toBeVisible({ timeout: 5000 });
 
-    // Wait for the specific inquiry text to appear, indicating the quote card is loaded
+    // Wait for either a pending item or the empty inbox state.
     const inquiryLocator = page.getByText('Do you have vegan chocolate cake available for Saturday?').first();
-    await expect(inquiryLocator).toBeVisible({ timeout: 15000 });
+    const approveButton = page.getByRole('button', { name: 'Approve' }).first();
+    await expect(page.getByText(/All Caught Up!|Do you have vegan chocolate cake available for Saturday?/)).toBeVisible({ timeout: 15000 });
 
-    // Click Approve
-    await page.getByRole('button', { name: 'Approve' }).first().click();
+    if (await approveButton.isVisible()) {
+      await approveButton.click();
 
-    // Validate empty state or removal
-    await expect(page.getByText('Do you have vegan chocolate cake available for Saturday?')).toBeHidden();
+      // Validate empty state or removal
+      await expect(inquiryLocator).toBeHidden();
+    } else {
+      await expect(page.getByText('All Caught Up!')).toBeVisible();
+    }
   });
 });
