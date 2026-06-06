@@ -8,7 +8,16 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     // Universal mock for draft
-    await page.route('/api/onboarding/draft', async route => {
+    await page.route('**/api/onboarding/draft', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({})
+      });
+    });
+
+    // Universal mock for state
+    await page.route('**/api/onboarding/state', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -273,6 +282,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/Portland, OR/i).fill('Local');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
+    await expect(page.locator('input[value="Test Business"]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
 
     // Do NOT fill out admin email and password initially
