@@ -183,7 +183,9 @@ export default function Dashboard() {
       subtitle="Network-style command center for database-backed store operations."
       statusItems={statusItems}
       actions={[
-        { label: "New Product", href: "/products/new", primary: true },
+        { label: "Settings", href: "/settings", primary: false },
+        { label: "New Product", href: "/products/new", primary: false },
+        { label: "Launch Site", href: "/website-builder", primary: true },
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10">
@@ -235,7 +237,7 @@ export default function Dashboard() {
 
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h2 className="app-panel-title">Business Analytics</h2>
+              <h2 className="app-panel-title">Business Snapshot</h2>
               <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
             </div>
           </div>
@@ -244,7 +246,7 @@ export default function Dashboard() {
             <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
               <WalkthroughTarget id="sales-card-target" className="app-card">
                 <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
-                  <div className="app-metric-label">Total Sales</div>
+                  <div className="app-metric-label">Today's Sales</div>
                 </WithTooltip>
                 <div className="app-metric-value">{money(metrics.total_sales)}</div>
                 <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>

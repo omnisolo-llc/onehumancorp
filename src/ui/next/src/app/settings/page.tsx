@@ -280,6 +280,9 @@ export default function SettingsPage() {
             <button onClick={() => router.push("/dashboard")} className="app-button primary w-fit" type="button">
               Save
             </button>
+            <button onClick={() => router.push("/dashboard")} className="app-button w-fit" type="button">
+              Cancel
+            </button>
           </div>
         </section>
       </div>
