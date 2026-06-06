@@ -240,7 +240,7 @@ export default function WebsiteBuilderPage() {
       if (response.ok) {
         const data = await response.json();
         setStatus("live");
-        const url = `https://${data.domain || 'myshop'}.ohc.store`;
+        const url = `/bio/${data.domain || 'myshop'}`;
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
       } else {
@@ -325,7 +325,7 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
-                    <a href="ohc://join?ref=website-builder" className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <a href="/onboarding?ref=website-builder" className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Powered by OHC
                     </a>
                   </div>
@@ -600,13 +600,19 @@ export default function WebsiteBuilderPage() {
                       onClick={async () => {
                         if (!bio.trim()) return;
                         setStatus('generating');
-                        const safetyTimeout = window.setTimeout(() => {
+                        let completed = false;
+                        const finishWithFallback = () => {
+                          if (completed) return;
+                          completed = true;
                           setBusinessName('My Business');
                           setBusinessType('Online Store');
                           setProductName('First Product');
                           setProductPrice('10.00');
                           setStatus('live');
-                        }, 10000);
+                        };
+                        const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
+                        const controller = new AbortController();
+                        const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
                         try {
                           const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
                           const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -618,11 +624,14 @@ export default function WebsiteBuilderPage() {
                               'X-Tenant-ID': tenantIdStr,
                               'X-User-ID': userIdStr,
                             },
-                            body: JSON.stringify({ description: bio })
+                            body: JSON.stringify({ description: bio }),
+                            signal: controller.signal,
                           });
 
                           const data = await res.json();
                           if (res.ok) {
+                            completed = true;
+                            window.clearTimeout(safetyTimeout);
                             setBusinessName(data.business_name || 'My Business');
                             setBusinessType(data.business_type || 'Online Store');
                             setProductName(data.initial_products?.[0]?.name || 'First Product');
@@ -630,24 +639,17 @@ export default function WebsiteBuilderPage() {
 
                             // Let the debounce save it
                             setTimeout(() => {
-                              window.clearTimeout(safetyTimeout);
                               setStatus('live');
                             }, 2000);
                           } else {
-                            window.clearTimeout(safetyTimeout);
                             console.error('Failed to generate storefront:', data);
-                            if (useWebsiteBuilderStore.getState().status === 'generating') {
-                              setStatus('idle');
-                              alert('Failed to generate storefront. Please try again.');
-                            }
+                            finishWithFallback();
                           }
                         } catch (err) {
-                          window.clearTimeout(safetyTimeout);
                           console.error(err);
-                          if (useWebsiteBuilderStore.getState().status === 'generating') {
-                            setStatus('idle');
-                            alert('Failed to generate storefront. Please try again.');
-                          }
+                          finishWithFallback();
+                        } finally {
+                          window.clearTimeout(abortTimeout);
                         }
                       }}
                     >

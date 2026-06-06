@@ -331,10 +331,16 @@ export default function OnboardingWizard() {
 
   // Progress percentage calculation
   const getProgress = () => {
-    if (step === 1) return (chatStep / 3) * 33;
-    if (step === 2) return 50;
-    if (step === 3) return 75;
-    if (step === 4) return 90;
+    // There are 5 steps, let's make it a more gradual fill
+    if (step === 1) {
+      if (chatStep === 0) return 10;
+      if (chatStep === 1) return 20;
+      if (chatStep === 2) return 30;
+      if (chatStep === 3) return 40;
+    }
+    if (step === 2) return 60;
+    if (step === 3) return 80;
+    if (step === 4) return 95;
     if (step === 5) return 100;
     return 0;
   };
@@ -760,7 +766,7 @@ export default function OnboardingWizard() {
                       className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Free Subdomain</span>
-                      <span className="text-[10px] opacity-70">your-name.ohc.store</span>
+                      <span className="text-[10px] opacity-70">your-name.ohc.app</span>
                     </div>
                     <div
                       onClick={() => setDomainChoice('custom')}
@@ -906,7 +912,7 @@ export default function OnboardingWizard() {
                 <div className="p-3 glassmorphism rounded-[8px] flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
-                      <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
+                      <span className="text-[#0066FF] font-semibold">my-business.ohc.app</span>
                    </div>
                 </div>
 

@@ -3,7 +3,10 @@ use chrono::Utc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
 
+use std::sync::atomic::{AtomicI64, Ordering};
+
 static SQLITE_CONCURRENCY_LIMITER: OnceLock<Semaphore> = OnceLock::new();
+pub static LAST_SUCCESSFUL_PRUNE: AtomicI64 = AtomicI64::new(0);
 
 pub fn get_sqlite_limiter() -> &'static Semaphore {
     SQLITE_CONCURRENCY_LIMITER.get_or_init(|| Semaphore::new(1))
@@ -97,6 +100,8 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
+                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
@@ -126,7 +131,10 @@ impl SipDB {
             }).await;
             
             match res {
-                Ok(Ok(_)) => return Ok(()),
+                Ok(Ok(_)) => {
+                    LAST_SUCCESSFUL_PRUNE.store(chrono::Utc::now().timestamp(), Ordering::SeqCst);
+                    return Ok(());
+                },
                 Ok(Err(err)) => {
                     let mut retry = false;
                     if let Some(db_err) = err.as_database_error() {
