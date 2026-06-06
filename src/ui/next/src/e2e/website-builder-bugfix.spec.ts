@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 test.describe('Website Builder Tool (E2E Validation)', () => {
     async function expectCurrentWizard(page: Page) {
         await page.goto('/website-builder');
-        await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
         await page.getByRole('button', { name: 'Instant Build' }).click();
         await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
     }

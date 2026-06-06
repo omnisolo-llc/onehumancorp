@@ -24,7 +24,7 @@ export function currentAppSmoke(label: string) {
     await expect(page.locator('h1', { hasText: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/website-builder');
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible({ timeout: 5000 });
