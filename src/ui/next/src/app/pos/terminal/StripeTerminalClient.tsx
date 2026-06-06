@@ -19,7 +19,7 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
 
       const term = StripeTerminal.create({
         onFetchConnectionToken: async () => {
-          const res = await fetch('/api/terminal/connection_token', { method: 'POST' });
+          const res = await fetch('/api/v1/payments/terminal/token', { method: 'POST' });
           const data = await res.json();
           return data.secret;
         },
@@ -62,10 +62,10 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
     if (!terminal || !connectedReader) return;
     setStatus('Creating payment intent...');
     try {
-      const res = await fetch('/api/terminal/create_payment_intent', {
+      const res = await fetch('/api/v1/payments/terminal/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, currency: 'usd' })
+        body: JSON.stringify({ amount_cents: amount, currency: 'usd' })
       });
       const data = await res.json();
 
@@ -82,6 +82,16 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
         setStatus('Payment processing failed: ' + processResult.error.message);
       } else {
         setStatus('Payment successful!');
+        // Trigger offline sync API to decrement inventory
+        try {
+           await fetch('/api/pos/inventory', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ type: 'ORDER_CREATED', payload: { item_id: 'prod-offline-1', quantity_sold: 1 } })
+           });
+        } catch (e) {
+           console.error("Failed to sync inventory", e);
+        }
       }
     } catch (e: any) {
       setStatus('Error: ' + e.message);

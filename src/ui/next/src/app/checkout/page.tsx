@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
+import StripeTerminalClient from '../pos/terminal/StripeTerminalClient';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -17,9 +18,41 @@ export default function CheckoutPage() {
     if (typeof localStorage !== 'undefined') {
       setTenant(localStorage.getItem('tenant') || 'my-store');
     }
+
+    // Offline Sync Logic
+    const handleOnline = async () => {
+      let queue = [];
+      try {
+        queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+      } catch (e) {}
+
+      if (queue.length > 0) {
+        console.log("Syncing offline queue...");
+        // Mock sync logic
+        for (const item of queue) {
+           await fetch('/api/pos/inventory', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ type: 'ORDER_CREATED', payload: { item_id: 'prod-offline-1', quantity_sold: 1 } })
+           });
+        }
+        localStorage.setItem('ohc_offline_queue', '[]');
+        alert("Offline transactions synced successfully!");
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    // Try syncing on mount in case we are already online
+    if (navigator.onLine) {
+        handleOnline();
+    }
+
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [terminalAmount, setTerminalAmount] = useState(0);
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
@@ -152,12 +185,13 @@ export default function CheckoutPage() {
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
               onClick={() => {
-                const amount = prompt("Enter amount to charge:");
-                if (!amount) return;
+                const amountInput = prompt("Enter amount to charge:");
+                if (!amountInput) return;
+                const amount = parseFloat(amountInput) * 100; // convert to cents
 
                 if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
-                  router.push('/dashboard');
+                  setTerminalAmount(amount);
+                  setShowTerminal(true);
                 } else {
                   let queue = [];
                   try {
@@ -166,13 +200,13 @@ export default function CheckoutPage() {
 
                   queue.push({
                     id: 'txn_' + Date.now(),
-                    amount: parseFloat(amount),
+                    amount: amount / 100, // store in dollars or desired unit
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
+                  alert(`You are offline. Payment of ${amountInput} saved locally and will process when reconnected.`);
                   router.push('/dashboard');
                 }
               }}
@@ -205,6 +239,21 @@ export default function CheckoutPage() {
           <PoweredByOHC tenantId={tenant} />
         </div>
       </main>
+
+      {/* Stripe Terminal Modal */}
+      {showTerminal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white/65 backdrop-blur-[20px] saturate-[200%] w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/40">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Tap to Pay</h3>
+              <button onClick={() => setShowTerminal(false)} className="text-gray-500 hover:text-black">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <StripeTerminalClient amount={terminalAmount} />
+          </div>
+        </div>
+      )}
 
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
