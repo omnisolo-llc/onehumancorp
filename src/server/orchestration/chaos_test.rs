@@ -432,6 +432,53 @@ mod chaos_tests {
 
 
     #[tokio::test]
+    async fn test_corrupt_agent_lock() {
+        use crate::orchestration::state::StateManager;
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+
+        // We simulate lock corruption where the lock is improperly dropped or invalidated
+        // We will test that StateManager handles transition failures properly when
+        // a lock cannot be acquired or fails due to a split brain state.
+
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: dummy_pg_pool,
+            store: DbStore::Postgres,
+        });
+
+        // A mesh that acts as if locks are held by other instances and can never be acquired
+        struct CorruptedLockMesh;
+        #[async_trait]
+        impl TeammateMesh for CorruptedLockMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            // Always return false, mimicking lock corruption / taken by split-brain ghost agent
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(false) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(CorruptedLockMesh);
+        let state_manager = CloudStateManager::new(db.clone(), mesh);
+
+        // The orchestrator attempts to transition state
+        let result = state_manager.transition_state("task_123", "tenant_xyz", "PENDING", "IN_PROGRESS", Some("agent1"), None).await;
+
+        // We assert that it safely fails and does NOT panic, properly fencing off the operation
+        assert!(result.is_err(), "State transition should gracefully fail when lock cannot be acquired due to corruption");
+        assert!(result.unwrap_err().contains("lock"), "Error message should indicate lock acquisition failure");
+    }
+
+    #[tokio::test]
     async fn test_pubsub_message_loss() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let transport = Arc::new(DroppingMockTransport::new(50)); // 50% drop rate

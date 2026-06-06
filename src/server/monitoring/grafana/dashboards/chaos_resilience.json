@@ -242,6 +242,75 @@
       ],
       "title": "Sandbox Violations",
       "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stashMixin": false
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(ohc_chaos_injected_total{type=\"CorruptAgentLock\"}[5m])) by (EnvMode)",
+          "interval": "",
+          "legendFormat": "{{EnvMode}} Lock Corruptions",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(rate(ohc_chaos_recovery_total{type=\"CorruptAgentLock\"}[5m])) by (EnvMode)",
+          "interval": "",
+          "legendFormat": "{{EnvMode}} Recoveries",
+          "refId": "B"
+        }
+      ],
+      "title": "CorruptAgentLock Events & Recoveries",
+      "type": "timeseries"
     }
   ],
   "refresh": false,
