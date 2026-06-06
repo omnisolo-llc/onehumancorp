@@ -59,7 +59,7 @@ test.describe('Agents Page', () => {
 test.describe('Business Setup Page', () => {
   test('should display setup page', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.getByRole('heading', { name: 'OneHuman' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
   });
 
   test('should show setup wizard text', async ({ page }) => {
