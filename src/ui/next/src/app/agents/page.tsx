@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AgentAutomations from './components/AgentAutomations';
+import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function AgentsPage() {
  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals' | 'automations'>('departments');
@@ -195,6 +196,7 @@ export default function AgentsPage() {
               >
                 Automations
               </button>
+ <WithTooltip id="approval-inbox-tooltip" defaultText="Review tasks that your AI agents need permission to execute. Approve or deny them here.">
  <button
  onClick={() => setActiveTab('approvals')}
  className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'approvals' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
@@ -206,6 +208,7 @@ export default function AgentsPage() {
  </span>
  )}
  </button>
+ </WithTooltip>
  </div>
 
  {/* Main Content */}

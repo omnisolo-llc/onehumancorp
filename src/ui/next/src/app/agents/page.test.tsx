@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, vi, beforeEach } from 'vitest';
 import AgentsPage from './page';
 import * as TooltipContext from '@/components/TooltipContext';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 
 vi.mock('@/components/TooltipContext', () => ({
   useTooltipContext: vi.fn(() => ({
@@ -29,7 +30,7 @@ beforeEach(() => {
 });
 
 test('renders AI Departments heading', async () => {
-  render(<AgentsPage />);
+  render(<TooltipProvider><AgentsPage /></TooltipProvider>);
 
   await waitFor(() => {
     expect(screen.getByText('AI Departments')).toBeDefined();
@@ -37,7 +38,7 @@ test('renders AI Departments heading', async () => {
 });
 
 test('switches tabs correctly', async () => {
-  render(<AgentsPage />);
+  render(<TooltipProvider><AgentsPage /></TooltipProvider>);
 
   // Default is 'teams'
   expect(screen.getByText('The Manager')).toBeDefined();
@@ -73,7 +74,7 @@ test('renders approvals tab correctly', async () => {
     return Promise.resolve({ ok: true, json: async () => ({}) });
   });
 
-  render(<AgentsPage />);
+  render(<TooltipProvider><AgentsPage /></TooltipProvider>);
 
   fireEvent.click(screen.getByText('Needs Approval'));
 
@@ -85,7 +86,7 @@ test('renders approvals tab correctly', async () => {
 });
 
 test('renders feed tab correctly', async () => {
-  render(<AgentsPage />);
+  render(<TooltipProvider><AgentsPage /></TooltipProvider>);
 
   fireEvent.click(screen.getByText('Activity Feed'));
 
@@ -118,7 +119,7 @@ test('approves a draft successfully', async () => {
     return Promise.resolve({ ok: true, json: async () => ({}) });
   });
 
-  render(<AgentsPage />);
+  render(<TooltipProvider><AgentsPage /></TooltipProvider>);
 
   fireEvent.click(screen.getByText('Needs Approval'));
 

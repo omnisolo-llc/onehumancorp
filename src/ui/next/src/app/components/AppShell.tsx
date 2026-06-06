@@ -56,6 +56,8 @@ const secondaryNav: NavItem[] = [
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
+  { label: "API Docs", href: "/api-docs", icon: "integrations" },
+  { label: "Changelog", href: "/changelog", icon: "activity" },
 ];
 
 function ShellIcon({ name }: { name: IconName }) {
@@ -105,6 +107,38 @@ function NavLink({ item }: { item: NavItem }) {
   if (item.href === "/kairos") {
     return (
       <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
+        {link}
+      </WithTooltip>
+    );
+  }
+
+  if (item.href === "/dashboard") {
+    return (
+      <WithTooltip id="nav-dashboard-tooltip" defaultText="View your store metrics, recent orders, and overall performance.">
+        {link}
+      </WithTooltip>
+    );
+  }
+
+  if (item.href === "/onboarding") {
+    return (
+      <WithTooltip id="nav-setup-tooltip" defaultText="Configure your business details, branding, and payment settings.">
+        {link}
+      </WithTooltip>
+    );
+  }
+
+  if (item.href === "/agents") {
+    return (
+      <WithTooltip id="nav-agents-tooltip" defaultText="Manage your AI workforce, check their tasks, and hire new agents.">
+        {link}
+      </WithTooltip>
+    );
+  }
+
+  if (item.href === "/changelog") {
+    return (
+      <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest OneHumanCorp updates.">
         {link}
       </WithTooltip>
     );
