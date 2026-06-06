@@ -551,17 +551,55 @@ impl DashboardService for MyDashboardService {
             org
         };
 
-        Ok(Response::new(DashboardSnapshot {
+        let final_products = if req.mobile_optimized {
+            products.into_iter().map(|mut p| {
+                p.description.clear();
+                p.metadata_json.clear();
+                p.fulfillment_strategy.clear();
+                p.currency.clear();
+                p
+            }).collect()
+        } else {
+            products
+        };
+
+        let final_orders = if req.mobile_optimized {
+            orders.into_iter().map(|mut o| {
+                o.status.clear();
+                o
+            }).collect()
+        } else {
+            orders
+        };
+
+        let final_bookings = if req.mobile_optimized {
+            bookings.into_iter().map(|mut b| {
+                b.status.clear();
+                b
+            }).collect()
+        } else {
+            bookings
+        };
+
+        let mut response = Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents_payload,
             meetings: final_meetings,
             cost_summary: final_cost_summary,
             statuses: final_statuses,
             updated_at: chrono::Utc::now().to_rfc3339(),
-            products,
-            orders,
-            bookings,
-        }))
+            products: final_products,
+            orders: final_orders,
+            bookings: final_bookings,
+        });
+
+        if req.mobile_optimized {
+            if let Ok(metadata_value) = "public, max-age=15, stale-while-revalidate=30".parse() {
+                response.metadata_mut().insert("cache-control", metadata_value);
+            }
+        }
+
+        Ok(response)
     }
 
     async fn get_onboarding_state(
@@ -776,23 +814,33 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
-        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
-        if let Some(org) = res_mobile.organization {
+        let res_mobile = service.get_dashboard(request_mobile).await.unwrap();
+
+        let metadata = res_mobile.metadata();
+        assert!(metadata.get("cache-control").is_some());
+        assert_eq!(metadata.get("cache-control").unwrap().to_str().unwrap(), "public, max-age=15, stale-while-revalidate=30");
+
+        let res_mobile_inner = res_mobile.into_inner();
+
+        assert_eq!(res_mobile_inner.agents[0].name, "", "Mobile optimization should clear agent names");
+        if let Some(org) = res_mobile_inner.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
             assert!(org.members.is_empty(), "Mobile optimization should clear org members");
             assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
             assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
         }
-        if !res_mobile.meetings.is_empty() {
-            assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
+        if !res_mobile_inner.meetings.is_empty() {
+            assert_eq!(res_mobile_inner.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
         }
-        if !res_mobile.products.is_empty() {
-            assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
-            assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
+        if !res_mobile_inner.products.is_empty() {
+            assert_eq!(res_mobile_inner.products[0].currency, "", "Mobile optimization should clear product currency");
+            assert_eq!(res_mobile_inner.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
+            assert_eq!(res_mobile_inner.products[0].description, "", "Mobile optimization should clear product description");
+            assert_eq!(res_mobile_inner.products[0].metadata_json, "", "Mobile optimization should clear product metadata_json");
         }
-        if !res_mobile.orders.is_empty() {
-            assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
+        if !res_mobile_inner.orders.is_empty() {
+            assert_eq!(res_mobile_inner.orders[0].status, "", "Mobile optimization should clear order status");
+            assert_eq!(res_mobile_inner.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
     }
 
