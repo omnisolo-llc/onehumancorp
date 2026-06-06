@@ -1410,3 +1410,75 @@ mod tests {
         } // end of test_customer_success_worker_draft_reply
     } // end of mod tests
 }
+
+#[cfg(test)]
+mod yield_worker_tests {
+    use super::*;
+    use crate::db::{DB, DbStore};
+    use chrono::Utc;
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::sync::Arc;
+
+    async fn setup_test_db() -> Arc<DB> {
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        // Standard test setup from db.rs or migrations
+        sqlx::query(
+            "CREATE TABLE tenants (id TEXT PRIMARY KEY, name TEXT);
+             CREATE TABLE products (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, type TEXT);
+             CREATE TABLE bookings (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, start_time TEXT);
+             CREATE TABLE yield_opportunities (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                service_id TEXT,
+                target_date TEXT,
+                empty_slots INTEGER,
+                proposed_discount INTEGER,
+                status TEXT
+             );"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        Arc::new(DB {
+            pool: pool.into(),
+            store: DbStore::Postgres, // Assuming test compat
+        })
+    }
+
+    #[tokio::test]
+    async fn test_finance_yield_worker_creates_opportunity() {
+        let db = setup_test_db().await;
+
+        // Setup data
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-1', 'Test Tenant')")
+            .execute(&db.pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO products (id, tenant_id, title, type) VALUES ('prod-1', 'tenant-1', 'Service', 'booking')")
+            .execute(&db.pool)
+            .await
+            .unwrap();
+
+        // No bookings inserted, so capacity is empty
+
+        let processed = FinanceYieldWorker::poll(&db).await.unwrap();
+        assert_eq!(processed, 1, "Should create one yield opportunity");
+
+        let opp = sqlx::query("SELECT * FROM yield_opportunities WHERE tenant_id = 'tenant-1'")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let empty_slots: i32 = opp.get("empty_slots");
+        let discount: i32 = opp.get("proposed_discount");
+        assert_eq!(empty_slots, 3);
+        assert_eq!(discount, 20);
+    }
+}
