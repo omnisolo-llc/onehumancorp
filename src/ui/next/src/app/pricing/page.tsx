@@ -7,9 +7,27 @@ import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function PricingPage() {
   const router = useRouter();
+  const [trialUnlocked, setTrialUnlocked] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const unlocked = localStorage.getItem('ohc_pro_trial_unlocked') === 'true';
+      setTrialUnlocked(unlocked);
+    }
+  }, []);
 
   const handleUpgrade = (tier: string) => {
     router.push('/checkout?tier=' + tier);
+  };
+
+  const handleShareToUnlock = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ohc_pro_trial_unlocked', 'true');
+      setTrialUnlocked(true);
+
+      const shareText = "I'm running my small business on OHC! It's an incredible AI-powered platform. Launch your own store today: ohc.app";
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');
+    }
   };
 
   return (
@@ -102,6 +120,27 @@ export default function PricingPage() {
 
         <div className="text-center mt-4">
             <p className="text-sm text-gray-600 px-2">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
+        </div>
+
+        {/* Growth Hack / Trial Extension Banner */}
+        <div className="mt-6 w-full p-6 shadow-md rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 border border-blue-100" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%)' }}>
+          <div>
+            <h3 className="text-xl font-bold text-blue-900 font-outfit mb-1">Not ready to upgrade?</h3>
+            <p className="text-sm text-blue-800">Share OHC on X to get a free 7-day Starter Trial and unlock premium campaigns instantly.</p>
+          </div>
+          {trialUnlocked ? (
+            <div className="py-2 px-6 bg-green-100 text-green-800 font-bold rounded-xl shadow-sm border border-green-200">
+              ✅ Trial Unlocked!
+            </div>
+          ) : (
+            <button
+              onClick={handleShareToUnlock}
+              className="py-3 px-6 bg-white hover:bg-gray-50 text-blue-600 font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap border border-blue-200"
+            >
+              <svg className="w-5 h-5 text-[#1DA1F2]" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+              Share on X to Unlock
+            </button>
+          )}
         </div>
 
         <div className="mt-8 p-6 md:p-8 shadow-sm w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
