@@ -1,18 +1,18 @@
 import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import MilestonesPage from './page';
+import StoreWrapPage from './page';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-describe('MilestonesPage', () => {
+describe('StoreWrapPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/mocked123' })
+      json: async () => ({ total_sales: 1000, active_customers: 50 })
     });
 
     const localStorageMock = {
@@ -26,36 +26,22 @@ describe('MilestonesPage', () => {
     });
   });
 
-  it('renders milestones list correctly', async () => {
+  it('renders store wrap list correctly', async () => {
     await act(async () => {
-      render(<MilestonesPage />);
+      render(<StoreWrapPage />);
     });
 
-    expect(screen.getByText('Your Achievements')).toBeDefined();
-    expect(screen.getByText('First Order! 🎉')).toBeDefined();
-  });
-
-  it('shows embed widget after clicking a milestone', async () => {
-    await act(async () => {
-      render(<MilestonesPage />);
-    });
-
-    const milestoneTitle = screen.getByText('First Order! 🎉');
-    const container = milestoneTitle.closest('div.glassmorphism');
-    expect(container).toBeDefined();
-
-    await act(async () => {
-        fireEvent.click(container!);
-    });
+    expect(screen.getByText('Store Wrap-Up 🎁')).toBeDefined();
+    expect(screen.getAllByRole('link', { name: /powered by ohc/i }).length).toBeGreaterThan(0);
   });
 
   it('shows soft paywall when attempting to remove branding without Pro', async () => {
     await act(async () => {
-      render(<MilestonesPage />);
+      render(<StoreWrapPage />);
     });
 
     // Click checkbox
-    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    const checkbox = screen.getByRole('checkbox', { name: /Remove Badge/i });
 
     await act(async () => {
       fireEvent.click(checkbox);
@@ -63,7 +49,7 @@ describe('MilestonesPage', () => {
 
     // Paywall should appear
     expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
-    expect(screen.getByText(/Make the milestones 100% yours/i)).toBeDefined();
+    expect(screen.getByText(/Make the Store Wrap 100% yours/i)).toBeDefined();
   });
 
   it('removes branding without paywall when user has Pro', async () => {
@@ -82,21 +68,14 @@ describe('MilestonesPage', () => {
     });
 
     await act(async () => {
-      render(<MilestonesPage />);
-    });
-
-    const milestoneTitle = screen.getByText('First Order! 🎉');
-    const container = milestoneTitle.closest('div.glassmorphism');
-
-    await act(async () => {
-        fireEvent.click(container!);
+      render(<StoreWrapPage />);
     });
 
     // Verify Powered by OHC is visible initially
     expect(screen.getAllByRole('link', { name: /powered by ohc/i }).length).toBeGreaterThan(0);
 
     // Click checkbox
-    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    const checkbox = screen.getByRole('checkbox', { name: /Remove Badge/i });
 
     await act(async () => {
       fireEvent.click(checkbox);
