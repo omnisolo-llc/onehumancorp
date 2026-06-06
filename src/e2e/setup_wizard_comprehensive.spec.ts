@@ -21,7 +21,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     // We only have the instant build flow now.
     await page.goto('/website-builder');
-    await page.waitForLoadState('networkidle');
+
 
     await page.getByRole('button', { name: /Instant Build/ }).click();
     await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a modern art shop online');
