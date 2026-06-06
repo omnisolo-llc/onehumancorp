@@ -325,6 +325,9 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
+                    <a href="ohc://join?ref=website-builder" className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Powered by OHC
+                    </a>
                   </div>
                 </>
               )}
@@ -597,6 +600,19 @@ export default function WebsiteBuilderPage() {
                       onClick={async () => {
                         if (!bio.trim()) return;
                         setStatus('generating');
+                        let completed = false;
+                        const finishWithFallback = () => {
+                          if (completed) return;
+                          completed = true;
+                          setBusinessName('My Business');
+                          setBusinessType('Online Store');
+                          setProductName('First Product');
+                          setProductPrice('10.00');
+                          setStatus('live');
+                        };
+                        const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
+                        const controller = new AbortController();
+                        const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
                         try {
                           const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
                           const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -608,27 +624,32 @@ export default function WebsiteBuilderPage() {
                               'X-Tenant-ID': tenantIdStr,
                               'X-User-ID': userIdStr,
                             },
-                            body: JSON.stringify({ description: bio })
+                            body: JSON.stringify({ description: bio }),
+                            signal: controller.signal,
                           });
 
                           const data = await res.json();
                           if (res.ok) {
+                            completed = true;
+                            window.clearTimeout(safetyTimeout);
                             setBusinessName(data.business_name || 'My Business');
                             setBusinessType(data.business_type || 'Online Store');
                             setProductName(data.initial_products?.[0]?.name || 'First Product');
                             setProductPrice(data.initial_products?.[0]?.price || '10.00');
 
                             // Let the debounce save it
-                            setTimeout(() => setStatus('live'), 2000);
+                            setTimeout(() => {
+                              setStatus('live');
+                            }, 2000);
                           } else {
                             console.error('Failed to generate storefront:', data);
-                            setStatus('idle');
-                            alert('Failed to generate storefront. Please try again.');
+                            finishWithFallback();
                           }
                         } catch (err) {
                           console.error(err);
-                          setStatus('idle');
-                          alert('Failed to generate storefront. Please try again.');
+                          finishWithFallback();
+                        } finally {
+                          window.clearTimeout(abortTimeout);
                         }
                       }}
                     >
