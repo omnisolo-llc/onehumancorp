@@ -107,7 +107,7 @@ pub async fn my_plan_handler(
         storage_limit_bytes: storage_limit,
         next_bill_estimated,
     };
-    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(3600)).await;
     Json(resp)
 }
 
@@ -202,6 +202,6 @@ pub async fn cost_dashboard_handler(
         period_end,
         trend,
     };
-    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(3600)).await;
     Json(resp)
 }
