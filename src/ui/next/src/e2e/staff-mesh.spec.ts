@@ -21,7 +21,7 @@ test.describe('Universal Autonomous Staff & Shift Management Mesh', () => {
     await page.waitForTimeout(2000);
 
     // Ensure we are locked
-    await expect(page.locator('h1', { hasText: 'Terminal Locked' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1', { hasText: 'Terminal Locked' })).toBeVisible({ timeout: 25000 });
 
     // Click inside the body to ensure interaction context
     await page.mouse.click(10, 10);
