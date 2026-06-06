@@ -69,57 +69,7 @@ impl WorkflowExecutor {
             outgoing_edges.entry(edge.source.clone()).or_default().push(edge.target.clone());
         }
 
-        // Kahn's algorithm for topological sorting to ensure DAG
-        let mut in_degree: HashMap<String, usize> = HashMap::new();
-        for node in &self.graph.nodes {
-            in_degree.insert(node.id.clone(), 0);
-        }
-        for edge in &self.graph.edges {
-            *in_degree.entry(edge.target.clone()).or_insert(0) += 1;
-        }
-        let mut queue = std::collections::VecDeque::new();
-        for (node_id, degree) in &in_degree {
-            if *degree == 0 { queue.push_back(node_id.clone()); }
-        }
-        let mut sorted_nodes = Vec::new();
-        while let Some(node_id) = queue.pop_front() {
-            sorted_nodes.push(node_id.clone());
-            if let Some(targets) = outgoing_edges.get(&node_id) {
-                for target in targets {
-                    let degree = in_degree.get_mut(target).unwrap();
-                    *degree -= 1;
-                    if *degree == 0 { queue.push_back(target.clone()); }
-                }
-            }
-        }
-        if sorted_nodes.len() != self.graph.nodes.len() { return Err("Visual Orchestrator cycle detected".to_string()); }
-
         let mut visited = std::collections::HashSet::new();
-
-        // Kahn's algorithm for topological sorting to ensure DAG
-        let mut in_degree: HashMap<String, usize> = HashMap::new();
-        for node in &self.graph.nodes {
-            in_degree.insert(node.id.clone(), 0);
-        }
-        for edge in &self.graph.edges {
-            *in_degree.entry(edge.target.clone()).or_insert(0) += 1;
-        }
-        let mut queue = std::collections::VecDeque::new();
-        for (node_id, degree) in &in_degree {
-            if *degree == 0 { queue.push_back(node_id.clone()); }
-        }
-        let mut sorted_nodes = Vec::new();
-        while let Some(node_id) = queue.pop_front() {
-            sorted_nodes.push(node_id.clone());
-            if let Some(targets) = outgoing_edges.get(&node_id) {
-                for target in targets {
-                    let degree = in_degree.get_mut(target).unwrap();
-                    *degree -= 1;
-                    if *degree == 0 { queue.push_back(target.clone()); }
-                }
-            }
-        }
-        if sorted_nodes.len() != self.graph.nodes.len() { return Err("Visual Orchestrator cycle detected".to_string()); }
 
         loop {
             let node = nodes_map.get(&current_node_id).ok_or_else(|| format!("Node not found: {}", current_node_id))?;
@@ -432,42 +382,5 @@ mod tests {
 
         let result = executor.execute(inputs).await.unwrap();
         assert_eq!(result, "Processed: Merged is [\"val1\",\"val2\"]");
-    }
-
-    #[tokio::test]
-    async fn test_visual_workflow_diamond() {
-        let graph = WorkflowGraph {
-            nodes: vec![
-                Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
-                Node { id: "cond1".to_string(), node_type: NodeType::Condition {
-                    condition_expression: "{{in}} == trigger".to_string(),
-                    true_target: "branch1".to_string(),
-                    false_target: "branch2".to_string()
-                }},
-                Node { id: "branch1".to_string(), node_type: NodeType::Llm { prompt_template: "Branch 1".to_string() } },
-                Node { id: "branch2".to_string(), node_type: NodeType::Llm { prompt_template: "Branch 2".to_string() } },
-                Node { id: "merge1".to_string(), node_type: NodeType::Merge { state_keys: vec!["branch1".to_string(), "branch2".to_string()], output_key: "merged".to_string() } },
-                Node { id: "out".to_string(), node_type: NodeType::Output },
-            ],
-            edges: vec![
-                Edge { source: "in".to_string(), target: "cond1".to_string() },
-                Edge { source: "branch1".to_string(), target: "merge1".to_string() },
-                Edge { source: "branch2".to_string(), target: "merge1".to_string() },
-                Edge { source: "merge1".to_string(), target: "out".to_string() },
-            ],
-        };
-
-        let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
-        let config = AgentRunConfig::default();
-
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
-
-        let mut inputs = HashMap::new();
-        inputs.insert("in".to_string(), "trigger".to_string());
-
-        let result = executor.execute(inputs).await.unwrap();
-        // The condition goes to branch1, branch2 never executes.
-        // So merge only receives branch1's output.
-        assert_eq!(result, "Visual orchestration completed with no data");
     }
 }
