@@ -7,6 +7,13 @@ use crate::utils::cache::HybridCache;
 
 pub static MY_PLAN_CACHE: OnceLock<HybridCache<MyPlanResponse>> = OnceLock::new();
 pub static COST_DASHBOARD_CACHE: OnceLock<HybridCache<CostDashboardResponse>> = OnceLock::new();
+pub static BUDGET_ALERT_CACHE: OnceLock<HybridCache<BudgetAlertConfig>> = OnceLock::new();
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct BudgetAlertConfig {
+    pub threshold_usd: f64,
+    pub notify_at_pct: f64,
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct MyPlanResponse {
@@ -38,7 +45,81 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/budget-alert", axum::routing::get(budget_alert_get_handler).post(budget_alert_post_handler))
         .with_state(hub)
+}
+
+use axum::response::IntoResponse;
+
+pub async fn budget_alert_get_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> axum::response::Response {
+    let auth = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(a) => a,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, "Missing auth").into_response(),
+    };
+    let tenant_id = if auth.org_id.is_empty() { "default".to_string() } else { auth.org_id.clone() };
+
+    // Fetch from Postgres
+    let pool = crate::db::get_pool();
+    let row = sqlx::query(
+        "SELECT threshold_usd, notify_at_pct FROM tenant_budget_alerts WHERE tenant_id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&pool)
+    .await;
+
+    let config = match row {
+        Ok(Some(r)) => {
+            use sqlx::Row;
+            let threshold_usd: f64 = r.try_get("threshold_usd").unwrap_or(100.0);
+            let notify_at_pct: f64 = r.try_get("notify_at_pct").unwrap_or(80.0);
+            BudgetAlertConfig { threshold_usd, notify_at_pct }
+        }
+        _ => BudgetAlertConfig { threshold_usd: 100.0, notify_at_pct: 80.0 }, // fallback
+    };
+
+    Json(config).into_response()
+}
+
+pub async fn budget_alert_post_handler(
+    State(hub): State<Arc<Hub>>,
+    mut request: axum::extract::Request,
+) -> axum::response::Response {
+    let auth = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(a) => a,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, "Missing auth").into_response(),
+    };
+    let tenant_id = if auth.org_id.is_empty() { "default".to_string() } else { auth.org_id.clone() };
+
+    use axum::extract::FromRequest;
+    let payload_res = Json::<BudgetAlertConfig>::from_request(request, &()).await;
+    let payload = match payload_res {
+        Ok(Json(p)) => p,
+        Err(_) => return (axum::http::StatusCode::BAD_REQUEST, "Invalid JSON payload").into_response(),
+    };
+
+    // Save to Postgres
+    let pool = crate::db::get_pool();
+    let _ = sqlx::query(
+        r#"
+        INSERT INTO tenant_budget_alerts (tenant_id, threshold_usd, notify_at_pct)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (tenant_id) DO UPDATE SET
+            threshold_usd = EXCLUDED.threshold_usd,
+            notify_at_pct = EXCLUDED.notify_at_pct,
+            updated_at = CURRENT_TIMESTAMP
+        "#
+    )
+    .bind(&tenant_id)
+    .bind(payload.threshold_usd)
+    .bind(payload.notify_at_pct)
+    .execute(&pool)
+    .await;
+
+    Json(payload).into_response()
 }
 
 pub async fn my_plan_handler(

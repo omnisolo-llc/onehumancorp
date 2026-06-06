@@ -32,10 +32,17 @@ export default function CostDashboardPage() {
   const [data, setData] = useState<CostDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [budgetThreshold, setBudgetThreshold] = useState<number>(100);
+  const [budgetNotifyPct, setBudgetNotifyPct] = useState<number>(80);
+  const [savingBudget, setSavingBudget] = useState(false);
+  const [budgetSaved, setBudgetSaved] = useState(false);
+
   useEffect(() => {
-    async function fetchCostData() {
+    async function fetchData() {
       try {
         const token = localStorage.getItem('token');
+
+        // Fetch cost data
         const res = await fetch('/api/billing/cost-dashboard', {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -47,14 +54,51 @@ export default function CostDashboardPage() {
         } else {
             console.error("Failed to fetch cost data:", res.status);
         }
+
+        // Fetch budget alert
+        const alertRes = await fetch('/api/billing/budget-alert', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (alertRes.ok) {
+            const alertData = await alertRes.json();
+            setBudgetThreshold(alertData.threshold_usd);
+            setBudgetNotifyPct(alertData.notify_at_pct);
+        }
       } catch (err) {
-        console.error("Error fetching cost data", err);
+        console.error("Error fetching data", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchCostData();
+    fetchData();
   }, []);
+
+  const saveBudgetAlert = async () => {
+    setSavingBudget(true);
+    setBudgetSaved(false);
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/billing/budget-alert', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                threshold_usd: budgetThreshold,
+                notify_at_pct: budgetNotifyPct
+            })
+        });
+        if (res.ok) {
+            setBudgetSaved(true);
+            setTimeout(() => setBudgetSaved(false), 3000);
+        }
+    } catch (err) {
+        console.error("Failed to save budget alert", err);
+    } finally {
+        setSavingBudget(false);
+    }
+  };
 
   if (loading) {
       return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -108,6 +152,71 @@ export default function CostDashboardPage() {
                     <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
                     <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
                 </div>
+            </div>
+        </section>
+
+        {/* Budget Alert Section */}
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Monthly Budget & Alerts</h2>
+
+            <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row gap-6">
+                    <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Monthly Budget Limit ($)</label>
+                        <input
+                            type="number"
+                            data-testid="budget-threshold-input"
+                            value={budgetThreshold}
+                            onChange={(e) => setBudgetThreshold(Number(e.target.value))}
+                            className="w-full p-3 rounded-xl border border-gray-300 bg-white/50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="block text-sm font-medium text-gray-700">Notify me at</label>
+                            <span className="text-sm font-bold text-indigo-600">{budgetNotifyPct}%</span>
+                        </div>
+                        <input
+                            type="range"
+                            data-testid="budget-notify-slider"
+                            min="50" max="100" step="5"
+                            value={budgetNotifyPct}
+                            onChange={(e) => setBudgetNotifyPct(Number(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-3"
+                        />
+                    </div>
+                </div>
+
+                {data && (
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-gray-700">Budget Progress</span>
+                            <span className="text-sm font-medium text-gray-500">
+                                {formatCurrency(data.total_costs)} / ${(budgetThreshold || 0).toFixed(2)}
+                            </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div
+                                className={`h-2.5 rounded-full transition-all duration-500 ${(data.total_costs / 100) >= ((budgetThreshold || 1) * ((budgetNotifyPct || 1) / 100)) ? 'bg-red-500' : 'bg-green-500'}`}
+                                style={{ width: `${Math.min(((data.total_costs / 100) / (budgetThreshold || 1)) * 100, 100)}%` }}
+                            ></div>
+                        </div>
+                        {(data.total_costs / 100) >= ((budgetThreshold || 1) * ((budgetNotifyPct || 1) / 100)) && (
+                            <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-800 flex items-start gap-2">
+                                <span className="text-lg">⚠️</span>
+                                <p>You have exceeded your budget notification threshold of {budgetNotifyPct}% (${((budgetThreshold || 0) * ((budgetNotifyPct || 0) / 100)).toFixed(2)}). Consider reviewing your active agents.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <button
+                    onClick={saveBudgetAlert}
+                    disabled={savingBudget}
+                    className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50"
+                >
+                    {savingBudget ? 'Saving...' : (budgetSaved ? 'Saved!' : 'Save Budget')}
+                </button>
             </div>
         </section>
 
