@@ -297,6 +297,12 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_loop");
 
@@ -339,7 +345,14 @@ impl Agent {
             messages.push(msg.clone());
 
             if msg.tool_calls.is_empty() {
+
                 if *phase == "Verify" {
+                    if let Some(guardrails) = &cfg.guardrails {
+                        if let Err(e) = guardrails.check_output(&msg.content) {
+                            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
+                        }
+                    }
                     return Ok(msg.content);
                 } else {
                     continue;
@@ -351,7 +364,14 @@ impl Agent {
             let mut read_only_calls = vec![];
             let mut mutating_calls = vec![];
 
+
             for tc in &msg.tool_calls {
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = guardrails.check_tool(tc) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Tool Guardrail tripwire fires: {}", e))));
+                    }
+                }
                 if let Some(tool) = session_tools.iter().find(|t| t.name == tc.name) {
                     if tool.is_read_only {
                         read_only_calls.push(tc.clone());
@@ -541,7 +561,6 @@ impl Agent {
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
             }
         }
-
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
@@ -1274,6 +1293,12 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
 
         struct WrapperClient {
             llm: std::sync::Arc<dyn LlmClient>,
@@ -1301,6 +1326,13 @@ impl Agent {
         };
 
         on_event(AgentEvent::TaskComplete { content: report.clone() });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_output(&report) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
+            }
+        }
+
         Ok(report)
     }
 
@@ -1410,6 +1442,13 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
         let plan_resp = self.llm.chat(plan_req.clone()).await?;
         let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
 
@@ -1974,6 +2013,12 @@ impl Agent {
         }
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run");
 
