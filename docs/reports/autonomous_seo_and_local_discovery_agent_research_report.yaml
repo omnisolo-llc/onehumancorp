@@ -1,0 +1,11 @@
+title: "Autonomous SEO & Local Discovery Agent"
+status: completed
+summary: >
+  Research report detailing how to eliminate the SEO friction point for micro-SMBs by automating local discovery optimization without requiring any user setup beyond a 1-tap approval. This agent is part of "The Promoter Agent" department.
+details:
+  - "Target Persona: Micro-SMBs (e.g., local bakers, handymen, tutors) who lack technical SEO knowledge and time to manage their local search presence."
+  - "Problem: Users launch an OHC store but struggle to gain local foot traffic or search visibility because they do not know how to optimize for local search engines."
+  - "Proposed Solution: The Autonomous SEO & Local Discovery Agent. It operates automatically to ensure the business is discoverable."
+  - "Core Mechanism: The agent continuously analyzes the store's catalog, location data, and business type. It automatically generates optimized metadata, local business schema markup, and submits to platforms like Google Business Profile."
+  - "User Experience: Zero setup required. The agent surfaces a 1-tap approval card in the Agent Feed (e.g., 'Let The Promoter optimize your store for local Google searches?'). Once approved, it works invisibly in the background."
+  - "Implementation Requirements: Background worker to monitor catalog/content changes, Gemini Pro integration to generate SEO-optimized copy, API integrations for local listings, and mobile UI for the 1-tap approval feed card."
