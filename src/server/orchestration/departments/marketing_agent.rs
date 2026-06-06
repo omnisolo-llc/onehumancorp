@@ -23,34 +23,12 @@ impl Department for MarketingAgent {
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
-
-
-        if event.event_type == "tenant.product.created" {
-            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");
-
-            let draft_copy = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
-            let payload = serde_json::json!({
-                "feature_type": "social_post",
-                "product_name": product_name,
-                "draft_copy": draft_copy
-            });
-            let description = format!("7-Day Social Calendar: {}", product_name);
-
-            return self.orchestrator.execute_action(
-                DepartmentType::Marketing,
-                description,
-                event.tenant_id.clone(),
-                risk,
-                payload,
-            ).await.map(|_| ());
-        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
@@ -106,27 +84,40 @@ impl Department for MarketingAgent {
                 "".to_string()
             };
 
-            let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
+            let prompt = format!("Generate exactly 3 variant captions optimized for different social media platforms for a new or restocked product named '{}'. Description: '{}'. Provide 1 short/punchy variant for TikTok, 1 visual/descriptive variant for Instagram (with 3 hashtags), and 1 informative variant for Facebook. Return ONLY a JSON object with a single 'variants' key containing an array of objects, each with 'platform' (string) and 'copy' (string).", product_name, description);
 
-            let draft_copy = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
+            let variants_json = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
                 if provider == "minimax" {
                     let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
+                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| "{}".to_string())
                 } else {
-                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
+                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| "{}".to_string())
                 }
             } else {
-                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
+                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| "{}".to_string())
             };
 
+            let mut variants_val: serde_json::Value = serde_json::from_str(&variants_json).unwrap_or(serde_json::json!({}));
+
+            // Fallback if AI fails or returns bad JSON
+            if variants_val.get("variants").is_none() {
+                variants_val = serde_json::json!({
+                    "variants": [
+                        { "platform": "TikTok", "copy": format!("Get the new {}! 🔥", product_name) },
+                        { "platform": "Instagram", "copy": format!("Check out our stunning new {} ✨ #newarrival #shopping", product_name) },
+                        { "platform": "Facebook", "copy": format!("We are excited to announce our new product: {}. Available now!", product_name) }
+                    ]
+                });
+            }
+
             let payload = serde_json::json!({
-                "feature_type": "social_post",
+                "feature_type": "social_post_variants",
                 "product_name": product_name,
                 "image_url": optimized_image_url,
-                "draft_copy": draft_copy
+                "variants": variants_val["variants"]
             });
 
-            let action_desc = format!("Draft Instagram post for {}", product_name);
+            let action_desc = format!("New product detected! Schedule a post to drive sales?");
             return self.orchestrator.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
         }
 

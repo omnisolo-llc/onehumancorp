@@ -197,6 +197,26 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
+                  {approval.payload?.feature_type === "social_post_variants" && (
+                    <div className="mt-3 flex flex-col gap-3 p-3 bg-pink-50 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-800/50 rounded-lg">
+                      <div className="text-sm text-pink-800 dark:text-pink-200">
+                        The Promoter has generated content for: <strong>{approval.payload.product_name}</strong>
+                      </div>
+                      {approval.payload.image_url && (
+                        <div className="w-full h-32 relative rounded overflow-hidden">
+                          <img src={approval.payload.image_url} alt={approval.payload.product_name} className="object-cover w-full h-full" />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2">
+                        {Array.isArray(approval.payload.variants) && approval.payload.variants.map((v: any, idx: number) => (
+                          <div key={idx} className="bg-white dark:bg-gray-800 p-3 rounded shadow-sm border border-pink-50 dark:border-gray-700">
+                            <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{v.platform}</div>
+                            <div className="text-xs text-gray-800 dark:text-gray-200 font-medium">"{v.copy}"</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {approval.payload?.context && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {approval.payload.context.abandoned_carts_count !== undefined && (

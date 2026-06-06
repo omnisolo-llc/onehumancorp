@@ -362,6 +362,33 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "social_post_variants" && (
+                    <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Social Media Variants Generated
+                      </div>
+                      <div className="text-xs text-pink-700">
+                        The Promoter has generated content for your new product: <strong>{req.payload.product_name}</strong>
+                      </div>
+                      {req.payload.image_url && (
+                        <div className="w-full h-32 relative rounded overflow-hidden">
+                          <img src={req.payload.image_url} alt={req.payload.product_name} className="object-cover w-full h-full" />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2 mt-2">
+                        {Array.isArray(req.payload.variants) && req.payload.variants.map((v: any, idx: number) => (
+                          <div key={idx} className="bg-white p-3 rounded shadow-sm border border-pink-50">
+                            <div className="text-[10px] font-bold text-gray-500 uppercase mb-1">{v.platform}</div>
+                            <div className="text-xs text-gray-800 font-medium">"{v.copy}"</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "social_calendar" && (
                     <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
