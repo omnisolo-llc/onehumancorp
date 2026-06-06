@@ -20,7 +20,7 @@ test.describe('Viral Referral Loop', () => {
     await expect(page.getByText('Your Referral Link')).toBeVisible();
 
     // Copy link button should eventually become enabled and we can click it
-    const copyButton = page.getByRole('button', { name: 'Copy', exact: true });
+    const copyButton = page.getByRole('button', { name: /Copy Link|Copy/i }).first();
     await expect(copyButton).toBeEnabled({ timeout: 10000 });
     await copyButton.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();

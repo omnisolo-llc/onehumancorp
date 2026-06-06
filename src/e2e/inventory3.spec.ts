@@ -5,6 +5,7 @@ test.describe('Autonomous Predictive Inventory Load', () => {
         await page.goto('/dashboard');
         await page.goto('/inventory');
 
-        await expect(page.locator('text=Inventory Intelligence')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
+        await expect(page.getByText('Raw Materials')).toBeVisible();
     });
 });

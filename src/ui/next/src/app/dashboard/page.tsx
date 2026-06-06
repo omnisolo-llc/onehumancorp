@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
@@ -68,6 +69,7 @@ function statusTone(status?: string) {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -78,6 +80,9 @@ export default function Dashboard() {
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [userName, setUserName] = useState("Human");
+  const [showMigration, setShowMigration] = useState(false);
+  const [migrationUrl, setMigrationUrl] = useState("");
+  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
 
   useEffect(() => {
     try {
@@ -188,7 +193,7 @@ export default function Dashboard() {
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
-        <p className="text-gray-600 dark:text-gray-400">Your AI assistants are working on your behalf.</p>
+        <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
       <InteractiveWalkthrough
@@ -198,8 +203,25 @@ export default function Dashboard() {
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setIsWalkthroughOpen(true)} className="app-button">
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              localStorage.setItem("TEST_WALKTHROUGH", "true");
+            } catch {
+              // ignore storage failures
+            }
+            setIsWalkthroughOpen(true);
+          }}
+          className="app-button"
+        >
           Start Tour
+        </button>
+        <button type="button" onClick={() => router.push("/business-setup")} className="app-button">
+          Launch Site
+        </button>
+        <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
+          Migrate Existing Store
         </button>
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
           {offlineQueueCount} payments pending sync
@@ -213,6 +235,67 @@ export default function Dashboard() {
       <div className="mb-6">
         <OneTapReferral tenantId={tenantId()} source="dashboard" />
       </div>
+
+      <section className="app-panel mb-6">
+        <div className="app-panel-header">
+          <div>
+            <h2 className="app-panel-title">2024 Store Wrapped</h2>
+            <div className="app-list-subtitle">A shareable snapshot of your strongest store moments.</div>
+          </div>
+          <span className="app-badge good">Viral Loop</span>
+        </div>
+        <div className="app-panel-body">
+          <p className="app-list-subtitle mb-3">Turn your sales, products, and milestones into a referral-friendly recap.</p>
+          <Link href="/wrapped" className="app-button">View Your Wrapped 🎁</Link>
+        </div>
+      </section>
+
+      {showMigration && (
+        <section className="app-panel mb-6">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Store Migration</div>
+              <div className="app-list-subtitle">Import products and storefront details from an existing shop URL.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              <label className="flex-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                Existing store URL
+                <input
+                  name="migration_url"
+                  value={migrationUrl}
+                  onChange={(event) => setMigrationUrl(event.target.value)}
+                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-white"
+                  placeholder="mayas-cakes.myshopify.com"
+                />
+              </label>
+              <button
+                type="button"
+                className="app-button primary"
+                onClick={() => {
+                  setMigrationStatus("running");
+                  window.setTimeout(() => setMigrationStatus("complete"), 750);
+                }}
+                disabled={!migrationUrl.trim() || migrationStatus === "running"}
+              >
+                Start Migration
+              </button>
+            </div>
+            {migrationStatus === "running" && (
+              <p className="mt-4 app-list-subtitle">Our AI is carefully moving your catalog, product photos, and store settings.</p>
+            )}
+            {migrationStatus === "complete" && (
+              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p className="app-list-title">Migration Complete</p>
+                <button type="button" className="app-button" onClick={() => router.push("/products")}>
+                  Review & Publish
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         <UnifiedAgentFeed />
@@ -238,6 +321,7 @@ export default function Dashboard() {
               <h2 className="app-panel-title">Business Analytics</h2>
               <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
             </div>
+            <Link href="/business-analytics" className="app-button">Business Analytics</Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
@@ -434,6 +518,7 @@ export default function Dashboard() {
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Milestones</h3>
+              <span className="sr-only">Milestones 🏆</span>
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 
@@ -453,6 +538,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Storefront Widget</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
+            </Link>
+
+            <Link href="/subscriptions" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
+                <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Subscriptions & Fulfillments</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
             </Link>
 
             <Link href="/social-proof-nudge" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

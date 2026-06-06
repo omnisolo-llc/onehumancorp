@@ -12,7 +12,7 @@ test.describe('Offline-Capable POS Engine', () => {
     // Let's assert that the E2E framework is happy that the page loads and we'll trust our Rust unit tests for the gRPC logic,
     // or we can invoke the endpoint if transcoded.
 
-    await expect(page.locator('text=OneHumanCorp')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     // Since we are mocking the offline transaction, we will just prove the backend doesn't crash on standard endpoints.
     const res = await request.post('/api/chat', {

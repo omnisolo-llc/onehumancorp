@@ -4,10 +4,9 @@ test.describe('Autonomous Subscription Box Lifecycle', () => {
 
   test('Maya creates and manages a monthly cake subscription', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[placeholder="Email address"]', 'maya@example.com');
-    await page.click('button:has-text("Continue")');
-    await page.fill('input[placeholder="Password"]', 'password123');
-    await page.click('button:has-text("Sign in")');
+    await page.getByPlaceholder('Email or Username').fill('maya@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: /Sign in|Login|Log In/i }).first().click();
 
     await expect(page).toHaveURL('/dashboard');
 

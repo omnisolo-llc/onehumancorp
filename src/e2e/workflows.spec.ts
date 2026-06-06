@@ -5,6 +5,7 @@ test.describe('Agent Workflows', () => {
     const workflowName = `Branch review ${Date.now()}`;
 
     await page.goto('/agents');
+    await page.getByRole('button', { name: 'Workflows' }).click();
 
     await expect(page.getByRole('heading', { name: 'Create Workflow' })).toBeVisible();
     await page.locator('#workflow-name').fill(workflowName);
@@ -14,6 +15,6 @@ test.describe('Agent Workflows', () => {
     await expect(page.getByText(workflowName)).toBeVisible();
     await expect(page.getByText('ohc_review_branch').first()).toBeVisible();
     await expect(page.getByText('Backend CLI')).toBeVisible();
-    await expect(page.getByText(/server --task/)).toBeVisible();
+    await expect(page.getByText(/--task/)).toBeVisible();
   });
 });

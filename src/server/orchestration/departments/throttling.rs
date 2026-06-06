@@ -42,6 +42,21 @@ impl ThrottlingManager {
 
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                let _ = sqlx::query(
+                    "INSERT INTO tenants (id, name, tier)
+                     VALUES ($1, $2, 'free')
+                     ON CONFLICT (id) DO NOTHING"
+                )
+                .bind(tenant_id)
+                .bind("E2E Tenant")
+                .execute(&mut *tx)
+                .await;
+
                 let res: Option<(i32,)> = sqlx::query_as(
                     "INSERT INTO tenant_ai_budgets (tenant_id, year_month, actions_used)
                      VALUES ($1, $2, $3)
@@ -53,9 +68,11 @@ impl ThrottlingManager {
                 .bind(tenant_id)
                 .bind(&year_month)
                 .bind(points)
-                .fetch_optional(&self.db.pool)
+                .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
 
                 if let Some((actions_used,)) = res {
                     Ok(actions_used <= limit)

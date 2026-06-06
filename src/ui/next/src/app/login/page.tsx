@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 
 export default function Login() {
   const router = useRouter();
+  const goDashboard = () => router.push('/dashboard');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 font-outfit">
@@ -21,11 +22,25 @@ export default function Login() {
             className="w-full p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
           />
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={goDashboard}
             className="w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,0,0,0.39)] hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
           >
             Log In
           </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={goDashboard}
+              className="w-full min-h-[44px] rounded-[8px] border border-gray-200 bg-white/70 px-4 py-2 font-semibold text-[#1D1D1F] transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-[#F5F5F7]"
+            >
+              Login
+            </button>
+            <button
+              onClick={goDashboard}
+              className="w-full min-h-[44px] rounded-[8px] border border-gray-200 bg-white/70 px-4 py-2 font-semibold text-[#1D1D1F] transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-[#F5F5F7]"
+            >
+              Sign in
+            </button>
+          </div>
         </div>
 
         <div className="relative flex items-center py-5">

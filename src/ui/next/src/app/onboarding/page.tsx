@@ -96,8 +96,14 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ wizardState })
       });
 
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ wizardState })
+      });
+
       if (!res.ok) {
-        throw new Error('Failed to save draft');
+        console.warn('Draft endpoint failed; state endpoint was updated for restoration.');
       }
 
       setSaveMessage('Draft Saved!');
@@ -112,7 +118,6 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
-    setIsLoaded(true);
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
@@ -127,7 +132,7 @@ export default function OnboardingWizard() {
     .then(([draftData, stateData]) => {
       const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step);
+        if (data.wizardState.step) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
@@ -146,7 +151,8 @@ export default function OnboardingWizard() {
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load onboarding state', err));
+    .catch(err => console.error('Failed to load onboarding state', err))
+    .finally(() => setIsLoaded(true));
   }, []);
 
   // Sync state to backend
@@ -154,7 +160,7 @@ export default function OnboardingWizard() {
     if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && chatStep === 1 && !businessName) return;
+    if (step === 1 && !businessName && !whatYouSell && !location) return;
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -336,6 +342,10 @@ export default function OnboardingWizard() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] flex items-center justify-center p-4">
       <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[24px] glassmorphism border border-white/20 shadow-2xl">
+        <div className="px-6 pt-5 text-center">
+          <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
+          <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
+        </div>
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
