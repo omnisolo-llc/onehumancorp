@@ -21,6 +21,7 @@ interface OnboardingState {
   aiAutoRespond: boolean;
   isLoading: boolean;
   error: string;
+  saveMessage: string;
   startResult: any;
   setStep: (step: number) => void;
   setChatStep: (step: number) => void;
@@ -41,6 +42,7 @@ interface OnboardingState {
   setAiAutoRespond: (autoRespond: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
+  setSaveMessage: (message: string) => void;
   setStartResult: (result: any) => void;
 }
 
@@ -56,7 +58,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessType: 'Online Store',
       categories: [],
       websiteTemplate: 'Modern',
-  domainChoice: 'subdomain',
+      domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
       adminName: '',
@@ -66,6 +68,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       aiAutoRespond: true,
       isLoading: false,
       error: '',
+      saveMessage: '',
       startResult: null,
       setStep: (step) => set({ step }),
       setChatStep: (chatStep) => set({ chatStep }),
@@ -76,7 +79,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
-  setDomainChoice: (domainChoice) => set({ domainChoice }),
+      setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
       setAdminName: (adminName) => set({ adminName }),
@@ -86,10 +89,11 @@ export const useOnboardingStore = create<OnboardingState>()(
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
+      setSaveMessage: (saveMessage) => set({ saveMessage }),
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v3',
     }
   )
 );
