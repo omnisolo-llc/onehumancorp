@@ -19,10 +19,25 @@ impl Department for FinanceAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.payment.received".to_string()]
+        vec![
+            "tenant.payment.received".to_string(),
+            "invoice.payment_failed".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "invoice.payment_failed" {
+            // Autonomous Dunning Workflow
+            self.orchestrator.execute_action(
+                DepartmentType::Finance,
+                "Draft and send polite SMS/Email for failed payment".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                event.payload.clone(),
+            ).await?;
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
