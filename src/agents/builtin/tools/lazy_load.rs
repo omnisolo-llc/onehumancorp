@@ -1,30 +1,30 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::{Tool, ToolExecutor};
+use super::{pydantic::{PydanticAdapter, PydanticToolExecutor}, Tool};
+
+#[derive(Deserialize)]
+struct LazyLoadArgs {
+    tool_names: Vec<String>,
+}
 
 struct LazyLoadToolsExecutor {
     active_tools: Arc<RwLock<HashSet<String>>>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for LazyLoadToolsExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let tool_names = args["tool_names"]
-            .as_array()
-            .ok_or_else(|| ToolError::LlmRecoverable("lazy_load_tools: 'tool_names' must be an array of strings".to_string()))?;
-
+impl PydanticToolExecutor<LazyLoadArgs> for LazyLoadToolsExecutor {
+    async fn execute_typed(&self, args: LazyLoadArgs) -> Result<String, ToolError> {
         let mut active = self.active_tools.write().await;
         let mut loaded = Vec::new();
 
-        for name_val in tool_names {
-            if let Some(name) = name_val.as_str() {
-                active.insert(name.to_string());
-                loaded.push(name.to_string());
-            }
+        for name in args.tool_names {
+            active.insert(name.clone());
+            loaded.push(name);
         }
 
         if loaded.is_empty() {
@@ -56,7 +56,7 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
             },
             "required": ["tool_names"]
         }),
-        execute: Arc::new(LazyLoadToolsExecutor { active_tools }),
+        execute: Arc::new(PydanticAdapter::new(LazyLoadToolsExecutor { active_tools })),
     }
 }
 
@@ -103,7 +103,7 @@ mod tests {
         assert!(res.is_err());
 
         if let Err(ToolError::LlmRecoverable(err_msg)) = res {
-            assert!(err_msg.contains("must be an array"));
+            assert!(err_msg.contains("Validation Error (Pydantic-first tool schema)"));
         } else {
             panic!("Expected LlmRecoverable error");
         }
