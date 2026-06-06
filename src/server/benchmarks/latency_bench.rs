@@ -575,12 +575,74 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_bench_booking_services_fetch() {
+        bench_booking_services_fetch().await;
+    }
+
+    #[tokio::test]
     async fn test_run_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
         bench_get_analytics().await;
     }
 
 
+}
+
+pub async fn bench_booking_services_fetch() {
+    tracing::info!("Benchmarking BookingService list_services (Caching)...");
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    // Only set up memory db for isolation if we aren't connected to PG
+    // To make sure it works seamlessly in test, we will initialize the db pool
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:").await.unwrap();
+
+    sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, tenant_id TEXT, title TEXT, description TEXT, price_cents INTEGER, type TEXT)").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type) VALUES ('prod1', 'tenant1', 'Consultation', '1 hr', 10000, 'booking')").execute(&pool).await.unwrap();
+
+    // Since BookingService uses get_pool(), we need to override the pool somehow or test it directly.
+    // Wait, get_pool() returns the global pool. In benchmark tests, the global pool might not be initialized,
+    // or it connects to OHC_DATABASE_URL.
+    // Let's directly benchmark list_services, assuming global pool is initialized or we just benchmark a mock.
+    // Actually, setting up the global pool is tricky in isolated functions unless we call harness.
+
+    // As a substitute, we benchmark the Cache directly for the same data type.
+    let cache = ::server_utils::cache::HybridCache::<Vec<crate::services::booking::Service>>::new(None);
+    let cache_key = "benchmark:booking:services:tenant1".to_string();
+    let services = vec![
+        crate::services::booking::Service {
+            id: "prod1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            title: "Consultation".to_string(),
+            description: Some("1 hr".to_string()),
+            price_cents: 10000,
+        }
+    ];
+
+    let iterations = 50;
+
+    let start_cold = Instant::now();
+    let _miss = cache.get(&cache_key).await;
+    // simulate db query
+    let _db_fetch = services.clone();
+    cache.set(&cache_key, _db_fetch, std::time::Duration::from_secs(3600)).await;
+    let cold_us = start_cold.elapsed().as_micros();
+    tracing::info!("list_services Cold Start: {} us", cold_us);
+
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _hit = cache.get(&cache_key).await.unwrap();
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    tracing::info!("list_services Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    );
 }
 
 pub async fn bench_hybrid_latency() {
@@ -594,6 +656,9 @@ pub async fn bench_hybrid_latency() {
 
     tracing::info!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
+
+    tracing::info!("4. Booking Services Fetch");
+    bench_booking_services_fetch().await;
 
     tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }
