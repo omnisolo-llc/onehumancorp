@@ -374,8 +374,8 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          for i in {1..3}; do docker pull pgvector/pgvector:pg16 && break || sleep 15; done
-          for i in {1..3}; do docker pull valkey/valkey:8-alpine && break || sleep 15; done
+          docker pull pgvector/pgvector:pg16
+          docker pull valkey/valkey:8-alpine
 
       - name: Test Playwright UI E2E target
         run: |
@@ -546,8 +546,8 @@ jobs:
 
       - name: Pull Docker Compose images
         run: |
-          for i in {1..3}; do docker pull pgvector/pgvector:pg16 && break || sleep 15; done
-          for i in {1..3}; do docker pull valkey/valkey:8-alpine && break || sleep 15; done
+          docker pull pgvector/pgvector:pg16
+          docker pull valkey/valkey:8-alpine
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
             pgvector/pgvector:pg16 \
