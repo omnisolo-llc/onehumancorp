@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 export function OneTapReferral({ tenantId, source }: { tenantId: string, source: string }) {
   const [copied, setCopied] = useState(false);
-  const referralLink = `/onboarding?ref=${tenantId}&source=${source}`;
+  const referralLink = `https://ohc.store/join?ref=${tenantId}&source=${source}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);

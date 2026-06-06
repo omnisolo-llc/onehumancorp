@@ -182,7 +182,7 @@ export default function StorefrontBuilderPage() {
       if (response.ok) {
         const data = await response.json();
         updateStatus("live");
-        const url = `/bio/${data.domain || 'myshop'}`;
+        const url = `https://${data.domain || 'myshop'}.ohc.store`;
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
       } else {

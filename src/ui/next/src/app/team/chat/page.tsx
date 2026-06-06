@@ -30,10 +30,6 @@ export default function TeamChatPage() {
     }));
   };
 
-  const handleEdit = (description: string) => {
-    setMessage(description);
-  };
-
   const handleSend = async () => {
     if (!message.trim()) return;
     const userMsg = message;
@@ -82,7 +78,7 @@ export default function TeamChatPage() {
 
         {/* Header */}
         <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
-          <button aria-label="Back to Team" onClick={() => router.push('/team')} className="text-gray-500">
+          <button onClick={() => router.push('/team')} className="text-gray-500">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <div>
@@ -139,11 +135,7 @@ export default function TeamChatPage() {
                         >
                           Approve & Execute
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(msg.card?.description || '')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
-                        >
+                        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors">
                           Edit
                         </button>
                       </div>

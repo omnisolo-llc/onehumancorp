@@ -23,7 +23,7 @@ test('renders OneTapReferral and handles copy', async () => {
     fireEvent.click(copyButton);
 
     // Check if writeText was called with correct URL
-    expect(mockWriteText).toHaveBeenCalledWith('/onboarding?ref=test-tenant&source=dashboard');
+    expect(mockWriteText).toHaveBeenCalledWith('https://ohc.store/join?ref=test-tenant&source=dashboard');
 
     // Check if button text changes to Copied!
     expect(await screen.findByText('Copied!')).toBeInTheDocument();

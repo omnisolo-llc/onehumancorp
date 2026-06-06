@@ -39,8 +39,7 @@ export default function SocialProofNudgePage() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -113,8 +112,8 @@ export default function SocialProofNudgePage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                         <div className="flex gap-2">
-                            <button aria-label="Light theme" aria-pressed={theme === 'light'} onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-300'}`} style={{ background: '#ffffff' }}></button>
-                            <button aria-label="Dark theme" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-gray-300'}`} style={{ background: '#1D1D1F' }}></button>
+                            <button onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-300'}`} style={{ background: '#ffffff' }}></button>
+                            <button onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-gray-300'}`} style={{ background: '#1D1D1F' }}></button>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 mt-2 pt-4 border-t border-gray-200">
@@ -190,7 +189,7 @@ export default function SocialProofNudgePage() {
 
                  {!hasPro && (
                      <div className="absolute bottom-2 left-6 z-10">
-                         <a href="/onboarding?ref=social-proof-nudge" className="text-[10px] font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity drop-shadow-sm" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>
+                         <a href="#" className="text-[10px] font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity drop-shadow-sm" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>
                              ⚡ Powered by OHC
                          </a>
                      </div>
@@ -207,7 +206,6 @@ export default function SocialProofNudgePage() {
 
             <div className="flex justify-end mb-2">
               <button
-                aria-label="Close paywall"
                 onClick={() => setShowPaywall(false)}
                 className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
               >

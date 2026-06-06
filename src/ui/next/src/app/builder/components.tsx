@@ -180,7 +180,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
         <div className="flex gap-3 justify-center">
           <a
-            href={`https://wa.me/?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || '/onboarding'}`)}`}
+            href={`https://wa.me/?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || 'https://ohc.store'}`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
@@ -189,7 +189,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             WhatsApp
           </a>
           <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || '/onboarding'}`)}`}
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || 'https://ohc.store'}`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
@@ -198,7 +198,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             Share
           </a>
           <a
-            href={`/onboarding?ref=${props.tenantId || 'storefront'}-referral`}
+            href={`https://ohc.store/join?ref=${props.tenantId || 'storefront'}-referral`}
             className="flex-1 bg-white dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             Get Code
@@ -231,7 +231,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     return (
       <div className="powered-by-footer py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
-          href={`/onboarding?ref=${tenantId}`}
+          href={`https://ohc.store/join?ref=${tenantId}`}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
           <span className="font-inter">⚡ Powered by</span>

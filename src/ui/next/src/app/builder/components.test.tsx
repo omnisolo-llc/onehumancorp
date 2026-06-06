@@ -7,7 +7,7 @@ describe('SmartBlock PoweredBy', () => {
         render(<SmartBlock type="PoweredBy" props={{ tenantId: 'test-tenant' }} />);
         expect(screen.getByText('⚡ Powered by')).toBeTruthy();
         expect(screen.getByText('OHC')).toBeTruthy();
-        expect(screen.getByRole('link').getAttribute('href')).toBe('/onboarding?ref=test-tenant');
+        expect(screen.getByRole('link').getAttribute('href')).toBe('https://ohc.store/join?ref=test-tenant');
     });
 
     it('does not render when isPremium is true', () => {

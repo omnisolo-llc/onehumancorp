@@ -18,7 +18,7 @@ describe('POST /api/v1/growth/discount_share/generate', () => {
 
     it('should successfully proxy the request to the backend and return data', async () => {
         process.env.OHC_BACKEND_URL = 'http://mock-backend';
-        const mockResponseData = { share_url: 'https://ohc.app/discount/mocked?tenant=test' };
+        const mockResponseData = { share_url: 'https://ohc.store/discount/mocked?tenant=test' };
 
         (global.fetch as import("vitest").Mock).mockResolvedValueOnce({
             ok: true,

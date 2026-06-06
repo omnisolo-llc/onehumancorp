@@ -12,7 +12,6 @@ export default function WinBackCampaignPage() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [isSent, setIsSent] = useState(false);
-  const [trialStatus, setTrialStatus] = useState('');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -24,8 +23,7 @@ export default function WinBackCampaignPage() {
     setIsGenerating(true);
     setTimeout(() => {
       const storeName = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Our Store' : 'Our Store';
-      const storeSlug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'my-store';
-      const draft = `Subject: We miss you! Here's ${discountOffer}% off your next order 🎁\n\nHi there,\n\nIt's been a while since we last saw you at ${storeName}. We noticed you loved our products, and we wanted to welcome you back with something special.\n\nUse code WINBACK${discountOffer} to get ${discountOffer}% off your next purchase${productName ? ` of our ${productName}` : ''}!\n\nShop now: /bio/${storeSlug}\n\nBest,\nThe ${storeName} Team\n\n⚡ Powered by OHC`;
+      const draft = `Subject: We miss you! Here's ${discountOffer}% off your next order 🎁\n\nHi there,\n\nIt's been a while since we last saw you at ${storeName}. We noticed you loved our products, and we wanted to welcome you back with something special.\n\nUse code WINBACK${discountOffer} to get ${discountOffer}% off your next purchase${productName ? ` of our ${productName}` : ''}!\n\nShop now: https://${storeName.toLowerCase().replace(/[^a-z0-9]/g, '')}.ohc.store\n\nBest,\nThe ${storeName} Team\n\n⚡ Powered by OHC`;
       setGeneratedDraft(draft);
       setIsGenerating(false);
       setIsSent(false);
@@ -43,15 +41,16 @@ export default function WinBackCampaignPage() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI win-back campaigns for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI win-back campaigns for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
     setHasPro(true);
     setShowSoftPaywall(false);
-    setTrialStatus('Your 7-day Pro trial has been activated.');
-    generateDraft();
+    setTimeout(() => {
+      alert('Your 7-day Pro trial has been activated.');
+      generateDraft();
+    }, 500);
   };
 
   const handleSend = () => {
@@ -71,7 +70,6 @@ export default function WinBackCampaignPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-8">
-        {trialStatus && <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800" role="status">{trialStatus}</p>}
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-2xl p-6 shadow-sm">
            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Re-engage Inactive Customers</h2>
            <p className="text-gray-600 text-sm">

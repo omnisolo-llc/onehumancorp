@@ -52,7 +52,6 @@ export default function UpgradeROIPage() {
                 <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{monthlyOrders}</span>
               </label>
               <input
-                aria-label="Current Monthly Orders"
                 type="range"
                 min="10"
                 max="500"
@@ -69,7 +68,6 @@ export default function UpgradeROIPage() {
                 <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${averageOrderValue}</span>
               </label>
               <input
-                aria-label="Average Order Value"
                 type="range"
                 min="10"
                 max="200"

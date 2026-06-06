@@ -34,8 +34,6 @@ export default function SmartPricingPage() {
             <p className="text-sm text-gray-500 mt-1">Turn on autonomous hyper-local dynamic pricing.</p>
           </div>
           <button
-            aria-label="Enable Smart Pricing"
-            aria-pressed={enabled}
             data-testid="enable-smart-pricing-toggle"
             onClick={() => setEnabled(!enabled)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}
@@ -54,8 +52,6 @@ export default function SmartPricingPage() {
                 <p className="text-xs text-gray-500 mt-1">Clear out remaining inventory today.</p>
               </div>
               <button
-                aria-label="Auto-discount perishables"
-                aria-pressed={discountPerishables}
                 data-testid="discount-perishables-toggle"
                 onClick={() => setDiscountPerishables(!discountPerishables)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${discountPerishables ? 'bg-blue-500' : 'bg-gray-300'}`}
@@ -70,8 +66,6 @@ export default function SmartPricingPage() {
                 <p className="text-xs text-gray-500 mt-1">Charge a premium during peak rush hours.</p>
               </div>
               <button
-                aria-label="Surge pricing"
-                aria-pressed={surgePricing}
                 data-testid="surge-pricing-toggle"
                 onClick={() => setSurgePricing(!surgePricing)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${surgePricing ? 'bg-blue-500' : 'bg-gray-300'}`}
@@ -86,7 +80,6 @@ export default function SmartPricingPage() {
                 <span className="font-bold text-blue-600">{maxAdjustment}%</span>
               </div>
               <input
-                aria-label="Maximum price adjustment bounds"
                 type="range"
                 min="5"
                 max="50"

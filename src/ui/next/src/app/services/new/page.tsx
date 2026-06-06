@@ -11,13 +11,9 @@ export default function NewServicePage() {
   const [frequency, setFrequency] = useState('monthly');
   const [price, setPrice] = useState('');
   const [saved, setSaved] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      setStatusMessage('Enter a service title before saving.');
-      return;
-    }
+    if (!title) return;
     setSaved(true);
     try {
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
@@ -106,7 +102,6 @@ export default function NewServicePage() {
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
-                aria-label="Recurring payment"
                 type="checkbox"
                 checked={isRecurring}
                 onChange={() => setIsRecurring(!isRecurring)}
@@ -134,7 +129,6 @@ export default function NewServicePage() {
         </div>
 
         <div className="pt-6">
-          {statusMessage && <p className="mb-3 text-sm font-medium text-red-600" role="status">{statusMessage}</p>}
           <button
             onClick={handleSave}
             className="w-full bg-black text-white font-medium py-3 rounded-lg hover:bg-gray-800"

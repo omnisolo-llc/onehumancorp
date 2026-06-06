@@ -6,20 +6,8 @@ export default function ReferralsPage() {
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [dataAction, setDataAction] = useState('');
 
   useEffect(() => {
-    const fallbackReferralLink = () => {
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      return `${origin}/onboarding?ref=${tenant}`;
-    };
-
-    const normalizeReferralLink = (rawLink: string) => {
-      if (!rawLink || rawLink.includes('ohc.store') || rawLink.startsWith('ohc://')) return fallbackReferralLink();
-      return rawLink;
-    };
-
     const fetchReferralLink = async () => {
       try {
         const response = await fetch("/api/v1/growth/referrals/generate", {
@@ -27,13 +15,15 @@ export default function ReferralsPage() {
         });
         const data = await response.json();
         if (data && data.referral_link) {
-          setReferralLink(normalizeReferralLink(data.referral_link));
+          setReferralLink(data.referral_link);
         } else {
-          setReferralLink(fallbackReferralLink());
+          const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+          setReferralLink(`ohc://join?ref=${tenant}`);
         }
       } catch (e) {
         console.error("Failed to generate dynamic referral link", e);
-        setReferralLink(fallbackReferralLink());
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        setReferralLink(`ohc://join?ref=${tenant}`);
       } finally {
         setIsLoading(false);
       }
@@ -165,7 +155,7 @@ export default function ReferralsPage() {
                 <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OHC storefront widget directly to your existing website.</p>
                 <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
                     <pre id="embed-code">
-{`<iframe src="/api/v1/growth/storefront/embed"
+{`<iframe src="https://mybusiness.ohc.store/api/v1/growth/storefront/embed"
   width="100%"
   height="600"
   frameborder="0"
@@ -176,8 +166,8 @@ export default function ReferralsPage() {
                 <button
                   className="w-full bg-gray-100 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-200 transition-colors"
                   onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="/api/v1/growth/storefront/embed" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>`);
-                      setDataAction('Embed code copied.');
+                      navigator.clipboard.writeText(`<iframe src="https://mybusiness.ohc.store/api/v1/growth/storefront/embed" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>`);
+                      alert("Embed code copied!");
                   }}
                 >
                     Copy Embed Code
@@ -189,21 +179,14 @@ export default function ReferralsPage() {
                <p className="text-sm text-gray-600 mb-6">Track your referral performance, view recent invites, or export your growth data.</p>
 
                <div className="space-y-3">
-                   <button
-                     onClick={() => setDataAction('Referral logs are ready to review.')}
-                     className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                   >
+                   <button className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                        View Referral Logs
                    </button>
-                   <button
-                     onClick={() => setDataAction('Growth data export has started.')}
-                     className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                   >
+                   <button className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                        Export Data
                    </button>
-                   {dataAction && <p role="status" className="text-sm text-gray-600 text-center">{dataAction}</p>}
                </div>
             </div>
         </div>
