@@ -33,6 +33,7 @@ rust_library(
         "@crates//:hex",
         "@crates//:image",
         "@crates//:sqlx",
+        "@crates//:temp-env",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
