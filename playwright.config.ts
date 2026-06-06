@@ -20,7 +20,7 @@ const actionTimeout = process.env.PLAYWRIGHT_ACTION_TIMEOUT
   : 0;
 
 export default defineConfig({
-  testDir: './src/e2e',
+  testDir: './src/ui/next/src/e2e',
   globalSetup: './src/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
