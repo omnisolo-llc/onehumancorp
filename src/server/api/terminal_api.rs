@@ -17,7 +17,7 @@ pub struct PaymentIntentRequest {
 
 #[derive(serde::Serialize)]
 pub struct PaymentIntentResponse {
-    pub intent_id: String,
+    pub client_secret: String,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -100,7 +100,7 @@ pub async fn create_payment_intent_handler(
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
-        Ok(intent_id) => Json(Ok(PaymentIntentResponse { intent_id })),
+        Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
         Err(e) => Json(Err(e)),
     }
 }
