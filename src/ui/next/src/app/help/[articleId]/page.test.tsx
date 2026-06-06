@@ -5,9 +5,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HelpArticlePage from './page';
 import * as navigation from 'next/navigation';
 
-vi.mock('next/navigation', () => ({
-  useParams: vi.fn(),
-}));
+vi.mock('next/navigation', async (importOriginal) => {
+  const actual = await importOriginal<typeof navigation>();
+  return {
+    ...actual,
+    useParams: vi.fn(),
+    useRouter: vi.fn(() => ({
+      push: vi.fn(),
+    })),
+  };
+});
 
 describe('HelpArticlePage', () => {
   beforeEach(() => {
