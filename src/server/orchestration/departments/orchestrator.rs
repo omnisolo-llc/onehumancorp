@@ -250,6 +250,20 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
+    pub async fn update_inbox_message_draft(&self, message_id: &str, tenant_id: &str, draft_reply: &str) -> Result<(), String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(draft_reply).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(draft_reply).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
 
         let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
