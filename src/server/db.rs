@@ -1126,6 +1126,7 @@ impl DB {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
+                // If a mission is STUCK, it fails immediately. Otherwise, it waits for the timeout threshold.
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
                     .bind(threshold)
                     .execute(sqlite_pool)
@@ -1138,6 +1139,7 @@ impl DB {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+                    // STUCK missions fail immediately without waiting for the timeout threshold
                     total_affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < $1)) AND tenant_id = $2")
                         .bind(threshold)
                         .bind(&tenant_id)
