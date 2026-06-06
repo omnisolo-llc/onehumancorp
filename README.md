@@ -103,6 +103,18 @@ onboarding, orchestration, and growth surfaces for shared-service deployments.
 bazelisk run //:deploy_dev
 ```
 
+**Docker Hub Rate Limits & Local Builds**
+If you encounter a `You have reached your unauthenticated pull rate limit` error when running Docker Compose or `deploy_dev`, you can bypass it by building and loading the required images locally from source:
+
+1.  Build and load the local images into your Docker daemon:
+    ```bash
+    npx @bazel/bazelisk run //deploy:server_load
+    ```
+2.  Use the provided override file to tell Docker Compose to use your local images instead of pulling from the registry:
+    ```bash
+    cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+    ```
+
 Services:
 | Service | Port | Description |
 |---------|------|-------------|
