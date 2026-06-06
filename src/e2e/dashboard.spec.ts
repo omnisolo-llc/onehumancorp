@@ -4,8 +4,8 @@ test.describe('Dashboard Core', () => {
   test('loads the dashboard and business snapshot', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByText("Today's Sales")).toBeVisible();
-    await expect(page.getByText('Business Snapshot')).toBeVisible();
+    await expect(page.getByText('Total Sales')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Business Analytics' })).toBeVisible();
 
     // Assert Growth Hub is present
     await expect(page.getByRole('heading', { name: 'Growth & Virality' })).toBeVisible();

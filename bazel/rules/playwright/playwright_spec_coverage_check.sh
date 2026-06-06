@@ -53,4 +53,11 @@ for spec in "${ci_specs[@]}"; do
   fi
 done
 
-echo "Bazel aggregate CI subset includes ${#ci_specs[@]} of ${#all_specs[@]} discovered Playwright specs."
+missing_specs="$(comm -23 <(printf '%s\n' "$all_unique") <(printf '%s\n' "$ci_unique"))"
+if [[ -n "$missing_specs" ]]; then
+  echo "Playwright Bazel coverage check failed: CI aggregate does not include every discovered spec."
+  printf '%s\n' "$missing_specs" | sed 's/^/missing from CI aggregate: /'
+  exit 1
+fi
+
+echo "Bazel aggregate CI coverage includes all ${#all_specs[@]} discovered Playwright specs."

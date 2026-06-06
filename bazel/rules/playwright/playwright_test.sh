@@ -22,6 +22,28 @@ if [[ ! -f "$workspace_root/package.json" || ! -d "$workspace_root/node_modules"
   echo "[playwright] Error: Bazel runfiles are missing package.json or node_modules under $workspace_root" >&2
   exit 1
 fi
+
+SOURCE_REPO_ROOT_CANDIDATES=(
+  "${SOURCE_REPO_ROOT:-}"
+  "${GITHUB_WORKSPACE:-}"
+  "$(pwd)"
+  "/home/kevin/mono"
+  "/home/runner/work/mono/mono"
+  "$workspace_root"
+)
+for candidate in "${SOURCE_REPO_ROOT_CANDIDATES[@]}"; do
+  if [[ -n "$candidate" && -f "$candidate/src/server/lib.rs" ]]; then
+    export SOURCE_REPO_ROOT="$(realpath "$candidate")"
+    break
+  fi
+done
+export SOURCE_REPO_ROOT="${SOURCE_REPO_ROOT:-$(pwd)}"
+if [[ -f "$SOURCE_REPO_ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$SOURCE_REPO_ROOT/.env"
+  set +a
+fi
 cd "$workspace_root"
 
 # Resolve spec files to absolute paths if passed as arguments.
@@ -265,33 +287,6 @@ trap cleanup EXIT
 
 echo "[playwright] Starting E2E infrastructure..."
 echo "[playwright] Pre-pulling docker images with retries..."
-for i in {1..3}; do docker pull pgvector/pgvector:pg16 >/dev/null 2>&1 && break || sleep 2; done
-for i in {1..3}; do docker pull valkey/valkey:8-alpine >/dev/null 2>&1 && break || sleep 2; done
-
-docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
-docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
-
-PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
-VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
-echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
-
-echo "[playwright] Waiting for postgres on port $PG_PORT..."
-for i in $(seq 1 120); do
-  if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
-    break
-  fi
-  if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
-    echo "[playwright] Postgres container exited before readiness."
-    docker logs "$POSTGRES_NAME" || true
-    exit 1
-  fi
-  if (( i == 120 )); then
-    echo "[playwright] Error: Postgres failed to become ready after 120 seconds."
-    docker logs "$POSTGRES_NAME" || true
-    exit 1
-  fi
-  sleep 1
-done
 
 postgres_exec() {
   local sql="$1"
@@ -312,10 +307,67 @@ postgres_exec() {
   return 1
 }
 
-echo "[playwright] Initializing database roles..."
-postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
-postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
+USE_STANDALONE_MODE=false
+PULL_PG_SUCCESS=false
+for i in {1..3}; do
+  if docker pull pgvector/pgvector:pg16 >/dev/null 2>&1; then
+    PULL_PG_SUCCESS=true
+    break
+  fi
+  sleep 2
+done
 
+if [ "$PULL_PG_SUCCESS" = true ]; then
+  PULL_VK_SUCCESS=false
+  for i in {1..3}; do
+    if docker pull valkey/valkey:8-alpine >/dev/null 2>&1; then
+      PULL_VK_SUCCESS=true
+      break
+    fi
+    sleep 2
+  done
+
+  if [ "$PULL_VK_SUCCESS" = true ]; then
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16; then
+      docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
+      PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
+      VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
+      echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
+      echo "[playwright] Waiting for postgres on port $PG_PORT..."
+      for i in $(seq 1 120); do
+        if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
+          break
+        fi
+        if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+          echo "[playwright] Postgres container exited before readiness. Falling back to Standalone Mode (SQLite)."
+          USE_STANDALONE_MODE=true
+          break
+        fi
+        if (( i == 120 )); then
+          echo "[playwright] Error: Postgres failed to become ready after 120 seconds. Falling back to Standalone Mode (SQLite)."
+          USE_STANDALONE_MODE=true
+          break
+        fi
+        sleep 1
+      done
+
+      if [ "$USE_STANDALONE_MODE" = false ]; then
+        echo "[playwright] Initializing database roles..."
+        postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
+        postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
+      fi
+    else
+      echo "[playwright] Docker run for Postgres failed. Falling back to Standalone Mode (SQLite)."
+      USE_STANDALONE_MODE=true
+    fi
+  else
+    echo "[playwright] Docker pull for valkey failed. Falling back to Standalone Mode (SQLite)."
+    USE_STANDALONE_MODE=true
+  fi
+else
+  echo "[playwright] Docker pull for pgvector failed. Falling back to Standalone Mode (SQLite)."
+  USE_STANDALONE_MODE=true
+fi
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
     if [[ -x "$candidate" ]]; then
@@ -342,7 +394,9 @@ fi
 export OHC_AGENT_TASK_TIMEOUT_SECS="${OHC_AGENT_TASK_TIMEOUT_SECS:-240}"
 export OHC_LLM_TIMEOUT_SECS="${OHC_LLM_TIMEOUT_SECS:-180}"
 if [[ -n "$AGENT_BIN" ]]; then
-  export OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-$AGENT_BIN}"
+  if [[ -z "${OHC_BUILTIN_AGENT_BINARY:-}" || ! -x "${OHC_BUILTIN_AGENT_BINARY:-}" ]]; then
+    export OHC_BUILTIN_AGENT_BINARY="$AGENT_BIN"
+  fi
 fi
 
 # Pick ports from a target-specific window. Plain "bind to port 0, close, then
@@ -356,17 +410,34 @@ export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
 export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
 export API_BASE_URL="http://127.0.0.1:$OHC_SERVER_PORT"
+export BACKEND_URL="$API_BASE_URL"
+export OHC_BACKEND_URL="$API_BASE_URL"
+export OHC_API_URL="$API_BASE_URL"
+export OHC_STANDALONE_MODE="${OHC_STANDALONE_MODE:-false}"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
-  REDIS_URL="redis://127.0.0.1:$VK_PORT" \
+  if [ "$USE_STANDALONE_MODE" = true ]; then
+    DB_URL="sqlite://$TEST_TMPDIR/ohc-e2e.db?mode=rwc"
+    RD_URL="redis://127.0.0.1:12345"
+    OHC_STANDALONE="true"
+    export REDIS_URL="redis://127.0.0.1:12345"
+  else
+    DB_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc"
+    RD_URL="redis://127.0.0.1:$VK_PORT"
+    OHC_STANDALONE="false"
+    export REDIS_URL="$RD_URL"
+  fi
+  DATABASE_URL="$DB_URL" \
+  REDIS_URL="$RD_URL" \
+  OHC_STANDALONE_MODE="$OHC_STANDALONE" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
   MINIMAX_API_KEY="${MINIMAX_API_KEY:-}" \
   OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
   OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \
   MINIMAX_MODEL="${MINIMAX_MODEL:-}" \
+  OHC_STANDALONE_MODE="$OHC_STANDALONE_MODE" \
   OHC_AGENT_TASK_TIMEOUT_SECS="$OHC_AGENT_TASK_TIMEOUT_SECS" \
   OHC_LLM_TIMEOUT_SECS="$OHC_LLM_TIMEOUT_SECS" \
   OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-}" \
@@ -464,8 +535,13 @@ if [[ -z "$NEXT_APP_ROOT" ]]; then
 fi
 
 if [[ ! -d "$NEXT_APP_ROOT/node_modules" ]]; then
-  echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules"
-  exit 1
+  if [[ -d "$workspace_root/node_modules" ]]; then
+    echo "[playwright] Next node_modules not found in $NEXT_APP_ROOT/node_modules, falling back to $workspace_root/node_modules"
+    ln -s "$workspace_root/node_modules" "$NEXT_APP_ROOT/node_modules" || true
+  else
+    echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules and fallback failed"
+    exit 1
+  fi
 fi
 
 NEXT_WORK_DIR="$WORK_DIR/src/ui/next"

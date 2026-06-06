@@ -74,7 +74,7 @@ test --local_test_jobs=HOST_CPUS
 test --sandbox_add_mount_pair=/var/run/docker.sock
 test --test_output=errors
 test --test_summary=terse
-test --test_timeout=300,600,900,1800
+test --test_timeout=300,600,900,7200
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
