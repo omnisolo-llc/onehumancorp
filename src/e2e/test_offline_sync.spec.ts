@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
   test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {

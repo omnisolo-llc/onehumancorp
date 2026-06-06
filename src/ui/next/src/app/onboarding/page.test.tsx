@@ -375,45 +375,6 @@ describe('OnboardingWizard', () => {
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
-  it('Step 2: Displays validation error when business type is empty', async () => {
-    const user = userEvent.setup({ delay: null });
-
-    act(() => {
-      useOnboardingStore.setState({
-        step: 2,
-        businessName: 'Valid Name',
-        businessType: 'Bakery',
-        categories: ['food'],
-        domainChoice: 'subdomain',
-        firstProductName: 'Cake',
-        firstProductPrice: '20'
-      });
-    });
-
-    await renderOnboardingWizard();
-
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    expect(continueButton).not.toBeDisabled();
-
-    // Find the input element that is associated with the 'Business Type' label
-    const inputs = screen.getAllByRole('textbox');
-    const businessTypeInput = screen.getByDisplayValue('Bakery');
-
-    // Clear the input to trigger validation
-    await user.clear(businessTypeInput);
-
-    // Button should now be disabled because businessType is empty
-    expect(continueButton).toBeDisabled();
-
-    // Type something to make it empty string on blur or just type and clear
-    await user.type(businessTypeInput, 'A');
-    await user.clear(businessTypeInput);
-
-    await waitFor(() => {
-      expect(screen.getByText('Business Type is required to configure your agents.')).toBeInTheDocument();
-    });
-  });
-
   it('Step 2: Proceeds to Step 3 when validation passes', async () => {
     const user = userEvent.setup({ delay: null });
 

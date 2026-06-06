@@ -68,24 +68,39 @@ impl TaskDbService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    UPDATE shared_tasks
-                    SET status = 'ASSIGNED', assigned_agent_id = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = (
-                        SELECT id FROM shared_tasks
-                        WHERE status = 'PENDING'
-                        LIMIT 1
-                    )
-                    RETURNING *
+                    SELECT * FROM shared_tasks
+                    WHERE status = 'PENDING'
+                    LIMIT 1
                     "#
                 )
-                .bind(agent_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 if let Some(row) = row_opt {
+                    let id: String = row.get("id");
+
+                    sqlx::query(
+                        r#"
+                        UPDATE shared_tasks
+                        SET status = 'ASSIGNED', assigned_agent_id = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        "#
+                    )
+                    .bind(agent_id)
+                    .bind(&id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    let updated_row = sqlx::query("SELECT * FROM shared_tasks WHERE id = ?")
+                        .bind(&id)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
                     tx.commit().await.map_err(|e| e.to_string())?;
-                    Ok(Some(Self::sqlite_row_to_task(row)))
+                    Ok(Some(Self::sqlite_row_to_task(updated_row)))
                 } else {
                     tx.rollback().await.map_err(|e| e.to_string())?;
                     Ok(None)

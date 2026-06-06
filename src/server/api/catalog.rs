@@ -66,7 +66,7 @@ async fn handle_create_product(
 ) -> impl IntoResponse {
     let tenant_id = claims
         .organization_id
-        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+        .unwrap_or_else(|| "system".to_string());
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,

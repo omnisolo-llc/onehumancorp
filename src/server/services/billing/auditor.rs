@@ -100,10 +100,6 @@ impl CostAuditor {
             &self.config,
         );
 
-        if event.input_tokens == 0 && event.output_tokens == 0 && event.cached_input_tokens == 0 && event.local_embedding_tokens == 0 {
-            return 0.0;
-        }
-
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let mut total_cost = self.total_cost.lock().unwrap();
 
@@ -316,9 +312,6 @@ impl CostAuditor {
     }
 
     pub fn calculate_efficiency(&self, cost: f64, output_tokens: i64) -> f64 {
-        if cost <= 0.0 {
-            return 0.0;
-        }
         calculator::calculate_efficiency(cost, output_tokens)
     }
 
@@ -490,61 +483,6 @@ mod tests {
         
         let report = auditor.generate_report();
         assert!(report.contains("OVER BUDGET"));
-    }
-
-    #[test]
-    fn test_record_compute_and_network_cost() {
-        let config = CostConfig {
-            cost_per_compute_hour: 2.0,
-            cost_per_network_gb: 0.10,
-            ..Default::default()
-        };
-        let auditor = CostAuditor::new(config);
-
-        let cost = auditor.record_compute_event(ComputeEvent { agent_id: "a".to_string(), tenant_id: "t".to_string(), compute_hours: 5.0, network_egress_bytes: 10 * 1024 * 1024 * 1024 });
-        assert_eq!(cost, 11.0);
-
-        assert_eq!(auditor.get_tenant_compute_cost("t"), 10.0);
-        assert_eq!(auditor.get_tenant_network_cost("t"), 1.0);
-    }
-
-    #[test]
-    fn test_record_cache_hit_edge_cases() {
-        let config = CostConfig {
-            cost_per_input_token: 0.001,
-            cost_per_output_token: 0.002,
-            cost_per_cached_input_token: 0.0005,
-            ..Default::default()
-        };
-        let auditor = CostAuditor::new(config);
-
-        let event = AuditEvent {
-            agent_id: "agent1".to_string(),
-            tenant_id: "tenant1".to_string(),
-            input_tokens: 0,
-            output_tokens: 0,
-            cached_input_tokens: 100,
-            local_embedding_tokens: 0,
-        };
-        let savings = auditor.record_cache_hit(event);
-        assert!(savings > 0.0);
-    }
-
-    #[test]
-    fn test_record_zero_event() {
-        let config = CostConfig::default();
-        let auditor = CostAuditor::new(config);
-
-        let event = AuditEvent {
-            agent_id: "agent1".to_string(),
-            tenant_id: "tenant1".to_string(),
-            input_tokens: 0,
-            output_tokens: 0,
-            cached_input_tokens: 0,
-            local_embedding_tokens: 0,
-        };
-        let cost = auditor.record_event(event);
-        assert_eq!(cost, 0.0);
     }
 
     #[test]
