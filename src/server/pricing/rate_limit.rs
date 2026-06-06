@@ -52,8 +52,8 @@ impl PlanTier {
 
         match self {
             PlanTier::Free => Some(500),
-            PlanTier::Starter => Some(5000), // 5GB
-            PlanTier::Pro => Some(50000),    // 50GB
+            PlanTier::Starter => Some(5120), // 5GB
+            PlanTier::Pro => Some(51200),    // 50GB
             PlanTier::Business => Some(512000),      // 500GB
         }
     }
@@ -394,8 +394,8 @@ mod tests {
         assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
 
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
-        assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
-        assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
+        assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5120));
+        assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(51200));
         assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 
         assert_eq!(PlanTier::Free.max_agents(), Some(1));
