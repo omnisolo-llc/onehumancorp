@@ -99,4 +99,64 @@ mod tests {
         assert_eq!(integration.tenant_id, "tenant-456");
         assert!(integration.integration_code.clone().unwrap_or_default().contains("DummyAPIClient"));
     }
+
+    #[tokio::test]
+    async fn test_scout_db_get_all_integrations_by_tenant() {
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to create pool");
+
+        sqlx::query(r#"
+            CREATE TABLE tool_integrations (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                api_url TEXT,
+                integration_code TEXT,
+                status TEXT NOT NULL,
+                created_at DATETIME NOT NULL
+            );
+        "#)
+        .execute(&pool)
+        .await
+        .expect("Failed to create table");
+
+        let db = ScoutDb::new_sqlite(pool);
+        let bus = Arc::new(SubagentBus::new());
+
+        let agent = ScoutAgent::new(db.clone(), bus.clone());
+
+        let _id1 = agent.process_tool_request(
+            "tenant-list",
+            "Tool1",
+            Some("Tool 1"),
+            None
+        ).await.expect("Failed to process tool 1 request");
+
+        let _id2 = agent.process_tool_request(
+            "tenant-list",
+            "Tool2",
+            Some("Tool 2"),
+            None
+        ).await.expect("Failed to process tool 2 request");
+
+        let _id_other = agent.process_tool_request(
+            "tenant-other",
+            "ToolOther",
+            None,
+            None
+        ).await.expect("Failed to process other tool request");
+
+        let integrations = db.get_all_integrations_by_tenant("tenant-list").await.expect("Failed to get all integrations");
+
+        assert_eq!(integrations.len(), 2);
+
+        // Assert we have both Tool1 and Tool2
+        let names: std::collections::HashSet<_> = integrations.iter().map(|i| i.name.as_str()).collect();
+        assert!(names.contains("Tool1"));
+        assert!(names.contains("Tool2"));
+        assert!(!names.contains("ToolOther"));
+    }
 }
