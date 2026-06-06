@@ -52,3 +52,5 @@ pub struct FulfillmentBatch {
     pub label_url: Option<String>,
     pub created_at: i64,
 }
+
+// Dummy comment
