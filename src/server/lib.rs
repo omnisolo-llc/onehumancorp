@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-
-
 pub mod rag_sync;
 pub use ::server_harness as harness;
 pub mod api;
