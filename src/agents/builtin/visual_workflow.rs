@@ -163,10 +163,17 @@ impl WorkflowExecutor {
                     let tool = self.tools.iter().find(|t| &t.name == tool_name)
                         .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await
-                        .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
+                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await;
 
-                    state.insert(node.id.clone(), result);
+                    let result_str = match result {
+                        Ok(res) => res,
+                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                            format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg)
+                        }
+                        Err(e) => return Err(format!("Tool {} execution failed: {}", tool_name, e)),
+                    };
+
+                    state.insert(node.id.clone(), result_str);
                 }
                 NodeType::Condition { condition_expression, true_target, false_target } => {
                     let mut expr = condition_expression.clone();
@@ -292,10 +299,17 @@ impl WorkflowExecutor {
                     let tool = self.tools.iter().find(|t| &t.name == tool_name)
                         .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await
-                        .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
+                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await;
 
-                    state.insert(node.id.clone(), result);
+                    let result_str = match result {
+                        Ok(res) => res,
+                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                            format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg)
+                        }
+                        Err(e) => return Err(format!("Tool {} execution failed: {}", tool_name, e)),
+                    };
+
+                    state.insert(node.id.clone(), result_str);
                 }
                 NodeType::Condition { condition_expression, true_target, false_target } => {
                     let mut expr = condition_expression.clone();
