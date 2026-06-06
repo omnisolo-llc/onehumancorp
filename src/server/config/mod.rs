@@ -283,7 +283,7 @@ mod tests {
         }
 
         let cfg = load().unwrap();
-        assert_eq!(cfg.telemetry_enabled, true);
+        assert!(cfg.telemetry_enabled);
 
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
@@ -291,7 +291,7 @@ mod tests {
         }
 
         let cfg2 = load().unwrap();
-        assert_eq!(cfg2.telemetry_enabled, false);
+        assert!(!(cfg2.telemetry_enabled));
 
         unsafe {
             env::remove_var("OHC_TELEMETRY_ENABLED");

@@ -13,7 +13,7 @@ mod tests {
             || {
                 let provider = ChromaDbProvider::new();
                 assert_eq!(provider.metadata.id, "chromadb");
-                assert_eq!(provider.is_mock, false);
+                assert!(!(provider.is_mock));
                 assert_eq!(provider.base_url, "http://127.0.0.1:9000");
 
                 let ip = provider.to_integration_provider();
@@ -32,7 +32,7 @@ mod tests {
             ],
             || {
                 let provider = ChromaDbProvider::new();
-                assert_eq!(provider.is_mock, true);
+                assert!(provider.is_mock);
                 assert_eq!(provider.base_url, "mock://chromadb");
 
                 let ip = provider.to_integration_provider();
@@ -52,7 +52,7 @@ mod tests {
             ],
             || {
                 let provider = ChromaDbProvider::new();
-                assert_eq!(provider.is_mock, false);
+                assert!(!(provider.is_mock));
                 assert_eq!(provider.base_url, "http://localhost:8000");
             },
         );
