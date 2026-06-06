@@ -213,3 +213,16 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct YieldOpportunity {
+    pub id: String,
+    pub tenant_id: String,
+    pub service_id: String,
+    pub target_date: String,
+    pub empty_slots: i32,
+    pub proposed_discount: i32,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

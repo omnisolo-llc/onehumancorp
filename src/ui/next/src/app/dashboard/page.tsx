@@ -74,6 +74,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [yieldOpportunities, setYieldOpportunities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
@@ -109,27 +110,30 @@ export default function Dashboard() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, yieldRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
+          fetch(`/api/ui/yield-opportunities?tenant_id=${tenant}`),
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok || !yieldRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, yieldData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
+          yieldRes.json(),
         ]);
 
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setYieldOpportunities(Array.isArray(yieldData?.opportunities) ? yieldData.opportunities : []);
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
@@ -232,9 +236,47 @@ export default function Dashboard() {
         {error && <div className="app-badge bad">{error}</div>}
       </div>
 
+
       <div className="mb-6">
         <OneTapReferral tenantId={tenantId()} source="dashboard" />
       </div>
+
+      {yieldOpportunities.length > 0 && (
+        <section className="mb-6">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="app-panel-title">Yield Opportunities</h2>
+              <p className="app-list-subtitle">Fill your upcoming empty slots autonomously.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {yieldOpportunities.map((opp) => (
+              <div key={opp.id} className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all group border border-white/40 dark:border-white/10 bg-indigo-50/50 dark:bg-indigo-900/10">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
+                  <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1 rounded-full">Yield</div>
+                </div>
+                <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-2">
+                  {userName}, you have {opp.empty_slots} empty slots on {opp.target_date}.
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Tap to send a {opp.proposed_discount}% discount offer to your waitlist.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setYieldOpportunities((prev) => prev.filter((o) => o.id !== opp.id));
+                    await fetch(`/api/ui/yield-opportunities/${opp.id}/approve`, { method: "POST" });
+                  }}
+                  className="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  Approve Offer
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="app-panel mb-6">
         <div className="app-panel-header">
