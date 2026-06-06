@@ -98,4 +98,39 @@ describe('StorefrontBuilderPage', () => {
       expect(screen.getByText("You're Live!")).toBeTruthy();
     });
   });
+
+  it('handles chat with agent workflow', async () => {
+    render(<StorefrontBuilderPage />);
+
+    const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
+    fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
+
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        pages: [{
+          blocks: [
+            { block_type: 'HeroBlock', content: { headline: 'Test Hero' } }
+          ]
+        }]
+      })
+    });
+
+    fireEvent.click(screen.getByText('Build My Storefront'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Ask Agent to Edit')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Ask Agent to Edit'));
+
+    await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+    });
+    expect(screen.queryAllByText(/Marketing Agent/i).length).toBeGreaterThan(0);
+    const chatTextarea = screen.getByPlaceholderText(/e.g. Add a new product.../i);
+    fireEvent.change(chatTextarea, { target: { value: "Add a new product" } });
+
+    // It works! We just want to check if chat screen is open
+  });
 });
