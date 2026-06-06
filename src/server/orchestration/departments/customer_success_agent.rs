@@ -28,6 +28,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
+            "tenant.cart.abandoned".to_string(),
         ]
     }
 
@@ -82,6 +83,33 @@ impl Department for CustomerSuccessAgent {
                 metadata: None,
             };
             self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.cart.abandoned" {
+            let cart_total = event.payload.get("cart_total").and_then(|v| v.as_str()).unwrap_or("$0");
+            let item_name = event.payload.get("item_name").and_then(|v| v.as_str()).unwrap_or("items");
+
+            let generated_response = format!(
+                "Hi! Looks like you left the {} in your cart. Still interested? Let us know!",
+                item_name
+            );
+
+            let action_payload = serde_json::json!({
+                "feature_type": "cart_recovery",
+                "cart_total": cart_total,
+                "item_name": item_name,
+                "generated_response": generated_response,
+            });
+
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                format!("Recover Cart: {}. Drafted message: '{}'", cart_total, generated_response),
+                event.tenant_id.clone(),
+                risk,
+                action_payload,
+            ).await.map(|_| ())?;
 
             return Ok(());
         }

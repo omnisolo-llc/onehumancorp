@@ -22,6 +22,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.cart.updated".to_string(),
         ]
     }
 
@@ -39,9 +40,22 @@ impl Department for OperationsAgent {
 
         let action_description = if event.event_type == "tenant.order.created" {
             "Process Order & Update Inventory".to_string()
+        } else if event.event_type == "tenant.cart.updated" {
+            "Monitor Abandoned Cart".to_string()
         } else {
             "Create order and booking".to_string()
         };
+
+        if event.event_type == "tenant.cart.updated" {
+            let cs_event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.cart.abandoned".to_string(),
+                payload: event.payload.clone(),
+            };
+            // Simulate 1 hour timeout (in a real system we would use a scheduler)
+            return self.orchestrator.dispatch_event(cs_event).await;
+        }
 
         self.orchestrator.execute_action(
             DepartmentType::Operations,
