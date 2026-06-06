@@ -33,7 +33,7 @@ test.describe('Growth Feature: Social Proof Nudge', () => {
 
         await page.route('https://ohc.app/widgets/social-proof.js', async route => {
             const fs = require('fs');
-            const script = fs.readFileSync('public/widgets/social-proof.js');
+            const script = fs.readFileSync('public/widgets/social-proof.ts');
             await route.fulfill({ body: script, contentType: 'application/javascript' });
         });
 
