@@ -2,34 +2,34 @@ import { test, expect } from './fixtures';
 
 test.describe('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page }) => {
-    let stateReads = 0;
-    await page.route('**/api/onboarding/state', async route => {
-      if (route.request().method() === 'POST') {
-        await route.fulfill({ json: { ok: true } });
-        return;
-      }
-      stateReads += 1;
-      await route.fulfill({
-        json: {
-          wizardState: stateReads === 1 ? {} : { chatStep: 1, businessName: 'Cross Device Bakery' },
-        },
-      });
-    });
-    await page.route('**/api/onboarding/draft', route => route.fulfill({ json: { ok: true } }));
+    const id = `cross-device-${Date.now()}-${Math.random()}`;
+    await page.addInitScript((tenantId) => {
+      localStorage.setItem('tenant_id', tenantId);
+      localStorage.setItem('user_id', tenantId);
+      localStorage.removeItem('ohc_wizard_state');
+      localStorage.removeItem('onboarding-storage-v3');
+      localStorage.removeItem('website-builder-storage');
+    }, id);
 
     // 1. Owner starts onboarding directly from the current route.
-    await page.goto('/onboarding');
-    await expect(page.getByText(/Welcome|Tell us about your business/)).toBeVisible();
-    const startButton = page.getByRole('link', { name: 'Start Onboarding' });
-    if (await startButton.isVisible()) {
-      await startButton.click({ force: true });
-    }
+    await page.goto('/website-builder');
+    await page.waitForLoadState('networkidle');
 
-    // Verify it landed on the Onboarding page
-    await expect(page.getByText('Tell us about your business')).toBeVisible();
+    // Check we landed on the Welcome screen.
+    await expect(page.getByText(/Your business, live in minutes./)).toBeVisible();
+
+    // Choose start business manually
+    await page.getByRole('button', { name: /Start My Business/i }).click();
+
+    // Verify it landed on the Business Type screen
+    await expect(page.getByText('What kind of business are you building?')).toBeVisible();
+
+    // Select type and progress
+    await page.getByRole('button', { name: /Online Store/i }).click();
 
     // 2. Owner enters business name
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
+    await expect(page.getByText('Give your business a name')).toBeVisible();
+    const nameInput = page.getByPlaceholder(/What is your business called\?/i);
     await nameInput.fill('Cross Device Bakery');
 
     // 3. Click Save Draft
@@ -37,10 +37,19 @@ test.describe('Cross Device Onboarding CUJ', () => {
     await saveDraftBtn.click();
     await expect(page.getByText('Draft Saved!')).toBeVisible();
 
+    // Clear local storage to simulate device switch but keep tenant info to restore the backend state
+    await page.evaluate((tenantId) => {
+      window.localStorage.clear();
+      localStorage.setItem('tenant_id', tenantId);
+      localStorage.setItem('user_id', tenantId);
+    }, id);
+
     // 4. Simulate a cross-device session or reload
     await page.reload();
 
-    // 5. Verify the business name was properly restored
-    await expect(page.getByPlaceholder(/e.g. Maya's Custom Cakes/i)).toHaveValue('Cross Device Bakery', { timeout: 10000 });
+    // 5. Verify the business name was properly restored to 'Cross Device Bakery'
+    // This expects to find the input restored with the saved state.
+    await expect(page.getByText('Give your business a name')).toBeVisible();
+    await expect(page.getByPlaceholder(/What is your business called\?/i)).toHaveValue('Cross Device Bakery', { timeout: 10000 });
   });
 });

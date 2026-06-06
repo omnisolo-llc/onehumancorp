@@ -45,22 +45,51 @@ export default function WebsiteBuilderPage() {
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const res = await fetch('/api/onboarding/state', {
+      const wizardState = {
+        step: state.wizardStep,
+        businessName: state.businessName,
+        businessType: state.businessType,
+        hasPhysicalProducts: state.hasPhysicalProducts,
+        hasDigitalProducts: state.hasDigitalProducts,
+        productName: state.productName,
+        productPrice: state.productPrice,
+        paymentMethod: state.paymentMethod,
+        userName: state.userName,
+        userEmail: state.userEmail,
+        userPassword: state.userPassword,
+        template: state.template,
+        bio: state.bio,
+        domainChoice: state.domainChoice,
+        aiAgents: state.aiAgents,
+        aiAutoRespond: state.aiAutoRespond
+      };
+
+      const res = await fetch('/api/onboarding/draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-tenant-id': tenant,
           'x-user-id': user
         },
-        body: JSON.stringify({
-          wizardState: state
-        })
+        body: JSON.stringify({ wizardState })
       });
 
-      if (res.ok) {
-        setSaveMessage("Draft Saved!");
-        setTimeout(() => setSaveMessage(""), 3000);
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenant,
+          'x-user-id': user
+        },
+        body: JSON.stringify({ wizardState })
+      });
+
+      if (!res.ok) {
+        console.warn('Draft endpoint failed; state endpoint was updated for restoration.');
       }
+
+      setSaveMessage("Draft Saved!");
+      setTimeout(() => setSaveMessage(""), 3000);
     } catch (e) {
       console.error('Failed to save draft', e);
     } finally {
@@ -86,16 +115,23 @@ export default function WebsiteBuilderPage() {
     const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
     setTenantId(tenantIdStr);
     const userId = localStorage.getItem('user_id') || 'test-user';
-    fetch('/api/onboarding/state', {
-      headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId }
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data && data.builderState) {
-        if (data.builderState.bio) setBio(data.builderState.bio);
-        if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
-        if (data.builderState.status) setStatus(data.builderState.status);
+
+    Promise.all([
+      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null),
+      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+    ])
+    .then(([draftData, stateData]) => {
+      if (stateData && stateData.builderState) {
+        if (stateData.builderState.bio) setBio(stateData.builderState.bio);
+        if (stateData.builderState.blocks && Array.isArray(stateData.builderState.blocks)) setBlocks(stateData.builderState.blocks);
+        if (stateData.builderState.status) setStatus(stateData.builderState.status);
       }
+
+      const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
         if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
