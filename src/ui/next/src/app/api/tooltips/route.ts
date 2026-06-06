@@ -11,9 +11,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({}, { status: res.status });
-  } catch (e) {
-    console.error("Failed to fetch tooltips from backend:", e);
-    return NextResponse.json({}, { status: 500 });
+    return NextResponse.json({ error: `Backend returned ${res.status}` }, { status: res.status });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Unknown error';
+    console.error("Failed to fetch tooltips from backend:", message);
+    return NextResponse.json({ error: "Failed to fetch tooltips" }, { status: 500 });
   }
 }

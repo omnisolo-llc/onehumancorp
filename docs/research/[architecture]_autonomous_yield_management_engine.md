@@ -1,34 +1,82 @@
-# Autonomous Yield Management Engine
+# [Architecture] Autonomous Yield Management Engine: AI-Driven Dynamic Pricing and Capacity Optimization
 
-## Problem Statement
-Small business owners in the services and bookings sector (e.g., Leo the Music Tutor, fitness studios, salons) often struggle with empty calendar slots and sub-optimal pricing. They lack the time and data analysis skills to dynamically adjust prices based on demand, seasonality, or last-minute availability. As a result, they leave significant revenue on the table and face inefficient capacity utilization. From a non-technical user's perspective, they just see "empty slots" and don't know how to fill them without manually emailing customers or dropping prices across the board, which devalues their service.
+## 1. Title
+**Autonomous Yield Management Engine: AI-Driven Dynamic Pricing and Capacity Optimization**
 
-## Research Report
-- **Market Context**: Airlines and hotels use sophisticated yield management to maximize revenue per available unit. SMBs currently have no access to such tools.
-- **Competitor Analysis**:
-  - **Shopify/Wix**: Focus on static product pricing. Any dynamic pricing requires complex third-party apps (e.g., Bold Custom Pricing) that are not tailored for services/bookings.
-  - **Acuity/Calendly**: Allow for coupons but do not autonomously adjust prices based on real-time availability.
-- **OHC Opportunity**: OHC can differentiate by embedding an *Invisible AI Yield Manager* that autonomously adjusts service prices and triggers targeted promotions to fill unused capacity, requiring zero configuration from the business owner.
+## 2. Problem Statement
+For OneHumanCorp (OHC)'s core personas—especially **Leo (music tutor, 22)** and **Fatima (food cart operator, 50)**—managing capacity and pricing is a significant challenge. When demand is high (e.g., Leo's prime after-school slots or Fatima's lunch rush), they miss out on potential revenue because their prices are static. Conversely, during slow periods, capacity goes unused. Existing platforms (Shopify, Wix) treat pricing as a fixed attribute, requiring manual intervention to run sales or adjust prices, which non-technical users find tedious and often forget to do. This results in lost revenue and inefficient capacity utilization. We need an autonomous engine that acts as a "Yield Manager," automatically adjusting prices and managing capacity based on real-time demand, seasonality, and historical data, without the user lifting a finger.
 
-## Design Doc
-- **Architecture**:
-  - **Data Model**: Extend the existing calendar/booking schema to track utilization rates per service type and time slot.
-  - **AI Yield Agent**: A background worker (part of the Finance & Payments / Operations department) that continuously monitors booking velocity and upcoming availability.
-  - **Pricing Rules Engine**: Simple, LLM-driven heuristics (e.g., "If tomorrow has >50% empty slots, offer a 15% discount to past customers who haven't booked in 30 days").
-  - **Integration**: Plugs into the existing quoting and booking system.
-- **Mobile UX**:
-  - 375px view: A single card on the dashboard showing "Yield Opportunities."
-  - "Leo, you have 3 empty guitar slots tomorrow. Tap to send a 20% discount offer to your waitlist." (1-tap approval).
-- **Multi-Tenant Isolation**: Ensure yield rules and utilization data are strictly scoped per `tenant_id`.
+## 3. Research Report
+### Competitive Analysis
+*   **Shopify/Wix:** Pricing is static. Merchants must manually create discount codes or adjust prices for sales. They lack any built-in dynamic pricing or capacity-aware yield management.
+*   **Airlines/Hotels (e.g., Sabre, Amadeus):** Highly sophisticated yield management systems, but far too complex and completely inaccessible for SMBs.
+*   **Uber/Lyft:** "Surge pricing" is highly effective but platform-controlled, not merchant-controlled.
 
-## Implementation Prompt
-**Outcome**: Implement the backend logic and mobile-first UI for the Autonomous Yield Management Engine.
-**CUJ**:
-1. Leo (Music Tutor) logs into the OHC app.
-2. The dashboard displays a notification: "3 empty slots tomorrow. Send a 20% discount offer to 15 past students?"
-3. Leo taps "Approve."
-4. The system updates the price for those specific slots and dispatches notifications via the Ambassador Agent.
-**Acceptance Criteria**:
-- Backend worker capable of identifying low-utilization periods.
-- UI card component (375px optimized) for 1-tap approval.
-- E2E Playwright test verifying the approval flow and subsequent price adjustment.
+### Market Data
+*   Dynamic pricing can increase revenue by 5-10% according to retail industry studies, yet fewer than 1% of SMBs use it due to complexity.
+*   Service businesses (like tutoring or salons) often have 20-30% unused capacity during off-peak hours.
+
+### Opportunity
+OHC can democratize yield management. By introducing an autonomous AI "Advisor/Yield Manager," we can automatically optimize pricing for both physical goods (based on inventory levels and velocity) and services (based on calendar slot availability and demand). This directly increases the bottom line for OHC merchants, making the platform indispensable.
+
+## 4. Design Doc
+
+### Architecture Diagram (Mermaid.js)
+```mermaid
+sequenceDiagram
+    participant Customer as Customer (Web/Mobile)
+    participant Gateway as Edge Gateway
+    participant YieldEngine as Autonomous Yield Engine
+    participant Inventory as Universal Inventory Ledger
+    participant Calendar as Booking/Capacity Mesh
+    participant FinanceAI as The Accountant (AI)
+    participant DB as Multi-Tenant DB (PostgreSQL)
+
+    Customer->>Gateway: Request product/service price
+    Gateway->>YieldEngine: Get current dynamic price
+    YieldEngine->>Inventory: Check stock velocity & levels
+    YieldEngine->>Calendar: Check slot availability/demand
+    YieldEngine->>DB: Fetch historical baseline & rules
+    YieldEngine->>FinanceAI: Evaluate price elasticity
+    FinanceAI-->>YieldEngine: Suggest optimized price
+    YieldEngine-->>Gateway: Return optimized price
+    Gateway-->>Customer: Display price
+```
+
+### Mobile UX Flow
+**Screen 1: Yield Management Settings (Advanced)**
+*   Clean, Translucent Glass card under Finance/Pricing.
+*   Toggle: `[ Enable Smart Pricing ]`
+*   Sliders: "Minimum Acceptable Price" and "Maximum Price Cap" (to protect brand perception).
+*   Toggle: `[ Auto-discount slow inventory ]`
+*   Toggle: `[ Surge price high-demand slots ]`
+
+**Screen 2: Business Advisory Report (Action Feed)**
+*   Weekly plain-text summary from "The Advisor":
+    *   *"Smart Pricing earned you an extra $45 this week! We slightly raised the price for your Tuesday 4 PM guitar lesson slot because it's always booked, and offered a 10% discount on Wednesday morning slots, filling two empty spaces."*
+
+### AI Agent Integration Points
+*   **The Accountant / The Advisor (Finance/Advisory AI):** Analyzes historical sales velocity, calendar density, and seasonality to determine the optimal price point within user-defined bounds.
+*   **The Vigilant Manager (Ops AI):** Feeds real-time inventory levels and booking capacity data into the Yield Engine.
+
+### Key Design Decisions
+*   **Guardrails are Mandatory:** The user MUST set minimum and maximum price bounds. AI should never price a product at $0.01 or $10,000 without explicit permission.
+*   **Transparency:** The merchant must always know *why* a price changed via the Business Advisory weekly reports.
+*   **Edge-Cached but Dynamic:** The Yield Engine must operate with very low latency. Prices might be cached at the edge for short TTLs but must reflect real-time demand shifts.
+
+## 5. Implementation Prompt
+**To the Implementer:**
+Your task is to implement the core logic and data models for the Autonomous Yield Management Engine.
+*   Create the necessary database schemas (tenant-isolated) to store pricing rules, minimum/maximum bounds, and historical price elasticity data.
+*   Implement the `YieldEngine` service that calculates dynamic prices based on current inventory/capacity (which you will mock or fetch from existing services) and predefined rules.
+*   Expose a gRPC/REST endpoint to fetch the current optimized price for a given product/service.
+*   Ensure the engine respects the user-defined upper and lower bounds.
+*   Write comprehensive unit tests ensuring the pricing algorithm never violates the bounds and scales correctly with demand inputs.
+
+*(Do not build the full UI, just the backend engine and API.)*
+
+## 6. Priority
+`P1` (High)
+
+## 7. Estimated Scope
+Medium
