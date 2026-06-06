@@ -197,7 +197,7 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <NeighborhoodPulseCard tenant={tenantId} />
+      <NeighborhoodPulseCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
