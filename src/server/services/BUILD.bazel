@@ -78,8 +78,6 @@ rust_library(
         "//src/server/services/sync:telemetry_sync.rs",
         "//src/server/services/pos:mod.rs",
         "//src/server/services/pos:service.rs",
-        "//src/server/services/collective:mod.rs",
-        "//src/server/services/collective:service.rs",
         "//src/server/services/syndication:adapter.rs",
         "//src/server/services/syndication:mesh.rs",
         "//src/server/services/syndication:mod.rs",
@@ -201,7 +199,6 @@ rust_test(
 rust_sharded_test(
     name = "server_services_unit_test",
     size = "large",
-    timeout = "eternal",
     binary = ":server_services_unit_test_bin",
     shard_count = 6,
     target_compatible_with = select({

@@ -11,16 +11,6 @@ exports_files(glob([
 ]))
 
 filegroup(
-    name = "next_e2e_specs",
-    srcs = glob([
-        "e2e/*.spec.ts",
-        "src/e2e/*.spec.ts",
-        "src/e2e/fixtures/*",
-    ]),
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "next_app_e2e_data",
     srcs = glob(
         [

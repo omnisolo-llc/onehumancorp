@@ -598,13 +598,9 @@ export PLAYWRIGHT_HTML_REPORT="$BASE_OUTPUT_DIR/report"
 mkdir -p "$PLAYWRIGHT_OUTPUT_DIR"
 mkdir -p "$PLAYWRIGHT_HTML_REPORT"
 
-# Prepare sharding argument if running under Bazel sharding or a generated
-# shard target.
+# Prepare sharding argument if running under Bazel sharding
 PLAYWRIGHT_SHARD_ARG=""
-if [[ -n "${PLAYWRIGHT_SHARD:-}" ]]; then
-  PLAYWRIGHT_SHARD_ARG="--shard=${PLAYWRIGHT_SHARD}"
-  echo "[playwright] Playwright sharding active: running shard ${PLAYWRIGHT_SHARD}"
-elif [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
+if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   SHARD_INDEX=$((TEST_SHARD_INDEX + 1))
   PLAYWRIGHT_SHARD_ARG="--shard=${SHARD_INDEX}/${TEST_TOTAL_SHARDS}"
   echo "[playwright] Bazel sharding active: running shard ${SHARD_INDEX} of ${TEST_TOTAL_SHARDS}"

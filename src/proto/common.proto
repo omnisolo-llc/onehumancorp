@@ -26,7 +26,6 @@ enum Role {
   AUDIT_MANAGER = 17;
   PAYROLL_MANAGER = 18;
   AI_NEWS_COLLECTOR = 19;
-  OPERATIONS_MANAGER = 20;
 }
 
 enum AgentStatus {

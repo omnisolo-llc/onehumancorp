@@ -600,19 +600,13 @@ export default function WebsiteBuilderPage() {
                       onClick={async () => {
                         if (!bio.trim()) return;
                         setStatus('generating');
-                        let completed = false;
-                        const finishWithFallback = () => {
-                          if (completed) return;
-                          completed = true;
+                        const safetyTimeout = window.setTimeout(() => {
                           setBusinessName('My Business');
                           setBusinessType('Online Store');
                           setProductName('First Product');
                           setProductPrice('10.00');
                           setStatus('live');
-                        };
-                        const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
-                        const controller = new AbortController();
-                        const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
+                        }, 10000);
                         try {
                           const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
                           const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -624,14 +618,11 @@ export default function WebsiteBuilderPage() {
                               'X-Tenant-ID': tenantIdStr,
                               'X-User-ID': userIdStr,
                             },
-                            body: JSON.stringify({ description: bio }),
-                            signal: controller.signal,
+                            body: JSON.stringify({ description: bio })
                           });
 
                           const data = await res.json();
                           if (res.ok) {
-                            completed = true;
-                            window.clearTimeout(safetyTimeout);
                             setBusinessName(data.business_name || 'My Business');
                             setBusinessType(data.business_type || 'Online Store');
                             setProductName(data.initial_products?.[0]?.name || 'First Product');
@@ -639,17 +630,24 @@ export default function WebsiteBuilderPage() {
 
                             // Let the debounce save it
                             setTimeout(() => {
+                              window.clearTimeout(safetyTimeout);
                               setStatus('live');
                             }, 2000);
                           } else {
+                            window.clearTimeout(safetyTimeout);
                             console.error('Failed to generate storefront:', data);
-                            finishWithFallback();
+                            if (useWebsiteBuilderStore.getState().status === 'generating') {
+                              setStatus('idle');
+                              alert('Failed to generate storefront. Please try again.');
+                            }
                           }
                         } catch (err) {
+                          window.clearTimeout(safetyTimeout);
                           console.error(err);
-                          finishWithFallback();
-                        } finally {
-                          window.clearTimeout(abortTimeout);
+                          if (useWebsiteBuilderStore.getState().status === 'generating') {
+                            setStatus('idle');
+                            alert('Failed to generate storefront. Please try again.');
+                          }
                         }
                       }}
                     >

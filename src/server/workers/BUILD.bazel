@@ -121,7 +121,6 @@ rust_library(
 rust_test(
     name = "server_workers_unit_test",
     size = "large",
-    timeout = "eternal",
     crate = ":server_workers",
     edition = "2024",
     env = {

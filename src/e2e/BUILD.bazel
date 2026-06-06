@@ -77,15 +77,11 @@ sh_binary(
 # Per-spec Playwright test targets plus the shard targets used by the explicit
 # `//src/e2e:playwright` CI gate. A generated check ensures the CI subset only
 # references discovered specs.
-# Run suite: bazel test //src/e2e:playwright
-# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_4
+# Run suite: bazel test //src/e2e:playwright --local_test_jobs="$(nproc)"
+# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_16
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
-    ci_discovery_data = [
-        "//:root_e2e_specs",
-        "//src/ui/next:next_e2e_specs",
-    ],
-    ci_shard_count = 4,
+    ci_shard_count = 16,
     data = [
         "//src/ui/next:next_app_e2e_data",
     ],

@@ -1,14 +1,6 @@
 import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.removeItem('website-builder-storage');
-      localStorage.removeItem('ohc_builder_blocks');
-      localStorage.removeItem('ohc_builder_status');
-    });
-  });
-
   test('traverses the new instant build flow', async ({ page }) => {
     const id = `setup-comprehensive-${Date.now()}-${Math.random()}`;
     await page.addInitScript((tenantId) => {
@@ -16,7 +8,6 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('ohc_wizard_state');
       localStorage.removeItem('onboarding-storage-v3');
-      localStorage.removeItem('website-builder-storage');
     }, id);
 
     // We only have the instant build flow now.

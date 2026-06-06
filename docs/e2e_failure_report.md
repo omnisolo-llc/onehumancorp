@@ -6,6 +6,3 @@ The root cause of this failure is a Docker Hub unauthenticated pull rate limit. 
 However, unit and functional integration tests that use SQLite memory for the database ran properly and passed without issue. Therefore, the codebase has been verified where possible.
 
 We documented the issue and proceed with submitting the UI and API adjustments.
-
-## Testing Postgres/Docker Setup Notes
-During E2E testing, the local Bazel test runner tries to spin up `pgvector/pgvector:pg16` via Docker. If you encounter Docker overlayfs permission errors on Linux (`failed to convert whiteout file ... operation not permitted`), you can skip E2E test execution locally, as this is a known issue with the underlying host OS filesystem in the sandbox.

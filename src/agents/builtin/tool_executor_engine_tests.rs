@@ -41,14 +41,8 @@ mod tests {
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
     use serde_json::json;
+    use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{Arc, OnceLock};
-
-    static USER_INPUT_ENV_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
-
-    fn user_input_env_lock() -> &'static tokio::sync::Mutex<()> {
-        USER_INPUT_ENV_LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
-    }
 
     struct DummyToolExecutor {
         result: Result<String, ToolError>,
@@ -314,7 +308,6 @@ mod tests {
 
     #[tokio::test()]
     async fn test_user_fixable() {
-        let _env_guard = user_input_env_lock().lock().await;
         unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let tool = Tool {
             name: "dummy".to_string(),
@@ -343,7 +336,6 @@ mod tests {
 
     #[tokio::test()]
     async fn test_user_fixable_resolve() {
-        let _env_guard = user_input_env_lock().lock().await;
         unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "here is the fix"); }
         let tool = Tool {
             name: "dummy".to_string(),

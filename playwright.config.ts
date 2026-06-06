@@ -19,8 +19,6 @@ const actionTimeout = process.env.PLAYWRIGHT_ACTION_TIMEOUT
   ? Number.parseInt(process.env.PLAYWRIGHT_ACTION_TIMEOUT, 10)
   : 0;
 
-const video = process.env.PLAYWRIGHT_VIDEO || 'on';
-
 export default defineConfig({
   testDir: './src/e2e',
   globalSetup: './src/e2e/global-setup.ts',
@@ -36,7 +34,7 @@ export default defineConfig({
     actionTimeout: Number.isFinite(actionTimeout) ? actionTimeout : 0,
     trace: 'on-first-retry',
     screenshot: 'on',
-    video: video as 'on' | 'off' | 'retain-on-failure' | 'on-first-retry',
+    video: 'on',
   },
   projects: [
     {
