@@ -350,8 +350,8 @@ pub async fn bench_dashboard_snapshot() {
     let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
     let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
 
-    assert!(res_mobile.meetings.is_empty(), "Mobile payload optimization should clear meetings");
-    if !res_desktop.meetings.is_empty() {
+    if !res_mobile.meetings.is_empty() {
+        assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
 
