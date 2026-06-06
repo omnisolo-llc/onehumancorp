@@ -12,8 +12,7 @@ export default function ChangelogPage() {
         "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
         "### 🛠️ Improvements",
         "- Faster loading times for product images.",
-        "- Simplified checkout process for your customers.",
-        "This is a plain paragraph test line."
+        "- Simplified checkout process for your customers."
       ]
     }
   ];
