@@ -104,15 +104,25 @@ impl OrgService for MyOrgService {
             return Ok(Response::new(cached));
         }
 
+        let hub_for_agents = self.hub.clone();
+        let hub_for_meetings = self.hub.clone();
         let hub_for_summary = self.hub.clone();
+        let hub_for_quota = self.hub.clone();
         let org_id_clone = org_id.clone();
-        let (agents, meetings, summary_res, quota_res) = tokio::join!(
-            self.hub.get_agents(),
-            self.hub.get_meetings(),
-            tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary("system")),
-            self.hub.tracker().check_agent_quota(&org_id_clone)
+
+        let (agents_join, meetings_join, summary_res_join, quota_res_join) = tokio::join!(
+            tokio::spawn(async move { hub_for_agents.get_agents().await }),
+            tokio::spawn(async move { hub_for_meetings.get_meetings().await }),
+            tokio::spawn(async move { tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary("system")).await }),
+            tokio::spawn(async move { hub_for_quota.tracker().check_agent_quota(&org_id_clone).await })
         );
-        let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
+
+        let agents = agents_join.map_err(|e| Status::internal(e.to_string()))?;
+        let meetings = meetings_join.map_err(|e| Status::internal(e.to_string()))?;
+        let summary_res = summary_res_join.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let quota_res = quota_res_join.map_err(|e| Status::internal(e.to_string()))?;
+
+        let summary = summary_res;
         let quota_result = quota_res;
         let mut total_msgs = 0;
         let mut audited_msgs = 0;
