@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet, BinaryHeap};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 /// Ruflo Unique Harness Innovations: HNSW vector memory: 150x-12,500x faster search via AgentDB
 /// A hierarchical navigable small world (HNSW) graph implementation for fast approximate nearest neighbor search.
@@ -13,12 +13,21 @@ pub struct Vector {
 
 impl Vector {
     pub fn new(id: String, values: Vec<f32>, metadata: String) -> Self {
-        Self { id, values, metadata }
+        Self {
+            id,
+            values,
+            metadata,
+        }
     }
 
     /// Computes the cosine similarity. If the norms are 0, it returns 0.0.
     pub fn cosine_similarity(&self, other: &Vector) -> f32 {
-        let dot_product: f32 = self.values.iter().zip(other.values.iter()).map(|(a, b)| a * b).sum();
+        let dot_product: f32 = self
+            .values
+            .iter()
+            .zip(other.values.iter())
+            .map(|(a, b)| a * b)
+            .sum();
         let norm_a: f32 = self.values.iter().map(|a| a * a).sum::<f32>().sqrt();
         let norm_b: f32 = other.values.iter().map(|b| b * b).sum::<f32>().sqrt();
         if norm_a == 0.0 || norm_b == 0.0 {
@@ -90,17 +99,16 @@ impl Ord for MaxDistNode {
     }
 }
 
-#[derive(Debug)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct AgentDB {
     vectors: HashMap<String, Vector>,
 
     // HNSW specific parameters
-    m: usize,             // max number of connections per layer
-    m_max: usize,         // max number of connections at layer 0
-    m_max0: usize,        // max number of connections for layer 0
+    m: usize,               // max number of connections per layer
+    m_max: usize,           // max number of connections at layer 0
+    m_max0: usize,          // max number of connections for layer 0
     ef_construction: usize, // size of the dynamic candidate list
-    ml: f32,              // level generation factor
+    ml: f32,                // level generation factor
 
     // Entry point
     enter_point: Option<String>,
@@ -109,6 +117,12 @@ pub struct AgentDB {
     // Layer structures: Graph edges at each level.
     // layers[l] maps node_id -> Vec<neighbor_id>
     layers: Vec<HashMap<String, Vec<String>>>,
+}
+
+impl Default for AgentDB {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AgentDB {
@@ -136,8 +150,13 @@ impl AgentDB {
         // we use a simple deterministic hash-based pseudo-random generator based on total count
         let count = self.vectors.len();
         // Just a simple linear congruential generator step
-        let pseudo_rand = (count.wrapping_mul(1103515245).wrapping_add(12345) % 1000000) as f32 / 1000000.0;
-        let r = if pseudo_rand == 0.0 { 0.000001 } else { pseudo_rand };
+        let pseudo_rand =
+            (count.wrapping_mul(1103515245).wrapping_add(12345) % 1000000) as f32 / 1000000.0;
+        let r = if pseudo_rand == 0.0 {
+            0.000001
+        } else {
+            pseudo_rand
+        };
         (-r.ln() * self.ml).floor() as usize
     }
 
@@ -180,7 +199,9 @@ impl AgentDB {
 
                 // Add bidirectional connections
                 for neighbor in neighbors {
-                    let neighbor_links = self.layers[lc].entry(neighbor.clone()).or_insert_with(Vec::new);
+                    let neighbor_links = self.layers[lc]
+                        .entry(neighbor.clone())
+                        .or_default();
                     neighbor_links.push(id.clone());
                     let links_len = neighbor_links.len();
                     let current_links = neighbor_links.clone();
@@ -219,16 +240,25 @@ impl AgentDB {
             v.insert(p.clone());
             let node = self.vectors.get(p).unwrap();
             let dist = q.distance(node);
-            c.push(DistNode { dist, id: p.clone() });
-            w.push(MaxDistNode { dist, id: p.clone() });
+            c.push(DistNode {
+                dist,
+                id: p.clone(),
+            });
+            w.push(MaxDistNode {
+                dist,
+                id: p.clone(),
+            });
         }
 
-        while let Some(DistNode { dist: c_dist, id: c_id }) = c.pop() {
-            if let Some(farthest) = w.peek() {
-                if c_dist > farthest.dist {
+        while let Some(DistNode {
+            dist: c_dist,
+            id: c_id,
+        }) = c.pop()
+        {
+            if let Some(farthest) = w.peek()
+                && c_dist > farthest.dist {
                     break; // All remaining candidates in C are further than the furthest in W
                 }
-            }
 
             if let Some(neighbors) = self.layers[lc].get(&c_id) {
                 for e in neighbors {
@@ -240,8 +270,14 @@ impl AgentDB {
                         let furthest_w_dist = w.peek().map(|n| n.dist).unwrap_or(f32::MAX);
 
                         if e_dist < furthest_w_dist || w.len() < ef {
-                            c.push(DistNode { dist: e_dist, id: e.clone() });
-                            w.push(MaxDistNode { dist: e_dist, id: e.clone() });
+                            c.push(DistNode {
+                                dist: e_dist,
+                                id: e.clone(),
+                            });
+                            w.push(MaxDistNode {
+                                dist: e_dist,
+                                id: e.clone(),
+                            });
 
                             if w.len() > ef {
                                 w.pop(); // Remove the furthest
@@ -259,16 +295,23 @@ impl AgentDB {
     fn select_neighbors(&self, q: &Vector, candidates: &[String], m: usize) -> Vec<String> {
         let mut heap = BinaryHeap::new();
         for c_id in candidates {
-            if c_id == &q.id { continue; } // Don't connect to self
+            if c_id == &q.id {
+                continue;
+            } // Don't connect to self
             if let Some(node) = self.vectors.get(c_id) {
                 let dist = q.distance(node);
-                heap.push(DistNode { dist, id: c_id.clone() });
+                heap.push(DistNode {
+                    dist,
+                    id: c_id.clone(),
+                });
             }
         }
 
         let mut selected = Vec::new();
         while let Some(node) = heap.pop() {
-            if selected.len() >= m { break; }
+            if selected.len() >= m {
+                break;
+            }
             selected.push(node.id);
         }
         selected
@@ -299,7 +342,11 @@ impl AgentDB {
             da.partial_cmp(&db).unwrap_or(Ordering::Equal)
         });
 
-        candidates.into_iter().take(top_k).map(|id| self.vectors.get(&id).unwrap().clone()).collect()
+        candidates
+            .into_iter()
+            .take(top_k)
+            .map(|id| self.vectors.get(&id).unwrap().clone())
+            .collect()
     }
 }
 
@@ -370,7 +417,11 @@ mod tests {
     #[test]
     fn test_hnsw_persistence_serialization_deserialization() {
         let mut db = AgentDB::with_params(2, 10);
-        db.insert("persist_1".to_string(), vec![1.0, 0.5, 0.0], "data".to_string());
+        db.insert(
+            "persist_1".to_string(),
+            vec![1.0, 0.5, 0.0],
+            "data".to_string(),
+        );
 
         // We can serialize and deserialize as JSON because it contains HashMaps, Vecs, and String.
         let json_str = serde_json::to_string(&db).unwrap();

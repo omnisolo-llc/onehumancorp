@@ -41,8 +41,7 @@ static LITE_FILLER_RE: Lazy<Regex> = Lazy::new(|| {
     .unwrap()
 });
 
-static FULL_ARTICLE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)\b(a|an|the)\s+").unwrap());
+static FULL_ARTICLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b(a|an|the)\s+").unwrap());
 
 static FULL_FILLER_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
@@ -67,8 +66,7 @@ static ULTRA_ABBR_RE: Lazy<Regex> = Lazy::new(|| {
     .unwrap()
 });
 
-static MULTI_ARROW_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(→\s*){2,}").unwrap());
+static MULTI_ARROW_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(→\s*){2,}").unwrap());
 
 static CODE_BLOCK_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?s)```[a-zA-Z]*\n.*?```|`[^`\n]+`").unwrap());
@@ -204,7 +202,10 @@ mod tests {
     fn test_code_blocks_preserved() {
         let text = "the database\n```rust\nlet the_var = 1;\n```\nmore the text";
         let result = caveman_compress(text, CavemanMode::Full);
-        assert!(result.contains("let the_var = 1;"), "code block should be preserved");
+        assert!(
+            result.contains("let the_var = 1;"),
+            "code block should be preserved"
+        );
     }
 
     #[test]
