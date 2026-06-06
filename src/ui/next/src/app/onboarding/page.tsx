@@ -242,6 +242,84 @@ export default function OnboardingWizard() {
     }
   };
 
+
+  const handleInstantBuild = async () => {
+    setIsLoading(true);
+    setError('');
+    setValidationErrors({});
+    setStep(4); // Go to loading screen
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      // 1. Call Intake API
+      const intakeRes = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: businessDescription })
+      });
+
+      const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
+
+      // 2. Call Start API
+      const startRes = await fetch('/api/onboarding/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: businessDescription,
+          selling_categories: intakeData.categories || ['physical'],
+          payment_pref: 'online',
+          admin_email: adminEmail,
+          admin_name: adminName || intakeData.business_name || 'Admin',
+          admin_password: adminPassword,
+          website_template: 'Modern',
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '10.00',
+          domain_choice: 'subdomain',
+          price_type: 'fixed',
+          location: 'Remote'
+        })
+      });
+
+      const result = await startRes.json().catch(() => ({}));
+      if (!startRes.ok) {
+        throw new Error(result.error || result.message || 'Failed to start onboarding');
+      }
+
+
+      setStartResult(result);
+      localStorage.setItem('has_onboarded', 'true');
+      if (result.organization_id) {
+        localStorage.setItem('tenant_id', result.organization_id);
+        localStorage.setItem('tenant', result.organization_id);
+      }
+      setStep(5); // Go to "You're Live" screen
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred during instant build');
+
+      setStep(1);
+      setChatStep(4); // Go back to instant build step
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleStartOnboarding = async () => {
     const errors: Record<string, string> = {};
     if (!adminName.trim()) {
@@ -265,13 +343,6 @@ export default function OnboardingWizard() {
     setIsLoading(true);
     setError('');
     setStep(4); // Go to loading screen
-    const safetyTimeout = setTimeout(() => {
-      // Fallback if API fails to respond in time
-      setStartResult({ message: 'Fallback: Your business has been successfully launched.' });
-      setStep(5);
-      setIsLoading(false);
-    }, 3000);
-
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -304,11 +375,11 @@ export default function OnboardingWizard() {
 
       const result = await startRes.json().catch(() => ({}));
       if (!startRes.ok) {
-        clearTimeout(safetyTimeout);
+
         throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
-      clearTimeout(safetyTimeout);
+
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       if (result.organization_id) {
@@ -320,7 +391,7 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      clearTimeout(safetyTimeout);
+
       setStep(3); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
@@ -381,12 +452,19 @@ export default function OnboardingWizard() {
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
                     Let's get your business online in under 10 minutes.
                   </p>
-                  <button
+                                    <button
                     role="link"
                     onClick={() => setChatStep(1)}
                     className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                   >
                     Start Onboarding
+                  </button>
+                  <button
+                    role="link"
+                    onClick={() => setChatStep(4)}
+                    className="w-full bg-white text-[#0066FF] border border-[#0066FF] min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,0,0,0.05)] hover:bg-gray-50 hover:shadow-[0_6px_20px_rgba(0,0,0,0.1)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] mt-2"
+                  >
+                    Instant Build (30 Seconds)
                   </button>
                 </div>
               )}
@@ -398,6 +476,99 @@ export default function OnboardingWizard() {
                     Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
                   </p>
                 </>
+              )}
+
+
+              {chatStep === 4 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in w-full">
+                  <button onClick={() => setChatStep(0)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 w-full text-left">Tell us about your business</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6 w-full text-left">
+                    Write a paragraph about your business. We will use AI to instantly generate your storefront, products, and configure your settings.
+                  </p>
+
+                  <div className="space-y-4 flex-1 w-full overflow-y-auto pr-2 custom-scrollbar">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Description</label>
+                      <textarea
+                        autoFocus
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
+                        placeholder="e.g. I bake custom vegan cakes for weddings and parties. I am located in Seattle, WA. My best seller is the Custom Vegan Chocolate Cake for $45."
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                      />
+                    </div>
+
+                    <div className="pt-2 border-t border-white/50 dark:border-white/10">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Details</label>
+                      <div className="space-y-3">
+                        <div>
+                          <input
+                            type="text"
+                            value={adminName}
+                            onChange={(e) => setAdminName(e.target.value)}
+                            placeholder="Your Name"
+                            className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="email"
+                            value={adminEmail}
+                            onChange={(e) => setAdminEmail(e.target.value)}
+                            placeholder="Email Address"
+                            className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="password"
+                            value={adminPassword}
+                            onChange={(e) => setAdminPassword(e.target.value)}
+                            placeholder="Password (min 8 chars, 1 number)"
+                            className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-4 w-full">
+                    {Object.keys(validationErrors).length > 0 && <p className="text-red-500 text-sm font-semibold mb-2">Please fix validation errors.</p>}
+                    <button
+                      onClick={() => {
+                        const errors: Record<string, string> = {};
+                        if (!businessDescription.trim()) errors.desc = 'Description is required';
+                        if (!adminName.trim()) errors.name = 'Name is required';
+                        if (!adminEmail.trim()) errors.email = 'Email is required';
+                        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) errors.email = 'Invalid email';
+                        if (!adminPassword.trim()) errors.password = 'Password is required';
+                        else if (adminPassword.length < 8 || !/\d/.test(adminPassword)) errors.password = 'Invalid password';
+
+                        if (Object.keys(errors).length > 0) {
+                          setValidationErrors(errors);
+                          return;
+                        }
+                        setValidationErrors({});
+                        handleInstantBuild();
+                      }}
+                      disabled={!businessDescription.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Building...
+                        </span>
+                      ) : <IconLabel icon="launch">Generate My Storefront</IconLabel>}
+                    </button>
+                  </div>
+                </div>
               )}
 
               {chatStep === 1 && (

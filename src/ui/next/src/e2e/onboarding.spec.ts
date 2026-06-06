@@ -17,6 +17,29 @@ test.describe('OnboardingWizard CUJ', () => {
     });
   });
 
+
+  test('Instant Build flow', async ({ page }) => {
+    await page.goto('/onboarding');
+    await expect(page.getByText('Welcome')).toBeVisible();
+
+    await page.getByText('Instant Build (30 Seconds)').click();
+    await expect(page.getByText('Tell us about your business').first()).toBeVisible();
+
+    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('I am Maya and I bake custom cakes.');
+    await page.getByPlaceholder(/Your Name/i).fill('Maya Admin');
+    await page.getByPlaceholder(/Email Address/i).fill('maya_instant@example.com');
+    await page.getByPlaceholder(/Password/i).fill('password123');
+
+    await page.getByRole('button', { name: 'Generate My Storefront' }).click();
+
+    // Since this is hitting real backend, it could take a moment. Wait for success view.
+    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBeTruthy();
+    expect(storedTenantId).not.toBe('storefront');
+  });
+
   test('Maya the Baker can complete the onboarding flow', async ({ page }) => {
     await page.route('/api/onboarding/intake', async route => {
       await route.fulfill({
