@@ -1158,6 +1158,15 @@ mod tests {
 
 
     #[test]
+    fn test_record_task_claim_contention() {
+        // Since OTel components are globally initialized and we don't have an easy way
+        // to retrieve current values without complex mocking in unit tests,
+        // calling this verifies it does not panic and successfully executes.
+        record_task_claim_contention("standalone");
+        record_task_claim_contention("cloud");
+    }
+
+    #[test]
     fn test_get_queue_length_gauge() {
         let gauge = get_queue_length_gauge();
         gauge.add(1, &[]);
