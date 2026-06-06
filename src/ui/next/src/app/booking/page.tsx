@@ -72,7 +72,6 @@ export default function Booking() {
             <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Attach a Photo (Optional)</label>
             <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
               <input
-                aria-label="Attach a photo"
                 type="file"
                 accept="image/*"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}

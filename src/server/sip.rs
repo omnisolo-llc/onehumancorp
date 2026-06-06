@@ -3,10 +3,7 @@ use chrono::Utc;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
 
-use std::sync::atomic::{AtomicI64, Ordering};
-
 static SQLITE_CONCURRENCY_LIMITER: OnceLock<Semaphore> = OnceLock::new();
-pub static LAST_SUCCESSFUL_PRUNE: AtomicI64 = AtomicI64::new(0);
 
 pub fn get_sqlite_limiter() -> &'static Semaphore {
     SQLITE_CONCURRENCY_LIMITER.get_or_init(|| Semaphore::new(1))
@@ -131,10 +128,7 @@ impl SipDB {
             }).await;
             
             match res {
-                Ok(Ok(_)) => {
-                    LAST_SUCCESSFUL_PRUNE.store(chrono::Utc::now().timestamp(), Ordering::SeqCst);
-                    return Ok(());
-                },
+                Ok(Ok(_)) => return Ok(()),
                 Ok(Err(err)) => {
                     let mut retry = false;
                     if let Some(db_err) = err.as_database_error() {

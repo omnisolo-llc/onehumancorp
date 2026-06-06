@@ -7,7 +7,6 @@ export default function BusinessAnalytics() {
   const router = useRouter();
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [trialStatus, setTrialStatus] = useState('');
 
   useEffect(() => {
     const isPro = localStorage.getItem('pro_plan') === 'true';
@@ -22,7 +21,7 @@ export default function BusinessAnalytics() {
     localStorage.setItem('trial_active', 'true');
     setHasPro(true);
     setShowSoftPaywall(false);
-    setTrialStatus('7-day Pro Trial activated. You now have access to advanced analytics.');
+    alert('🎉 7-day Pro Trial activated! You now have access to advanced analytics.');
   };
 
   return (
@@ -39,7 +38,6 @@ export default function BusinessAnalytics() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-8">
-        {trialStatus && <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800" role="status">{trialStatus}</p>}
         {/* Core Metrics Section */}
         <section>
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Core Performance (Last 30 Days)</h2>

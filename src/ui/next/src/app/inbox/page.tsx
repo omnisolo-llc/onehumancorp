@@ -30,7 +30,6 @@ export default function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [actionStatus, setActionStatus] = useState("");
 
   useEffect(() => {
     async function loadMessages() {
@@ -79,7 +78,7 @@ export default function InboxPage() {
       });
 
       if (!approval) {
-        setActionStatus("Could not find a pending approval for this message.");
+        alert("Could not find a pending approval for this message.");
         return;
       }
 
@@ -91,13 +90,12 @@ export default function InboxPage() {
 
       if (approveRes.ok) {
         setMessages((prev) => prev.map((m) => m.id === inboxMessageId ? { ...m, status: "sent" } : m));
-        setActionStatus("Draft approved and sent.");
       } else {
-        setActionStatus("Failed to approve and send message.");
+        alert("Failed to approve and send message.");
       }
     } catch (e) {
       console.error(e);
-      setActionStatus("Error approving message.");
+      alert("Error approving message.");
     }
   }
 
@@ -111,7 +109,6 @@ export default function InboxPage() {
       ]}
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
-      {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="app-grid two">
         <section className="app-panel">
           <div className="app-panel-header">

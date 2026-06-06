@@ -62,7 +62,6 @@ rust_library(
         "hibernation.rs",
         "json_rpc_server.rs",
         "json_store.rs",
-        "in_memory_store.rs",
         "langgraph.rs",
         "lib.rs",
         "local_provider.rs",

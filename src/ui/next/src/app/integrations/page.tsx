@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
   const router = useRouter();
-  const [statusMessage, setStatusMessage] = useState("");
 
   const [integrations, setIntegrations] = useState([
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Single API for posting and retrieving messages across social networks." },
@@ -33,28 +32,29 @@ export default function Integrations() {
   });
 
   const handleConnect = (id: string) => {
-    const integration = integrations.find((item) => item.id === id);
-    if (integration?.status === 'connected') {
-      setStatusMessage(`${integration.name} settings are ready to manage.`);
-      return;
-    }
-    if (id === 'ayrshare') {
+    if (id === 'calendly') {
+      alert("Connecting Calendly via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
-      setStatusMessage("Ayrshare connected. Opening the social inbox.");
+      router.push("/dashboard");
+    }
+    if (id === 'ayrshare') {
+      alert("Connecting Ayrshare via OAuth...");
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
       router.push('/inbox');
-      return;
     }
     if (id === 'twilio') {
       setShowTwilioModal(true);
-      setStatusMessage("Choose Twilio channels to finish connecting.");
-      return;
     }
-    setIntegrations(prev => prev.map(integration =>
-      integration.id === id ? { ...integration, status: "connected" } : integration
-    ));
-    setStatusMessage(`${integration?.name || id} connected.`);
+    if (id === 'zoom' || id === 'whereby' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com' || id === 'front') {
+      alert(`Connecting ${id} via OAuth...`);
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+    }
   };
 
   const saveTwilioIntegration = () => {
@@ -62,7 +62,6 @@ export default function Integrations() {
       integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
     ));
     setShowTwilioModal(false);
-    setStatusMessage("Twilio Conversations connected.");
     router.push('/inbox');
   };
 
@@ -136,8 +135,7 @@ export default function Integrations() {
         <div className="flex gap-4 mb-8 border-b border-gray-200 pb-4 overflow-x-auto hide-scrollbar">
           {["all", "marketing", "operations", "finance", "social"].map(tab => (
             <button
-                  key={tab}
-              aria-pressed={activeTab === tab}
+              key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                 activeTab === tab
@@ -149,12 +147,6 @@ export default function Integrations() {
             </button>
           ))}
         </div>
-
-        {statusMessage && (
-          <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">
-            {statusMessage}
-          </div>
-        )}
 
         {/* Integration Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
