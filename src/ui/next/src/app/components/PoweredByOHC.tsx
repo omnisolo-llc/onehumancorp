@@ -2,13 +2,14 @@ import React from 'react';
 
 interface PoweredByOHCProps {
   tenantId: string;
+  className?: string;
 }
 
-export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
+export function PoweredByOHC({ tenantId, className }: PoweredByOHCProps) {
   const referralUrl = `https://ohc.store/join?ref=${tenantId}&source=footer_widget`;
 
   return (
-    <div className="flex justify-center items-center mt-8 pb-4">
+    <div className={`flex justify-center items-center mt-8 pb-4 ${className || ''}`}>
       <a
         href={referralUrl}
         target="_blank"

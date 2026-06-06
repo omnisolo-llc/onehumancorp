@@ -16,4 +16,14 @@ describe('PoweredByOHC Component', () => {
     expect(linkElement).toHaveAttribute('target', '_blank');
     expect(linkElement).toHaveAttribute('rel', 'noopener noreferrer');
   });
+
+  it('applies custom className correctly', () => {
+    const testTenantId = 'test-org-123';
+    const customClass = 'my-custom-test-class';
+    const { container } = render(<PoweredByOHC tenantId={testTenantId} className={customClass} />);
+
+    // container.firstChild is the outer div
+    expect(container.firstChild).toHaveClass(customClass);
+    expect(container.firstChild).toHaveClass('flex justify-center items-center mt-8 pb-4');
+  });
 });

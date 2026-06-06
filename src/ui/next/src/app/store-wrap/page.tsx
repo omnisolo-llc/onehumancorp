@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function StoreWrapPage() {
   const router = useRouter();
@@ -9,11 +10,19 @@ export default function StoreWrapPage() {
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('my-store');
   const [metrics, setMetrics] = useState({ sales: 0, customers: 0 });
+  const [hasPro, setHasPro] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('tenant') || 'my-store';
       setTenant(storedTenant);
+
+      const plan = localStorage.getItem('ohc_plan');
+      if (plan === 'Pro' || plan === 'Business') {
+        setHasPro(true);
+      }
 
       const token = localStorage.getItem('token') || 'test-token';
 
@@ -32,6 +41,15 @@ export default function StoreWrapPage() {
       .catch(e => console.error("Failed to fetch wrap-up metrics", e));
     }
   }, []);
+
+  const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasPro) {
+      e.preventDefault();
+      setShowPaywall(true);
+    } else {
+      setRemoveBranding(e.target.checked);
+    }
+  };
 
   const referralLink = `https://ohc.store/join?ref=${tenant}`;
   const shareText = `My business just generated $${metrics.sales.toLocaleString()} in revenue this year! 🚀 Built and scaled on OHC. Start your own business today and get a $50 credit: ${referralLink}`;
@@ -161,16 +179,72 @@ export default function StoreWrapPage() {
               )}
             </div>
 
-            <div className="absolute bottom-8 text-white/60 text-sm font-semibold tracking-widest uppercase">
-              Powered by OHC
-            </div>
+            {!removeBranding && (
+              <div className="absolute bottom-8 text-white/60 text-sm font-semibold tracking-widest uppercase z-10">
+                <PoweredByOHC tenantId={tenant} className="mt-0 pb-0 opacity-80 mix-blend-overlay text-white border-white" />
+              </div>
+            )}
           </div>
         ))}
+
+        {/* Branding Controls overlay */}
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30">
+          <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
+            <div className="flex items-center gap-2">
+              <input
+                  type="checkbox"
+                  id="removeBrandingWrap"
+                  checked={removeBranding}
+                  onChange={handleRemoveBranding}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <label htmlFor="removeBrandingWrap" className="text-xs font-medium text-white/90 flex items-center gap-2 cursor-pointer">
+                  Remove Badge
+                  {!hasPro && <span className="bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">PRO</span>}
+              </label>
+            </div>
+          </div>
+        </div>
 
         {/* Navigation Overlays */}
         <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={prevSlide} />
         <div className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer" onClick={nextSlide} />
       </main>
+
+      {/* Soft Paywall Modal */}
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setShowPaywall(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg mx-auto mb-6 text-white font-bold">
+              PRO
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed text-gray-900">
+              Make the Store Wrap 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+            </p>
+
+            <button
+              onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+            >
+              Upgrade to Pro
+            </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap');

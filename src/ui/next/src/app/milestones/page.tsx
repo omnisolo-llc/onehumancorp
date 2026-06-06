@@ -1,12 +1,38 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function MilestonesPage() {
   const router = useRouter();
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [tenant, setTenant] = useState('my-store');
+  const [hasPro, setHasPro] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const storedTenant = localStorage.getItem('tenant') || 'my-store';
+      setTenant(storedTenant);
+
+      const plan = localStorage.getItem('ohc_plan');
+      if (plan === 'Pro' || plan === 'Business') {
+        setHasPro(true);
+      }
+    }
+  }, []);
+
+  const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasPro) {
+      e.preventDefault();
+      setShowPaywall(true);
+    } else {
+      setRemoveBranding(e.target.checked);
+    }
+  };
 
   const milestones = [
     {
@@ -43,7 +69,7 @@ export default function MilestonesPage() {
     }
   ];
 
-  const shareText = "I just hit a huge business milestone using OHC! Launch your own store today: ohc://join?ref=milestone";
+  const shareText = `I just hit a huge business milestone using OHC! Launch your own store today: https://ohc.store/join?ref=${tenant}`;
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -88,6 +114,23 @@ export default function MilestonesPage() {
                     </div>
                 ))}
             </div>
+
+            <div className="mt-4 p-4 rounded-2xl glassmorphism border border-white/40">
+              <h3 className="text-md font-semibold text-gray-800 mb-2">Branding</h3>
+              <div className="flex items-center gap-2">
+                <input
+                    type="checkbox"
+                    id="removeBranding"
+                    checked={removeBranding}
+                    onChange={handleRemoveBranding}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    Remove "Powered by OHC" Badge
+                    {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
+                </label>
+              </div>
+            </div>
         </section>
 
         {/* Milestone Share Card */}
@@ -112,9 +155,11 @@ export default function MilestonesPage() {
                                     <p className="text-lg font-medium opacity-90 drop-shadow-sm max-w-[280px]">{activeM.description}</p>
                                 </div>
 
-                                <div className="absolute bottom-6 flex flex-col items-center gap-1 opacity-90">
-                                    <span className="text-xs uppercase font-bold tracking-widest">Powered by OHC</span>
-                                </div>
+                                {!removeBranding && (
+                                  <div className="absolute bottom-6 flex flex-col items-center gap-1 opacity-90">
+                                    <PoweredByOHC tenantId={tenant} className="mt-0 pb-0 opacity-80 mix-blend-overlay text-white border-white" />
+                                  </div>
+                                )}
                             </div>
 
                             {/* Share Buttons */}
@@ -150,6 +195,41 @@ export default function MilestonesPage() {
              </div>
         </section>
       </main>
+
+      {/* Soft Paywall Modal */}
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setShowPaywall(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg mx-auto mb-6 text-white font-bold">
+              PRO
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Make the milestones 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+            </p>
+
+            <button
+              onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+            >
+              Upgrade to Pro
+            </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
