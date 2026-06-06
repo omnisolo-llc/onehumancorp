@@ -1,90 +1,100 @@
-vi.mock("next/link", () => ({ default: (props: any) => <a href={props.href}>{props.children}</a> }));
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import HelpCenterPage from './page';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
+
+global.fetch = vi.fn() as any;
 
 describe('HelpCenterPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockImplementation((url) => {
+    vi.clearAllMocks();
+  });
+
+  it('renders articles and videos when fetched', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/help') {
         return Promise.resolve({
-          json: () => Promise.resolve([
-            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-            { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
-          ])
+          ok: true,
+          json: async () => [{ title: 'Art 1', desc: 'Desc 1', link: '/help/1' }]
         });
       }
       if (url === '/api/videos') {
         return Promise.resolve({
-          json: () => Promise.resolve([
-            { id: 1, title: "How to set up your first store easily", duration: "1:20" },
-            { id: 2, title: "Linking your own website name", duration: "0:45" }
-          ])
+          ok: true,
+          json: async () => [{ id: 1, title: 'Vid 1', duration: '1:00' }]
         });
       }
-      return Promise.resolve({
-        json: () => Promise.resolve([])
-      });
+      return Promise.resolve({ ok: true, json: async () => ([]) });
     });
-  });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('renders articles loaded from API', async () => {
-    render(<HelpCenterPage />);
-
-    expect(screen.getByText('Help Center')).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
-      expect(screen.getByText('My Store')).toBeInTheDocument();
-    });
-  });
-
-  it('filters articles based on search query', async () => {
-    const user = userEvent.setup();
     render(<HelpCenterPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
-    });
-
-    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
-    await user.type(searchInput, 'products');
-
-    await waitFor(() => {
-      expect(screen.queryByText('Getting Started')).not.toBeInTheDocument();
-      expect(screen.getByText('My Store')).toBeInTheDocument();
+      expect(screen.getByText('Art 1')).toBeInTheDocument();
+      expect(screen.getByText('Vid 1')).toBeInTheDocument();
     });
   });
 
-  it('displays no matching articles message when search fails', async () => {
-    const user = userEvent.setup();
+  it('filters results with search', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/help') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            { title: 'Art 1', desc: 'Desc 1', link: '/help/1' },
+            { title: 'Other', desc: 'Other desc', link: '/help/2' }
+          ]
+        });
+      }
+      if (url === '/api/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ id: 1, title: 'Vid 1', duration: '1:00' }]
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ([]) });
+    });
+
     render(<HelpCenterPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Other')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
-    await user.type(searchInput, 'nonexistentxyz123');
+    const input = screen.getByPlaceholderText(/search/i);
+    fireEvent.change(input, { target: { value: 'Art' } });
 
-    await waitFor(() => {
-      expect(screen.getByText('No results found matching "nonexistentxyz123"')).toBeInTheDocument();
-    });
+    expect(screen.queryByText('Other')).not.toBeInTheDocument();
+    expect(screen.getByText('Art 1')).toBeInTheDocument();
   });
 
-  it('renders video tutorials loaded from API', async () => {
+  it('shows empty state when no results match', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/help') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ title: 'Art 1', desc: 'Desc 1', link: '/help/1' }]
+        });
+      }
+      if (url === '/api/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ id: 1, title: 'Vid 1', duration: '1:00' }]
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ([]) });
+    });
+
     render(<HelpCenterPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
-      expect(screen.getByText('Linking your own website name')).toBeInTheDocument();
+      expect(screen.getByText('Art 1')).toBeInTheDocument();
     });
+
+    const input = screen.getByPlaceholderText(/search/i);
+    fireEvent.change(input, { target: { value: 'Nonexistent' } });
+
+    expect(screen.getByText(/No results found matching/i)).toBeInTheDocument();
   });
 });

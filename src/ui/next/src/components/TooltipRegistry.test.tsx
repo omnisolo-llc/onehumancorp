@@ -1,49 +1,86 @@
 import '@testing-library/jest-dom';
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TooltipProvider, WithTooltip } from './TooltipRegistry';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
-global.fetch = vi.fn().mockImplementation((url) => {
-    if (url === '/api/tooltips' || url.toString().includes('/api/tooltips')) {
-        return Promise.resolve({ ok: true, json: async () => ({ "test-id": "Fetched tooltip text" }) });
-    }
-    return Promise.resolve({ ok: true, json: async () => ({}) });
-}) as any;
+global.fetch = vi.fn() as any;
+
+const TestComponent = () => {
+  return (
+    <WithTooltip id="test-id" defaultText="Default Tooltip">
+      <button>Hover Me</button>
+    </WithTooltip>
+  );
+};
 
 describe('TooltipRegistry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-  it('renders default text on hover', async () => {
+  it('renders children without tooltip initially', async () => {
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({
+      ok: true,
+      json: async () => ({ "test-id": "Fetched Tooltip" })
+    }));
+
     render(
       <TooltipProvider>
-        <WithTooltip id="test-id" defaultText="Default Tooltip">
-          <button>Hover me</button>
-        </WithTooltip>
+        <TestComponent />
       </TooltipProvider>
     );
 
-    const button = screen.getByText('Hover me');
+    expect(screen.getByText('Hover Me')).toBeInTheDocument();
+    expect(screen.queryByText('Fetched Tooltip')).not.toBeInTheDocument();
+  });
 
-    // Wait for context to be populated via fetch call in TooltipProvider
-    await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-    });
-
-    // Create a mock getBoundingClientRect
-    Element.prototype.getBoundingClientRect = vi.fn(() => ({
-      width: 100, height: 20, top: 10, left: 10, bottom: 30, right: 110, x: 10, y: 10, toJSON: () => {}
+  it('shows default text if fetch fails or id not found', async () => {
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({
+      ok: false
     }));
 
-    fireEvent.mouseEnter(button.parentElement!);
+    render(
+      <TooltipProvider>
+        <TestComponent />
+      </TooltipProvider>
+    );
+
+    const button = screen.getByText('Hover Me');
+    fireEvent.mouseEnter(button.closest('div')!);
 
     await waitFor(() => {
-      expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
+      expect(screen.getByText('Default Tooltip')).toBeInTheDocument();
     });
 
-    fireEvent.mouseLeave(button.parentElement!);
+    fireEvent.mouseLeave(button.closest('div')!);
+    await waitFor(() => {
+      expect(screen.queryByText('Default Tooltip')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows fetched text when available', async () => {
+    (global.fetch as any).mockImplementationOnce(() => Promise.resolve({
+      ok: true,
+      json: async () => ({ "test-id": "Fetched Tooltip Data" })
+    }));
+
+    render(
+      <TooltipProvider>
+        <TestComponent />
+      </TooltipProvider>
+    );
 
     await waitFor(() => {
-      expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    const button = screen.getByText('Hover Me');
+    fireEvent.mouseEnter(button.closest('div')!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Fetched Tooltip Data')).toBeInTheDocument();
     });
   });
 });

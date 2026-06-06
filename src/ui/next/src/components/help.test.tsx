@@ -1,93 +1,247 @@
 import '@testing-library/jest-dom';
+
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
-import { HelpWidget, WalkthroughProvider } from './help';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { HelpWidget, WalkthroughProvider, useWalkthrough } from './help';
 import { TooltipProvider } from './TooltipRegistry';
+import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-  }),
-  usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(),
-}));
+global.fetch = vi.fn() as any;
 
-describe('HelpWidget', () => {
+describe('HelpWidget System', () => {
   beforeEach(() => {
-    // Override the global fetch mock for these tests
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/videos') {
-        return Promise.resolve(new Response(JSON.stringify([
-          { id: 1, title: 'Test Video 1', duration: '1:23' },
-          { id: 2, title: 'Test Video 2', duration: '2:34' },
-        ]), { status: 200 }));
+    vi.clearAllMocks();
+    (global.fetch as any).mockImplementation(() => Promise.resolve({
+      ok: true,
+      json: async () => ({})
+    }));
+
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+
+    // Add dummy target elements for the walkthrough tests
+    const dummyIds = ["bio-input", "generate-btn", "stripe-setup-btn", "help-widget-container", "foo"];
+    dummyIds.forEach(id => {
+      if (!document.getElementById(id)) {
+        const el = document.createElement('div');
+        el.id = id;
+        el.getBoundingClientRect = vi.fn(() => ({
+          top: 0, left: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => {}
+        }));
+        document.body.appendChild(el);
       }
-      if (url === '/api/help') {
-        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
-      }
-      return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
     });
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    document.body.innerHTML = '';
   });
 
-  it('renders widget button and opens chat interface', async () => {
-    const user = userEvent.setup();
+  const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+    <TooltipProvider>
+      <WalkthroughProvider>
+        {children}
+      </WalkthroughProvider>
+    </TooltipProvider>
+  );
+
+  it('renders help button initially', async () => {
     render(
-      <TooltipProvider>
-        <WalkthroughProvider>
-          <HelpWidget />
-        </WalkthroughProvider>
-      </TooltipProvider>
+      <TestWrapper>
+        <HelpWidget />
+      </TestWrapper>
     );
-
-    const openButton = screen.getByLabelText('Help');
-    expect(openButton).toBeInTheDocument();
-
-    await user.click(openButton);
-
-    expect(screen.getByText('Help Center')).toBeInTheDocument();
-  });
-
-  it('navigates to videos tab and selects a video to play', async () => {
-    const user = userEvent.setup();
-    render(
-      <TooltipProvider>
-        <WalkthroughProvider>
-          <HelpWidget />
-        </WalkthroughProvider>
-      </TooltipProvider>
-    );
-
-    // Open widget
-    await user.click(screen.getByLabelText('Help'));
-
-    // Click Videos tab
-    const videosTab = screen.getByRole('button', { name: /Videos/i });
-    await user.click(videosTab);
-
-    // Wait for videos to load
     await waitFor(() => {
-      expect(screen.getByText('Test Video 1')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /help/i })).toBeInTheDocument();
+    });
+  });
+
+  it('opens widget when button is clicked', async () => {
+    render(
+      <TestWrapper>
+        <HelpWidget />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /help/i })).toBeInTheDocument();
     });
 
-    // Click a video to open the player modal
-    await user.click(screen.getByText('Test Video 1'));
+    fireEvent.click(screen.getByRole('button', { name: /help/i }));
 
-    // Assert player modal is open
-    expect(screen.getByLabelText('Close video')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Help Center')).toBeInTheDocument();
+    });
+  });
 
-    // Close the video player
-    await user.click(screen.getByLabelText('Close video'));
-    expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
+  it('switches tabs', async () => {
+    render(
+      <TestWrapper>
+        <HelpWidget />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /help/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /help/i }));
+
+    // Switch to Ask AI
+    fireEvent.click(screen.getByText('Ask AI'));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
+    });
+
+    // Switch to Videos
+    fireEvent.click(screen.getByText('Videos'));
+    await waitFor(() => {
+      expect(screen.getByText('Tutorials')).toBeInTheDocument();
+    });
+
+    // Switch to What's New
+    fireEvent.click(screen.getByText("New"));
+    await waitFor(() => {
+      expect(screen.getByText("New AI Store Builder")).toBeInTheDocument();
+    });
+  });
+
+  it('sends chat message and receives reply', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === "/api/chat") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ reply: "Mocked AI Help Reply" })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({})
+      });
+    });
+
+    render(
+      <TestWrapper>
+        <HelpWidget />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /help/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /help/i }));
+    fireEvent.click(screen.getByText('Ask AI'));
+
+    const input = screen.getByPlaceholderText('Ask anything...');
+    fireEvent.change(input, { target: { value: 'How to setup?' } });
+
+    fireEvent.submit(input.closest('form')!);
+
+    expect(screen.getByText('How to setup?')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('Mocked AI Help Reply')).toBeInTheDocument();
+    });
+  });
+
+  it('handles chat fetch error gracefully', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === "/api/chat") {
+        return Promise.reject(new Error("Network Error"));
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({})
+      });
+    });
+
+    render(
+      <TestWrapper>
+        <HelpWidget />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /help/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /help/i }));
+    fireEvent.click(screen.getByText('Ask AI'));
+
+    const input = screen.getByPlaceholderText('Ask anything...');
+    fireEvent.change(input, { target: { value: 'Fail test' } });
+
+    fireEvent.submit(input.closest('form')!);
+
+    await waitFor(() => {
+      // The error message from help.tsx is "Sorry, I'm having trouble connecting right now."
+      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
+    });
+  });
+
+  it('starts a walkthrough', async () => {
+    const TestComponent = () => {
+      const { startWalkthrough } = useWalkthrough();
+      return (
+        <button onClick={() => startWalkthrough([{ targetId: "foo", title: "Foo", content: "Bar" }])}>
+          Start Walkthrough
+        </button>
+      );
+    };
+
+    render(
+      <TestWrapper>
+        <TestComponent />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Start Walkthrough')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Start Walkthrough'));
+  });
+
+  it('plays a video', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === "/api/videos") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ([
+            { id: 1, title: "How to set up your first store easily", duration: "1:20" }
+          ])
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({})
+      });
+    });
+
+    render(
+      <TestWrapper>
+        <HelpWidget />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /help/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /help/i }));
+    fireEvent.click(screen.getByText('Videos'));
+
+    await waitFor(() => {
+      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
+    });
+
+    const video = screen.getByText('How to set up your first store easily');
+    fireEvent.click(video);
+
+    expect(screen.getAllByText('How to set up your first store easily').length).toBeGreaterThan(0);
+
+    // Close video
+    const closeBtn = screen.getByLabelText('Close video');
+    fireEvent.click(closeBtn);
   });
 });

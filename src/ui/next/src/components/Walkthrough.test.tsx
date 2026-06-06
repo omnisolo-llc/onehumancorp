@@ -1,48 +1,46 @@
 import '@testing-library/jest-dom';
+
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { InteractiveWalkthrough } from './Walkthrough';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('Walkthrough Component', () => {
-  let mockGetElementById: any;
-
   beforeEach(() => {
-    mockGetElementById = vi.spyOn(document, 'getElementById').mockImplementation((id) => {
-      if (id === 'test-target') {
-        const div = document.createElement('div');
-        div.id = id;
-        div.scrollIntoView = vi.fn();
-        div.getBoundingClientRect = vi.fn().mockReturnValue({
-          top: 100,
-          left: 100,
-          bottom: 120,
-          right: 120,
-          width: 20,
-          height: 20
-        });
-        return div;
-      }
-      return null;
-    });
+    // Add a dummy target element to the DOM
+    const target = document.createElement('div');
+    target.id = 'test-target';
+    // Add this style to ensure it occupies space
+    target.style.width = '100px';
+    target.style.height = '100px';
+
+    // We must return a DOMRect so InteractiveWalkthrough can measure it
+    target.getBoundingClientRect = vi.fn(() => ({
+      top: 100, left: 100, width: 200, height: 50, right: 300, bottom: 150, x: 100, y: 100, toJSON: () => {}
+    }));
+    document.body.appendChild(target);
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+    vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
-  it('renders nothing when not open', () => {
+  it('does not render if not open', () => {
     const { container } = render(
       <InteractiveWalkthrough
-        steps={[{ targetId: 'test-target', title: 'Test', content: 'test content' }]}
+        steps={[{ targetId: 'test-target', title: 'Test', content: 'Test Content' }]}
         isOpen={false}
         onClose={() => {}}
       />
     );
-    expect(container.firstChild).toBeNull();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders nothing when there are no steps', () => {
+  it('does not render if no steps provided', () => {
     const { container } = render(
       <InteractiveWalkthrough
         steps={[]}
@@ -50,77 +48,175 @@ describe('Walkthrough Component', () => {
         onClose={() => {}}
       />
     );
-    expect(container.firstChild).toBeNull();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders the tooltip and advances to the next step and finishes', async () => {
-    const handleClose = vi.fn();
-    const handleComplete = vi.fn();
+  it('renders step content when open', async () => {
+    act(() => {
+      render(
+        <InteractiveWalkthrough
+          steps={[{ targetId: 'test-target', title: 'Step 1', content: 'Content 1' }]}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      );
+    });
 
-    render(
-      <InteractiveWalkthrough
-        steps={[
-          { targetId: 'test-target', title: 'Step 1', content: 'content 1' },
-          { targetId: 'test-target', title: 'Step 2', content: 'content 2' }
-        ]}
-        isOpen={true}
-        onClose={handleClose}
-        onComplete={handleComplete}
-      />
-    );
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
 
-    // Initial step wait
-    await waitFor(() => {
-      expect(screen.getByText('Step 1')).toBeInTheDocument();
-      expect(screen.getByText('content 1')).toBeInTheDocument();
-      expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
+    expect(screen.getByText('Step 1')).toBeInTheDocument();
+    expect(screen.getByText('Content 1')).toBeInTheDocument();
+  });
+
+  it('advances to next step', async () => {
+    const steps = [
+      { targetId: 'test-target', title: 'Step 1', content: 'Content 1' },
+      { targetId: 'test-target', title: 'Step 2', content: 'Content 2' }
+    ];
+
+    act(() => {
+      render(
+        <InteractiveWalkthrough
+          steps={steps}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
     });
 
     const nextBtn = screen.getByText('Next');
-    fireEvent.click(nextBtn);
+    act(() => {
+      fireEvent.click(nextBtn);
+    });
 
-    // Second step
-    await waitFor(() => {
-      expect(screen.getByText('Step 2')).toBeInTheDocument();
-      expect(screen.getByText('content 2')).toBeInTheDocument();
-      expect(screen.getByText('Step 2 of 2')).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.getByText('Step 2')).toBeInTheDocument();
+  });
+
+  it('calls onComplete and onClose when finished', async () => {
+    const onComplete = vi.fn();
+    const onClose = vi.fn();
+
+    act(() => {
+      render(
+        <InteractiveWalkthrough
+          steps={[{ targetId: 'test-target', title: 'Step 1', content: 'Content 1' }]}
+          isOpen={true}
+          onClose={onClose}
+          onComplete={onComplete}
+        />
+      );
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
     });
 
     const finishBtn = screen.getByText('Finish');
-    fireEvent.click(finishBtn);
-
-    expect(handleComplete).toHaveBeenCalled();
-    expect(handleClose).toHaveBeenCalled();
-  });
-
-  it('calls onClose when skip button is clicked', async () => {
-    const handleClose = vi.fn();
-
-    const { container } = render(
-      <InteractiveWalkthrough
-        steps={[
-          { targetId: 'test-target', title: 'Step 1', content: 'content 1' },
-        ]}
-        isOpen={true}
-        onClose={handleClose}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Step 1')).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(finishBtn);
     });
 
-    // SVG is inside a button, find the button by getting the closest button to the SVG
-    // Or we can query the skip button by its class name or hover state which we know from the component
-    // We can also query all buttons and pick the one with SVG inside.
-    const buttons = screen.getAllByRole('button');
-    const skipButton = buttons.find(btn => btn.querySelector('svg'));
-    if (skipButton) {
-      fireEvent.click(skipButton);
-    } else {
-      // Fallback if svg inside button isn't found, try clicking the generic skip button by text or class if we add it, or just call handleClose directly in extreme test isolation scenarios. Actually, wait, let's just make it robust.
-    }
+    expect(onComplete).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
 
-    expect(handleClose).toHaveBeenCalled();
+  it('calls onClose when skipped', async () => {
+    const onClose = vi.fn();
+
+    act(() => {
+      render(
+        <InteractiveWalkthrough
+          steps={[{ targetId: 'test-target', title: 'Step 1', content: 'Content 1' }]}
+          isOpen={true}
+          onClose={onClose}
+        />
+      );
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    // The skip button is the SVG icon X button
+    const closeBtn = screen.getAllByRole('button')[0];
+    act(() => {
+      fireEvent.click(closeBtn);
+    });
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('handles window resize and scroll gracefully', async () => {
+    const steps = [{ targetId: 'test-target', title: 'Step 1', content: 'Content 1' }];
+
+    act(() => {
+      render(
+        <InteractiveWalkthrough
+          steps={steps}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    act(() => {
+      fireEvent.scroll(window);
+      fireEvent.resize(window);
+    });
+
+    expect(screen.getByText('Step 1')).toBeInTheDocument();
+  });
+
+  it('does not throw when target element is not found', () => {
+    act(() => {
+      render(
+        <InteractiveWalkthrough
+          steps={[{ targetId: 'non-existent', title: 'Step 1', content: 'Content 1' }]}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.queryByText('Step 1')).not.toBeInTheDocument();
+  });
+
+  it('renders correctly with different positions', () => {
+    act(() => {
+      render(
+        <InteractiveWalkthrough
+          steps={[
+            { targetId: 'test-target', title: 'TopTitle', content: 'Top', position: 'top' },
+            { targetId: 'test-target', title: 'RightTitle', content: 'Right', position: 'right' },
+            { targetId: 'test-target', title: 'LeftTitle', content: 'Left', position: 'left' }
+          ]}
+          isOpen={true}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+    expect(screen.getByText('TopTitle')).toBeInTheDocument();
   });
 });
