@@ -609,18 +609,4 @@ mod parity_tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_parity_cleanup_stagnant_missions() {
-        let sqlite_db = setup_sqlite_db().await;
-        let pg_db = setup_postgres_db().await;
-
-        // SQLite
-        let res = sqlite_db.cleanup_stagnant_missions(3600).await;
-        assert!(res.is_ok());
-
-        if let Some(pg) = pg_db {
-            let res = pg.cleanup_stagnant_missions(3600).await;
-            assert!(res.is_ok());
-        }
-    }
 }

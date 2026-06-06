@@ -19,25 +19,29 @@ metadata:
     {{- include "ohc.labels" . | nindent 4 }}
 data:
   custom.css: |
-    .grafana-app {
-        backdrop-filter: blur(30px) saturate(210%) !important;
-        background: rgba(22, 22, 26, 0.7) !important;
-        font-family: 'Outfit', 'Inter', sans-serif !important;
+    /* Apple / Ubiquiti UniFi Network Application design standards */
+    /* Light Mode Translucent Glass */
+    .grafana-app .navbar-page-btn,
+    .grafana-app .dashboard-container,
+    .grafana-app .panel-container,
+    .grafana-app .grafana-tooltip {
+      background: rgba(255, 255, 255, 0.65) !important;
+      backdrop-filter: blur(30px) saturate(210%) !important;
+      -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.4) !important;
+      font-family: 'Outfit', 'Inter', sans-serif !important;
+      border-radius: 12px !important;
     }
-    .panel-container {
-        backdrop-filter: blur(30px) saturate(210%);
-        background: rgba(22, 22, 26, 0.7) !important;
-        font-family: 'Outfit', 'Inter', sans-serif !important;
-        border-radius: 12px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-    @media (prefers-color-scheme: light) {
-        .panel-container {
-            background: rgba(255, 255, 255, 0.65) !important;
-            border: 1px solid rgba(255, 255, 255, 0.4) !important;
-        }
-        .grafana-app {
-            background: rgba(255, 255, 255, 0.65) !important;
-            backdrop-filter: blur(30px) saturate(210%) !important;
-        }
+
+    /* Dark Mode Translucent Glass */
+    body.theme-dark .grafana-app .navbar-page-btn,
+    body.theme-dark .grafana-app .dashboard-container,
+    body.theme-dark .grafana-app .panel-container,
+    body.theme-dark .grafana-app .grafana-tooltip {
+      background: rgba(22, 22, 26, 0.7) !important;
+      backdrop-filter: blur(30px) saturate(210%) !important;
+      -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      font-family: 'Outfit', 'Inter', sans-serif !important;
+      border-radius: 12px !important;
     }

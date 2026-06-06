@@ -26,6 +26,7 @@ export default function BuilderPage() {
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [startY, setStartY] = useState(0);
+  const [saveMessage, setSaveMessage] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
@@ -171,7 +172,7 @@ export default function BuilderPage() {
       if (response.ok) {
         const data = await response.json();
         setStatus("live");
-        setLiveUrl(`https://${data.domain || 'myshop'}.ohc.store`);
+        setLiveUrl(`/bio/${data.domain || 'myshop'}`);
       } else {
         console.error('Failed to publish');
       }
@@ -476,27 +477,36 @@ export default function BuilderPage() {
             <div className="bg-white/60 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
-<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
+<script src="/embed.js" data-store="${tenantId}"></script>
 <div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
+  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
 </div>`}
                 </pre>
                 <button
                     onClick={() => {
-                        const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
+                        const code = `<div id="ohc-embed-root"></div>\n<script src="/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
                         navigator.clipboard.writeText(code);
-                        alert("Copied embed code to clipboard!");
+                        setSaveMessage("Embed code copied.");
                     }}
                     className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
                 >
                     Copy
                 </button>
             </div>
+            {saveMessage && <p role="status" className="mt-2 text-xs font-semibold text-green-600">{saveMessage}</p>}
           </div>
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(liveUrl);
+                setSaveMessage("Live URL copied.");
+              }}
+              className="text-blue-600 font-semibold text-sm hover:underline shrink-0"
+            >
+              Copy
+            </button>
           </div>
 
           {/* Growth Loop 1: Acquisition (Get your first customer) */}
