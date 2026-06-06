@@ -895,3 +895,8 @@ mod store_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    pub mod multitenancy_isolation;
+}

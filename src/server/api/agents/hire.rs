@@ -46,8 +46,8 @@ async fn hire_handler(
     req: axum::extract::Request,
 ) -> impl IntoResponse {
     let tenant_id = match req.extensions().get::<::server_common::Claims>() {
-        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
-        None => "system".to_string(),
+        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant()),
+        None => ::server_common::auth_utils::get_default_tenant(),
     };
 
     let (parts, body) = req.into_parts();
