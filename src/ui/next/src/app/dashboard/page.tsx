@@ -8,6 +8,16 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { OneTapReferral } from "../components/OneTapReferral";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 
+type BookingRecord = {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  product_id: string;
+  start_time: string;
+  end_time?: string;
+  status: string;
+};
+
 type DashboardMetrics = {
   active_customers: number;
   pending_orders: number;
@@ -71,6 +81,7 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -104,27 +115,30 @@ export default function Dashboard() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, bookingsRes, supplyRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
+          fetch(`/api/ui/bookings?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !bookingsRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, bookingsData, supplyData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
+          bookingsRes.json(),
           supplyRes.json(),
         ]);
 
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setBookings(Array.isArray(bookingsData) ? bookingsData : []);
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
@@ -283,6 +297,49 @@ export default function Dashboard() {
                 Upgrade to Pro
               </button>
             </div>
+          </div>
+        </section>
+
+
+        <section className="app-grid two mb-6">
+          <div className="app-panel">
+            <div className="app-panel-header">
+              <div className="app-panel-title">Upcoming Bookings</div>
+              <Link href="/booking" className="app-button">Manage</Link>
+            </div>
+            {bookings.length === 0 ? (
+              <div className="app-empty">{loading ? "Loading bookings from the database..." : "No bookings found for this tenant."}</div>
+            ) : (
+              <div className="app-table-wrap">
+                <table className="app-table">
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.slice(0, 5).map((b) => (
+                      <tr key={b.id}>
+                        <td className="font-semibold text-gray-900 dark:text-white">{b.product_id}</td>
+                        <td className="text-gray-600 dark:text-gray-400">
+                          {new Date(b.start_time).toLocaleString(undefined, {
+                            weekday: 'short', month: 'short', day: 'numeric',
+                            hour: 'numeric', minute: '2-digit'
+                          })}
+                        </td>
+                        <td>
+                          <span className={`app-badge ${b.status === 'confirmed' ? 'good' : 'warn'}`}>
+                            {b.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
 

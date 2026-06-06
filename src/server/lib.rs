@@ -3252,6 +3252,7 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
+        .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
@@ -3786,3 +3787,22 @@ async fn api_not_found_handler(req: axum::extract::Request) -> impl axum::respon
 }
 pub mod crypto;
 // resolves #9690
+
+pub async fn list_ui_bookings_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+
+    let bookings_res = crate::services::booking::BookingService::get_bookings(&tenant_id).await;
+
+    match bookings_res {
+        Ok(bookings) => (axum::http::StatusCode::OK, axum::Json(bookings)).into_response(),
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::Json(serde_json::json!({ "error": e })),
+        )
+            .into_response(),
+    }
+}

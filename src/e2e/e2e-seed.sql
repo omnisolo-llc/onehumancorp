@@ -167,3 +167,10 @@ ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Insert some bookings for E2E Native Booking Dashboard Tests
+INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, status)
+VALUES
+  ('e2e-booking-1', 'e2e-tenant', 'e2e-customer-1', 'e2e-product-class', CURRENT_TIMESTAMP + INTERVAL '1 day', 'confirmed'),
+  ('e2e-booking-2', 'e2e-tenant', 'e2e-customer-2', 'e2e-product-class', CURRENT_TIMESTAMP + INTERVAL '2 days', 'pending')
+ON CONFLICT DO NOTHING;
