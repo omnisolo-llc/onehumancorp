@@ -470,7 +470,7 @@ async fn handle_storefront_embed(
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-        use sqlx::Row;
+
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
@@ -598,7 +598,7 @@ async fn handle_check_milestones(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
-    use sqlx::Row;
+
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
@@ -611,6 +611,7 @@ async fn handle_check_milestones(
             .fetch_all(&state.pool)
             .await
             .unwrap_or_default();
+        use sqlx::Row;
         let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
         cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
         types
@@ -841,6 +842,7 @@ async fn handle_onboarding_metrics(
         .fetch_all(&_state.pool).await
     {
         Ok(rows) => {
+
             use sqlx::Row;
             let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
             let resp = OnboardingMetricsResponse { metrics };
