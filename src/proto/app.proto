@@ -272,3 +272,15 @@ message SyncOfflineTransactionsResponse {
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
 }
+
+message ApproveSeoRequest {
+  string seo_metadata_id = 1;
+}
+
+message ApproveSeoResponse {
+  bool success = 1;
+}
+
+service PromoterService {
+  rpc ApproveSeo(ApproveSeoRequest) returns (ApproveSeoResponse);
+}

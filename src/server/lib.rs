@@ -332,6 +332,7 @@ pub mod services {
     pub mod booking;
     pub mod pos;
     pub mod collective;
+    pub mod promoter;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2274,6 +2275,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
     promoter_worker.start();
 
+    let seo_discovery_worker = crate::services::promoter::worker::SeoDiscoveryWorker::new(db.clone(), hub.clone());
+    seo_discovery_worker.start();
+
     ops_worker.start();
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
@@ -3843,6 +3847,7 @@ async fn create_ui_bom_item_handler(
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::app::promoter_service_server::PromoterServiceServer::with_interceptor(crate::services::promoter::service::MyPromoterService::new(db.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 
