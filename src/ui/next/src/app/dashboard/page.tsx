@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { OneTapReferral } from "../components/OneTapReferral";
+import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
@@ -84,6 +84,7 @@ export default function Dashboard() {
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
+  const [actionMessage, setActionMessage] = useState("");
 
   useEffect(() => {
     try {
@@ -197,7 +198,7 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <NeighborhoodPulseCard tenant={tenantId} />
+      <NeighborhoodPulseCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -233,10 +234,11 @@ export default function Dashboard() {
           Offline - changes saved locally
         </div>
         {error && <div className="app-badge bad">{error}</div>}
+        {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
       <div className="mb-6">
-        <OneTapReferral tenantId={tenantId()} source="dashboard" />
+        <GrowthReferralWidget />
       </div>
 
       <section className="app-panel mb-6">
@@ -305,7 +307,7 @@ export default function Dashboard() {
 
         <section>
           <div className="mb-6 glassmorphism p-6 rounded-[16px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-4xl">🎉</div>
                 <div>
@@ -313,7 +315,15 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
                 </div>
               </div>
-              <button onClick={() => window.alert("Awesome! Your 7-day Pro Trial Extension has been unlocked.")} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors">
+              <button
+                type="button"
+                onClick={() => {
+                  const inviteUrl = `${window.location.origin}/onboarding?ref=${tenantId()}`;
+                  navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
+                  setActionMessage("Reward claimed. Invite link copied.");
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors"
+              >
                 Share & Claim Reward
               </button>
             </div>
@@ -361,9 +371,8 @@ export default function Dashboard() {
               <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
               <button
                 onClick={() => {
-                  if (window.confirm('Upgrade to Pro to access Advanced AI Insights?')) {
-                    window.location.href = '/pricing';
-                  }
+                  setActionMessage('Opening Pro pricing for Advanced AI Insights.');
+                  router.push('/pricing');
                 }}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
               >
