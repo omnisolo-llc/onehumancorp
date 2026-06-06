@@ -18,3 +18,4 @@ pub mod dynamic_workflows;
 
 pub mod catalog;
 pub mod meta_webhook;
+pub mod marketplace;
