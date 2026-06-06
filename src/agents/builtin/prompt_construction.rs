@@ -21,21 +21,22 @@ impl PromptBuilder {
                 // Summarize recent tool errors if any exist near the end of the context
                 let recent_errors = Self::summarize_recent_tool_errors(final_messages);
 
-                let reminder = format!(
+                let mut reminder_text = format!(
                     "[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}]{}",
                     core_objective,
                     if recent_errors.is_empty() { String::new() } else { format!(" | Recent Tool Errors: {}", recent_errors) }
                 );
 
-                final_messages.push(Message::user(reminder));
                 if !developer_instructions.is_empty() {
-                    final_messages.push(Message::user(format!("[System Reminder (Developer Instructions): {}]", developer_instructions)));
+                    reminder_text.push_str(&format!("\n\n[Developer Instructions Reminder: {}]", developer_instructions));
                 }
+
+                final_messages.push(Message::user(reminder_text));
             } else if !developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[System Reminder (Developer Instructions): {}]", developer_instructions)));
+                final_messages.push(Message::user(format!("[Developer Instructions Reminder: {}]", developer_instructions)));
             }
         } else if !developer_instructions.is_empty() {
-            final_messages.push(Message::user(format!("[System Reminder (Developer Instructions): {}]", developer_instructions)));
+            final_messages.push(Message::user(format!("[Developer Instructions Reminder: {}]", developer_instructions)));
         }
     }
 
@@ -75,7 +76,6 @@ pub struct HierarchicalPromptBuilder {
     tool_definitions: String,
     developer_instructions: String,
     user_instructions: String,
-    enable_lost_in_the_middle_prevention: bool,
 }
 
 impl HierarchicalPromptBuilder {
@@ -127,7 +127,6 @@ impl HierarchicalPromptBuilder {
             tool_definitions: tool_defs,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
-            enable_lost_in_the_middle_prevention: cfg.enable_lost_in_the_middle_prevention,
         }
     }
 
@@ -169,17 +168,80 @@ impl HierarchicalPromptBuilder {
 
         // 5. Conversation History (happens at run loop outside this builder)
 
-        // Lost in the Middle prevention: High-signal context at the very beginning and very end
-        if self.enable_lost_in_the_middle_prevention {
-            if !self.server_system_message.is_empty() {
-                if !combined_system.is_empty() {
-                    combined_system.push_str("\n\n");
-                }
-                combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
-                combined_system.push_str(&self.server_system_message);
-            }
-        }
+        // Lost in the Middle prevention is handled by `apply_lost_in_the_middle_prevention`
+        // which appends the reminder to the end of the context window.
 
         combined_system
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{Message, Role};
+
+    #[test]
+    fn test_apply_lost_in_the_middle_prevention_long_conversation() {
+        let mut messages = vec![
+            Message::user("Message 1"),
+            Message::assistant("Message 2"),
+            Message::user("Message 3"),
+            Message::assistant("Message 4"),
+        ];
+
+        let developer_instructions = "Use Rust and be efficient.";
+        let user_instructions = "Build a web server.\n\nMake sure it has logging.";
+
+        PromptBuilder::apply_lost_in_the_middle_prevention(
+            &mut messages,
+            true,
+            developer_instructions,
+            user_instructions,
+        );
+
+        assert_eq!(messages.len(), 5);
+        let last_msg = &messages[4];
+        assert_eq!(last_msg.role, Role::User);
+        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Build a web server.]"));
+        assert!(last_msg.content.contains("[Developer Instructions Reminder: Use Rust and be efficient.]"));
+    }
+
+    #[test]
+    fn test_apply_lost_in_the_middle_prevention_with_errors() {
+        let mut messages = vec![
+            Message::user("Message 1"),
+            Message::assistant("Message 2"),
+            Message::user("There was an error: file not found"),
+            Message::assistant("Message 4"),
+        ];
+
+        PromptBuilder::apply_lost_in_the_middle_prevention(
+            &mut messages,
+            true,
+            "",
+            "Objective",
+        );
+
+        let last_msg = &messages[4];
+        assert!(last_msg.content.contains("Recent Tool Errors: There was an error: file not found"));
+    }
+
+    #[test]
+    fn test_apply_lost_in_the_middle_prevention_short_conversation() {
+        let mut messages = vec![
+            Message::user("Message 1"),
+        ];
+
+        PromptBuilder::apply_lost_in_the_middle_prevention(
+            &mut messages,
+            true,
+            "Dev rules",
+            "User rule",
+        );
+
+        assert_eq!(messages.len(), 2);
+        let last_msg = &messages[1];
+        assert_eq!(last_msg.role, Role::User);
+        assert_eq!(last_msg.content, "[Developer Instructions Reminder: Dev rules]");
     }
 }
