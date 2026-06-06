@@ -1,0 +1,150 @@
+name: Generate CI Custom Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-ci-image.yml'
+  workflow_dispatch:
+  schedule:
+    # Rebuild weekly to pick up upstream image and security updates.
+    - cron: "0 0 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generate-ci-custom-image
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate CI Custom Image
+    runs-on: ${{ vars.CI_IMAGE_GENERATION_RUNNER || 'ci-image-generation-ubuntu-24.04-x64' }}
+    snapshot:
+      image-name: ohc-ci-ubuntu-24.04
+      version: "1.*"
+    timeout-minutes: 120
+    env:
+      KIND_VERSION: "v0.31.0"
+      KUBECTL_VERSION: "v1.36.1"
+      HELM_VERSION: "v3.20.2"
+      KIND_SHA256_AMD64: "eb244cbafcc157dff60cf68693c14c9a75c4e6e6fedaf9cd71c58117cb93e3fa"
+      KIND_SHA256_ARM64: "8e1014e87c34901cc422a1445866835d1e666f2a61301c27e722bdeab5a1f7e4"
+      KUBECTL_SHA256_AMD64: "629d3f410e09bf49b64ae7079f7f0bda1191efed311f7d37fdbab0ad5b0ec2b7"
+      KUBECTL_SHA256_ARM64: "59f7ee8e477fae658447607dc3c8790ac17a1b016c01c622c12070e969e2d4e7"
+      HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
+      HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
+    steps:
+      - name: Install Linux CI dependencies
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get upgrade -y
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            curl \
+            git \
+            gnupg \
+            jq \
+            lsb-release \
+            pkg-config \
+            software-properties-common \
+            unzip \
+            wget \
+            zip \
+            python3 \
+            python3-distutils \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
+            || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
+
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Install Bazelisk
+        run: |
+          set -euo pipefail
+
+          case "$(uname -m)" in
+            x86_64) bazelisk_arch=amd64 ;;
+            aarch64|arm64) bazelisk_arch=arm64 ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+
+          curl -fsSL \
+            -o /tmp/bazelisk \
+            "https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-${bazelisk_arch}"
+          chmod +x /tmp/bazelisk
+          sudo install /tmp/bazelisk /usr/local/bin/bazelisk
+          if [[ ! -e /usr/local/bin/bazel ]]; then
+            sudo ln -s /usr/local/bin/bazelisk /usr/local/bin/bazel
+          fi
+
+      - name: Install Kubernetes tools
+        run: |
+          set -euo pipefail
+
+          case "$(uname -m)" in
+            x86_64)
+              ci_arch=amd64
+              kind_sha256="$KIND_SHA256_AMD64"
+              kubectl_sha256="$KUBECTL_SHA256_AMD64"
+              helm_sha256="$HELM_SHA256_AMD64"
+              ;;
+            aarch64|arm64)
+              ci_arch=arm64
+              kind_sha256="$KIND_SHA256_ARM64"
+              kubectl_sha256="$KUBECTL_SHA256_ARM64"
+              helm_sha256="$HELM_SHA256_ARM64"
+              ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+
+          tool_dir="$(mktemp -d)"
+
+          curl -fsSL -o "$tool_dir/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${ci_arch}"
+          echo "${kind_sha256}  $tool_dir/kind" | sha256sum --check --strict
+          chmod +x "$tool_dir/kind"
+          sudo install "$tool_dir/kind" /usr/local/bin/kind
+
+          curl -fsSL -o "$tool_dir/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ci_arch}/kubectl"
+          echo "${kubectl_sha256}  $tool_dir/kubectl" | sha256sum --check --strict
+          chmod +x "$tool_dir/kubectl"
+          sudo install "$tool_dir/kubectl" /usr/local/bin/kubectl
+
+          curl -fsSL -o "$tool_dir/helm.tar.gz" "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ci_arch}.tar.gz"
+          echo "${helm_sha256}  $tool_dir/helm.tar.gz" | sha256sum --check --strict
+          tar -C "$tool_dir" -xzf "$tool_dir/helm.tar.gz"
+          sudo install "$tool_dir/linux-${ci_arch}/helm" /usr/local/bin/helm
+
+      - name: Pre-pull Docker service images
+        run: |
+          set -euo pipefail
+
+          docker version
+          docker pull pgvector/pgvector:pg16
+          docker pull valkey/valkey:8-alpine
+
+      - name: Verify image contents
+        run: |
+          set -euo pipefail
+
+          bazelisk version
+          kind version
+          kubectl version --client=true
+          helm version --short
+          docker image inspect pgvector/pgvector:pg16 >/dev/null
+          docker image inspect valkey/valkey:8-alpine >/dev/null
+
+          {
+            echo "OHC_CI_IMAGE_BUILT=true"
+            echo "OHC_CI_IMAGE_BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "OHC_CI_IMAGE_SOURCE_RUN=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } | sudo tee /etc/ohc-ci-image.conf

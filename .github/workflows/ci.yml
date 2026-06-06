@@ -26,7 +26,7 @@ defaults:
 jobs:
   check-changes:
     name: Check what files changed
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
@@ -70,20 +70,17 @@ jobs:
     needs:
       - check-changes
     if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ vars.CI_CUSTOM_RUNNER || 'ci-ubuntu-24.04-x64' }}
     timeout-minutes: 60
     strategy:
       fail-fast: true
       matrix:
         include:
           - name: linux-x86_64
-            runner: ubuntu-latest
             bazel_config: linux_x86_64
           - name: windows-x86_64
-            runner: ubuntu-latest
             bazel_config: windows_x86_64
           - name: android
-            runner: ubuntu-latest
             bazel_config: linux_x86_64
           # - name: windows-arm64
           #  runner: windows-11-arm
@@ -96,20 +93,6 @@ jobs:
           #  bazel_config: macos_x86_64
     steps:
       - uses: actions/checkout@v6.0.2
-
-      - name: Free runner disk space
-        if: startsWith(matrix.runner, 'ubuntu')
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -164,19 +147,6 @@ jobs:
             --skip_incompatible_explicit_targets \
             --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
             < build-targets.txt
-
-      - name: Install Linux Tauri desktop dependencies
-        if: matrix.name == 'linux-x86_64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            pkg-config
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
-            || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
 
       - name: Build Tauri desktop Bazel target
         if: matrix.name == 'linux-x86_64'
@@ -242,23 +212,10 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_CUSTOM_RUNNER || 'ci-ubuntu-24.04-x64' }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6.0.2
-
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -305,7 +262,7 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_CUSTOM_RUNNER || 'ci-ubuntu-24.04-x64' }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -325,19 +282,6 @@ jobs:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
       - uses: actions/checkout@v6.0.2
-
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -372,11 +316,6 @@ jobs:
             test --test_output=errors
             test --test_summary=detailed
 
-      - name: Pull E2E Docker images
-        run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
-
       - name: Test Playwright UI E2E target
         run: |
           bazelisk test "${{ matrix.target }}" \
@@ -389,74 +328,12 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_CUSTOM_RUNNER || 'ci-ubuntu-24.04-x64' }}
     timeout-minutes: 45
     env:
-      KIND_VERSION: "v0.31.0"
-      KUBECTL_VERSION: "v1.36.1"
-      HELM_VERSION: "v3.20.2"
-      KIND_SHA256_AMD64: "eb244cbafcc157dff60cf68693c14c9a75c4e6e6fedaf9cd71c58117cb93e3fa"
-      KIND_SHA256_ARM64: "8e1014e87c34901cc422a1445866835d1e666f2a61301c27e722bdeab5a1f7e4"
-      KUBECTL_SHA256_AMD64: "629d3f410e09bf49b64ae7079f7f0bda1191efed311f7d37fdbab0ad5b0ec2b7"
-      KUBECTL_SHA256_ARM64: "59f7ee8e477fae658447607dc3c8790ac17a1b016c01c622c12070e969e2d4e7"
-      HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
-      HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
       - uses: actions/checkout@v6.0.2
-
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
-      - name: Install Kubernetes tools
-        run: |
-          case "$(uname -m)" in
-            x86_64)
-              CI_ARCH=amd64
-              KIND_SHA256="$KIND_SHA256_AMD64"
-              KUBECTL_SHA256="$KUBECTL_SHA256_AMD64"
-              HELM_SHA256="$HELM_SHA256_AMD64"
-              ;;
-            aarch64|arm64)
-              CI_ARCH=arm64
-              KIND_SHA256="$KIND_SHA256_ARM64"
-              KUBECTL_SHA256="$KUBECTL_SHA256_ARM64"
-              HELM_SHA256="$HELM_SHA256_ARM64"
-              ;;
-            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
-          esac
-          echo "CI_ARCH=${CI_ARCH}" >> "${GITHUB_ENV}"
-
-          tool_dir="$(mktemp -d)"
-
-          curl -fsSL -o "$tool_dir/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
-          echo "${KIND_SHA256}  $tool_dir/kind" | sha256sum --check --strict
-          chmod +x "$tool_dir/kind"
-          sudo install "$tool_dir/kind" /usr/local/bin/kind
-
-          curl -fsSL -o "$tool_dir/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
-          echo "${KUBECTL_SHA256}  $tool_dir/kubectl" | sha256sum --check --strict
-          chmod +x "$tool_dir/kubectl"
-          sudo install "$tool_dir/kubectl" /usr/local/bin/kubectl
-
-          curl -fsSL -o "$tool_dir/helm.tar.gz" "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
-          echo "${HELM_SHA256}  $tool_dir/helm.tar.gz" | sha256sum --check --strict
-          tar -C "$tool_dir" -xzf "$tool_dir/helm.tar.gz"
-          sudo install "$tool_dir/linux-${CI_ARCH}/helm" /usr/local/bin/helm
-
-          kind version
-          kubectl version --client=true
-          helm version --short
 
       - name: Verify Docker is available
         run: |
@@ -491,11 +368,11 @@ jobs:
           command -v helm
           command -v docker
           command -v bazelisk
-          if [[ "${CI_ARCH}" == "arm64" ]]; then
-            BAZEL_PLATFORM_CONFIG=linux_arm64
-          else
-            BAZEL_PLATFORM_CONFIG=linux
-          fi
+          case "$(uname -m)" in
+            aarch64|arm64) BAZEL_PLATFORM_CONFIG=linux_arm64 ;;
+            x86_64) BAZEL_PLATFORM_CONFIG=linux ;;
+            *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
           bazelisk test //deploy:kind_e2e_test \
             --config="${BAZEL_PLATFORM_CONFIG}" \
             --nocache_test_results
@@ -505,54 +382,17 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_CUSTOM_RUNNER || 'ci-ubuntu-24.04-x64' }}
     timeout-minutes: 30
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
       - uses: actions/checkout@v6.0.2
 
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
       - name: Verify Docker is available
         run: |
           docker version
           docker info
-
-      - name: Restore Docker Compose image cache
-        uses: actions/cache@v5.0.5
-        with:
-          path: /tmp/ohc-docker-compose-images
-          key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-
-
-      - name: Load Docker Compose image cache
-        run: |
-          if [[ -f /tmp/ohc-docker-compose-images/images.tar ]]; then
-            docker load -i /tmp/ohc-docker-compose-images/images.tar
-          fi
-
-      - name: Pull Docker Compose images
-        run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
-          mkdir -p /tmp/ohc-docker-compose-images
-          docker save \
-            pgvector/pgvector:pg16 \
-            valkey/valkey:8-alpine \
-            -o /tmp/ohc-docker-compose-images/images.tar
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -594,7 +434,7 @@ jobs:
       - kind-e2e
       - docker-e2e
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     timeout-minutes: 5
     steps:
       - name: Check required CI results
