@@ -111,12 +111,17 @@ impl Department for CustomerSuccessAgent {
                 "Draft email for review".to_string()
             };
 
+            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+            if !inbox_id.is_empty() {
+                let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, generated_response).await;
+            }
+
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
-                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "inbox_message_id": inbox_id,
             });
 
             self.orchestrator.execute_action(
