@@ -15,39 +15,19 @@ export default function TeamChatPage() {
   const [messages, setMessages] = useState<{id: string, role: 'user'|'system', content: string, card?: ActionCard}[]>([]);
   const router = useRouter();
 
-  const handleApprove = async (msgId: string) => {
-    // Find the message to get the card ID
-    const msgToApprove = messages.find(m => m.id === msgId);
-    if (!msgToApprove || !msgToApprove.card) return;
-
-    try {
-      const response = await fetch(`/api/agents/approvals/${msgToApprove.card.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ approved: true })
-      });
-
-      if (response.ok) {
-        setMessages(prev => prev.map(msg => {
-          if (msg.id === msgId && msg.card) {
-            return {
-              ...msg,
-              card: {
-                ...msg.card,
-                status: 'approved'
-              }
-            };
+  const handleApprove = (msgId: string) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === msgId && msg.card) {
+        return {
+          ...msg,
+          card: {
+            ...msg.card,
+            status: 'approved'
           }
-          return msg;
-        }));
-      } else {
-        console.error("Failed to approve action");
+        };
       }
-    } catch (e) {
-      console.error("Error approving action", e);
-    }
+      return msg;
+    }));
   };
 
   const handleSend = async () => {
@@ -63,16 +43,13 @@ export default function TeamChatPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Assuming authorization is handled by Next.js API routes / middleware in reality
+          // 'Authorization': 'Bearer ' + token
         },
         body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
       });
       if (response.ok) {
         const data = await response.json();
-
-        // Use a generic placeholder card ID since /api/agents/chat response
-        // doesn't return an approval ID directly in this simplified version,
-        // but we want to simulate the data flow as realistically as possible
-        const approvalId = data.approval_id || Date.now().toString() + '-approval';
 
         const msgId = Date.now().toString() + '-system';
         setMessages(prev => [...prev, {
@@ -80,8 +57,8 @@ export default function TeamChatPage() {
           role: 'system',
           content: "I've drafted an action for your approval.",
           card: {
-            id: approvalId,
-            department: data.department_assigned || 'The Manager',
+            id: Date.now().toString() + '-card',
+            department: data.agent || 'The Manager',
             description: data.description || `Drafted action based on: "${userMsg}"`,
             status: 'pending'
           }
@@ -97,23 +74,16 @@ export default function TeamChatPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div
-        className="w-[375px] min-h-[812px] rounded-[16px] shadow-2xl overflow-hidden flex flex-col relative border border-white/40"
-        style={{
-          background: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(30px) saturate(210%)',
-          WebkitBackdropFilter: 'blur(30px) saturate(210%)'
-        }}
-      >
+      <div className="w-[375px] min-h-[812px] mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-4 px-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
-          <button onClick={() => router.push('/team')} className="text-gray-500 hover:text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center">
+        <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
+          <button onClick={() => router.push('/team')} className="text-gray-500">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <div>
-            <h1 className="text-xl font-bold font-outfit text-[#1D1D1F]">Team Chat</h1>
-            <p className="text-xs text-[#34C759] font-medium tracking-wide">All departments online</p>
+            <h1 className="text-xl font-bold font-outfit text-gray-900">Team Chat</h1>
+            <p className="text-xs text-green-500 font-medium">All departments online</p>
           </div>
         </div>
 
@@ -138,34 +108,34 @@ export default function TeamChatPage() {
 
               <div className="flex flex-col gap-2 max-w-[80%]">
                 {/* Text Bubble */}
-                <div className={`p-3 text-sm ${msg.role === 'user' ? 'bg-[#0066FF] text-[#F5F5F7] rounded-2xl rounded-tr-none' : 'bg-[rgba(255,255,255,0.8)] border border-white/40 text-[#1D1D1F] rounded-2xl rounded-tl-none'}`}>
+                <div className={`p-3 text-sm ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-2xl rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-2xl rounded-tl-none'}`}>
                   {msg.content}
                 </div>
 
                 {/* Action Card if present */}
                 {msg.card && (
-                  <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-200 border border-white/40 rounded-[16px] p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
-                    <div className={`absolute top-0 left-0 w-full h-1 ${msg.card.status === 'approved' ? 'bg-[#34C759]' : 'bg-gradient-to-r from-[#0066FF] to-indigo-500'}`}></div>
+                  <div className="bg-white/60 backdrop-blur-md border border-gray-200 rounded-xl p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
+                    <div className={`absolute top-0 left-0 w-full h-1 ${msg.card.status === 'approved' ? 'bg-green-500' : 'bg-gradient-to-r from-blue-400 to-indigo-500'}`}></div>
                     <div className="flex items-center gap-2 mb-2">
                       {msg.card.status === 'pending' ? (
-                        <span className="text-xs font-bold px-2 py-0.5 bg-[#FF9500]/10 text-[#FF9500] rounded-full uppercase tracking-wide">Needs Approval</span>
+                        <span className="text-xs font-bold px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full uppercase tracking-wide">Needs Approval</span>
                       ) : (
-                        <span className="text-xs font-bold px-2 py-0.5 bg-[#34C759]/10 text-[#34C759] rounded-full uppercase tracking-wide">Approved</span>
+                        <span className="text-xs font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full uppercase tracking-wide">Approved</span>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-[#1D1D1F] mb-1">{msg.card.department}</p>
-                    <p className="text-xs text-[#1D1D1F]/70 mb-4">{msg.card.description}</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">{msg.card.department}</p>
+                    <p className="text-xs text-gray-600 mb-4">{msg.card.description}</p>
 
                     {msg.card.status === 'pending' && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleApprove(msg.id)}
-                          className="flex-1 bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-xs font-semibold py-2 px-3 rounded-[8px] transition-colors min-h-[44px]"
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
                           data-testid="approve-action-btn"
                         >
                           Approve & Execute
                         </button>
-                        <button className="bg-gray-100/50 hover:bg-gray-200 text-[#1D1D1F] text-xs font-medium py-2 px-3 rounded-[8px] transition-colors min-h-[44px]">
+                        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors">
                           Edit
                         </button>
                       </div>
@@ -178,11 +148,11 @@ export default function TeamChatPage() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-white/40 sticky bottom-0 z-10 bg-[rgba(255,255,255,0.4)] backdrop-blur-[30px] saturate-200">
-          <div className="flex items-center bg-[rgba(255,255,255,0.8)] rounded-[16px] border border-white/40 px-4 py-2 min-h-[44px]">
+        <div className="p-4 bg-white/65 backdrop-blur-[30px] border-t border-white/40 sticky bottom-0 z-10">
+          <div className="flex items-center bg-gray-50 rounded-full border border-gray-200 px-4 py-2">
             <input
               type="text"
-              className="flex-1 bg-transparent border-none outline-none text-sm text-[#1D1D1F] placeholder-gray-500"
+              className="flex-1 bg-transparent border-none outline-none text-sm"
               placeholder="Message your team..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -190,7 +160,7 @@ export default function TeamChatPage() {
               data-testid="team-chat-input"
             />
             <button
-              className="ml-2 text-[#0066FF] font-medium text-sm disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="ml-2 text-blue-500 font-medium text-sm disabled:opacity-50"
               onClick={handleSend}
               disabled={!message.trim()}
               data-testid="team-chat-send"
