@@ -8,6 +8,38 @@ impl ChaosEngine {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_chaos_cross_tenant_query_rejection() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let pool1 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'chaos_tenant_1'").await?; Ok(true) }) }).connect(&database_url).await.unwrap();
+
+        let pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'chaos_tenant_2'").await?; Ok(true) }) }).connect(&database_url).await.unwrap();
+
+        let mission_id = format!("chaos_mission_{}", uuid::Uuid::new_v4());
+
+        // Chaos setup: Insert data as tenant 1
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', '{}', 'chaos_tenant_1')").bind(&mission_id).execute(&pool1).await.unwrap();
+
+        // Chaos experiment: Attempt to read it from tenant 2 (should fail or return empty)
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE id = $1").bind(&mission_id).fetch_one(&pool2).await.unwrap();
+
+        assert_eq!(count, 0, "Chaos Test Failed: Tenant 2 was able to read Tenant 1 data (tenant isolation breached).");
+
+        // Chaos experiment: Attempt to update it from tenant 2 (should affect 0 rows)
+        let res = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE id = $1").bind(&mission_id).execute(&pool2).await.unwrap();
+        assert_eq!(res.rows_affected(), 0, "Chaos Test Failed: Tenant 2 was able to modify Tenant 1 data.");
+
+        // Cleanup
+        sqlx::query("DELETE FROM agent_missions WHERE id = $1").bind(&mission_id).execute(&pool1).await.unwrap();
+    }
+
+
+
     use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
     use crate::sip::SipDB;
