@@ -627,22 +627,22 @@ pub async fn bench_advisory_insights_latency() {
             let tenant_id_orders = tenant_id.clone();
 
             let (_org_res, _active_orders_res) = tokio::join!(
-                tokio::spawn(async move {
+                async move {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
                     .bind(&tenant_id_org)
                     .fetch_optional(&db_org.pool)
                     .await
-                }),
-                tokio::spawn(async move {
+                },
+                async move {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
                     .bind(&tenant_id_orders)
                     .fetch_one(&db_orders.pool)
                     .await
-                })
+                }
             );
 
             fetch_times.push(start.elapsed().as_micros());
@@ -677,7 +677,7 @@ pub async fn bench_advisory_insights_latency() {
         let tenant_id_orders = tenant_id.clone();
 
         let (_org_res, _active_orders_res) = tokio::join!(
-            tokio::spawn(async move {
+            async move {
                 sqlx::query_as::<_, (String, String)>(
                     "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
                 )
@@ -685,8 +685,8 @@ pub async fn bench_advisory_insights_latency() {
                 .fetch_optional(&pool_org)
                 .await
                 .unwrap()
-            }),
-            tokio::spawn(async move {
+            },
+            async move {
                 sqlx::query_scalar::<_, i64>(
                     "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
                 )
@@ -694,7 +694,7 @@ pub async fn bench_advisory_insights_latency() {
                 .fetch_one(&pool_orders)
                 .await
                 .unwrap()
-            })
+            }
         );
 
         fetch_times_sqlite.push(start.elapsed().as_micros());
