@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ohc.api.v1;
 
+import "google/api/annotations.proto";
 import "src/proto/agent.proto";
 import "src/proto/billing.proto";
 import "src/proto/organization.proto";
@@ -281,6 +282,32 @@ message ApproveSeoResponse {
   bool success = 1;
 }
 
+message SeoMetadata {
+  string id = 1;
+  string entity_id = 2;
+  string entity_type = 3;
+  string meta_title = 4;
+  string meta_description = 5;
+  string generated_keywords = 6;
+  string status = 7;
+}
+
+message GetPendingSeoRequest {}
+
+message GetPendingSeoResponse {
+  repeated SeoMetadata pending_seo = 1;
+}
+
 service PromoterService {
-  rpc ApproveSeo(ApproveSeoRequest) returns (ApproveSeoResponse);
+  rpc ApproveSeo(ApproveSeoRequest) returns (ApproveSeoResponse) {
+    option (google.api.http) = {
+      post: "/v1/promoter/seo/approve"
+      body: "*"
+    };
+  }
+  rpc GetPendingSeo(GetPendingSeoRequest) returns (GetPendingSeoResponse) {
+    option (google.api.http) = {
+      get: "/v1/promoter/seo/pending"
+    };
+  }
 }

@@ -23,6 +23,7 @@ export function UnifiedAgentFeed() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<ApprovalRequest[]>([]);
+  const [pendingSeo, setPendingSeo] = useState<any[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
   const tenantId = () => {
@@ -51,6 +52,16 @@ export function UnifiedAgentFeed() {
         const data: ApprovalsResponse = await res.json();
         if (mounted && data.pending_approvals) {
           setApprovals(data.pending_approvals);
+        }
+
+        const seoRes = await fetch(`/api/agents/promoter_seo`, {
+          headers: { "x-tenant-id": tenant }
+        });
+        if (seoRes.ok) {
+           const seoData = await seoRes.json();
+           if (mounted && seoData.pending_seo) {
+               setPendingSeo(seoData.pending_seo);
+           }
         }
       } catch (err: any) {
         if (mounted) {
@@ -126,7 +137,25 @@ export function UnifiedAgentFeed() {
     }
   };
 
+  const handleSeoDecision = async (id: string, approved: boolean) => {
+    setPendingSeo(prev => prev.filter(app => app.id !== id));
+    if (!approved) return;
 
+    try {
+      const tenant = tenantId();
+      const res = await fetch(`/api/agents/promoter_seo/${id}`, {
+        method: "POST",
+        headers: {
+          "x-tenant-id": tenant,
+        }
+      });
+      if (!res.ok) {
+        throw new Error("Failed to approve SEO");
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
 
   if (error) {
     return (
@@ -169,7 +198,7 @@ export function UnifiedAgentFeed() {
                 Loading Agent Proposals...
               </div>
             )}
-            {!loading && approvals.length === 0 && (
+            {!loading && approvals.length === 0 && pendingSeo.length === 0 && (
               <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
@@ -178,6 +207,53 @@ export function UnifiedAgentFeed() {
                 </p>
               </div>
             )}
+
+            {pendingSeo.map((seo) => (
+              <div
+                key={seo.id}
+                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+              >
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                      The Promoter
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                      SEO Upgrade
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
+                    The Promoter Agent noticed you added a new {seo.entity_type}. I've optimized it so locals searching for '{seo.generated_keywords}' can find it. Want me to publish?
+                  </h3>
+                </div>
+
+                <div className="flex flex-col gap-3 w-full mt-2">
+                  <button
+                    onClick={() => handleSeoDecision(seo.id, true)}
+                    className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
+                    aria-label="Approve proposal"
+                  >
+                    Approve
+                  </button>
+                  <div className="flex gap-3 w-full">
+                    <button
+                      className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      aria-label="Edit proposal"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleSeoDecision(seo.id, false)}
+                      className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      aria-label="Reject proposal"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
             {approvals.map((approval) => (
               <div
                 key={approval.id}
