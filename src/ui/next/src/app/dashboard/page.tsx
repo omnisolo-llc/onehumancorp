@@ -67,6 +67,55 @@ function statusTone(status?: string) {
   return "neutral";
 }
 
+
+function NeighborhoodPulse() {
+  const [partners, setPartners] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/v1/growth/collective/suggest', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId: 'current-tenant' })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.suggested_tenant_ids) {
+        setPartners(data.suggested_tenant_ids);
+      }
+      setLoading(false);
+    })
+    .catch(() => setLoading(false));
+  }, []);
+
+  if (loading || partners.length === 0) return null;
+
+  return (
+        <div id="neighborhood-pulse" className="mb-6 p-6 rounded-[16px] mac-glass-container border border-white/40 dark:border-white/10" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 mb-1">Neighborhood Pulse</h3>
+              <p className="text-sm text-gray-700">There are {partners.length} OHC businesses in your area. Form a 'Main Street Collective' to share customers?</p>
+            </div>
+            <button
+              onClick={async () => {
+                const res = await fetch('/api/v1/growth/collective/create', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: 'Main Street Collective', location_center: 'local', tenantId: 'current-tenant' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`Partnering with ${partners.join(' and ')}! Main Street Collective Formed.`);
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-[8px] font-medium shadow-sm transition-colors"
+            >
+              Partner Match
+            </button>
+          </div>
+        </div>
+  );
+}
+
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);

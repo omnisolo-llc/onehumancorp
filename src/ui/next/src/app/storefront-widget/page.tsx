@@ -3,6 +3,37 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+
+function NeighborhoodPartners({ tenantId }: { tenantId: string }) {
+    const [partners, setPartners] = useState<{tenant_id: string}[]>([]);
+
+    useEffect(() => {
+        fetch('/api/v1/growth/collective/get', { method: 'POST', body: JSON.stringify({ tenantId }) })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.members) {
+                setPartners(data.members.filter((m: any) => m.tenant_id !== tenantId));
+            }
+        }).catch(() => {});
+    }, [tenantId]);
+
+    if (partners.length === 0) return null;
+
+    return (
+        <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50 flex flex-col gap-2 px-1 relative z-20">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Neighborhood Partners</p>
+            <div className="flex justify-center items-center gap-4">
+                {partners.map(p => (
+                    <div key={p.tenant_id} className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs mb-1">{p.tenant_id.charAt(0).toUpperCase()}</div>
+                        <span className="text-[10px] text-gray-600 dark:text-gray-400">{p.tenant_id}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function StorefrontWidgetPage() {
   const router = useRouter();
   const [tenant, setTenant] = useState('my-store');

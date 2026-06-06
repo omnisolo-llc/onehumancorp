@@ -21,6 +21,25 @@ export default function CheckoutPage() {
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+
+  const [collectivePoints, setCollectivePoints] = useState(0);
+  const [usePoints, setUsePoints] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/v1/growth/collective/get', { method: 'POST', body: JSON.stringify({ tenantId: tenant }) })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && data.collectives.length > 0) {
+            fetch('/api/v1/growth/collective/redeem', { method: 'POST', body: JSON.stringify({ buyerId: 'current-user', collectiveId: data.collectives[0].id, points: 0 }) })
+            .then(res2 => res2.json())
+            .then(data2 => {
+                // Just fetching mock points for UI
+                setCollectivePoints(50);
+            });
+        }
+    }).catch(() => {});
+  }, [tenant]);
+
   const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
