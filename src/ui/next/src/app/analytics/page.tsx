@@ -86,37 +86,17 @@ export default function AnalyticsPage() {
            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-sm select-none pointer-events-none opacity-60' : ''}`}>
                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Traffic Sources</h3>
-                   <div className="flex-1 flex flex-col justify-center items-center gap-3">
-                       {/* Mock Chart representation */}
-                       <div className="w-full flex items-end justify-around h-32 border-b border-gray-200 pb-2">
-                           <div className="w-8 bg-blue-500 rounded-t-sm h-full" title="Direct (45%)"></div>
-                           <div className="w-8 bg-indigo-500 rounded-t-sm h-3/4" title="Social (30%)"></div>
-                           <div className="w-8 bg-purple-500 rounded-t-sm h-1/2" title="Organic (15%)"></div>
-                           <div className="w-8 bg-pink-500 rounded-t-sm h-1/4" title="Referral (10%)"></div>
-                       </div>
-                       <div className="flex gap-4 text-xs font-medium text-gray-500">
-                           <span className="flex items-center gap-1"><span className="w-2 h-2 bg-blue-500 rounded-full"></span>Direct</span>
-                           <span className="flex items-center gap-1"><span className="w-2 h-2 bg-indigo-500 rounded-full"></span>Social</span>
-                           <span className="flex items-center gap-1"><span className="w-2 h-2 bg-purple-500 rounded-full"></span>Organic</span>
-                       </div>
+                   <div className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                     <span className="text-3xl mb-2">📊</span>
+                     <p className="text-gray-500 text-sm">Waiting for real traffic data from visitors.</p>
                    </div>
                </div>
 
                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">AI Buying Intent</h3>
-                   <div className="flex-1 flex flex-col justify-center gap-4">
-                       <div>
-                           <div className="flex justify-between text-xs mb-1 font-medium"><span className="text-gray-700">High Intent Visitors</span><span className="text-green-600">28%</span></div>
-                           <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-green-500 h-2 rounded-full w-[28%]"></div></div>
-                       </div>
-                       <div>
-                           <div className="flex justify-between text-xs mb-1 font-medium"><span className="text-gray-700">Considering</span><span className="text-yellow-600">45%</span></div>
-                           <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-yellow-500 h-2 rounded-full w-[45%]"></div></div>
-                       </div>
-                       <div>
-                           <div className="flex justify-between text-xs mb-1 font-medium"><span className="text-gray-700">Just Browsing</span><span className="text-gray-500">27%</span></div>
-                           <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-gray-400 h-2 rounded-full w-[27%]"></div></div>
-                       </div>
+                   <div className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                     <span className="text-3xl mb-2">🧠</span>
+                     <p className="text-gray-500 text-sm">AI needs more customer behavior data to calculate intent.</p>
                    </div>
                </div>
            </div>

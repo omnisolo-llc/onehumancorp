@@ -39,3 +39,39 @@ test.describe('Business Analytics Widget Soft Paywall', () => {
     await expect(pricingScreen).toBeVisible();
   });
 });
+
+test.describe('Analytics Empty States (Grandmother Test)', () => {
+  test('business-analytics should show empty state for Revenue Forecast', async ({ page }) => {
+    await page.goto('/business-analytics');
+    await expect(page.getByRole('heading', { name: 'Revenue Forecast' })).toBeVisible();
+    await expect(page.getByText('Not enough historical data to generate an AI forecast.')).toBeVisible();
+  });
+
+  test('business-analytics should show empty state for Customer Cohort Retention', async ({ page }) => {
+    await page.goto('/business-analytics');
+    await expect(page.getByRole('heading', { name: 'Customer Cohort Retention' })).toBeVisible();
+    await expect(page.getByText('Customer retention data requires at least 3 months of history.')).toBeVisible();
+  });
+
+  test('analytics should show empty state for Traffic Sources', async ({ page }) => {
+    await page.goto('/analytics');
+    await expect(page.getByRole('heading', { name: 'Traffic Sources' })).toBeVisible();
+    await expect(page.getByText('Waiting for real traffic data from visitors.')).toBeVisible();
+  });
+
+  test('analytics should show empty state for AI Buying Intent', async ({ page }) => {
+    await page.goto('/analytics');
+    await expect(page.getByRole('heading', { name: 'AI Buying Intent' })).toBeVisible();
+    await expect(page.getByText('AI needs more customer behavior data to calculate intent.')).toBeVisible();
+  });
+
+  test('analytics pages should not contain mock data indicators', async ({ page }) => {
+    await page.goto('/business-analytics');
+    const pageContent = await page.content();
+    expect(pageContent).not.toContain('Mock area chart');
+
+    await page.goto('/analytics');
+    const analyticsContent = await page.content();
+    expect(analyticsContent).not.toContain('Mock Chart representation');
+  });
+});

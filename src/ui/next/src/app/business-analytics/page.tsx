@@ -90,58 +90,17 @@ export default function BusinessAnalytics() {
            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-md select-none pointer-events-none opacity-50' : ''}`}>
                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-72 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Revenue Forecast</h3>
-                   <div className="flex-1 flex flex-col justify-end gap-2 pb-4 border-b border-gray-100 relative">
-                        {/* Mock area chart */}
-                       <div className="w-full h-full absolute inset-0 flex items-end">
-                           <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
-                               <path d="M0,50 L0,30 Q10,20 20,25 T40,15 T60,20 T80,5 Q90,10 100,0 L100,50 Z" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" strokeWidth="1"></path>
-                               <path d="M80,5 Q90,10 100,0" fill="none" stroke="#6366f1" strokeWidth="2" strokeDasharray="2,2"></path>
-                           </svg>
-                       </div>
-                       <div className="flex justify-between w-full text-xs text-gray-400 mt-2 absolute bottom-0">
-                           <span>Oct</span><span>Nov</span><span>Dec</span><span className="text-indigo-500 font-semibold">Jan (Est)</span>
-                       </div>
+                   <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                     <span className="text-3xl mb-2">📉</span>
+                     <p className="text-gray-500 text-sm">Not enough historical data to generate an AI forecast.</p>
                    </div>
                </div>
 
                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-72 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Customer Cohort Retention</h3>
-                   <div className="flex-1 flex flex-col gap-2">
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600">Month 1</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-blue-600 rounded-sm" style={{width: '100%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">100%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600">Month 2</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-blue-500 rounded-sm" style={{width: '65%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">65%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600">Month 3</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-blue-400 rounded-sm" style={{width: '45%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">45%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600">Month 4</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-blue-300 rounded-sm" style={{width: '35%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">35%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600">Month 5</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-blue-200 rounded-sm" style={{width: '28%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">28%</span>
-                       </div>
+                   <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                     <span className="text-3xl mb-2">👥</span>
+                     <p className="text-gray-500 text-sm">Customer retention data requires at least 3 months of history.</p>
                    </div>
                </div>
            </div>
