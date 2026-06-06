@@ -1,21 +1,29 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct ReadArgs {
+    path: String,
+    start_line: Option<usize>,
+    end_line: Option<usize>,
+}
 
 struct ReadExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for ReadExecutor {
-    async fn execute(
+impl PydanticToolExecutor<ReadArgs> for ReadExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: ReadArgs,
     ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
+        let path = &args.path;
         let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
         // Just-in-Time (JIT) Retrieval Mechanic:
@@ -30,8 +38,8 @@ impl ToolExecutor for ReadExecutor {
         let mut result_lines = Vec::new();
         let mut line_count = 0;
 
-        let req_start = args["start_line"].as_u64().map(|n| n.saturating_sub(1) as usize);
-        let req_end = args["end_line"].as_u64().map(|n| n as usize);
+        let req_start = args.start_line.map(|n| n.saturating_sub(1));
+        let req_end = args.end_line;
 
         if let (Some(s), Some(e)) = (req_start, req_end) {
             if s >= e {
@@ -103,7 +111,7 @@ pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(ReadExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(ReadExecutor { working_dir })),
     }
 }
 
@@ -123,7 +131,7 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = ReadExecutor { working_dir: None };
+        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
 
         let args = json!({
             "path": test_file.to_string_lossy().to_string(),
@@ -131,7 +139,7 @@ mod tests {
             "end_line": 4903
         });
 
-        let result = executor.execute(args).await.unwrap();
+        use super::super::ToolExecutor; let result = executor.execute(args).await.unwrap();
         let expected = "Line 4900\nLine 4901\nLine 4902\nLine 4903";
         assert_eq!(result, expected);
 
@@ -149,11 +157,11 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = ReadExecutor { working_dir: None };
+        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
 
         // 1. Try reading the whole file - should fail
         let args = json!({ "path": test_file.to_string_lossy().to_string() });
-        let result = executor.execute(args).await;
+        use super::super::ToolExecutor; let result = executor.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("JIT Retrieval Error: File is too large"));
