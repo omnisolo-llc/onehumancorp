@@ -1,3 +1,4 @@
+use chrono::Timelike;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -343,7 +344,7 @@ mod tests {
 use tonic::{Request, Response, Status};
 use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
 use ::server_ohc::app::{
-    CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
+    CheckAvailabilityRequest, CheckAvailabilityResponse, SetAvailabilityRulesRequest, SetAvailabilityRulesResponse, TimeSlot,
     ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
     ConversationalCheckoutSession,
 };
@@ -354,6 +355,52 @@ pub struct NativeBookingService {
 
 #[tonic::async_trait]
 impl BookingEngineService for NativeBookingService {
+
+    async fn set_availability_rules(
+        &self,
+        request: Request<SetAvailabilityRulesRequest>,
+    ) -> Result<Response<SetAvailabilityRulesResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+        let rule_id = uuid::Uuid::new_v4().to_string();
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query(
+            "INSERT INTO booking_rules (id, tenant_id, rule_type, start_time, end_time, timezone, is_available) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (tenant_id, rule_type) DO UPDATE SET start_time = EXCLUDED.start_time, end_time = EXCLUDED.end_time, is_available = EXCLUDED.is_available, updated_at = NOW()"
+        )
+        .bind(&rule_id)
+        .bind(&tenant_id)
+        .bind(&req.rule_type)
+        .bind(&req.start_time)
+        .bind(&req.end_time)
+        .bind(&req.timezone)
+        .bind(req.is_available)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(SetAvailabilityRulesResponse { success: true }))
+    }
+
     async fn check_availability(
         &self,
         request: Request<CheckAvailabilityRequest>,
@@ -383,33 +430,68 @@ impl BookingEngineService for NativeBookingService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        // Simplified query: find bookings overlapping with this date
-        // In reality, you'd check specific business hours. We'll return dummy slots filtered by DB.
-        let rows = sqlx::query(
-            "SELECT start_time, end_time FROM bookings WHERE tenant_id = $1 AND start_time::date = $2::date"
+        // 1. Get existing bookings
+        let query_res = sqlx::query(
+            "SELECT start_time, end_time FROM bookings WHERE tenant_id = $1 AND DATE(start_time) = $2"
         )
         .bind(&tenant_id)
-        .bind(&date_str)
+        .bind(chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").map_err(|_| Status::invalid_argument("Invalid date format"))?)
         .fetch_all(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let _ = tx.commit().await;
-
-        let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows.into_iter().filter_map(|row| {
-            let st: Option<DateTime<Utc>> = row.get("start_time");
-            let et: Option<DateTime<Utc>> = row.get("end_time");
-            if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
+        let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = query_res.into_iter().filter_map(|r| {
+            use sqlx::Row;
+            let start_time: DateTime<Utc> = r.get("start_time");
+            let end_time: Option<DateTime<Utc>> = r.get("end_time");
+            if let Some(et) = end_time {
+                Some((start_time, et))
+            } else { None }
         }).collect();
 
-        // Let's generate slots from 9 AM to 5 PM
+        // 2. Get booking rules
+        let rules_res = sqlx::query(
+            "SELECT rule_type, start_time, end_time, is_available FROM booking_rules WHERE tenant_id = $1"
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Simple working hours rule interpretation: if there's a working_hours rule, use it instead of 9-17
+        let mut work_start_hour = 9;
+        let mut work_end_hour = 17;
+
+        use sqlx::Row;
+        for rule in rules_res {
+            let rule_type: String = rule.get("rule_type");
+            let is_available: Option<bool> = rule.get("is_available");
+
+            if rule_type == "working_hours" && is_available == Some(true) {
+                let st: Option<String> = rule.get("start_time");
+                if let Some(st_val) = st {
+                    if let Ok(parsed) = chrono::NaiveTime::parse_from_str(&st_val, "%H:%M") {
+                        work_start_hour = parsed.hour();
+                    }
+                }
+
+                let et: Option<String> = rule.get("end_time");
+                if let Some(et_val) = et {
+                    if let Ok(parsed) = chrono::NaiveTime::parse_from_str(&et_val, "%H:%M") {
+                        work_end_hour = parsed.hour();
+                    }
+                }
+            }
+        }
+
+        // Let's generate slots
         let date_parsed = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
             .map_err(|_e| Status::invalid_argument("Invalid date format, use YYYY-MM-DD"))?;
 
         let mut available_slots = vec![];
-        for hour in 9..17 {
-            let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
-            let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
+        for hour in work_start_hour..work_end_hour {
+            let st_naive = date_parsed.and_hms_opt(hour, 0, 0).ok_or_else(|| Status::internal("Time parsing error"))?;
+            let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).ok_or_else(|| Status::internal("Time parsing error"))?;
             let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
             let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
 
@@ -431,7 +513,6 @@ impl BookingEngineService for NativeBookingService {
 
         Ok(Response::new(CheckAvailabilityResponse { available_slots }))
     }
-
     async fn reserve_time_slot(
         &self,
         request: Request<ReserveTimeSlotRequest>,
@@ -592,7 +673,7 @@ mod native_booking_tests {
     use super::*;
     use tonic::Request;
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
-    use ::server_ohc::app::{ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
+    use ::server_ohc::app::{ReserveTimeSlotRequest, CreateConversationalCheckoutRequest, SetAvailabilityRulesRequest};
 
     #[tokio::test]
     async fn test_native_booking_invalid_timeslot_format() {
@@ -655,6 +736,71 @@ mod native_booking_tests {
         assert_eq!(session.customer_id, "c1");
         assert_eq!(session.amount_cents, 1000);
         assert!(session.checkout_url.starts_with("https://checkout.stripe.com/pay/cs_test_"));
+        assert_eq!(session.status, "pending");
+    }
+
+    #[tokio::test]
+    async fn test_set_availability_rules() {
+        let svc = NativeBookingService { redis_client: None };
+        let req = Request::new(SetAvailabilityRulesRequest {
+            tenant_id: "t1".to_string(),
+            rule_type: "working_hours".to_string(),
+            start_time: "09:00".to_string(),
+            end_time: "17:00".to_string(),
+            timezone: "UTC".to_string(),
+            is_available: true,
+        });
+
+        let res = svc.set_availability_rules(req).await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code(), tonic::Code::Unauthenticated);
+    }
+}
+
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use tonic::Request;
+    use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+
+    // Simulate LLM
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    struct LlmQuote {
+        suggested_price: String,
+        scope: String,
+        suggested_time: String,
+    }
+
+    #[tokio::test]
+    async fn test_ai_quote_generation_path() {
+        // Normally the `ohc_builtin_agent_core` handles LLM generation.
+        // We will simulate a quote generated correctly via AI, and passing the quote
+        // fields back into the conversational checkout engine.
+        let svc = NativeBookingService { redis_client: None };
+
+        let llm_mock_response = r#"{"suggested_price": "150", "scope": "Fix leaky pipe", "suggested_time": "Tue 2 PM"}"#;
+        let parsed_llm: LlmQuote = serde_json::from_str(llm_mock_response).unwrap();
+
+        let ai_suggested_price: i64 = parsed_llm.suggested_price.parse::<i64>().unwrap() * 100; // convert dollars to cents
+
+        let mut req = Request::new(CreateConversationalCheckoutRequest {
+            tenant_id: "t1".to_string(),
+            customer_id: "c1".to_string(),
+            amount_cents: ai_suggested_price,
+            product_id: "ai_service_id".to_string(),
+        });
+
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t1".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = svc.create_conversational_checkout(req).await;
+        assert!(res.is_ok());
+        let session = res.unwrap().into_inner();
+        assert_eq!(session.amount_cents, 15000);
         assert_eq!(session.status, "pending");
     }
 }

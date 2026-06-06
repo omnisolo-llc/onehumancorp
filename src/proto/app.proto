@@ -194,6 +194,7 @@ message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
 }
 service BookingEngineService {
+  rpc SetAvailabilityRules(SetAvailabilityRulesRequest) returns (SetAvailabilityRulesResponse);
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
@@ -271,4 +272,17 @@ message SyncOfflineTransactionsResponse {
 
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+}
+
+message SetAvailabilityRulesRequest {
+  string tenant_id = 1;
+  string rule_type = 2; // e.g. "working_hours"
+  string start_time = 3;
+  string end_time = 4;
+  string timezone = 5;
+  bool is_available = 6;
+}
+
+message SetAvailabilityRulesResponse {
+  bool success = 1;
 }
