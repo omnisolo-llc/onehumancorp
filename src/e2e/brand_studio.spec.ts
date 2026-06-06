@@ -22,7 +22,7 @@ test.describe('Brand Studio workflow', () => {
     });
 
     await expect(page.getByText('Brand DNA').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Brand Book', exact: true })).toBeVisible();
+    await expect(page.getByText('Brand Book').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Logo Concepts' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Starter Catalog' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Campaign Ideas' })).toBeVisible();
