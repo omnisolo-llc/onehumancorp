@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
 use std::sync::Arc;
 use ::server_common::Claims;
-use ::server_integrations::registry::IntegrationsRegistry;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Order {
@@ -20,8 +19,6 @@ pub struct Order {
     pub customer_name: String,
     pub items: Vec<String>,
     pub organization_id: String,
-    pub tracking_number: Option<String>,
-    pub label_url: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -52,8 +49,6 @@ where
             customer_name: "John Doe".to_string(),
             items: vec!["2 Summer Dresses".to_string()],
             organization_id: "default".to_string(),
-            tracking_number: None,
-            label_url: None,
         },
         Order {
             id: "ord-2".to_string(),
@@ -62,8 +57,6 @@ where
             customer_name: "Jane Smith".to_string(),
             items: vec!["Chocolate Cake".to_string()],
             organization_id: "default".to_string(),
-            tracking_number: None,
-            label_url: None,
         },
         Order {
             id: "ord-3".to_string(),
@@ -72,8 +65,6 @@ where
             customer_name: "Alice Johnson".to_string(),
             items: vec!["Coffee and Bagel".to_string()],
             organization_id: "default".to_string(),
-            tracking_number: None,
-            label_url: None,
         },
     ];
 
@@ -138,20 +129,8 @@ async fn execute_action(
             found = true;
             match payload.action.as_str() {
                 "print_label" => {
+                    // Simulate ops agent printing label and shipping
                     if order.fulfillment_mode == "Shipping" {
-                        // Use shippo integration to fetch rates and purchase label
-                        let registry = IntegrationsRegistry::new();
-                        // Assume a default mocked creds block setup in registry (in reality done via `connect`)
-                        if let Ok(rates) = registry.fetch_rates("shippo", 1.0, "10x10x10").await {
-                            if let Some(rate_id) = rates.first() {
-                                if let Ok(label_url) = registry.purchase_label("shippo", rate_id).await {
-                                    order.label_url = Some(label_url.clone());
-                                    // Normally tracking number is also returned; mock it here from the label creation
-                                    order.tracking_number = Some(format!("TRACK_{}", rate_id));
-                                }
-                            }
-                        }
-
                         order.status = "Shipped".to_string();
                     }
                 }
