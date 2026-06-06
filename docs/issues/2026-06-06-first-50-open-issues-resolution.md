@@ -23,12 +23,39 @@ After the first 50, the next 300 open issues were scanned for code-resolvable fe
 - #23997: Payment-success webhook handling can extract and release conversational checkout `inventory_lock_id` values.
 - #23956: The frontend `CreateConversationalCheckout` path is wired to the backend route contract for the booking service.
 - #23924: Checkout delivery checks now include browser coordinates and proxy delivery eligibility requests to the Rust backend.
+- #24025: Subscription passwordless magic-link tokens now use HMAC-SHA256 signed claims with expiration checks instead of treating the token as a subscriber id.
+- #23957: The Checkout page now starts Mercado Pago checkout through a backend-backed API route and redirects to the provider URL.
+- #23994: Additional mocked Next.js API routes now proxy backend services, including booking request, subscription dashboard, ManyChat send/draft, inbox draft reply, mesh broadcast/collective, POS, staff, and shipping routes.
+- #24097: Shipping rate shopping and label purchase routes now call the backend Shippo integration boundary instead of returning hardcoded carrier rates or fake label URLs.
+- #21606: The Shippo-facing frontend API no longer fabricates rate and label responses locally; it preserves tenant/user/auth headers and delegates to backend shipping services.
+- #23009: The subscriptions dashboard API now fetches backend subscription data, and the Rust subscription router is mounted at `/api/subscriptions`.
 - #23519: The `/sites/{site_id}` builder endpoint now fetches site, pages, and blocks with a single joined query instead of per-page block queries.
 - #23425: Removed unused Rust imports that were surfacing during shared `server_lib` builds.
 - #22300: SIP database retry loops now share PostgreSQL-aware retry classification for lock, deadlock, and serialization failures.
 - #22508: Integration connect buttons now request backend-generated OAuth URLs through `/api/integrations/{id}/connect`.
 - #22181: Added an AutoDream sync-duration metric recorder and a dashboard-backed test for `ohc_autodream_sync_duration_seconds`.
 - #22180: Added a test to prevent `hybrid-telemetry.json` drift and synchronized deploy dashboard mirrors to the canonical dashboard.
+
+## Mock API/Data Cleanup From The Broader Scan
+
+The user explicitly requested avoiding mocked APIs and data. This branch therefore also removes local fake responses from the following frontend API routes and replaces them with backend proxy boundaries plus regression tests:
+
+- `/api/inbox/webhook`
+- `/api/integrations/manychat/draft`
+- `/api/integrations/manychat/send`
+- `/api/mesh/v2/broadcast`
+- `/api/mesh/v2/collective`
+- `/api/pos/orders`
+- `/api/pos/inventory`
+- `/api/staff`
+- `/api/staff/timecard`
+- `/api/subscriptions`
+- `/api/v1/booking/request`
+- `/api/v1/shipping/rates`
+- `/api/v1/shipping/label`
+- `/api/checkout/mercadopago`
+
+The Rust app now mounts the subscription and staff routers backing the corresponding frontend proxies. These mock-removal changes are not all listed as individual `Fixes #...` entries because several adjacent open issues are broad architecture epics rather than narrowly satisfied implementation tickets.
 
 ## Report Or Research Artifacts
 

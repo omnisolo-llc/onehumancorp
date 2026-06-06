@@ -80,4 +80,35 @@ describe('CheckoutPage', () => {
       });
     });
   });
+
+  it('starts a MercadoPago checkout and redirects to the provider URL', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { assign },
+    });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        checkout_url: 'https://www.mercadopago.com/checkout/v1/redirect?pref_id=real',
+      }),
+    } as any);
+
+    render(<CheckoutPage />);
+
+    fireEvent.click(screen.getByText('Pay with Mercado Pago'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: 'my-store',
+          amount_cents: 4500,
+          currency: 'MXN',
+        }),
+      });
+      expect(assign).toHaveBeenCalledWith('https://www.mercadopago.com/checkout/v1/redirect?pref_id=real');
+    });
+  });
 });

@@ -3,6 +3,7 @@ pub mod offline_sync;
 pub mod mesh_handler;
 pub mod autodream;
 pub mod terminal_api;
+pub mod staff_mesh;
 
 pub mod billing_webhook;
 pub mod billing_api;
@@ -19,3 +20,4 @@ pub mod dynamic_workflows;
 pub mod catalog;
 pub mod meta_webhook;
 pub mod docs;
+pub mod subscription;

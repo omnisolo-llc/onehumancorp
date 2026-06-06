@@ -1,16 +1,33 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const tenantId = req.headers.get('x-tenant-id') || 'default';
+  const userId = req.headers.get('x-user-id') || 'default';
+  const authHeader = req.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-tenant-id': tenantId,
+    'x-user-id': userId,
+  };
+  if (authHeader) {
+    headers.authorization = authHeader;
+  }
+
   try {
-    const { messages } = await req.json();
-
-    // Simulate AI drafting a reply based on the context of the most recent message
-    const aiDraft = "Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.";
-
-    return NextResponse.json({
-      draft: aiDraft
+    const body = await req.json();
+    const res = await fetch(`${backendUrl}/api/integrations/manychat/draft`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
     });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to generate draft' }, { status: 500 });
+
+    if (res.ok) {
+      return NextResponse.json(await res.json());
+    }
+
+    return NextResponse.json({ error: 'Failed to generate ManyChat draft' }, { status: res.status });
+  } catch {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }

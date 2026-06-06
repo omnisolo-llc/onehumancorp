@@ -2,7 +2,9 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
     http::HeaderMap,
+    routing::post,
     Json,
+    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -62,6 +64,11 @@ pub struct TimecardEventInput {
 #[derive(Serialize)]
 pub struct SyncTimecardResponse {
     pub success: bool,
+}
+
+#[derive(Serialize)]
+pub struct GetTimecardResponse {
+    pub events: Vec<serde_json::Value>,
 }
 
 fn get_tenant_id(headers: &HeaderMap) -> String {
@@ -250,6 +257,62 @@ pub async fn sync_timecard_handler(
     (axum::http::StatusCode::OK, Json(SyncTimecardResponse { success: true })).into_response()
 }
 
+pub async fn get_timecard_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = get_tenant_id(&headers);
+
+    let events = match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+            let rows = sqlx::query(
+                "SELECT id, staff_id, event_type, CAST(offline_timestamp AS TEXT) AS offline_timestamp, CAST(created_at AS TEXT) AS created_at FROM timecard_events WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 100",
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await;
+            rows.map(|rows| rows.into_iter().map(|row| {
+                use sqlx::Row;
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "staff_id": row.get::<String, _>("staff_id"),
+                    "event_type": row.get::<String, _>("event_type"),
+                    "offline_timestamp": row.get::<String, _>("offline_timestamp"),
+                    "created_at": row.get::<String, _>("created_at"),
+                })
+            }).collect::<Vec<_>>()).unwrap_or_default()
+        }
+        crate::db::DbStore::Postgres => {
+            let rows = sqlx::query(
+                "SELECT id, staff_id, event_type, offline_timestamp::text AS offline_timestamp, created_at::text AS created_at FROM timecard_events WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100",
+            )
+            .bind(&tenant_id)
+            .fetch_all(&db.pool)
+            .await;
+            rows.map(|rows| rows.into_iter().map(|row| {
+                use sqlx::Row;
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "staff_id": row.get::<String, _>("staff_id"),
+                    "event_type": row.get::<String, _>("event_type"),
+                    "offline_timestamp": row.get::<String, _>("offline_timestamp"),
+                    "created_at": row.get::<String, _>("created_at"),
+                })
+            }).collect::<Vec<_>>()).unwrap_or_default()
+        }
+    };
+
+    (axum::http::StatusCode::OK, Json(GetTimecardResponse { events })).into_response()
+}
+
+pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
+    Router::new()
+        .route("/", post(create_staff_handler).get(get_staff_handler))
+        .route("/{id}/pin", post(set_staff_pin_handler))
+        .route("/timecard", post(sync_timecard_handler).get(get_timecard_handler))
+        .with_state(db)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -307,7 +370,7 @@ mod tests {
 
         let app = axum::Router::new()
             .route("/staff", axum::routing::post(create_staff_handler).get(get_staff_handler))
-            .route("/staff/:id/pin", axum::routing::post(set_staff_pin_handler))
+            .route("/staff/{id}/pin", axum::routing::post(set_staff_pin_handler))
             .route("/timecard", axum::routing::post(sync_timecard_handler))
             .with_state(db_arc);
 
