@@ -18,12 +18,16 @@ export default function Integrations() {
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
     { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
     { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
+    { id: "chatwoot", name: "Chatwoot", category: "operations", status: "disconnected", icon: "💬", description: "Unified omnichannel inbox for Instagram, WhatsApp, and more." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const [showTwilioModal, setShowTwilioModal] = useState(false);
+  const [showChatwootModal, setShowChatwootModal] = useState(false);
+  const [chatwootUrl, setChatwootUrl] = useState("https://");
+  const [chatwootToken, setChatwootToken] = useState("");
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
     instagram: false,
@@ -49,6 +53,9 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
     }
+    if (id === 'chatwoot') {
+      setShowChatwootModal(true);
+    }
     if (id === 'zoom' || id === 'whereby' || id === 'resend' || id === 'meta' || id === 'mercadopago' || id === 'cal_com' || id === 'front') {
       alert(`Connecting ${id} via OAuth...`);
       setIntegrations(prev => prev.map(integration =>
@@ -62,6 +69,14 @@ export default function Integrations() {
       integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
     ));
     setShowTwilioModal(false);
+    router.push('/inbox');
+  };
+
+  const saveChatwootIntegration = () => {
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === 'chatwoot' ? { ...integration, status: "connected" } : integration
+    ));
+    setShowChatwootModal(false);
     router.push('/inbox');
   };
 
@@ -105,6 +120,60 @@ export default function Integrations() {
 
             <button
               onClick={saveTwilioIntegration}
+              className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors"
+            >
+              Save & Connect
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Chatwoot Connect Modal */}
+      {showChatwootModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-blue-600 border border-blue-100">
+                💬
+              </div>
+              <button
+                onClick={() => setShowChatwootModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Chatwoot</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Enter your Chatwoot API endpoint and agent token to enable the unified omnichannel inbox.
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">API Endpoint URL</label>
+                <input
+                  type="url"
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={chatwootUrl}
+                  onChange={(e) => setChatwootUrl(e.target.value)}
+                  placeholder="https://chatwoot.example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Agent Token</label>
+                <input
+                  type="password"
+                  className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={chatwootToken}
+                  onChange={(e) => setChatwootToken(e.target.value)}
+                  placeholder="Enter your API token"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={saveChatwootIntegration}
               className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors"
             >
               Save & Connect
