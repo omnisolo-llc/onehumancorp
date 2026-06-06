@@ -127,6 +127,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
+        .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
@@ -344,6 +345,51 @@ async fn handle_send_receipt(
     state.hub.append_recent_event(msg);
 
     Json(SendReceiptResponse { success: true, message: generated })
+}
+
+
+#[derive(Deserialize)]
+pub struct LeadGenCampaignRequest {
+    pub budget: f64,
+    pub radius_miles: i32,
+    pub zip_code: String,
+}
+
+#[derive(Serialize)]
+pub struct LeadGenCampaignResponse {
+    pub id: String,
+    pub status: String,
+}
+
+async fn handle_create_lead_gen_campaign(
+    Extension(state): Extension<GrowthState>,
+    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<LeadGenCampaignRequest>,
+) -> Result<Json<LeadGenCampaignResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id.clone();
+
+    let repo = crate::domain::repository::campaign_repo::CampaignRepository::new(state.pool.clone());
+
+    let campaign = crate::domain::repository::models::LeadGenCampaign {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        budget: std::str::FromStr::from_str(&req.budget.to_string()).unwrap_or_default(),
+        radius_miles: req.radius_miles,
+        zip_code: req.zip_code.clone(),
+        status: "Active".to_string(),
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    repo.create_lead_gen_campaign(&campaign).await.map_err(|e| {
+        tracing::error!("Failed to save lead gen campaign: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(LeadGenCampaignResponse {
+        id: campaign.id,
+        status: campaign.status,
+    }))
 }
 
 async fn handle_send_campaign(
