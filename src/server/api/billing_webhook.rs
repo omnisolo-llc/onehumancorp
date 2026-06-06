@@ -225,6 +225,19 @@ pub async fn stripe_webhook_handler(
 
             StatusCode::OK.into_response()
         },
+        "invoice.payment_failed" => {
+            let obj = &payload.data.object;
+            let stripe_sub_id = obj.get("subscription").and_then(|s| s.as_str()).unwrap_or("unknown");
+
+            let _ = sqlx::query(
+                "UPDATE subscribers SET status = 'PAST_DUE' WHERE stripe_subscription_id = $1"
+            )
+            .bind(stripe_sub_id)
+            .execute(&webhook_state.db_pool)
+            .await;
+
+            StatusCode::OK.into_response()
+        },
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
 
@@ -252,6 +265,22 @@ pub async fn stripe_webhook_handler(
                     _ => PlanTier::Free,
                 };
 
+
+                if let Some(plan_id) = obj.get("metadata").and_then(|m| m.get("subscription_plan_id")).and_then(|id| id.as_str()) {
+                    let customer_id = obj.get("customer").and_then(|c| c.as_str()).unwrap_or("unknown");
+                    let stripe_sub_id = obj.get("subscription").and_then(|s| s.as_str()).unwrap_or("unknown");
+
+                    let _ = sqlx::query(
+                        "INSERT INTO subscribers (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status) VALUES ($1, $2, $3, $4, $5, 'ACTIVE') ON CONFLICT DO NOTHING"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(tenant_id)
+                    .bind(plan_id)
+                    .bind(customer_id)
+                    .bind(stripe_sub_id)
+                    .execute(&webhook_state.db_pool)
+                    .await;
+                }
 
                 // Update Redis Rate Limiter
                 if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
@@ -296,6 +325,15 @@ pub async fn stripe_webhook_handler(
         },
         "customer.subscription.deleted" => {
             let obj = &payload.data.object;
+
+            let stripe_sub_id = obj.get("id").and_then(|id| id.as_str()).unwrap_or("unknown");
+            let _ = sqlx::query(
+                "UPDATE subscribers SET status = 'CANCELED' WHERE stripe_subscription_id = $1"
+            )
+            .bind(stripe_sub_id)
+            .execute(&webhook_state.db_pool)
+            .await;
+
             let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))
                 .and_then(|id| id.as_str())
@@ -336,19 +374,6 @@ pub async fn stripe_webhook_handler(
             } else {
                 StatusCode::BAD_REQUEST.into_response()
             }
-        },
-        "invoice.payment_failed" => {
-            let obj = &payload.data.object;
-            let tenant_id_opt = obj.get("customer")
-                .and_then(|id| id.as_str());
-
-            if let Some(_tenant_id) = tenant_id_opt {
-                // Trigger SMS notification
-                tokio::spawn(async move {
-                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
-                });
-            }
-            StatusCode::OK.into_response()
         },
         _ => {
             // Unhandled event types are ignored successfully
