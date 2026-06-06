@@ -32,3 +32,31 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page).toHaveURL('/plan');
   });
 });
+
+test.describe('Rate Limit UI', () => {
+  test('Rate limit banner shows on soft limit reached', async ({ page }) => {
+    // Navigate to a page
+    await page.goto('/dashboard');
+
+    // Simulate a fetch that returns the rate limit warning header
+    await page.evaluate(() => {
+      const originalFetch = window.fetch;
+      window.fetch = async (...args) => {
+        if (args[0] === '/api/test-rate-limit') {
+          return new Response('{}', {
+            headers: {
+              'x-ratelimit-warning': 'Your agent has reached its Free tier limit of 20 actions. Upgrade your plan for unlimited AI power!'
+            }
+          });
+        }
+        return originalFetch(...args);
+      };
+
+      // Trigger the fetch
+      fetch('/api/test-rate-limit');
+    });
+
+    // Check if the banner appears
+    await expect(page.locator('text=Your agent has reached its Free tier limit of 20 actions. Upgrade your plan for unlimited AI power!')).toBeVisible({ timeout: 5000 });
+  });
+});
