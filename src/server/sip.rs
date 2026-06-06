@@ -39,10 +39,11 @@ impl SipDB {
                 sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $2 END,
                          updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2 AND tenant_id = $3"
+                     WHERE id = $3 AND tenant_id = $4"
                 )
+                .bind(blockers)
                 .bind(blockers)
                 .bind(mission_id)
                 .bind(&self.org_id)

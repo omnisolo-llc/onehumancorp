@@ -61,6 +61,28 @@ mod tests {
 
         assert_eq!(row.0, "1");
         assert_eq!(row.1, None, "NULL handling parity must be maintained between SQLite and Postgres");
+
+        // Execute handoff_mission logic to expose missing parameter binding parity
+        sqlx::query(
+            "UPDATE test_parity
+             SET mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $2 END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $3"
+        )
+        .bind("first block")
+        .bind("first block")
+        .bind("1")
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        let updated_row: (String, Option<String>) = sqlx::query_as("SELECT id, mission_log FROM test_parity WHERE id = '1'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+
+        assert_eq!(updated_row.1, Some("first block".to_string()), "SQLite must correctly process parameter bindings across multiple CASE WHEN branch paths identically to Postgres");
+
         // Timezone serialization parity test. SQLite stores as text UTC, Postgres as TIMESTAMPTZ.
         // This ensures the type mapper translates properly across modes.
         assert!(row.2.timestamp() > 0);
