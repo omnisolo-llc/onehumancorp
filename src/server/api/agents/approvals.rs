@@ -58,7 +58,7 @@ async fn list_approvals(
     let limit = query.limit.unwrap_or(20);
 
     // Fetch from DB using cursor pagination
-    let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64, false).await;
 
     let next_cursor = if approvals.len() == limit {
         approvals.last().map(|a| a.id.clone())
@@ -85,7 +85,7 @@ async fn list_activity_feed(
 
     let limit = query.limit.unwrap_or(20);
 
-    let activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64, false).await;
 
     let next_cursor = if activities.len() == limit {
         activities.last().map(|a| a.id.clone())

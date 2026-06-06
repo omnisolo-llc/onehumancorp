@@ -364,7 +364,7 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn get_pending_approvals(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
+    pub async fn get_pending_approvals(&self, tenant_id: &str, cursor: Option<String>, limit: i64, mobile_optimized: bool) -> Vec<ApprovalRequest> {
         let mut results = Vec::new();
 
         match &self.db.store {
@@ -418,7 +418,7 @@ impl DepartmentOrchestrator {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
-                            description: row.get("description"),
+                            description: if mobile_optimized { String::new() } else { row.get("description") },
                             status,
                             action_risk,
                             payload: payload_opt,
@@ -461,7 +461,7 @@ impl DepartmentOrchestrator {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
-                            description: row.get("description"),
+                            description: if mobile_optimized { String::new() } else { row.get("description") },
                             status,
                             action_risk,
                             payload: payload_opt,
@@ -475,7 +475,7 @@ impl DepartmentOrchestrator {
     }
 
 
-    pub async fn get_activity_feed(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
+    pub async fn get_activity_feed(&self, tenant_id: &str, cursor: Option<String>, limit: i64, mobile_optimized: bool) -> Vec<ApprovalRequest> {
         let mut results = Vec::new();
 
         match &self.db.store {
@@ -529,7 +529,7 @@ impl DepartmentOrchestrator {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
-                            description: row.get("description"),
+                            description: if mobile_optimized { String::new() } else { row.get("description") },
                             status,
                             action_risk,
                             payload: payload_opt,
@@ -572,7 +572,7 @@ impl DepartmentOrchestrator {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
-                            description: row.get("description"),
+                            description: if mobile_optimized { String::new() } else { row.get("description") },
                             status,
                             action_risk,
                             payload: payload_opt,
@@ -841,7 +841,14 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn get_customer360(&self, tenant_id: &str, customer_id: &str) -> Result<Option<crate::orchestration::departments::types::Customer360>, String> {
+    pub async fn get_customer360(&self, tenant_id: &str, customer_id: &str, mobile_optimized: bool) -> Result<Option<crate::orchestration::departments::types::Customer360>, String> {
+        let cache_key = format!("orchestrator:customer360:{}:{}:{}", tenant_id, customer_id, mobile_optimized);
+        let cache = crate::utils::cache::HybridCache::<crate::orchestration::departments::types::Customer360>::new(None);
+
+        if let Some(c360) = cache.get(&cache_key).await {
+            return Ok(Some(c360));
+        }
+
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 let row = sqlx::query("SELECT * FROM customer360 WHERE tenant_id = $1 AND customer_id = $2")
@@ -853,7 +860,7 @@ impl DepartmentOrchestrator {
                 if let Some(r) = row {
                     use sqlx::Row;
                     let prefs_str: Option<String> = r.get("preferences");
-                    Ok(Some(crate::orchestration::departments::types::Customer360 {
+                    let mut c360 = crate::orchestration::departments::types::Customer360 {
                         id: r.get("id"),
                         tenant_id: r.get("tenant_id"),
                         customer_id: r.get("customer_id"),
@@ -863,7 +870,12 @@ impl DepartmentOrchestrator {
                         preferences: prefs_str.and_then(|s: String| serde_json::from_str(&s).ok()),
                         created_at: Some(r.get("created_at")),
                         updated_at: Some(r.get("updated_at")),
-                    }))
+                    };
+                    if mobile_optimized {
+                        c360.preferences = None;
+                    }
+                    cache.set(&cache_key, c360.clone(), std::time::Duration::from_secs(60)).await;
+                    Ok(Some(c360))
                 } else {
                     Ok(None)
                 }
@@ -878,7 +890,7 @@ impl DepartmentOrchestrator {
                 if let Some(r) = row {
                     use sqlx::Row;
                     let prefs_str: Option<String> = r.get("preferences");
-                    Ok(Some(crate::orchestration::departments::types::Customer360 {
+                    let mut c360 = crate::orchestration::departments::types::Customer360 {
                         id: r.get("id"),
                         tenant_id: r.get("tenant_id"),
                         customer_id: r.get("customer_id"),
@@ -888,7 +900,12 @@ impl DepartmentOrchestrator {
                         preferences: prefs_str.and_then(|s: String| serde_json::from_str(&s).ok()),
                         created_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").unwrap_or_else(|_| chrono::Utc::now())),
                         updated_at: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").unwrap_or_else(|_| chrono::Utc::now())),
-                    }))
+                    };
+                    if mobile_optimized {
+                        c360.preferences = None;
+                    }
+                    cache.set(&cache_key, c360.clone(), std::time::Duration::from_secs(60)).await;
+                    Ok(Some(c360))
                 } else {
                     Ok(None)
                 }
@@ -952,7 +969,11 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn update_customer_mood(&self, tenant_id: &str, customer_id: &str, mood: &str) -> Result<(), String> {
-        let c = self.get_customer360(tenant_id, customer_id).await?;
+        let cache = crate::utils::cache::HybridCache::<crate::orchestration::departments::types::Customer360>::new(None);
+        cache.invalidate(&format!("orchestrator:customer360:{}:{}:false", tenant_id, customer_id)).await;
+        cache.invalidate(&format!("orchestrator:customer360:{}:{}:true", tenant_id, customer_id)).await;
+
+        let c = self.get_customer360(tenant_id, customer_id, false).await?;
         if let Some(mut cust) = c {
             cust.mood = Some(mood.to_string());
             self.upsert_customer360(&cust).await
@@ -973,6 +994,13 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn get_loyalty_ledger(&self, tenant_id: &str, customer_id: &str) -> Result<Option<crate::orchestration::departments::types::LoyaltyLedger>, String> {
+        let cache_key = format!("orchestrator:loyalty_ledger:{}:{}", tenant_id, customer_id);
+        let cache = crate::utils::cache::HybridCache::<crate::orchestration::departments::types::LoyaltyLedger>::new(None);
+
+        if let Some(ledger) = cache.get(&cache_key).await {
+            return Ok(Some(ledger));
+        }
+
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 let row = sqlx::query("SELECT * FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
@@ -983,14 +1011,16 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some(crate::orchestration::departments::types::LoyaltyLedger {
+                    let ledger = crate::orchestration::departments::types::LoyaltyLedger {
                         id: r.get("id"),
                         tenant_id: r.get("tenant_id"),
                         customer_id: r.get("customer_id"),
                         points_balance: r.get("points_balance"),
                         tier_name: r.get("tier_name"),
                         last_updated: Some(r.get("last_updated")),
-                    }))
+                    };
+                    cache.set(&cache_key, ledger.clone(), std::time::Duration::from_secs(60)).await;
+                    Ok(Some(ledger))
                 } else {
                     Ok(None)
                 }
@@ -1004,14 +1034,16 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some(crate::orchestration::departments::types::LoyaltyLedger {
+                    let ledger = crate::orchestration::departments::types::LoyaltyLedger {
                         id: r.get("id"),
                         tenant_id: r.get("tenant_id"),
                         customer_id: r.get("customer_id"),
                         points_balance: r.get("points_balance"),
                         tier_name: r.try_get("tier_name").ok(),
                         last_updated: Some(r.try_get::<chrono::DateTime<chrono::Utc>, _>("last_updated").unwrap_or_else(|_| chrono::Utc::now())),
-                    }))
+                    };
+                    cache.set(&cache_key, ledger.clone(), std::time::Duration::from_secs(60)).await;
+                    Ok(Some(ledger))
                 } else {
                     Ok(None)
                 }
@@ -1020,6 +1052,10 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn add_loyalty_points(&self, tenant_id: &str, customer_id: &str, points: i32) -> Result<(), String> {
+        let cache_key = format!("orchestrator:loyalty_ledger:{}:{}", tenant_id, customer_id);
+        let cache = crate::utils::cache::HybridCache::<crate::orchestration::departments::types::LoyaltyLedger>::new(None);
+        cache.invalidate(&cache_key).await;
+
         let now = chrono::Utc::now();
         match &self.db.store {
             crate::db::DbStore::Postgres => {

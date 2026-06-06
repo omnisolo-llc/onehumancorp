@@ -3,6 +3,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::db::get_pool;
 use sqlx::Row;
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
+
+static SERVICES_CACHE: OnceLock<HybridCache<Vec<Service>>> = OnceLock::new();
+static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<BookingRecord>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
@@ -191,7 +196,14 @@ impl BookingService {
         Ok(())
     }
 
-    pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
+    pub async fn get_bookings(tenant_id: &str, mobile_optimized: bool) -> Result<Vec<BookingRecord>, String> {
+        let cache_key = format!("booking:bookings:{}:{}", tenant_id, mobile_optimized);
+        let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(None));
+
+        if let Some(bookings) = cache.get(&cache_key).await {
+            return Ok(bookings);
+        }
+
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
@@ -212,7 +224,9 @@ impl BookingService {
             start_time: row.get("start_time"),
             end_time: row.get("end_time"),
             status: row.get("status"),
-        }).collect();
+        }).collect::<Vec<_>>();
+
+        cache.set(&cache_key, bookings.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(bookings)
     }

@@ -595,7 +595,28 @@ pub async fn bench_hybrid_latency() {
     println!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
 
+    println!("4. API Response Time (Booking)");
+    bench_booking_response_time().await;
+
     println!("--- Hybrid Latency Benchmark Complete ---");
+}
+
+pub async fn bench_booking_response_time() {
+    let iterations = 2000;
+    let mut times = Vec::new();
+    let tenant_id = "bench_tenant";
+
+    for _ in 0..iterations {
+        let start = std::time::Instant::now();
+        let _ = crate::services::booking::BookingService::get_bookings(tenant_id, false).await;
+        times.push(start.elapsed().as_micros());
+    }
+
+    times.sort();
+    println!("Booking Response Time: p50: {} us, p95: {} us, p99: {} us",
+             times[iterations / 2],
+             times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+             times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
 }
 
 pub async fn bench_advisory_insights_latency() {
