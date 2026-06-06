@@ -197,6 +197,34 @@ service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
+  rpc SetBookingRule(SetBookingRuleRequest) returns (SetBookingRuleResponse);
+  rpc GetBookingRules(GetBookingRulesRequest) returns (GetBookingRulesResponse);
+}
+
+message BookingRule {
+  string id = 1;
+  string tenant_id = 2;
+  string product_id = 3;
+  string rules_json = 4;
+}
+
+message SetBookingRuleRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  string rules_json = 3;
+}
+
+message SetBookingRuleResponse {
+  BookingRule rule = 1;
+}
+
+message GetBookingRulesRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+}
+
+message GetBookingRulesResponse {
+  repeated BookingRule rules = 1;
 }
 
 message CheckAvailabilityRequest {

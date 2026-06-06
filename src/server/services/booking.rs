@@ -394,28 +394,66 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let _ = tx.commit().await;
-
         let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows.into_iter().filter_map(|row| {
-            let st: Option<DateTime<Utc>> = row.get("start_time");
-            let et: Option<DateTime<Utc>> = row.get("end_time");
+            use sqlx::Row;
+            let st: Option<DateTime<Utc>> = row.try_get("start_time").unwrap_or(None);
+            let et: Option<DateTime<Utc>> = row.try_get("end_time").unwrap_or(None);
             if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
         }).collect();
 
-        // Let's generate slots from 9 AM to 5 PM
+        let rules_opt: Option<serde_json::Value> = sqlx::query_scalar(
+            "SELECT rules FROM booking_rules WHERE tenant_id = $1 AND (product_id = $2 OR product_id IS NULL) ORDER BY product_id NULLS LAST LIMIT 1"
+        )
+        .bind(&tenant_id)
+        .bind(&_product_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Fallback to 9..17
+        let mut start_hour = 9;
+        let mut end_hour = 17;
+        let mut buffer_minutes = 0;
+        let mut unavailable_days = vec![];
+
+        if let Some(rules) = rules_opt {
+            if let Some(sh) = rules.get("start_hour").and_then(|v| v.as_i64()) {
+                start_hour = sh as u32;
+            }
+            if let Some(eh) = rules.get("end_hour").and_then(|v| v.as_i64()) {
+                end_hour = eh as u32;
+            }
+            if let Some(bm) = rules.get("buffer_minutes").and_then(|v| v.as_i64()) {
+                buffer_minutes = bm as i64;
+            }
+            if let Some(ud) = rules.get("unavailable_days").and_then(|v| v.as_array()) {
+                unavailable_days = ud.iter().filter_map(|v| v.as_u64().map(|x| x as u32)).collect();
+            }
+        }
+
         let date_parsed = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
             .map_err(|_e| Status::invalid_argument("Invalid date format, use YYYY-MM-DD"))?;
 
+        use chrono::Datelike;
+        if unavailable_days.contains(&date_parsed.weekday().number_from_sunday()) {
+            return Ok(Response::new(CheckAvailabilityResponse { available_slots: vec![] }));
+        }
+
         let mut available_slots = vec![];
-        for hour in 9..17 {
+        for hour in start_hour..end_hour {
             let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
+            // apply buffer manually for simple logic
             let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
             let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
             let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
 
+            // Calculate overlap taking buffer into account
+            let buffered_et = et + chrono::Duration::minutes(buffer_minutes);
             let mut overlap = false;
             for (est, eet) in &existing_slots {
-                if st < *eet && et > *est {
+                if st < *eet && buffered_et > *est {
                     overlap = true;
                     break;
                 }
@@ -531,6 +569,153 @@ impl BookingEngineService for NativeBookingService {
             booking_id,
             deposit_stripe_link,
         }))
+    }
+
+    async fn set_booking_rule(
+        &self,
+        request: Request<::server_ohc::app::SetBookingRuleRequest>,
+    ) -> Result<Response<::server_ohc::app::SetBookingRuleResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let rule_id = uuid::Uuid::new_v4().to_string();
+        let rules_json: serde_json::Value = serde_json::from_str(&req.rules_json)
+            .map_err(|_| Status::invalid_argument("Invalid JSON in rules_json"))?;
+
+        let product_id_opt = if req.product_id.is_empty() { None } else { Some(req.product_id.clone()) };
+
+        // check if rule exists for product
+        let existing: Option<String> = if let Some(pid) = &product_id_opt {
+             sqlx::query_scalar("SELECT id FROM booking_rules WHERE tenant_id = $1 AND product_id = $2")
+                 .bind(&tenant_id)
+                 .bind(&pid)
+                 .fetch_optional(&mut *tx)
+                 .await
+                 .map_err(|e| Status::internal(e.to_string()))?
+        } else {
+             sqlx::query_scalar("SELECT id FROM booking_rules WHERE tenant_id = $1 AND product_id IS NULL")
+                 .bind(&tenant_id)
+                 .fetch_optional(&mut *tx)
+                 .await
+                 .map_err(|e| Status::internal(e.to_string()))?
+        };
+
+        let final_rule_id = if let Some(eid) = existing {
+             sqlx::query("UPDATE booking_rules SET rules = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                 .bind(&rules_json)
+                 .bind(&eid)
+                 .execute(&mut *tx)
+                 .await
+                 .map_err(|e| Status::internal(e.to_string()))?;
+             eid
+        } else {
+             sqlx::query(
+                 "INSERT INTO booking_rules (id, tenant_id, product_id, rules) \
+                  VALUES ($1, $2, $3, $4)"
+             )
+             .bind(&rule_id)
+             .bind(&tenant_id)
+             .bind(&product_id_opt)
+             .bind(&rules_json)
+             .execute(&mut *tx)
+             .await
+             .map_err(|e| Status::internal(e.to_string()))?;
+             rule_id
+        };
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(::server_ohc::app::SetBookingRuleResponse {
+            rule: Some(::server_ohc::app::BookingRule {
+                id: final_rule_id,
+                tenant_id,
+                product_id: req.product_id,
+                rules_json: req.rules_json,
+            }),
+        }))
+    }
+
+    async fn get_booking_rules(
+        &self,
+        request: Request<::server_ohc::app::GetBookingRulesRequest>,
+    ) -> Result<Response<::server_ohc::app::GetBookingRulesResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let mut req = request.into_inner();
+        req.tenant_id = tenant_id.clone();
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let product_id_opt = if req.product_id.is_empty() { None } else { Some(req.product_id.clone()) };
+
+        let rows = if let Some(pid) = &product_id_opt {
+            sqlx::query("SELECT id, tenant_id, product_id, rules FROM booking_rules WHERE tenant_id = $1 AND (product_id = $2 OR product_id IS NULL)")
+                .bind(&tenant_id)
+                .bind(pid)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?
+        } else {
+            sqlx::query("SELECT id, tenant_id, product_id, rules FROM booking_rules WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?
+        };
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut rules = Vec::new();
+        for row in rows {
+            use sqlx::Row;
+            let id: String = row.try_get("id").unwrap_or_default();
+            let t_id: String = row.try_get("tenant_id").unwrap_or_default();
+            let p_id_opt: Option<String> = row.try_get("product_id").unwrap_or_default();
+            let rules_jsonb: serde_json::Value = row.try_get("rules").unwrap_or(serde_json::json!({}));
+
+            rules.push(::server_ohc::app::BookingRule {
+                id,
+                tenant_id: t_id,
+                product_id: p_id_opt.unwrap_or_default(),
+                rules_json: rules_jsonb.to_string(),
+            });
+        }
+
+        Ok(Response::new(::server_ohc::app::GetBookingRulesResponse { rules }))
     }
 
     async fn create_conversational_checkout(
