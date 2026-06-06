@@ -398,6 +398,65 @@ mod chaos_tests {
     }
 
     #[tokio::test]
+    async fn test_extreme_sql_sync_lag() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        // We simulate a scenario where a node attempts to acquire a lock, but due to severe database lag
+        // the lock acquire timeout triggers.
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(6000));
+
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+
+        let start = std::time::Instant::now();
+        // pull_available_tasks will try to lock and hit the internal timeout (~2 seconds)
+        let tasks = state_manager.pull_available_tasks(1).await;
+        let elapsed = start.elapsed();
+
+        // The overall operation must terminate safely near the 2-second timeout window,
+        // well before the 6-second simulated lag finishes.
+        assert!(elapsed.as_millis() < 4500, "Should degrade gracefully within bounds, took {}ms", elapsed.as_millis());
+        // Since it timed out, it should return an empty task list or an error gracefully.
+        match tasks {
+            Ok(t) => assert!(t.is_empty(), "Expected empty tasks on timeout"),
+            Err(_) => {} // Also acceptable
+        }
+    }
+
+    #[tokio::test]
+    async fn test_node_restart_simulation() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        let mesh = Arc::new(RacingLockMesh::new());
+
+        let resource_name = "ohc:lock:stale_node_restart";
+        let owner1 = "node_old";
+        let owner2 = "node_new";
+
+        // Simulate node_old acquiring a lock and then 'crashing' without releasing it.
+        let acquired = mesh.acquire_lock(resource_name, owner1, 3).await.unwrap();
+        assert!(acquired);
+
+        // Immediately, node_new starts up and tries to acquire the same lock. It should fail.
+        let acquired_new = mesh.acquire_lock(resource_name, owner2, 3).await.unwrap();
+        assert!(!acquired_new);
+
+        // Simulate wait for TTL expiration
+        tokio::time::sleep(tokio::time::Duration::from_millis(3100)).await;
+
+        // Now node_new should be able to acquire it
+        let acquired_after_ttl = mesh.acquire_lock(resource_name, owner2, 3).await.unwrap();
+        assert!(acquired_after_ttl);
+    }
+
+    #[tokio::test]
     async fn test_agent_lock_race_conditions() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let mesh = Arc::new(RacingLockMesh::new());

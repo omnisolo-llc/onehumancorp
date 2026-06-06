@@ -610,6 +610,110 @@ mod parity_tests {
     }
 
     #[tokio::test]
+    async fn test_parity_long_text_truncation() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let mission_id = "mission_1234_long";
+        let long_title = "A".repeat(10000);
+
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlite_db.execute_with_retry("insert_task_long_text", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES (?, ?, ?, 'PENDING', 'default_tenant')")
+                .bind(&task_id)
+                .bind(mission_id)
+                .bind(&long_title)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string()) }).await.unwrap();
+
+            let row = sqlx::query("SELECT title FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            let retrieved_title: String = row.get("title");
+            assert_eq!(retrieved_title.len(), 10000);
+        }
+
+        if let Some(pg) = pg_db {
+            pg.execute_with_retry("insert_task_long_text", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES ($1::uuid, $2, $3, 'PENDING', 'default_tenant')")
+                .bind(&task_id)
+                .bind(mission_id)
+                .bind(&long_title)
+                .execute(&pg.pool)
+                .await
+                .map_err(|e| e.to_string()) }).await.unwrap();
+
+            let row = sqlx::query("SELECT title FROM swarm_tasks WHERE id = $1::uuid")
+                .bind(&task_id)
+                .fetch_one(&pg.pool)
+                .await
+                .unwrap();
+            let retrieved_title: String = row.get("title");
+            assert_eq!(retrieved_title.len(), 10000);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_concurrent_inserts() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let mission_id = "mission_concurrent";
+
+        // SQLite concurrent inserts
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            let mut handles = vec![];
+            for _i in 0..10 {
+                let pool_clone = pool.clone();
+                let task_id = uuid::Uuid::new_v4().to_string();
+                handles.push(tokio::spawn(async move {
+                    sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES (?, ?, 'title', 'PENDING', 'default_tenant')")
+                        .bind(&task_id)
+                        .bind(mission_id)
+                        .execute(&pool_clone)
+                        .await
+                }));
+            }
+            for handle in handles {
+                assert!(handle.await.unwrap().is_ok());
+            }
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM swarm_tasks WHERE mission_id = ?")
+                .bind(mission_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(count, 10);
+        }
+
+        // Postgres concurrent inserts
+        if let Some(pg) = pg_db {
+            let mut handles = vec![];
+            for _i in 0..10 {
+                let pool_clone = pg.pool.clone();
+                let task_id = uuid::Uuid::new_v4().to_string();
+                handles.push(tokio::spawn(async move {
+                    sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, tenant_id) VALUES ($1::uuid, $2, 'title', 'PENDING', 'default_tenant')")
+                        .bind(&task_id)
+                        .bind(mission_id)
+                        .execute(&pool_clone)
+                        .await
+                }));
+            }
+            for handle in handles {
+                assert!(handle.await.unwrap().is_ok());
+            }
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM swarm_tasks WHERE mission_id = $1")
+                .bind(mission_id)
+                .fetch_one(&pg.pool)
+                .await
+                .unwrap();
+            assert_eq!(count, 10);
+        }
+    }
+
+    #[tokio::test]
     async fn test_parity_cleanup_stagnant_missions() {
         let sqlite_db = setup_sqlite_db().await;
         let pg_db = setup_postgres_db().await;
