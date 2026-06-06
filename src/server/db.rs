@@ -800,6 +800,7 @@ impl DB {
                         interaction_id TEXT,
                         action_type TEXT NOT NULL,
                         payload TEXT DEFAULT '{}',
+                        status TEXT NOT NULL DEFAULT 'PENDING',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',

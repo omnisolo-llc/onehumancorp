@@ -26,6 +26,7 @@ rust_library(
         "mod.rs",
         "settings.rs",
         "webhook.rs",
+        "feed.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
