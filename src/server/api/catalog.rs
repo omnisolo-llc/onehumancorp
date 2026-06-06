@@ -90,6 +90,8 @@ async fn handle_create_product(
         .await
         .unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
 
+    let mut warning_message = None;
+
     if let Some(limit) = tier.max_products() {
         let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
         let count_opt = cache.get(&tenant_id).await;
@@ -118,17 +120,11 @@ async fn handle_create_product(
         };
 
         if total_products >= limit as i64 {
-            return (
-                StatusCode::PAYMENT_REQUIRED,
-                Json(ErrorResponse {
-                    error: "LIMIT_EXCEEDED".to_string(),
-                    message: format!(
-                        "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
-                        plan_name(&tier),
-                        limit
-                    ),
-                }),
-            ).into_response();
+            warning_message = Some(format!(
+                "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
+                plan_name(&tier),
+                limit
+            ));
         }
     }
 
@@ -216,7 +212,7 @@ async fn handle_create_product(
         StatusCode::OK,
         Json(CreateProductResponse {
             success: true,
-            message: Some(format!("Created {}", payload.name)),
+            message: warning_message.or_else(|| Some(format!("Created {}", payload.name))),
         }),
     )
         .into_response()
