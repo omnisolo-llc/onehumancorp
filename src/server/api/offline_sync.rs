@@ -46,19 +46,36 @@ pub async fn offline_sync_handler(
     for mutation in &payload.mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
-        let query = "
-            UPDATE products
-            SET inventory_count = GREATEST(0, inventory_count - $1)
-            WHERE id = $2 AND tenant_id = $3
-            RETURNING id
-        ";
+        let result = if mutation.product_id.starts_with("sub_") {
+            // It's a subscription mutation
+            let query = "
+                UPDATE subscriptions
+                SET status = 'active'
+                WHERE id = $1 AND tenant_id = $2
+                RETURNING id
+            ";
 
-        let result = sqlx::query(query)
-            .bind(mutation.quantity_deducted)
-            .bind(&mutation.product_id)
-            .bind(&tenant_id)
-            .fetch_optional(&db)
-            .await;
+            sqlx::query(query)
+                .bind(&mutation.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&db)
+                .await
+        } else {
+            // It's a regular product
+            let query = "
+                UPDATE products
+                SET inventory_count = GREATEST(0, inventory_count - $1)
+                WHERE id = $2 AND tenant_id = $3
+                RETURNING id
+            ";
+
+            sqlx::query(query)
+                .bind(mutation.quantity_deducted)
+                .bind(&mutation.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&db)
+                .await
+        };
 
         match result {
             Ok(Some(_)) => {

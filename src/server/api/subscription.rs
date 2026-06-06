@@ -207,3 +207,18 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
         .route("/magic-link", post(handle_magic_link))
         .layer(Extension(hub))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_magic_link_struct() {
+        let req = MagicLinkRequest {
+            token: "abc".to_string(),
+            action: "pause".to_string(),
+        };
+        assert_eq!(req.token, "abc");
+        assert_eq!(req.action, "pause");
+    }
+}
