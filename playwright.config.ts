@@ -31,6 +31,12 @@ export default defineConfig({
   reporter,
   outputDir: './test-results/screenshots',
   timeout: Number.isFinite(timeout) ? timeout : 60000,
+  webServer: {
+    command: 'cd src/ui/next && npm install --legacy-peer-deps && npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     actionTimeout: Number.isFinite(actionTimeout) ? actionTimeout : 0,
