@@ -54,6 +54,42 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    const wizardState = {
+      step,
+      chatStep,
+      businessDescription,
+      businessName,
+      whatYouSell,
+      location,
+      businessType,
+      categories,
+      websiteTemplate,
+      domainChoice,
+      firstProductName,
+      firstProductPrice,
+      adminName,
+      adminEmail,
+      adminPassword,
+      aiAgents,
+      aiAutoRespond,
+      ...overrideState
+    };
+
+    try {
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ wizardState })
+      });
+    } catch (err) {
+      console.error('Failed to sync onboarding state', err);
+    }
+  };
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
@@ -231,12 +267,12 @@ export default function OnboardingWizard() {
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
 
-      setStep(2); // Go to review step
+      setStep(2); await syncStateToBackend({ step: 2 }); // Go to review step
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
-      setStep(1);
-      setChatStep(3);
+      setStep(1); syncStateToBackend({ step: 1 });
+      setChatStep(3); syncStateToBackend({ chatStep: 3 });
     } finally {
       setIsLoading(false);
     }
@@ -264,11 +300,12 @@ export default function OnboardingWizard() {
     setValidationErrors({});
     setIsLoading(true);
     setError('');
-    setStep(4); // Go to loading screen
+    setStep(4); syncStateToBackend({ step: 4 }); // Go to loading screen
     const safetyTimeout = setTimeout(() => {
       // Fallback if API fails to respond in time
       setStartResult({ message: 'Fallback: Your business has been successfully launched.' });
       setStep(5);
+        syncStateToBackend({ step: 5 });
       setIsLoading(false);
     }, 3000);
 
@@ -315,13 +352,14 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant_id', result.organization_id);
         localStorage.setItem('tenant', result.organization_id);
       }
-      setStep(5); // Go to "You're Live" screen
+      setStep(5);
+        syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
 
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
       clearTimeout(safetyTimeout);
-      setStep(3); // Go back to last input screen on error
+      setStep(3); syncStateToBackend({ step: 3 }); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
     }
@@ -383,7 +421,7 @@ export default function OnboardingWizard() {
                   </p>
                   <button
                     role="link"
-                    onClick={() => setChatStep(1)}
+                    onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }}
                     className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                   >
                     Start Onboarding
@@ -432,7 +470,7 @@ export default function OnboardingWizard() {
                               return;
                             }
                             setValidationError('');
-                            setChatStep(2);
+                            setChatStep(2); syncStateToBackend({ chatStep: 2 });
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
@@ -450,7 +488,7 @@ export default function OnboardingWizard() {
                           return;
                         }
                         setValidationError('');
-                        setChatStep(2);
+                        setChatStep(2); syncStateToBackend({ chatStep: 2 });
                       }}
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -463,7 +501,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 2 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
@@ -495,7 +533,7 @@ export default function OnboardingWizard() {
                               return;
                             }
                             setValidationError('');
-                            setChatStep(3);
+                            setChatStep(3); syncStateToBackend({ chatStep: 3 });
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
@@ -513,7 +551,7 @@ export default function OnboardingWizard() {
                           return;
                         }
                         setValidationError('');
-                        setChatStep(3);
+                        setChatStep(3); syncStateToBackend({ chatStep: 3 });
                       }}
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -526,7 +564,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 3 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
@@ -602,7 +640,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
@@ -711,7 +749,7 @@ export default function OnboardingWizard() {
                       return;
                     }
                     setValidationError('');
-                    setStep(3);
+                    setStep(3); syncStateToBackend({ step: 3 });
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -724,7 +762,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
@@ -786,7 +824,15 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         value={adminName}
-                        onChange={(e) => setAdminName(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminName(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminName: 'Admin Name is required' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminName, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="e.g. Maya Smith"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
@@ -797,7 +843,17 @@ export default function OnboardingWizard() {
                       <input
                         type="email"
                         value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminEmail(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
+                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="you@example.com"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
@@ -808,7 +864,17 @@ export default function OnboardingWizard() {
                       <input
                         type="password"
                         value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminPassword(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password is required' }));
+                          } else if (val.length < 8 || !/\d/.test(val)) {
+                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password must be at least 8 characters and contain a number' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminPassword, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="••••••••"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
