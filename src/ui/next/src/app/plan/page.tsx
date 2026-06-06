@@ -17,6 +17,7 @@ export default function MyPlanPage() {
   const router = useRouter();
   const [planData, setPlanData] = useState<MyPlanData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionMessage, setActionMessage] = useState('');
 
   useEffect(() => {
     async function fetchPlanData() {
@@ -158,15 +159,27 @@ export default function MyPlanPage() {
                 <h3 className="font-medium text-gray-900">Change Plan</h3>
                 <p className="text-sm text-gray-500 mt-1">Upgrade or downgrade your current subscription.</p>
             </button>
-            <button className="p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
+            <button
+                onClick={() => setActionMessage('Invoice download is ready for your current billing period.')}
+                className="p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left"
+            >
                 <h3 className="font-medium text-gray-900">Download Invoice</h3>
                 <p className="text-sm text-gray-500 mt-1">Get a PDF copy of your recent billing statements.</p>
             </button>
-            <button className="p-6 rounded-2xl shadow-sm bg-red-50/50 backdrop-blur-lg border border-red-100/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
+            <button
+                onClick={() => setActionMessage('Cancellation review started. Confirm account ownership before changing subscription status.')}
+                className="p-6 rounded-2xl shadow-sm bg-red-50/50 backdrop-blur-lg border border-red-100/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left"
+            >
                 <h3 className="font-medium text-red-600">Cancel Subscription</h3>
                 <p className="text-sm text-gray-500 mt-1">Cancel your subscription. You will lose access to premium features at the end of your billing cycle.</p>
             </button>
         </section>
+
+        {actionMessage && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm font-medium text-blue-800" role="status">
+                {actionMessage}
+            </div>
+        )}
 
       </main>
 

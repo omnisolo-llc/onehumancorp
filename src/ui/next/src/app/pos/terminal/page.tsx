@@ -27,6 +27,7 @@ export default function TerminalPage() {
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
+  const [orderStatus, setOrderStatus] = useState('');
 
   // Background sync
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function TerminalPage() {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);
     }
-    alert(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+    setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
   };
 
   if (!activeStaff) {
@@ -152,7 +153,13 @@ export default function TerminalPage() {
                </button>
              </div>
              <div className="col-start-3 flex items-center justify-center">
-               <button onClick={handleClear} className="text-gray-400 hover:text-white">{t('Clear')}</button>
+               <button
+                 onClick={handleClear}
+                 disabled={!pin}
+                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400"
+               >
+                 {t('Clear')}
+               </button>
              </div>
            </div>
 
@@ -243,6 +250,7 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
+           {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
         {syncing && <div className="bg-blue-50 text-blue-600 text-xs text-center py-2 border-t border-blue-100">{t('Syncing offline events...')}</div>}

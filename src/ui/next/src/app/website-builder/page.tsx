@@ -240,7 +240,7 @@ export default function WebsiteBuilderPage() {
       if (response.ok) {
         const data = await response.json();
         setStatus("live");
-        const url = `https://${data.domain || 'myshop'}.ohc.store`;
+        const url = `/bio/${data.domain || 'myshop'}`;
         setLiveUrl(url);
         localStorage.setItem("ohc_builder_liveUrl", url);
       } else {
@@ -325,7 +325,7 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
-                    <a href="ohc://join?ref=website-builder" className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <a href="/onboarding?ref=website-builder" className="text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Powered by OHC
                     </a>
                   </div>

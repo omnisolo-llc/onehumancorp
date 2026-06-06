@@ -40,7 +40,7 @@ export default function Wrapped() {
     fetchMetrics();
   }, []);
 
-  const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/join?ref=${localStorage.getItem('tenant') || 'my-store'}` : 'https://ohc.app/join';
+  const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${localStorage.getItem('tenant') || 'my-store'}` : '/onboarding?ref=my-store';
 
   if (loading) return <div className="h-screen w-full bg-black flex items-center justify-center text-white">Loading...</div>;
 

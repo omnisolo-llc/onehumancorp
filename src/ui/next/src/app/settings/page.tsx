@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [smsStatus, setSmsStatus] = useState("");
   const [preferences, setPreferences] = useState({
     urgent_booking: false,
     failed_payment: false,
@@ -58,11 +59,13 @@ export default function SettingsPage() {
         body: JSON.stringify({ phone }),
       });
       if (!res.ok) {
-        alert("Failed to send verification SMS");
+        setSmsStatus("Failed to send verification SMS.");
         setIsVerifying(false);
+      } else {
+        setSmsStatus("Verification code sent.");
       }
     } catch {
-      alert("Network error");
+      setSmsStatus("Network error while sending verification SMS.");
       setIsVerifying(false);
     }
   };
@@ -76,11 +79,12 @@ export default function SettingsPage() {
       });
       if (res.ok) {
         setIsVerified(true);
+        setSmsStatus("Phone number verified.");
       } else {
-        alert("Invalid OTP");
+        setSmsStatus("Invalid OTP.");
       }
     } catch {
-      alert("Network error");
+      setSmsStatus("Network error while confirming OTP.");
     }
   };
 
@@ -157,6 +161,7 @@ export default function SettingsPage() {
           <div className="app-panel-body">
             <div className="space-y-4">
               <input
+                aria-label="Mobile Phone Number"
                 type="text"
                 placeholder="Mobile Phone Number (e.g. +1234567890)"
                 value={phone}
@@ -170,11 +175,14 @@ export default function SettingsPage() {
                 </button>
               )}
 
+              {smsStatus && <p className="text-sm font-medium text-blue-700" role="status">{smsStatus}</p>}
+
               {isVerifying && !isVerified && (
                 <div className="rounded-md border border-blue-100 bg-blue-50 p-3">
                   <p className="mb-2 text-sm text-blue-800">A 6-digit code has been sent. Enter it below:</p>
                   <div className="flex gap-2">
                     <input
+                      aria-label="Verification code"
                       type="text"
                       placeholder="123456"
                       value={otp}
@@ -199,6 +207,7 @@ export default function SettingsPage() {
                   <label key={key} className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
                     <span>{label}</span>
                     <input
+                      aria-label={label}
                       type="checkbox"
                       checked={preferences[key as keyof typeof preferences]}
                       onChange={(e) => handlePreferenceChange(key, e.target.checked)}
@@ -224,6 +233,7 @@ export default function SettingsPage() {
               <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
                 <span>Enable Local Delivery</span>
                 <input
+                  aria-label="Enable Local Delivery"
                   type="checkbox"
                   checked={deliverySettings.delivery_enabled}
                   onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}

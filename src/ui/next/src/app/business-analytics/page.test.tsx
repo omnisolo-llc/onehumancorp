@@ -81,7 +81,7 @@ test('claims trial extension via social share', () => {
 
   expect(global.window.open).toHaveBeenCalled();
   expect(localStorage.getItem('trial_active')).toBe('true');
-  expect(global.alert).toHaveBeenCalled();
+  expect(screen.getByRole('status')).toHaveTextContent('7-day Pro Trial activated');
   expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).not.toBeInTheDocument();
 });
 
