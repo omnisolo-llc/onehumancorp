@@ -43,7 +43,8 @@ export default function MilestonesPage() {
     }
   ];
 
-  const shareText = "I just hit a huge business milestone using OHC! Launch your own store today: ohc://join?ref=milestone";
+  const shareTarget = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=milestone` : '/onboarding?ref=milestone';
+  const shareText = `I just hit a huge business milestone using OHC! Launch your own store today: ${shareTarget}`;
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
