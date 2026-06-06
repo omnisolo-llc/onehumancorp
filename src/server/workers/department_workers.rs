@@ -1493,6 +1493,7 @@ mod tests {
         } // end of test_customer_success_worker_draft_reply
 
     #[tokio::test]
+    #[allow(dead_code, unnameable_test_items)]
     async fn test_promoter_worker_social_post_draft() {
         let db = setup_test_db().await;
         if let DbStore::Sqlite(pool) = &db.store {
