@@ -446,7 +446,7 @@ export default function Dashboard() {
         <section className="app-grid two">
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Recent Orders</div>
+              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
               <Link href="/orders" className="app-button">View All</Link>
             </div>
             {orders.length === 0 ? (
@@ -479,7 +479,7 @@ export default function Dashboard() {
 
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Inbox Activity</div>
+              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
               <Link href="/inbox" className="app-button">Open Inbox</Link>
             </div>
             <div className="app-list">
