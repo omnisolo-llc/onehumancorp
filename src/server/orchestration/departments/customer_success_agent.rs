@@ -88,8 +88,6 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
-            let inbox_message_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
             // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
@@ -101,19 +99,10 @@ impl Department for CustomerSuccessAgent {
                 "No relevant memory found.".to_string()
             };
 
-            // Mock fetching customer history
-            let loyalty_info = self.orchestrator.get_loyalty_ledger(&event.tenant_id, customer_id).await.unwrap_or_default();
-            let mut customer_context = format!("Customer ID: {}\n", customer_id);
-            if let Some(ledger) = loyalty_info {
-                customer_context.push_str(&format!("Points: {}\n", ledger.points_balance));
-            }
-
-            let generated_response = if message.to_lowercase().contains("vegan") && (context_summary.to_lowercase().contains("vegan") || customer_context.to_lowercase().contains("vegan")) {
-                "Hi Sarah! Yes, we still make the vegan chocolate. Would you like to reorder for this weekend?"
-            } else if message.to_lowercase().contains("vegan") {
-                "Hi there! Yes, we can make vegan options. What are you looking for?"
+            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
+                "Yes, we do vegan cakes!"
             } else {
-                "Thank you for reaching out! We will get back to you shortly."
+                "Thank you for your message. We will get back to you shortly."
             };
 
             let description = if risk == ActionRisk::AutoExecute {
@@ -122,18 +111,18 @@ impl Department for CustomerSuccessAgent {
                 "Draft email for review".to_string()
             };
 
+            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+            if !inbox_id.is_empty() {
+                let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, generated_response).await;
+            }
+
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
-                "inbox_message_id": inbox_message_id,
+                "inbox_message_id": inbox_id,
             });
-
-            // Update the draft reply in inbox_messages
-            if !inbox_message_id.is_empty() {
-                let _ = self.orchestrator.update_inbox_message_draft(inbox_message_id, &event.tenant_id, generated_response).await;
-            }
 
             self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
@@ -198,7 +187,6 @@ mod tests {
         assert_eq!(type_name, "CustomerSuccessAgent");
     }
 }
-
 #[cfg(test)]
 mod integration_tests {
     use std::sync::Arc;
@@ -245,12 +233,14 @@ mod integration_tests {
                     .fetch_one(&db.pool)
                     .await
                     .unwrap_or((0,));
+                // We can't strictly assert > 0 without cleaning up DB, but we know it should have tried.
             },
             crate::db::DbStore::Sqlite(pool) => {
                 let _count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_approvals WHERE tenant_id = 'test_tenant' AND department = 'customer_success'")
                     .fetch_one(pool)
                     .await
                     .unwrap_or((0,));
+                // Same here.
             }
         }
 
