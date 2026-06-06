@@ -48,6 +48,7 @@ pub struct CostAuditor {
     storage_savings_counter: Counter<u64>,
     bandwidth_savings_counter: Counter<u64>,
     compute_cost_counter: Counter<u64>,
+    cached_tokens_counter: Counter<u64>,
 }
 
 impl CostAuditor {
@@ -57,6 +58,7 @@ impl CostAuditor {
         let storage_savings_counter = meter.u64_counter("ohc_storage_savings_total_cents").build();
         let bandwidth_savings_counter = meter.u64_counter("ohc_bandwidth_savings_total_cents").build();
         let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
+        let cached_tokens_counter = meter.u64_counter("ohc_cached_tokens_total").build();
 
         CostAuditor {
             config,
@@ -84,6 +86,7 @@ impl CostAuditor {
             storage_savings_counter,
             bandwidth_savings_counter,
             compute_cost_counter,
+            cached_tokens_counter,
         }
     }
 
@@ -139,6 +142,14 @@ impl CostAuditor {
     }
 
     pub fn record_cache_hit(&self, event: AuditEvent) -> f64 {
+        self.cached_tokens_counter.add(event.cached_input_tokens as u64, &[opentelemetry::KeyValue::new("tenant_id", event.tenant_id.clone())]);
+
+        {
+            let mut tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
+            let current_tenant_cached_tokens = tenant_cached_tokens.entry(event.tenant_id.clone()).or_insert(0);
+            *current_tenant_cached_tokens += event.cached_input_tokens;
+        }
+
         let actual_cost = calculator::calculate_cost_with_config(
             event.input_tokens,
             event.output_tokens,
@@ -548,5 +559,20 @@ mod tests {
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("test_tenant"), 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("other_tenant"), 0.0);
+    }
+
+    #[test]
+    fn test_cache_hit_tracking() {
+        let auditor = CostAuditor::new(crate::pricing::calculator::CostConfig::default());
+        let event = AuditEvent {
+            tenant_id: "tenant-1".to_string(),
+            agent_id: "agent-1".to_string(),
+            input_tokens: 100,
+            output_tokens: 50,
+            cached_input_tokens: 500,
+            local_embedding_tokens: 0,
+        };
+        auditor.record_cache_hit(event);
+        assert_eq!(auditor.get_tenant_cached_tokens("tenant-1"), 500);
     }
 }
