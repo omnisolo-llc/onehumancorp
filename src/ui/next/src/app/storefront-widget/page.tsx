@@ -12,6 +12,7 @@ export default function StorefrontWidgetPage() {
   const [removeBranding, setRemoveBranding] = useState(false);
   const [previewStatus, setPreviewStatus] = useState('');
   const [removeBranding, setRemoveBranding] = useState(false);
+  const [previewStatus, setPreviewStatus] = useState('');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
