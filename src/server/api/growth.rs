@@ -29,20 +29,6 @@ pub struct SocialPostResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SendReceiptRequest {
-    pub customer_email: Option<String>,
-    pub order_id: Option<String>,
-    pub amount: Option<String>,
-    pub tenant_id: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SendReceiptResponse {
-    pub success: bool,
-    pub message: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct CampaignRequest {
     pub name: String,
     pub subject: String,
@@ -122,7 +108,6 @@ where
 {
     Router::new()
         .route("/social/post", post(handle_social_post))
-        .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
@@ -293,30 +278,6 @@ async fn handle_generate_cart(
     Json(GenerateCartResponse {
         message: generated,
     })
-}
-
-async fn handle_send_receipt(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<SendReceiptRequest>,
-) -> impl IntoResponse {
-    let email = req.customer_email.unwrap_or_else(|| "customer@example.com".to_string());
-    let order_id = req.order_id.unwrap_or_else(|| "unknown_order".to_string());
-    let amount = req.amount.unwrap_or_else(|| "$0.00".to_string());
-    let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
-
-    let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
-        email, amount, order_id, tenant_id
-    );
-
-    let msg = state.hub.sanitize_hub_event(serde_json::json!({
-        "type": "growth.receipt_sent",
-        "order_id": order_id,
-        "customer_email": email
-    }));
-    state.hub.append_recent_event(msg);
-
-    Json(SendReceiptResponse { success: true, message: generated })
 }
 
 async fn handle_send_campaign(

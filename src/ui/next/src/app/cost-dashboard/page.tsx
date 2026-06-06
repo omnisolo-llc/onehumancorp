@@ -20,8 +20,6 @@ interface CostDashboardData {
   payment_fees: number;
   network_cost: number;
   bandwidth_savings: number;
-  cache_hit_rate: number;
-  cost_per_1k_tokens: number;
   period_start: string;
   period_end: string;
   trend: DailyCost[];
@@ -77,7 +75,7 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="p-8 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Advisory Summary</h2>
             <p className="text-gray-700 font-medium leading-relaxed">
               Here's what happened this week and what you should do next:<br/><br/>
@@ -88,38 +86,34 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="p-8 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                     <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                 </div>
-                <div className="p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                <div className="p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
                     <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
                 </div>
-                <div className="p-6 rounded-xl shadow-sm border border-green-200" style={{ background: 'rgba(240, 253, 244, 0.8)', backdropFilter: 'blur(10px)' }}>
-                    <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
-                    <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
-                    <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
-                </div>
+
             </div>
         </section>
 
         {/* Breakdown Section */}
-        <section className="p-8 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">
-                <div className="flex flex-col p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                <div className="flex flex-col p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
                     <ul id="cost-dashboard-trend" className="space-y-2">
-                        {(data?.trend?.length ? data.trend : [{ date: 'No trend data yet', total_cost: 0 } as DailyCost]).map((daily, index) => (
+                        {data?.trend?.map((daily, index) => (
                             <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
                                 <span className="text-sm text-gray-700">{daily.date}</span>
                                 <span className="text-sm font-medium text-gray-900">{formatCurrency(daily.total_cost)}</span>
@@ -128,18 +122,15 @@ export default function CostDashboardPage() {
                     </ul>
                 </div>
 
-                <div className="flex justify-between items-center p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">LLM Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
-                    <div className="text-right">
-                        <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900 block">{formatCurrency(data?.llm_cost || 0)}</span>
-                        <span className="text-xs text-gray-500 font-medium">Efficiency: {data?.cache_hit_rate}% cache hit rate, ${data?.cost_per_1k_tokens.toFixed(4)}/1k tokens</span>
-                    </div>
+                    <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">Storage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
@@ -147,14 +138,14 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-storage" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">Payment Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
-                <div className="flex justify-between items-center p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-gray-900">Network & Bandwidth</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
@@ -162,7 +153,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.network_cost || 0)}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-6 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.3)' }}>
+                <div className="flex justify-between items-center p-4 rounded-xl shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                     <div>
                         <span className="font-medium text-green-700">Bandwidth Savings</span>
                         <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>

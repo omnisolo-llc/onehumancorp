@@ -69,7 +69,7 @@ impl EdgeOffloadMcpServer {
                 .instrument(tracing::info_span!("mcp_inference_router"))
                 .await
             }
-            _ => Err(tonic::Status::not_found(format!("tool {} not found", req.tool_id))),
+            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
         }
     }
 }

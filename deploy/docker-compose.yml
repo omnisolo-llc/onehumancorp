@@ -65,7 +65,7 @@ services:
       CHATWOOT_ADMIN_EMAIL: admin@ohc.local
       CHATWOOT_ADMIN_PASSWORD: changeme
       CHATWOOT_ENABLED: ${CHATWOOT_ENABLED:-false}
-      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-"dummy-key-for-test"}
       OHC_LLM_PROVIDER: ${OHC_LLM_PROVIDER:-minimax}
       OHC_LLM_MODEL: ${OHC_LLM_MODEL:-MiniMax-M3}
       MINIMAX_MODEL: ${MINIMAX_MODEL:-MiniMax-M3}

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Business Analytics Flow', () => {
   test('Dashboard contains link to Business Analytics', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('http://localhost:3000/dashboard');
     const analyticsLink = page.locator('a', { hasText: 'Business Analytics' });
     await expect(analyticsLink).toBeVisible();
     await expect(analyticsLink).toHaveAttribute('href', '/business-analytics');
@@ -14,7 +14,7 @@ test.describe('Business Analytics Flow', () => {
 
   test('Shows soft paywall for predictive insights when not pro', async ({ page }) => {
     // Navigate straight to page
-    await page.goto('/business-analytics');
+    await page.goto('http://localhost:3000/business-analytics');
 
     // Assert the "Unlock Predictions" wall is there
     const unlockBtn = page.getByRole('button', { name: 'Unlock Predictions' });
@@ -26,7 +26,7 @@ test.describe('Business Analytics Flow', () => {
   });
 
   test('Upgrade to Pro button navigates to pricing', async ({ page }) => {
-    await page.goto('/business-analytics');
+    await page.goto('http://localhost:3000/business-analytics');
     await page.getByRole('button', { name: 'Unlock Predictions' }).click();
 
     const upgradeBtn = page.getByRole('button', { name: 'Upgrade to Pro ($79/mo)' });
@@ -38,7 +38,7 @@ test.describe('Business Analytics Flow', () => {
   });
 
   test('Share to unlock gives a 7 day trial and hides the paywall', async ({ page, context }) => {
-    await page.goto('/business-analytics');
+    await page.goto('http://localhost:3000/business-analytics');
     await page.getByRole('button', { name: 'Unlock Predictions' }).click();
 
     const shareBtn = page.getByRole('button', { name: /Share on X to unlock 7 Days Free/i });
@@ -62,7 +62,7 @@ test.describe('Business Analytics Flow', () => {
   });
 
   test('Back to dashboard button works', async ({ page }) => {
-    await page.goto('/business-analytics');
+    await page.goto('http://localhost:3000/business-analytics');
     await page.getByRole('button', { name: 'Back to Dashboard' }).click();
     await page.waitForURL('**/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible();

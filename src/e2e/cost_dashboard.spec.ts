@@ -7,6 +7,7 @@ test.describe('Cost Dashboard', () => {
     await page.goto('/cost-dashboard');
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
     const trendList = page.locator('#cost-dashboard-trend');
+    await expect(trendList).toBeVisible();
     await expect(trendList.locator('li').first()).toBeVisible({ timeout: 10000 });
   });
 
@@ -22,8 +23,6 @@ test.describe('Cost Dashboard', () => {
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
     await expect(page.locator('#cost-dashboard-llm')).toBeVisible();
     await expect(page.locator('#cost-dashboard-llm')).toContainText('$');
-    await expect(page.locator('span', { hasText: 'cache hit rate' })).toBeVisible();
-    await expect(page.locator('span', { hasText: '/1k tokens' })).toBeVisible();
   });
 
   test('should display Storage and CDN Cost breakdown', async ({ page }) => {
@@ -45,8 +44,8 @@ test.describe('Cost Dashboard', () => {
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
     await expect(page.locator('#cost-dashboard-network')).toBeVisible();
     await expect(page.locator('#cost-dashboard-network')).toContainText('$');
-    await expect(page.locator('#cost-dashboard-total-savings')).toBeVisible();
-    await expect(page.locator('#cost-dashboard-total-savings')).toContainText('$');
+    await expect(page.locator('#cost-dashboard-bandwidth-savings')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-bandwidth-savings')).toContainText('$');
   });
 
   test('should return correct JSON payload from backend API', async ({ request }) => {

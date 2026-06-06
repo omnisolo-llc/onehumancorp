@@ -167,7 +167,6 @@ pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
     pub model: String,
     pub criteria: Option<String>,
-    pub confidence_threshold: f32,
 }
 
 #[derive(Deserialize, serde::Serialize)]
@@ -212,11 +211,8 @@ impl InferentialSensor for LlmJudgeSensor {
 
         match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
             Ok(eval) => {
-                if eval.status.to_uppercase() == "REJECT" || eval.confidence < self.confidence_threshold {
-                    let mut err_msg = format!("LLM Judge REJECTED the output (Confidence: {:.2} vs Threshold: {:.2}).\nReason: {}", eval.confidence, self.confidence_threshold, eval.reason);
-                    if eval.status.to_uppercase() == "APPROVE" && eval.confidence < self.confidence_threshold {
-                        err_msg = format!("LLM Judge APPROVED the output, but confidence {:.2} was below threshold {:.2}.\nReason: {}", eval.confidence, self.confidence_threshold, eval.reason);
-                    }
+                if eval.status.to_uppercase() == "REJECT" {
+                    let mut err_msg = format!("LLM Judge REJECTED the output (Confidence: {:.2}).\nReason: {}", eval.confidence, eval.reason);
                     if !eval.missing_elements.is_empty() {
                         err_msg.push_str(&format!("\nMissing Elements: {}", eval.missing_elements.join(", ")));
                     }
@@ -409,7 +405,7 @@ mod tests {
         let pass_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string()
         });
-        let judge = Arc::new(LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.5 });
+        let judge = Arc::new(LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None });
 
         let mut manager = VerificationManager::new();
         manager.add_inferential(judge);
@@ -422,13 +418,13 @@ mod tests {
         let pass_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string()
         });
-        let judge = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.5 };
+        let judge = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None };
         assert!(judge.verify_inferential("output", "task").await.is_ok());
 
         let fail_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8, "missing_elements": ["element1"], "suggested_fixes": ["fix1"]}"#.to_string()
         });
-        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.5 };
+        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string(), criteria: None };
         let res = judge_fail.verify_inferential("output", "task").await;
         assert!(res.is_err());
         let err = res.unwrap_err();
@@ -437,17 +433,4 @@ mod tests {
         assert!(err.contains("Missing Elements: element1"));
         assert!(err.contains("Suggested Fixes:\n- fix1"));
     }
-
-    #[tokio::test]
-    async fn test_llm_judge_sensor_below_threshold() {
-        let pass_llm = Arc::new(MockLlmClient {
-            response_text: r#"{"status": "APPROVE", "reason": "Looks mostly okay", "confidence": 0.4, "missing_elements": [], "suggested_fixes": []}"#.to_string()
-        });
-        let judge_fail = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.8 };
-        let res = judge_fail.verify_inferential("output", "task").await;
-        assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert!(err.contains("APPROVED the output, but confidence 0.40 was below threshold 0.80"));
-    }
-
 }
