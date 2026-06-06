@@ -99,7 +99,6 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
-    pub caveman_mode: Option<crate::caveman::CavemanMode>,
 }
 
 impl Default for AgentRunConfig {
@@ -161,7 +160,6 @@ enable_llmcompiler_plan_and_execute: false,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
-            caveman_mode: None,
         }
     }
 }
@@ -321,10 +319,7 @@ impl Agent {
             } else {
                 phase_cfg.server_system_message = format!("You are in the {} phase.", phase_prompt);
             }
-                    let mut system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&phase_cfg, session_tools).build();
-        if let Some(mode) = cfg.caveman_mode {
-            system_prompt.push_str(crate::caveman::caveman_system_prompt(mode));
-        }
+            let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&phase_cfg, session_tools).build();
 
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
@@ -555,10 +550,7 @@ impl Agent {
         let mut total_session_cost = 0.0;
         let mut budget_tracker = crate::budget::BudgetTracker::default();
 
-                let mut system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools).build();
-        if let Some(mode) = cfg.caveman_mode {
-            system_prompt.push_str(crate::caveman::caveman_system_prompt(mode));
-        }
+        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools).build();
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools.iter().map(|t| crate::types::ToolDefinition {
             name: t.name.clone(),
             description: t.description.clone(),
@@ -841,10 +833,7 @@ impl Agent {
         let tools_def_arc = std::sync::Arc::new(tools_def);
         let session_tools_arc = std::sync::Arc::new(session_tools);
 
-                let mut system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg_arc, &session_tools_arc).build();
-        if let Some(mode) = cfg_arc.caveman_mode {
-            system_prompt.push_str(crate::caveman::caveman_system_prompt(mode));
-        }
+        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg_arc, &session_tools_arc).build();
 
         // --- NODE 1: LLM Call ---
         let llm_cfg = cfg_arc.clone();
@@ -2083,10 +2072,7 @@ impl Agent {
 
         let max_iterations = if final_cfg.max_iterations <= 0 { 100 } else { final_cfg.max_iterations };
 
-                let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&final_cfg, &session_tools).build();
-        if let Some(mode) = final_cfg.caveman_mode {
-            combined_system.push_str(crate::caveman::caveman_system_prompt(mode));
-        }
+        let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(&final_cfg, &session_tools).build();
 
         // Long-Term Memory Retrieval
         let mut checkpoint_history: Vec<String> = Vec::new();
@@ -2182,18 +2168,7 @@ impl Agent {
                 }
             }
 
-
-        // Apply Caveman compression if enabled
-        if let Some(mode) = final_cfg.caveman_mode {
-            for msg in &mut final_messages {
-                if msg.role == crate::types::Role::User || msg.role == crate::types::Role::Assistant {
-                    msg.content = crate::caveman::caveman_compress(&msg.content, mode);
-                }
-            }
-        }
-
-        let req = ChatRequest {
-
+            let req = ChatRequest {
                 model: final_cfg.model.clone(),
                 system: combined_system.clone(),
                 messages: final_messages,
@@ -3183,76 +3158,6 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
-
-
-
-
-    #[tokio::test]
-    async fn test_caveman_compression_applied() {
-        use crate::caveman::CavemanMode;
-
-        // Use a mock client that records requests
-        struct MockLlmClientForCaveman {
-            responses: tokio::sync::Mutex<Vec<ChatResponse>>,
-            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
-        }
-
-        #[async_trait::async_trait]
-        impl LlmClient for MockLlmClientForCaveman {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let mut resps = self.responses.lock().await;
-                self.requests.lock().await.push(req);
-                let resp = if !resps.is_empty() {
-                    resps.remove(0)
-                } else {
-                    ChatResponse {
-                        message: Message::assistant("Success"),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id".to_string()),
-                    }
-                };
-                Ok(resp)
-            }
-        }
-
-        let client = Arc::new(MockLlmClientForCaveman {
-            responses: tokio::sync::Mutex::new(vec![ChatResponse {
-                message: Message::assistant("Success"),
-                usage: Usage::default(),
-                stop_reason: "stop".to_string(),
-                response_id: Some("mock-id".to_string()),
-            }]),
-            requests: tokio::sync::Mutex::new(vec![]),
-        });
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.caveman_mode = Some(CavemanMode::Full);
-        cfg.user_instructions = "The database has an error in the configuration".to_string();
-
-        let agent = Agent::new(client.clone(), vec![]);
-
-        let mut on_event = |_| {};
-        let _ = agent.run_internal(&cfg, "I think we should do this basically", &mut on_event).await;
-
-        let requests = client.requests.lock().await;
-        assert_eq!(requests.len(), 1);
-
-        let first_req = &requests[0];
-
-        println!("SYSTEM PROMPT: {}", first_req.system);
-
-        // System prompt should contain the Caveman system prompt suffix
-        assert!(first_req.system.contains("[COMM-MODE: full]"));
-
-        // The user message "I think we should do this basically" should be compressed
-        // "I think" and "basically" should be removed by CavemanMode::Full
-        let first_user_msg = first_req.messages.first().unwrap();
-        assert!(!first_user_msg.content.to_lowercase().contains("i think"));
-        assert!(!first_user_msg.content.to_lowercase().contains("basically"));
-    }
-
-
     #[tokio::test]
     async fn test_llm_recoverable_tool_messages_agent_loop() {
         use crate::tools::ToolExecutor;

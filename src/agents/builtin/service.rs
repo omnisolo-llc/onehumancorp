@@ -608,7 +608,6 @@ impl AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
-            caveman_mode: None,
             enable_tao_orchestration_loop: req.enable_tao_orchestration_loop,
         }
     }
@@ -1052,7 +1051,6 @@ impl AgentService for AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
-            caveman_mode: None,
             enable_tao_orchestration_loop: sub_req.enable_tao_orchestration_loop,
             };
 
