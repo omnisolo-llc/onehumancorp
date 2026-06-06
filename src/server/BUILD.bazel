@@ -643,6 +643,10 @@ rust_test(
     name = "queue_test",
     size = "large",
     srcs = ["queue_test.rs"],
+    data = [
+        "lib.rs",
+        "//src/server/migrations",
+    ],
     edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],

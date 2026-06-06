@@ -33,8 +33,15 @@ After the first 50, the next 300 open issues were scanned for code-resolvable fe
 - #23425: Removed unused Rust imports that were surfacing during shared `server_lib` builds.
 - #22300: SIP database retry loops now share PostgreSQL-aware retry classification for lock, deadlock, and serialization failures.
 - #22508: Integration connect buttons now request backend-generated OAuth URLs through `/api/integrations/{id}/connect`.
+- #22479: Added the missing PostgreSQL `sub_agent_queue` schema migration with indexes and tenant RLS for legacy onboarding/hybrid-sync queue paths.
+- #22279: Stripe Terminal backend infrastructure now fails closed without credentials and uses real Stripe Terminal/PaymentIntent API calls instead of mock secrets.
+- #22353: The Stripe Terminal POS flow now has Next.js proxy routes that normalize real backend token and card-present PaymentIntent responses for Terminal JS.
+- #22844: In-person Terminal payment infrastructure now routes through the backend `/api/v1/payments/terminal` contract instead of missing mock-shaped frontend endpoints.
+- #22946: The POS Terminal architecture now has backend-backed connection-token and payment-intent routes wired to the frontend Terminal client boundary.
 - #22181: Added an AutoDream sync-duration metric recorder and a dashboard-backed test for `ohc_autodream_sync_duration_seconds`.
 - #22180: Added a test to prevent `hybrid-telemetry.json` drift and synchronized deploy dashboard mirrors to the canonical dashboard.
+- #23937: The dashboard metrics endpoint now reads campaign-sent counts from `agent_actions` instead of hard-coding placeholder values.
+- #23520: Dashboard, order, inbox, and supply UI requests now have Next.js backend proxy routes for the Rust database-backed `/api/ui/*` endpoints.
 
 ## Mock API/Data Cleanup From The Broader Scan
 
@@ -54,6 +61,12 @@ The user explicitly requested avoiding mocked APIs and data. This branch therefo
 - `/api/v1/shipping/rates`
 - `/api/v1/shipping/label`
 - `/api/checkout/mercadopago`
+- `/api/ui/dashboard/metrics`
+- `/api/ui/orders`
+- `/api/ui/inbox/messages`
+- `/api/ui/supply`
+- `/api/terminal/connection_token`
+- `/api/terminal/create_payment_intent`
 
 The Rust app now mounts the subscription and staff routers backing the corresponding frontend proxies. These mock-removal changes are not all listed as individual `Fixes #...` entries because several adjacent open issues are broad architecture epics rather than narrowly satisfied implementation tickets.
 

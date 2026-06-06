@@ -2671,6 +2671,56 @@ fn ui_tenant_id(query: &UiTenantQuery) -> String {
         .to_string()
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub(crate) struct UiDashboardMetrics {
+    active_customers: i64,
+    pending_orders: i64,
+    total_sales: f64,
+    total_campaigns_sent: i64,
+}
+
+pub(crate) async fn load_ui_dashboard_metrics(
+    db: &crate::db::DB,
+    tenant_id: &str,
+) -> Result<UiDashboardMetrics, sqlx::Error> {
+    let (active_customers, pending_orders, total_sales, total_campaigns_sent) = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+                "SELECT \
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
+                    (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales, \
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+            )
+            .bind(tenant_id)
+            .fetch_one(&db.pool)
+            .await?
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+                "SELECT \
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
+                    (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales, \
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+            )
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .fetch_one(pool)
+            .await?
+        }
+    };
+
+    Ok(UiDashboardMetrics {
+        active_customers,
+        pending_orders,
+        total_sales,
+        total_campaigns_sent,
+    })
+}
+
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -2887,41 +2937,11 @@ async fn ui_dashboard_metrics_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let metrics = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_as::<_, (i64, i64, f64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&db.pool)
-            .await
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, (i64, i64, f64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales"
-            )
-            .bind(&tenant_id)
-            .bind(&tenant_id)
-            .bind(&tenant_id)
-            .fetch_one(pool)
-            .await
-        }
-    };
+    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await;
 
     match metrics {
-        Ok((active_customers, pending_orders, total_sales)) => {
-            let res = serde_json::json!({
-                "active_customers": active_customers,
-                "pending_orders": pending_orders,
-                "total_sales": total_sales,
-                "total_campaigns_sent": 0
-            });
+        Ok(metrics) => {
+            let res = serde_json::to_value(metrics).unwrap_or_else(|_| serde_json::json!({}));
             cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
             (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
@@ -3842,5 +3862,6 @@ async fn api_not_found_handler(req: axum::extract::Request) -> impl axum::respon
     )
         .into_response()
 }
+
 pub mod crypto;
 // resolves #9690
