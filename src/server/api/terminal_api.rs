@@ -20,13 +20,62 @@ pub struct PaymentIntentResponse {
     pub intent_id: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct ReserveInventoryRequest {
+    pub product_id: String,
+    pub ttl_secs: u64,
+}
+
+#[derive(serde::Serialize)]
+pub struct ReserveInventoryResponse {
+    pub success: bool,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
+        .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .with_state(hub)
 }
 
+pub async fn reserve_inventory_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<ReserveInventoryRequest>,
+) -> Json<ReserveInventoryResponse> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Json(ReserveInventoryResponse { success: false });
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Json(ReserveInventoryResponse { success: false })
+    };
+
+    if let Some(client) = &hub.redis_client {
+        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+        if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+            let acquired: bool = redis::cmd("SET")
+                .arg(&lock_key)
+                .arg("1")
+                .arg("NX")
+                .arg("EX")
+                .arg(req_data.ttl_secs)
+                .query_async(&mut conn)
+                .await
+                .unwrap_or(false);
+
+            return Json(ReserveInventoryResponse { success: acquired });
+        }
+    }
+
+    // Fail closed if Redis is unavailable to prevent double booking
+    Json(ReserveInventoryResponse { success: false })
+}
 
 pub async fn get_terminal_connection_token_handler(
     _headers: HeaderMap,
@@ -64,8 +113,6 @@ pub async fn get_terminal_connection_token_handler(
         Err(e) => Json(Err(e)),
     }
 }
-
-
 
 pub async fn create_payment_intent_handler(
     _headers: HeaderMap,

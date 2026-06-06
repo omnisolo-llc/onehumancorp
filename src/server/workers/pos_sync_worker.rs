@@ -44,6 +44,21 @@ impl PosSyncWorker {
                 .execute(&mut *tx)
                 .await
                 .unwrap();
+
+            let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = $1")
+                .bind(product_id)
+                .fetch_one(&mut *tx)
+                .await
+                .unwrap();
+
+            if count.0 <= 0 {
+                let _ = sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content, status) VALUES ($1, $2, 'Operations Agent', 'Product (ID: ' || $3 || ') sold out. Would you like to draft a restock order?', 'pending')")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&job.tenant_id)
+                    .bind(product_id)
+                    .execute(&mut *tx)
+                    .await;
+            }
         }
 
         sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")

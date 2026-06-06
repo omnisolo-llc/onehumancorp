@@ -54,6 +54,18 @@ export default function CheckoutPage() {
   const [isSubscription, setIsSubscription] = useState(false);
 
   const handlePayment = async (isSub = false) => {
+    // TODO: Extract product ID dynamically from cart or props
+    const res = await fetch("/api/v1/payments/terminal/reserve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: "demo_product", ttl_secs: 300 }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      setCheckoutStatus("Item sold out online just now.");
+      setIsProcessing(false);
+      return;
+    }
     setIsProcessing(true);
     setIsSubscription(isSub);
     const fallbackReferralLink = () => {

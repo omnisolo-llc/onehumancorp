@@ -60,6 +60,25 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
 
   const processPayment = async () => {
     if (!terminal || !connectedReader) return;
+
+    setStatus("Reserving inventory...");
+    // TODO: Pass product ID via props or global state
+    try {
+      const reserveRes = await fetch("/api/v1/payments/terminal/reserve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: "demo_product", ttl_secs: 15 })
+      });
+      const reserveData = await reserveRes.json();
+      if (!reserveData.success) {
+        setStatus("Item sold out online just now.");
+        return;
+      }
+    } catch (e) {
+      setStatus("Failed to reserve inventory.");
+      return;
+    }
+
     setStatus('Creating payment intent...');
     try {
       const res = await fetch('/api/terminal/create_payment_intent', {
