@@ -19,7 +19,7 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
 
       const term = StripeTerminal.create({
         onFetchConnectionToken: async () => {
-          const res = await fetch('/api/terminal/connection_token', { method: 'POST' });
+          const res = await fetch('/api/v1/payments/terminal/token', { method: 'POST' });
           const data = await res.json();
           return data.secret;
         },
@@ -62,7 +62,7 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
     if (!terminal || !connectedReader) return;
     setStatus('Creating payment intent...');
     try {
-      const res = await fetch('/api/terminal/create_payment_intent', {
+      const res = await fetch('/api/v1/payments/terminal/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, currency: 'usd' })

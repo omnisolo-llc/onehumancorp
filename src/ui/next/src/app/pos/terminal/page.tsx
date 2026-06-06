@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
+import StripeTerminalClient from './StripeTerminalClient';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -102,6 +103,9 @@ export default function TerminalPage() {
     setClockedIn(type === 'CLOCK_IN');
   };
 
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+
   const handleNewOrder = () => {
     const basePrice = 5000; // $50.00
     const converted = convert(basePrice, 'USD', currency);
@@ -109,7 +113,8 @@ export default function TerminalPage() {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);
     }
-    alert(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+    setPaymentAmount(converted.amount);
+    setShowPayment(true);
   };
 
   if (!activeStaff) {
@@ -212,6 +217,8 @@ export default function TerminalPage() {
                </button>
              )}
            </div>
+
+           {showPayment && <StripeTerminalClient amount={paymentAmount} />}
 
            {/* Role-based UI rendering */}
            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Quick Actions')}</h3>
