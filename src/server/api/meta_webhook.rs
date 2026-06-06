@@ -115,8 +115,30 @@ pub async fn meta_webhook_post_handler(
 
                             // Try to look up the tenant ID by sender id. For now, use "system" or let the DB logic handle it
 
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+                                      let identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
+                                      let tenant_id = if identifier != "unknown" {
+                                          let pool = &state.db.pool;
+                                          match &state.db.store {
+                                              crate::db::DbStore::Postgres => {
+                                                  sqlx::query_scalar::<_, String>("SELECT tenant_id FROM integrations WHERE provider_id = 'meta' AND metadata->>'account_id' = $1 LIMIT 1")
+                                                      .bind(identifier)
+                                                      .fetch_optional(pool)
+                                                      .await
+                                                      .unwrap_or(None)
+                                                      .unwrap_or_else(|| "test_tenant".to_string())
+                                              },
+                                              crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                                  sqlx::query_scalar::<_, String>("SELECT tenant_id FROM integrations WHERE provider_id = 'meta' AND json_extract(metadata, '$.account_id') = ? LIMIT 1")
+                                                      .bind(identifier)
+                                                      .fetch_optional(sqlite_pool)
+                                                      .await
+                                                      .unwrap_or(None)
+                                                      .unwrap_or_else(|| "test_tenant".to_string())
+                                              }
+                                          }
+                                      } else {
+                                          "test_tenant".to_string()
+                                      };
 
                             let inbox_id = Uuid::new_v4().to_string();
                             let source = "instagram".to_string();
@@ -184,8 +206,30 @@ pub async fn meta_webhook_post_handler(
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
 
 
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+                                      let identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
+                                      let tenant_id = if identifier != "unknown" {
+                                          let pool = &state.db.pool;
+                                          match &state.db.store {
+                                              crate::db::DbStore::Postgres => {
+                                                  sqlx::query_scalar::<_, String>("SELECT tenant_id FROM integrations WHERE provider_id = 'meta' AND metadata->>'account_id' = $1 LIMIT 1")
+                                                      .bind(identifier)
+                                                      .fetch_optional(pool)
+                                                      .await
+                                                      .unwrap_or(None)
+                                                      .unwrap_or_else(|| "test_tenant".to_string())
+                                              },
+                                              crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                                  sqlx::query_scalar::<_, String>("SELECT tenant_id FROM integrations WHERE provider_id = 'meta' AND json_extract(metadata, '$.account_id') = ? LIMIT 1")
+                                                      .bind(identifier)
+                                                      .fetch_optional(sqlite_pool)
+                                                      .await
+                                                      .unwrap_or(None)
+                                                      .unwrap_or_else(|| "test_tenant".to_string())
+                                              }
+                                          }
+                                      } else {
+                                          "test_tenant".to_string()
+                                      };
 
                                       let inbox_id = Uuid::new_v4().to_string();
                                       let source = "whatsapp".to_string();

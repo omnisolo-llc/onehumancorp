@@ -701,6 +701,21 @@ impl DepartmentOrchestrator {
     }
 
 
+
+    pub async fn update_inbox_message_draft(&self, message_id: &str, tenant_id: &str, draft: &str) -> Result<(), String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(draft).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(draft).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn update_inbox_message_status(&self, message_id: &str, tenant_id: &str, new_status: &str) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {

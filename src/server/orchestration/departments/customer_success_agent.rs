@@ -111,13 +111,26 @@ impl Department for CustomerSuccessAgent {
                 "Draft email for review".to_string()
             };
 
+            let inbox_id_val = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
-                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "inbox_message_id": inbox_id_val,
             });
+
+            let orchestrator_clone = self.orchestrator.clone();
+            let id_clone = inbox_id_val.to_string();
+            let tenant_id_clone = event.tenant_id.clone();
+            let generated_response_clone = generated_response.to_string();
+            if !id_clone.is_empty() {
+                tokio::spawn(async move {
+                    if let Err(e) = orchestrator_clone.update_inbox_message_draft(&id_clone, &tenant_id_clone, &generated_response_clone).await {
+                        tracing::error!("Failed to update draft reply for inbox message {}: {}", id_clone, e);
+                    }
+                });
+            }
 
             self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
