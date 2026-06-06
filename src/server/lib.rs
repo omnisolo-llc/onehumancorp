@@ -90,6 +90,8 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
+    m.insert("inventory-toggle-tooltip".to_string(), "Quickly mark an item as sold out. It will disappear from your shop until you toggle it back on.".to_string());
+    m.insert("booking-calendar-tooltip".to_string(), "See all your appointments here. We automatically handle time zones and reminders for you.".to_string());
     RwLock::new(m)
     })
 }
@@ -3639,6 +3641,7 @@ async fn create_ui_bom_item_handler(
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
             { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
+            { "title": "Subscriptions", "desc": "Manage recurring lesson packages and monthly billing. Perfect for tutors and monthly boxes.", "link": "/help/leo-guide" },
             { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {

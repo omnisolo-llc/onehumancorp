@@ -54,6 +54,30 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 title: "Understanding your invoice".to_string(),
                 content_markdown: "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string(),
             },
+            HelpArticle {
+                id: "maya-guide".to_string(),
+                topic: "My Store".to_string(),
+                title: "Maya's Guide: Taking Custom Cake Orders".to_string(),
+                content_markdown: "Selling custom cakes is easy with OHC. Use the 'Custom Order' feature in your store to let customers describe their dream cake. You can require a deposit upfront so you're never left with a cake and no buyer. Use the deposit toggle when adding your 'Custom Cake' product.".to_string(),
+            },
+            HelpArticle {
+                id: "carlos-guide".to_string(),
+                topic: "My Store".to_string(),
+                title: "Carlos's Guide: Scheduling Repairs".to_string(),
+                content_markdown: "If you're a handyman like Carlos, use our Booking system in your store. Set your available hours, and customers can pick a time that works for both of you. We'll send you a notification as soon as someone books a repair.".to_string(),
+            },
+            HelpArticle {
+                id: "fatima-guide".to_string(),
+                topic: "My Store".to_string(),
+                title: "Fatima's Guide: Managing Pickup Orders".to_string(),
+                content_markdown: "Running a food cart? Use the 'Pickup Only' mode in your store. Your customers order and pay on their phone, and you get a clear list of what to cook and when they'll arrive. Toggle items as 'Sold Out' instantly if you run out of ingredients.".to_string(),
+            },
+            HelpArticle {
+                id: "leo-guide".to_string(),
+                topic: "Subscriptions".to_string(),
+                title: "Leo's Guide: Recurring Lesson Packages".to_string(),
+                content_markdown: "Leo uses Subscriptions to sell monthly guitar lesson packages. You can set up a recurring plan that automatically bills your students every month. This ensures steady income and less time chasing payments. Go to 'Subscriptions' to create your first plan.".to_string(),
+            },
         ]
     })
 }
@@ -102,6 +126,16 @@ fn get_tooltips() -> &'static Vec<Tooltip> {
                 element_id: "setting-standalone".to_string(),
                 title: "Standalone Mode".to_string(),
                 plain_language_description: "Runs entirely on your computer. Great if you don't have internet.".to_string(),
+            },
+            Tooltip {
+                element_id: "inventory-toggle".to_string(),
+                title: "Sold Out Toggle".to_string(),
+                plain_language_description: "Quickly mark an item as sold out. It will disappear from your shop until you toggle it back on.".to_string(),
+            },
+            Tooltip {
+                element_id: "booking-calendar".to_string(),
+                title: "Your Schedule".to_string(),
+                plain_language_description: "See all your appointments here. We automatically handle time zones and reminders for you.".to_string(),
             },
         ]
     })

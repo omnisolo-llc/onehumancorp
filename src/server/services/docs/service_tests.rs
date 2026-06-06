@@ -32,7 +32,7 @@
             topic_filter: "".to_string(),
         });
         let response = service.search_help_articles(request).await.unwrap().into_inner();
-        assert_eq!(response.articles.len(), 6);
+        assert_eq!(response.articles.len(), 10);
 
         // Test 2: Search by query "payment"
         let request = Request::new(SearchHelpArticlesRequest {
@@ -93,12 +93,12 @@
         let service = MyDocsService::new();
 
         let cases = vec![
-            ("store", "", 2), // "My Store" and "Getting Started"
+            ("store", "", 5), // "My Store" (4 articles) and "Getting Started"
             ("invoice", "", 1), // "Account & Billing"
             ("social media", "", 1), // "Marketing"
             ("photo", "", 1), // "My Store"
             ("setup", "", 0), // wait, "set up" is in the text, let's verify "set up"
-            ("set up", "", 2), // "My Store", "Getting Started"
+            ("set up", "", 3), // "My Store", "Getting Started", "Leo's Guide"
         ];
 
         for (query, topic, expected) in cases {
@@ -249,9 +249,9 @@
         let service = MyDocsService::new();
         // A large array of known topics and hypothetical search queries
         let test_cases = vec![
-            ("store", 2),
+            ("store", 5),
             ("storefront", 1),
-            ("payment", 2), // getting started, payments
+            ("payment", 3), // getting started, payments, subscriptions
             ("social", 1), // marketing
             ("media", 1),
             ("chat", 1),
@@ -271,17 +271,17 @@
             ("simple", 3), // getting started, my store, account & billing
             ("app", 1),
             ("setup", 0),
-            ("set up", 2),
+            ("set up", 3),
             ("catchy", 1),
             ("share", 1),
-            ("customers", 1), // marketing
+            ("customers", 4), // marketing + 3 persona guides
             ("account", 1), // account & billing
-            ("monthly", 1),
+            ("monthly", 2),
             ("exactly", 1),
             ("paid", 1),
             ("keep", 1),
             ("things", 1),
-            ("no", 1), // no hidden fees
+            ("no", 3), // no hidden fees, notification, notification
             ("missing-query-1", 0),
             ("missing-query-2", 0),
             ("missing-query-3", 0),
@@ -420,8 +420,9 @@
         // Additional extensive testing for topic filtering combining with empty queries
         let test_cases = vec![
             ("Getting Started", 1),
-            ("My Store", 1),
+            ("My Store", 4),
             ("Payments", 1),
+            ("Subscriptions", 1),
             ("AI Agents", 1),
             ("Marketing", 1),
             ("Account & Billing", 1),

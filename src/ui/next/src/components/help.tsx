@@ -223,8 +223,8 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/70 backdrop-blur-[30px] saturate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all font-inter">
-          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md overflow-x-auto scrollbar-hide">
+        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/40 backdrop-blur-[30px] saturate-[210%] rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/20 transition-all font-inter before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/20 before:to-transparent before:pointer-events-none">
+          <div className="flex border-b border-white/20 bg-white/20 backdrop-blur-md overflow-x-auto scrollbar-hide">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
@@ -239,14 +239,14 @@ export function HelpWidget() {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 bg-white/10">
             {tab === "center" && (
               <div>
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">Help Center</h3>
-                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
+                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/30 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/40 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
                 <div className="space-y-3 mb-8">
                   {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white/70 backdrop-blur-[20px] saturate-200 p-5 rounded-2xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
+                    <div key={idx} className="bg-white/50 backdrop-blur-[20px] saturate-200 p-5 rounded-2xl shadow-sm border border-white/40 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-blue-500/5 before:to-transparent">
                       {a.link ? (
                         <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
                       ) : (
@@ -269,6 +269,9 @@ export function HelpWidget() {
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
+                  </button>
+                  <button onClick={() => startWalkthrough([{ targetId: "nav-subscriptions", message: "Click here to manage your recurring lesson packages and monthly plans." }, { targetId: "create-plan-btn", message: "Use this button to create a new subscription plan for your customers." }])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                    <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up recurring subscriptions</span>
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>

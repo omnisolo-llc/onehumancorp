@@ -10,6 +10,8 @@ export default function ChangelogPage() {
         "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
         "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
         "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
+        "- **Persona-Focused Guides:** New step-by-step guides for bakers, handymen, tutors, and food carts.",
+        "- **Subscription Management:** New walkthrough to help you set up recurring payments and monthly lesson packages.",
         "### 🛠️ Improvements",
         "- Faster loading times for product images.",
         "- Simplified checkout process for your customers.",
