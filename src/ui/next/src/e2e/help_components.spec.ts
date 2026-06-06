@@ -50,10 +50,10 @@ test.describe('Documentation Components', () => {
 
     // Now it expects exactly one Help widget container, ignoring hidden ones
     // Check if help widget is open
-    await expect(page.locator('#help-widget-container')).toBeVisible();
+    await expect(page.locator('#help-widget-container').last()).toBeVisible();
 
     // Click the "Tour: Set up your store" button
-    const tourBtn = page.getByRole('button', { name: 'Tour: Set up your store' });
+    const tourBtn = page.getByRole('button', { name: 'Tour: Virtual Meeting Room & UltraPlan' });
     await expect(tourBtn).toBeVisible();
     await tourBtn.click();
 
