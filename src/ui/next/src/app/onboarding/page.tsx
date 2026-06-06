@@ -415,6 +415,7 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                    autoComplete="organization"
                         autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
@@ -619,6 +620,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
                     type="text"
+                    autoComplete="organization"
                     autoFocus
                     value={businessName}
                     onChange={(e) => {
@@ -779,6 +781,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
                       <input
                         type="text"
+                        autoComplete="name"
                         value={adminName}
                         onChange={(e) => setAdminName(e.target.value)}
                         placeholder="e.g. Maya Smith"
@@ -790,6 +793,8 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
+                        inputMode="email"
+                        autoComplete="email"
                         value={adminEmail}
                         onChange={(e) => setAdminEmail(e.target.value)}
                         placeholder="you@example.com"
@@ -801,6 +806,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
                       <input
                         type="password"
+                        autoComplete="new-password"
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         placeholder="••••••••"

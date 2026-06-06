@@ -38,6 +38,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
     await expect(page.getByText('Draft Saved!')).toBeVisible();
 
     // 4. Simulate a cross-device session or reload
+    await page.evaluate(() => localStorage.clear());
     await page.reload();
 
     // 5. Verify the business name was properly restored
