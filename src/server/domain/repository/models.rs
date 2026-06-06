@@ -213,3 +213,28 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Wallet {
+    pub id: String,
+    pub tenant_id: String,
+    pub available_balance_cents: i64,
+    pub currency: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct VirtualCard {
+    pub id: String,
+    pub wallet_id: String,
+    pub tenant_id: String,
+    pub status: String,
+    pub tokenized_pan: String,
+    pub last_four: String,
+    pub expiry_month: i32,
+    pub expiry_year: i32,
+    pub cardholder_name: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

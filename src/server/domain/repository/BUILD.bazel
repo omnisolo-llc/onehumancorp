@@ -5,6 +5,7 @@ exports_files(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "wallet_repo.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -16,6 +17,7 @@ rust_library(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "wallet_repo.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -115,4 +117,11 @@ rust_test(
     timeout = "eternal",
     crate = ":server_domain_repository",
     edition = "2024",
+)
+
+exports_files(
+    [
+        "wallet_repo.rs",
+    ],
+    visibility = ["//visibility:public"],
 )

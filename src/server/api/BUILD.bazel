@@ -23,6 +23,7 @@ exports_files(
         "telemetry.rs",
         "catalog.rs",
         "shipping.rs",
+        "wallet.rs",
         "local_seo.rs",
     ],
     visibility = ["//visibility:public"],
@@ -53,6 +54,7 @@ rust_library(
         "telemetry.rs",
         "catalog.rs",
         "shipping.rs",
+        "wallet.rs",
         "local_seo.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
@@ -172,4 +174,11 @@ rust_test(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+)
+
+exports_files(
+    [
+        "wallet.rs",
+    ],
+    visibility = ["//visibility:public"],
 )
