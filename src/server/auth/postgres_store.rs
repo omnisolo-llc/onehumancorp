@@ -23,12 +23,11 @@ use sqlx::Row;
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
-        if $org_id.trim() == "system" {
-            if ::server_config::get().multitenant {
+        if ::server_config::get().multitenant {
+            if $org_id.trim() == "system" {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
-        } else if $org_id.trim().is_empty() {
-            if ::server_config::get().multitenant {
+            if $org_id.trim().is_empty() {
                 return Err("empty tenant_id is not allowed in multi-tenant mode".into());
             }
         }
