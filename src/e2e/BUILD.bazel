@@ -48,7 +48,6 @@ _ROOT_UI_E2E_SPECS = [
     "//:e2e/autonomous-migration.spec.ts",
     "//:e2e/dashboard.spec.ts",
     "//:e2e/expert-team.spec.ts",
-    "//:e2e/fulfillment.spec.ts",
     "//:e2e/help-center.spec.ts",
     "//:e2e/offline_pos.spec.ts",
     "//:e2e/onboarding.spec.ts",
