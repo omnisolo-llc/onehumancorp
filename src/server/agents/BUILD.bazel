@@ -4,6 +4,7 @@ exports_files(
     [
         "mod.rs",
         "sandbox.rs",
+        "agent_feed_service.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -14,6 +15,7 @@ rust_library(
         "bazel_lib.rs",
         "mod.rs",
         "sandbox.rs",
+        "agent_feed_service.rs",
         "//src/server/agents/mcp:mod.rs",
         "//src/server/agents/mcp:proxy/blob.rs",
         "//src/server/agents/mcp:proxy/client.rs",
