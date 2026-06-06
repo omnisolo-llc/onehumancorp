@@ -295,7 +295,7 @@ mod tests {
     async fn test_local_provider_read_write_blob() {
         let (p, dir) = new_test_provider();
         let content = b"test data";
-        let key = "test/blob.bin";
+        let key = "test/blob.txt";
         let final_key = key.to_string();
 
         p.write_blob(key, content).await.unwrap();
