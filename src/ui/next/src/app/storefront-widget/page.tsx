@@ -11,6 +11,7 @@ export default function StorefrontWidgetPage() {
   const [showModal, setShowModal] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [previewStatus, setPreviewStatus] = useState('');
+  const [removeBranding, setRemoveBranding] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
