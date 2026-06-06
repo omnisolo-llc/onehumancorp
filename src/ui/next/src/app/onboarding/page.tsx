@@ -265,6 +265,7 @@ export default function OnboardingWizard() {
     setIsLoading(true);
     setError('');
     setStep(4); // Go to loading screen
+    window.scrollTo(0, 0);
     const safetyTimeout = setTimeout(() => {
       // Fallback if API fails to respond in time
       setStartResult({ message: 'Fallback: Your business has been successfully launched.' });
