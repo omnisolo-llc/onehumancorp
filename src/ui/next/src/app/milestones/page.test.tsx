@@ -41,7 +41,7 @@ describe('MilestonesPage', () => {
     });
 
     const milestoneTitle = screen.getByText('First Order! 🎉');
-    const container = milestoneTitle.closest('div.mac-glass-container');
+    const container = milestoneTitle.closest('div.glassmorphism');
     expect(container).toBeDefined();
 
     await act(async () => {

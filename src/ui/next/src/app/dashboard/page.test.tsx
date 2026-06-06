@@ -10,7 +10,10 @@ global.fetch = vi.fn(() => Promise.resolve({
 })) as any;
 
 test('renders dashboard with actionable feed', async () => {
-  render(<TooltipProvider><Dashboard /></TooltipProvider>);
+  const { act } = await import('@testing-library/react');
+  await act(async () => {
+    render(<TooltipProvider><Dashboard /></TooltipProvider>);
+  });
 
   await waitFor(() => {
     expect(screen.getAllByText("Business Analytics").length).toBeGreaterThan(0);
