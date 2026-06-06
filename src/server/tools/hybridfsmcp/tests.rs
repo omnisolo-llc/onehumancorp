@@ -12,7 +12,7 @@ async fn test_local_fs_provider() {
     // Test write and read
     provider.write_file("test.txt", b"hello world").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"hello world".to_vec());
+    assert_eq!(content, b"hello world");
 
     // Test list dir
     provider.write_file("dir/file1.txt", b"1").await.unwrap();

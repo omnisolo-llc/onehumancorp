@@ -9,7 +9,6 @@ export default function StorefrontWidgetPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [removeBranding, setRemoveBranding] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -19,7 +18,7 @@ export default function StorefrontWidgetPage() {
     document.title = "Embed Your Store | OHC";
   }, []);
 
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/join?ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -89,18 +88,6 @@ export default function StorefrontWidgetPage() {
                     <p className="text-xs text-gray-500 mt-2">Used to link the widget to your store.</p>
                 </div>
 
-                <div className="mb-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={removeBranding}
-                            onChange={(e) => setRemoveBranding(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Badge (Pro)</span>
-                    </label>
-                </div>
-
                 <button
                     onClick={() => setShowModal(true)}
                     className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
@@ -148,13 +135,6 @@ export default function StorefrontWidgetPage() {
                         </button>
                     </div>
                 </div>
-                {!removeBranding && (
-                    <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <a href={`https://ohc.app/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-                            ⚡ Powered by OHC
-                        </a>
-                    </div>
-                )}
             </div>
         </div>
       </main>

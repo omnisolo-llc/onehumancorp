@@ -179,7 +179,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_analytics_caching() {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let pg_pool = crate::db::get_pool();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
         let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
 

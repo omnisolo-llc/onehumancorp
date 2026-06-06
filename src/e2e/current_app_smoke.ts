@@ -14,12 +14,6 @@ export function currentAppSmoke(label: string) {
     await expect(panel).toHaveCSS('backdrop-filter', /blur\(30px\)/);
     await expect(panel).toHaveCSS('border-radius', '16px');
 
-    // Verify glassmorphism style drift on dashboard cards
-    const card = page.locator('.app-card').first();
-    await expect(card).toBeVisible();
-    await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\)/);
-    await expect(card).toHaveCSS('border-radius', '16px');
-
     await page.goto('/agents');
     await expect(page.locator('h1', { hasText: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
 

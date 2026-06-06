@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json, Extension},
+    extract::{State, Json},
     routing::{post, get},
     Router,
 };
@@ -52,11 +52,11 @@ async fn process_intake_handler(
 
 async fn get_draft(
     State(agent): State<Arc<OnboardingAgent>>,
-    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id.clone();
-    let user_id = auth_info.agent_id.clone(); // In this context agent_id refers to the user
-    match agent.get_onboarding_state(&tenant_id, &user_id).await {
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    match agent.get_onboarding_state(tenant_id, user_id).await {
         Ok(state) => Ok(Json(state)),
         Err(_) => Ok(Json(serde_json::json!({}))), // fallback
     }
@@ -64,11 +64,11 @@ async fn get_draft(
 
 async fn save_draft(
     State(agent): State<Arc<OnboardingAgent>>,
-    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id.clone();
-    let user_id = auth_info.agent_id.clone();
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
 
     let step = payload.get("wizardState")
         .and_then(|w| w.get("step"))
@@ -76,7 +76,7 @@ async fn save_draft(
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    match agent.save_onboarding_state(&tenant_id, &user_id, step, &payload).await {
+    match agent.save_onboarding_state(tenant_id, user_id, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -94,16 +94,16 @@ async fn start_onboarding(
 
 async fn launch_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
-    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id.clone();
-    let user_id = auth_info.agent_id.clone();
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
     let current_step = 5; // Launch step
 
     let state = serde_json::json!({
         "status": "launched"
     });
-    match agent.save_onboarding_state(&tenant_id, &user_id, current_step, &state).await {
+    match agent.save_onboarding_state(tenant_id, user_id, current_step, &state).await {
         Ok(_) => Ok(Json(state)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
     }
@@ -111,11 +111,11 @@ async fn launch_onboarding(
 
 async fn get_state(
     State(agent): State<Arc<OnboardingAgent>>,
-    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id.clone();
-    let user_id = auth_info.agent_id.clone();
-    match agent.get_onboarding_state(&tenant_id, &user_id).await {
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    match agent.get_onboarding_state(tenant_id, user_id).await {
         Ok(state) => Ok(Json(state)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -123,11 +123,11 @@ async fn get_state(
 
 async fn save_state(
     State(agent): State<Arc<OnboardingAgent>>,
-    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id.clone();
-    let user_id = auth_info.agent_id.clone();
+    let tenant_id = headers.get("X-Tenant-ID").or_else(|| headers.get("x-tenant-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").or_else(|| headers.get("x-user-id")).and_then(|v| v.to_str().ok()).unwrap_or("default_user");
 
     let step = payload.get("wizardState")
         .and_then(|w| w.get("step"))
@@ -135,7 +135,7 @@ async fn save_state(
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    match agent.save_onboarding_state(&tenant_id, &user_id, step, &payload).await {
+    match agent.save_onboarding_state(tenant_id, user_id, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
