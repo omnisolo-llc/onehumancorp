@@ -109,6 +109,35 @@ function NavLink({ item }: { item: NavItem }) {
       </WithTooltip>
     );
   }
+  if (item.href === "/dashboard") {
+    return (
+      <WithTooltip id="nav-dashboard-tooltip" defaultText="View your store metrics, recent orders, and overall performance.">
+        {link}
+      </WithTooltip>
+    );
+  }
+  if (item.href === "/agents") {
+    return (
+      <WithTooltip id="nav-agents-tooltip" defaultText="Manage your AI workforce, check their tasks, and hire new agents.">
+        {link}
+      </WithTooltip>
+    );
+  }
+  if (item.href === "/business-setup") {
+    return (
+      <WithTooltip id="nav-setup-tooltip" defaultText="Configure your business details, branding, and payment settings.">
+        {link}
+      </WithTooltip>
+    );
+  }
+  // Original /kairos branch we are replacing so we just comment it out
+  if (false) {
+    return (
+      <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
+        {link}
+      </WithTooltip>
+    );
+  }
 
   return link;
 }

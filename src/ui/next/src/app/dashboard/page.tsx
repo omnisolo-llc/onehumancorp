@@ -197,7 +197,7 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <NeighborhoodPulseCard tenant={tenantId} />
+      <NeighborhoodPulseCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -223,9 +223,12 @@ export default function Dashboard() {
         <button type="button" onClick={() => router.push("/business-setup")} className="app-button">
           Launch Site
         </button>
-        <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
-          Migrate Existing Store
-        </button>
+        <WithTooltip id="migrate-store-tooltip" defaultText="Bring your store over from another platform like Shopify or Wix easily.">
+          <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
+            Migrate Existing Store
+          </button>
+        </WithTooltip>
+
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
           {offlineQueueCount} payments pending sync
         </div>
@@ -321,7 +324,9 @@ export default function Dashboard() {
 
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h2 className="app-panel-title">Business Analytics</h2>
+              <WithTooltip id="business-analytics-tooltip" defaultText="See detailed charts and figures about your sales over time.">
+                <h2 className="app-panel-title">Business Analytics</h2>
+              </WithTooltip>
               <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
             </div>
             <Link href="/business-analytics" className="app-button">Business Analytics</Link>
