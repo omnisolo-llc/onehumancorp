@@ -22,6 +22,9 @@ exports_files(
         "telemetry.rs",
         "catalog.rs",
         "local_seo.rs",
+        "chat/mod.rs",
+        "chat/webhooks.rs",
+        "chat/webhooks_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -59,7 +62,7 @@ rust_library(
         "//src/server/api/agents:settings.rs",
         "//src/server/api/agents:webhook.rs",
         "//src/server/api/onboarding:mod.rs",
-    ],
+    ] + glob(["chat/**/*.rs"]),
     crate_root = "bazel_lib.rs",
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel_package"],
