@@ -76,6 +76,7 @@ rust_library(
         "human_in_loop.rs",
         "plane.rs",
         "plugins.rs",
+        "prompt_construction.rs",
         "progressive_skills.rs",
         "proto.rs",
         "provider.rs",
@@ -208,6 +209,7 @@ rust_binary(
 
 AGENT_UNIT_TEST_FILTERS = [
     "agent",
+    "prompt_construction",
     "auth",
     "budget",
     "caveman",

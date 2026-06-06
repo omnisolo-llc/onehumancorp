@@ -753,6 +753,16 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
         Ok("".to_string())
     }
 
+    /// Store a raw message into the session search FTS5 table
+    async fn store_session_message(&self, _session_id: &str, _role: &str, _content: &str) -> Result<(), String> {
+        Ok(()) // Default no-op
+    }
+
+    /// Searches session messages using FTS5 MATCH, returning ranked snippets
+    async fn search_session_messages(&self, _session_id: &str, _query: &str, _limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
+        Ok(vec![]) // Default no-op
+    }
+
     /// 3-Tier: Pull a detailed topic file on demand
     async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
         Err("Not implemented".to_string())

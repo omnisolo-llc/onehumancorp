@@ -41,6 +41,7 @@ static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCac
 static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
@@ -813,33 +814,28 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let db_org = db.clone();
-    let db_orders = db.clone();
-    let tenant_id_org = tenant_id.clone();
-    let tenant_id_orders = tenant_id.clone();
-
     let (org_res, active_orders_res) = tokio::join!(
-        tokio::spawn(async move {
-            let cache_key = format!("advisory:org:{}", tenant_id_org);
+        async {
+            let cache_key = format!("advisory:org:{}", tenant_id);
             let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
 
-            let result = match &db_org.store {
+            let result = match &db.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id_org)
-                    .fetch_optional(&db_org.pool)
+                    .bind(&tenant_id)
+                    .fetch_optional(&db.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id_org)
+                    .bind(&tenant_id)
                     .fetch_optional(pool)
                     .await
                 }
@@ -849,28 +845,28 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
             }
             result
-        }),
-        tokio::spawn(async move {
-            let cache_key = format!("advisory:orders:{}", tenant_id_orders);
+        },
+        async {
+            let cache_key = format!("advisory:orders:{}", tenant_id);
             let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
 
-            let result = match &db_orders.store {
+            let result = match &db.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id_orders)
-                    .fetch_one(&db_orders.pool)
+                    .bind(&tenant_id)
+                    .fetch_one(&db.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id_orders)
+                    .bind(&tenant_id)
                     .fetch_one(pool)
                     .await
                 }
@@ -880,11 +876,11 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
             }
             result
-        })
+        }
     );
 
-    let org_data = org_res.unwrap_or(Ok(None));
-    let orders_data = active_orders_res.unwrap_or(Ok(0));
+    let org_data = org_res;
+    let orders_data = active_orders_res;
 
     let (business_name, industry) = org_data
         .unwrap_or(None)
@@ -2589,10 +2585,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+    let meta_webhook_state = api::meta_webhook::MetaWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
-        .with_state(hub.clone());
+        .with_state(meta_webhook_state);
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
@@ -2741,6 +2742,79 @@ async fn list_ui_orders_handler(
     }
 }
 
+async fn list_ui_bookings_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_bookings:{}", tenant_id);
+    let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
+    let bookings = match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query(
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
+            )
+            .bind(&tenant_id)
+            .fetch_all(&db.pool)
+            .await {
+                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "customer_name": row.get::<String, _>("customer_name"),
+                    "product_id": row.get::<String, _>("product_id"),
+                    "product_title": row.get::<String, _>("product_title"),
+                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                    "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                    "status": row.get::<String, _>("status"),
+                })).collect::<Vec<_>>()),
+                Err(e) => Err(e),
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query(
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                 FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
+                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await {
+                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "customer_name": row.get::<String, _>("customer_name"),
+                    "product_id": row.get::<String, _>("product_id"),
+                    "product_title": row.get::<String, _>("product_title"),
+                    "start_time": row.get::<String, _>("start_time"),
+                    "end_time": row.get::<String, _>("end_time"),
+                    "status": row.get::<String, _>("status"),
+                })).collect::<Vec<_>>()),
+                Err(e) => Err(e),
+            }
+        }
+    };
+
+    match bookings {
+        Ok(v) => {
+            cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(v)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch ui bookings: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+        }
+    }
+}
+
 async fn list_ui_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -2877,11 +2951,19 @@ async fn list_ui_supply_handler(
 
     let (vendors, raw_materials, bom_items) = match &db.store {
         crate::db::DbStore::Postgres => {
-            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
+            let (v_res, rm_res, bi_res) = tokio::join!(
+                sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(&db.pool),
+                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(&db.pool),
+                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
+                    .bind(&tenant_id)
+                    .fetch_all(&db.pool)
+            );
+
+            let vendors = v_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2889,11 +2971,8 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
+
+            let raw_materials = rm_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2902,11 +2981,8 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
-                .bind(&tenant_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap_or_default()
+
+            let bom_items = bi_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2915,14 +2991,23 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
+
             (vendors, raw_materials, bom_items)
         }
         crate::db::DbStore::Sqlite(pool) => {
-            let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
+            let (v_res, rm_res, bi_res) = tokio::join!(
+                sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(pool),
+                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
+                    .bind(&tenant_id)
+                    .fetch_all(pool),
+                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
+                    .bind(&tenant_id)
+                    .fetch_all(pool)
+            );
+
+            let vendors = v_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2930,11 +3015,8 @@ async fn list_ui_supply_handler(
                     "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
-            let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
+
+            let raw_materials = rm_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2943,11 +3025,8 @@ async fn list_ui_supply_handler(
                     "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
-            let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .unwrap_or_default()
+
+            let bom_items = bi_res.unwrap_or_default()
                 .into_iter()
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -2956,6 +3035,7 @@ async fn list_ui_supply_handler(
                     "quantity_required": row.get::<i32, _>("quantity_required"),
                 }))
                 .collect::<Vec<_>>();
+
             (vendors, raw_materials, bom_items)
         }
     };
@@ -3247,6 +3327,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
+        .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
@@ -3530,7 +3611,7 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()).with_state(mesh_transport.clone()))
+        .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
