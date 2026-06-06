@@ -154,15 +154,42 @@ export default function MyPlanPage() {
                 <h3 className="font-medium text-gray-900">View Cost Details</h3>
                 <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and storage details.</p>
             </button>
-            <button onClick={() => router.push('/pricing')} className="p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
+            <button onClick={async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch('/api/billing/portal', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
+                    const data = await res.json();
+                    window.location.href = data.url;
+                } catch (e) {
+                    alert("Failed to load billing portal.");
+                }
+            }} className="p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
                 <h3 className="font-medium text-gray-900">Change Plan</h3>
                 <p className="text-sm text-gray-500 mt-1">Upgrade or downgrade your current subscription.</p>
             </button>
-            <button className="p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
+            <button onClick={async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch('/api/billing/portal', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
+                    const data = await res.json();
+                    window.location.href = data.url;
+                } catch (e) {
+                    alert("Failed to load billing portal.");
+                }
+            }} className="p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
                 <h3 className="font-medium text-gray-900">Download Invoice</h3>
                 <p className="text-sm text-gray-500 mt-1">Get a PDF copy of your recent billing statements.</p>
             </button>
-            <button className="p-6 rounded-2xl shadow-sm bg-red-50/50 backdrop-blur-lg border border-red-100/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
+            <button onClick={async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch('/api/billing/portal', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
+                    const data = await res.json();
+                    window.location.href = data.url;
+                } catch (e) {
+                    alert("Failed to load billing portal.");
+                }
+            }} className="p-6 rounded-2xl shadow-sm bg-red-50/50 backdrop-blur-lg border border-red-100/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left">
                 <h3 className="font-medium text-red-600">Cancel Subscription</h3>
                 <p className="text-sm text-gray-500 mt-1">Cancel your subscription. You will lose access to premium features at the end of your billing cycle.</p>
             </button>

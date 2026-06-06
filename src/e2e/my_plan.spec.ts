@@ -39,6 +39,32 @@ test.describe('My Plan Dashboard', () => {
     await expect(page.locator('h3', { hasText: 'Cancel Subscription' })).toBeVisible();
   });
 
+  test('should redirect to billing portal on management buttons', async ({ page }) => {
+    await page.route('/api/billing/portal', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ url: 'https://billing.stripe.com/p/session/mock' }),
+      });
+    });
+
+    await page.goto('/plan');
+
+    // Test Change Plan
+    await page.locator('button', { hasText: 'Change Plan' }).click();
+    await page.waitForURL('https://billing.stripe.com/p/session/mock');
+
+    // Go back and test Download Invoice
+    await page.goto('/plan');
+    await page.locator('button', { hasText: 'Download Invoice' }).click();
+    await page.waitForURL('https://billing.stripe.com/p/session/mock');
+
+    // Go back and test Cancel Subscription
+    await page.goto('/plan');
+    await page.locator('button', { hasText: 'Cancel Subscription' }).click();
+    await page.waitForURL('https://billing.stripe.com/p/session/mock');
+  });
+
   test('should return correct JSON payload from backend API', async ({ request }) => {
     const response = await request.get('/api/billing/my-plan');
     expect(response.ok()).toBeTruthy();
