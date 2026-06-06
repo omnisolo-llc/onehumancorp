@@ -181,3 +181,9 @@ ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+VALUES
+('e2e-approval-promoter', 'e2e-tenant', 'marketing', 'New product detected! Schedule a post to drive sales?', 'DRAFT', 'HIGH', '{"feature_type": "social_post_variants", "product_name": "Vegan Celebration Cake", "image_url": "https://example.com/optimized.jpg", "variants": [{"platform": "TikTok", "copy": "Get the new Vegan Celebration Cake! 🔥"}, {"platform": "Instagram", "copy": "Check out our stunning new Vegan Celebration Cake ✨ #newarrival #shopping"}, {"platform": "Facebook", "copy": "We are excited to announce our new product: Vegan Celebration Cake. Available now!"}]}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status, payload = EXCLUDED.payload;
