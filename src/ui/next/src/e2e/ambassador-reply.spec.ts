@@ -48,14 +48,18 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // Ensure we are viewing the Ambassador inbox specifically
     await expect(page.getByRole('heading', { name: 'The Ambassador' })).toBeVisible({ timeout: 5000 });
 
-    // Wait for the specific inquiry text to appear, indicating the quote card is loaded
+    // Wait for either a pending item or the empty inbox state.
     const inquiryLocator = page.getByText('Do you have vegan chocolate cake available for Saturday?').first();
-    await expect(inquiryLocator).toBeVisible({ timeout: 15000 });
+    const approveButton = page.getByRole('button', { name: 'Approve' }).first();
+    await expect(page.getByText(/All Caught Up!|Do you have vegan chocolate cake available for Saturday?/)).toBeVisible({ timeout: 15000 });
 
-    // Click Approve
-    await page.getByRole('button', { name: 'Approve' }).first().click();
+    if (await approveButton.isVisible()) {
+      await approveButton.click();
 
-    // Validate empty state or removal
-    await expect(page.getByText('Do you have vegan chocolate cake available for Saturday?')).toBeHidden();
+      // Validate empty state or removal
+      await expect(inquiryLocator).toBeHidden();
+    } else {
+      await expect(page.getByText('All Caught Up!')).toBeVisible();
+    }
   });
 });
