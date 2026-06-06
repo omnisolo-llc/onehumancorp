@@ -40,3 +40,12 @@ where
     }
     Ok(())
 }
+
+
+pub fn get_default_tenant() -> String {
+    if ::server_config::get().multitenant {
+        "".to_string()
+    } else {
+        "system".to_string()
+    }
+}
