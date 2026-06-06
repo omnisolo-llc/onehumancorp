@@ -132,14 +132,8 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ wizardState })
       });
 
-      await fetch('/api/onboarding/state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-        body: JSON.stringify({ wizardState })
-      });
-
       if (!res.ok) {
-        console.warn('Draft endpoint failed; state endpoint was updated for restoration.');
+        throw new Error('Draft endpoint failed');
       }
 
       setSaveMessage('Draft Saved!');
@@ -755,7 +749,8 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => {
                     if (businessName.trim().length < 3) {
-                      setValidationError('Business Name must be at least 3 characters.');
+                      setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                      setValidationError('Please fix the errors before continuing.');
                       return;
                     }
                     if (Object.keys(validationErrors).length > 0) {
