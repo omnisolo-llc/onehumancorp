@@ -1024,21 +1024,104 @@ impl PromoterWorker {
 
         // Handle product creation for social auto-posting
 
+let db_for_products = self.db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
-                            if let Some(product_id) = payload_json.get("product_id").and_then(|p| p.as_str()) {
+                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let mut product_id = String::new();
+                            let mut product_name = String::new();
+                            if let Some(pid) = payload_json.get("product_id").and_then(|p| p.as_str()) {
+                                product_id = pid.to_string();
                                 let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                                cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
+                            }
+                            if let Some(name) = payload_json.get("name").and_then(|p| p.as_str()) {
+                                product_name = name.to_string();
+                            }
+
+                            if !product_id.is_empty() && !product_name.is_empty() {
+                                let prompt = format!("You are The Promoter, an AI social media manager. Generate 3 variant captions (TikTok, Instagram, Facebook) to promote the new product '{}'. Format the output as JSON with keys 'tiktok', 'instagram', 'facebook'.", product_name);
+
+                                let mut drafted_msg = r#"{"tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}"#.to_string();
+
+                                let mut attempts = 0;
+                                while attempts < MAX_RETRIES {
+                                    let ai_op = async {
+                                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                                prompt: prompt.clone(),
+                                                from_agent_id: "The Promoter".into(),
+                                            };
+                                            if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                                return Ok(res.into_inner().content);
+                                            }
+                                        }
+                                        Err("AI call failed".to_string())
+                                    };
+
+                                    match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                        Ok(Ok(content)) => {
+                                            drafted_msg = content;
+                                            break;
+                                        },
+                                        _ => {
+                                            attempts += 1;
+                                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                        }
+                                    }
+                                }
+
+                                let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                    "tiktok": "Check out our new product!",
+                                    "instagram": "New arrival! Link in bio.",
+                                    "facebook": "We just added a new product to our store."
+                                }));
+
+                                let task_id = uuid::Uuid::new_v4().to_string();
+                                let title = format!("Draft Social Post: {}", product_name);
+                                let description = "The Promoter generated social media captions for your new product. Review and schedule.";
+                                let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
+
+                                match &db_for_products.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'LOW', 'PENDING', $5)
+                                            "#
+                                        )
+                                        .bind(&task_id)
+                                        .bind(&org_id)
+                                        .bind(&title)
+                                        .bind(&description)
+                                        .bind(&proposed_content)
+                                        .execute(&db_for_products.pool)
+                                        .await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES (?, ?, ?, ?, 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                            "#
+                                        )
+                                        .bind(&task_id)
+                                        .bind(&org_id)
+                                        .bind(&title)
+                                        .bind(&description)
+                                        .bind(&proposed_content)
+                                        .execute(pool)
+                                        .await;
+                                    }
+                                }
                             }
                         }
                     }
                 }
-
             }
         });
 
@@ -1408,5 +1491,61 @@ mod tests {
                 .fetch_one(pool).await.unwrap();
             assert_eq!(status, "PAUSED");
         } // end of test_customer_success_worker_draft_reply
-    } // end of mod tests
+
+    #[tokio::test]
+    async fn test_promoter_worker_social_post_draft() {
+        let db = setup_test_db().await;
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(pool).await;
+
+            // Insert a tenant
+            sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant1', 'Priya Boutique', 'Retail')")
+                .execute(pool).await.unwrap();
+        }
+
+        let (event_tx, _event_rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, db.pool.clone()));
+        hub.set_db(db.clone());
+
+        let promoter_worker = PromoterWorker::new(db.clone(), hub.clone());
+        promoter_worker.start();
+
+        let event_payload = serde_json::json!({
+            "product_id": "prod_promoter_123",
+            "name": "Summer Dress",
+            "organization_id": "tenant1",
+        });
+
+        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: "ProductCreated".to_string(),
+            status: "success".to_string(),
+            payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+
+        let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+
+        // Allow some time for background task to process
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1' AND title LIKE 'Draft Social Post%'")
+                .fetch_optional(pool).await.unwrap();
+
+            assert!(row.is_some(), "Shared task for social post draft was not created");
+
+            if let Some(r) = row {
+                let title: String = r.get("title");
+                let content: String = r.get("proposed_content");
+                let approval_status: String = r.get("approval_status");
+
+                assert_eq!(title, "Draft Social Post: Summer Dress");
+                assert!(content.contains("tiktok") && content.contains("instagram") && content.contains("facebook"));
+                assert_eq!(approval_status, "PENDING");
+            }
+        }
+    }
+}
+
 }
