@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import SwaggerUI from "swagger-ui-react";
-import "swagger-ui-react/swagger-ui.css";
+
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 // OpenAPI spec for OHC backend

@@ -197,7 +197,7 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <NeighborhoodPulseCard tenant={tenantId} />
+      <NeighborhoodPulseCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -226,10 +226,10 @@ export default function Dashboard() {
         <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
           Migrate Existing Store
         </button>
-        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
-          {offlineQueueCount} payments pending sync
+        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
+          {offlineQueueCount} Payments Pending Sync
         </div>
-        <div id="network-status-indicator" className={isOffline ? "app-badge warn" : "hidden"}>
+        <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
           Offline - changes saved locally
         </div>
         {error && <div className="app-badge bad">{error}</div>}
