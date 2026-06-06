@@ -116,16 +116,11 @@ export default function OnboardingWizard() {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-    Promise.all([
-      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
-        .then(res => res.ok ? res.json() : null)
-        .catch(() => null),
-      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
-        .then(res => res.ok ? res.json() : null)
-        .catch(() => null)
-    ])
-    .then(([draftData, stateData]) => {
-      const data = (draftData && draftData.wizardState) ? draftData : stateData;
+    fetch('/api/onboarding/state', {
+      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+    })
+    .then(res => res.json())
+    .then(data => {
       if (data && data.wizardState) {
         if (data.wizardState.step) setStep(data.wizardState.step);
         if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
@@ -243,13 +238,13 @@ export default function OnboardingWizard() {
     }
     if (!adminEmail.trim()) {
       errors.adminEmail = 'Admin Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
-      errors.adminEmail = 'Please enter a valid email address';
+    } else if (!/^\S+@\S+\.\S+$/.test(adminEmail)) {
+      errors.adminEmail = 'Invalid email format';
     }
     if (!adminPassword.trim()) {
       errors.adminPassword = 'Password is required';
-    } else if (adminPassword.length < 8 || !/\d/.test(adminPassword)) {
-      errors.adminPassword = 'Password must be at least 8 characters and contain a number';
+    } else if (adminPassword.length < 8) {
+      errors.adminPassword = 'Password must be at least 8 characters';
     }
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);

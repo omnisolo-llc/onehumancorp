@@ -5,18 +5,13 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    let backendRes;
-    try {
-        backendRes = await fetch(`${backendUrl}/api/v1/growth/campaign/generate-review`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-    } catch (e) {
-        // Backend is down, fallback
-    }
+    const backendRes = await fetch(`${backendUrl}/api/v1/growth/campaign/generate-review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-    if (backendRes && backendRes.ok) {
+    if (backendRes.ok) {
         const data = await backendRes.json();
         return NextResponse.json(data);
     } else {
@@ -31,7 +26,7 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error("Error generating review campaign message:", error);
-    const message = `Hi Customer,\n\nWe noticed you recently received your your order and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/recent\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
+    const message = `Hi there,\n\nWe hope you are absolutely loving your recent order!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
     return NextResponse.json({ message });
   }
 }

@@ -28,7 +28,7 @@ mod tests {
 
     #[test]
     fn test_generate_audit_report_passed() {
-        if std::path::Path::new(".ohc-local-data").exists() { fs::remove_dir_all(".ohc-local-data").unwrap(); }
+        let _ = fs::remove_dir_all(".ohc-local-data");
         provisioner::provision_environment(false).unwrap();
 
         let report = generate_audit_report(false);
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_generate_audit_report_failed() {
-        if std::path::Path::new(".ohc-cloud-data").exists() { fs::remove_dir_all(".ohc-cloud-data").unwrap(); }
+        let _ = fs::remove_dir_all(".ohc-cloud-data");
 
         let report = generate_audit_report(true);
         assert!(report.contains("FAILED"));
