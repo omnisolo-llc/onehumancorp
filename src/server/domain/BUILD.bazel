@@ -12,7 +12,6 @@ exports_files(
         "sre.rs",
         "subscription.rs",
         "unified_tenant_test.rs",
-        "collective.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -31,7 +30,6 @@ rust_library(
         "sre.rs",
         "subscription.rs",
         "unified_tenant_test.rs",
-        "collective.rs",
         "//src/server/domain/repository:mod.rs",
         "//src/server/domain/repository:models.rs",
         "//src/server/domain/repository:task_repo.rs",
