@@ -836,6 +836,15 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_customer360_tenant_customer ON customer360(tenant_id, customer_id);
+                    CREATE TABLE IF NOT EXISTS customer_identities (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        provider TEXT NOT NULL,
+                        identifier TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_customer_identities_tenant_provider ON customer_identities(tenant_id, provider, identifier);
                     CREATE TABLE IF NOT EXISTS loyalty_ledger (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

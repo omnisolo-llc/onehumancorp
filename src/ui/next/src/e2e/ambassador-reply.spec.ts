@@ -28,17 +28,23 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     const webhookPayload = {
       tenant_id: tenantId,
       message: 'Do you have vegan chocolate cake available for Saturday?',
-      source: 'instagram'
+      source: 'instagram',
+      sender_id: 'maya_customer_123'
     };
 
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || 'http://127.0.0.1:8081';
     const response = await request.post(`${apiBase}/api/agents/webhook`, {
       data: webhookPayload,
     });
 
     expect(response.ok()).toBeTruthy();
 
-    // 3. Navigate to Team Page
+    // 3. Check Unified Inbox specifically first
+    await page.goto('/inbox');
+    await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
+    await expect(page.getByText('Do you have vegan chocolate cake available for Saturday?')).toBeVisible();
+
+    // 4. Navigate to Team Page
     await page.goto('/team');
     await expect(page.getByRole('heading', { name: 'Your Team', exact: true })).toBeVisible();
 

@@ -17,6 +17,7 @@ pub struct WebhookPayload {
     pub tenant_id: String,
     pub message: String,
     pub source: String,
+    pub sender_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -97,20 +98,8 @@ async fn handle_webhook(
     // We route external messages (like DMs) to the Customer Success department
     let risk = ActionRisk::DraftForReview;
 
-    // Generate a draft reply
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let draft_reply = if !api_key.is_empty() {
-        let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
-        let prompt = format!(
-            "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
-            business_context, payload.message
-        );
-        let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
-        let client = crate::minimax::MinimaxClient::new(api_key);
-        client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
-    } else {
-        "Thank you for reaching out! We will get back to you shortly.".to_string()
-    };
+    let sender_id = payload.sender_id.clone().unwrap_or_else(|| "unknown_sender".to_string());
+    let customer_id = orchestrator.resolve_customer_identity(&payload.tenant_id, &payload.source, &sender_id).await.unwrap_or_default();
 
     // Save to inbox_messages
     let id = Uuid::new_v4().to_string();
@@ -125,13 +114,31 @@ async fn handle_webhook(
             .bind(&payload.tenant_id)
             .bind(&payload.source)
             .bind(&payload.message)
-            .bind(&draft_reply)
+            .bind("")
             .bind(&status)
             .execute(&mut *tx)
             .await;
             let _ = tx.commit().await;
         }
     }
+
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: Uuid::new_v4().to_string(),
+        tenant_id: payload.tenant_id.clone(),
+        event_type: "tenant.message.received".to_string(),
+        payload: serde_json::json!({
+            "source": payload.source,
+            "message": payload.message,
+            "sender_id": sender_id,
+            "customer_id": customer_id,
+            "inbox_message_id": id,
+        }),
+    };
+
+    let orchestrator_clone = orchestrator.clone();
+    tokio::spawn(async move {
+        let _ = orchestrator_clone.dispatch_event(event).await;
+    });
 
     match orchestrator.execute_action(
         DepartmentType::CustomerSuccess,
@@ -141,8 +148,8 @@ async fn handle_webhook(
         serde_json::json!({
             "source": payload.source,
             "message": payload.message,
-            "draft_reply": draft_reply,
             "inbox_message_id": id,
+            "customer_id": customer_id,
         }),
     ).await {
         Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),

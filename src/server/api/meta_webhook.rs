@@ -121,6 +121,8 @@ pub async fn meta_webhook_post_handler(
                             let inbox_id = Uuid::new_v4().to_string();
                             let source = "instagram".to_string();
 
+                            let customer_id = state.orchestrator.resolve_customer_identity(&tenant_id, &source, sender_id).await.unwrap_or_default();
+
                             // Insert into inbox_messages
                             let pool = &state.db.pool;
                             let insert_result = match &state.db.store {
@@ -161,6 +163,7 @@ pub async fn meta_webhook_post_handler(
                                     "source": source,
                                     "message": text,
                                     "sender_id": sender_id,
+                                    "customer_id": customer_id,
                                     "inbox_message_id": inbox_id,
                                 }),
                             };
@@ -189,6 +192,8 @@ pub async fn meta_webhook_post_handler(
 
                                       let inbox_id = Uuid::new_v4().to_string();
                                       let source = "whatsapp".to_string();
+
+                                      let customer_id = state.orchestrator.resolve_customer_identity(&tenant_id, &source, sender_id).await.unwrap_or_default();
 
                                       let pool = &state.db.pool;
                                       let insert_result = match &state.db.store {
@@ -228,6 +233,7 @@ pub async fn meta_webhook_post_handler(
                                               "source": source,
                                               "message": text,
                                               "sender_id": sender_id,
+                                              "customer_id": customer_id,
                                               "inbox_message_id": inbox_id,
                                           }),
                                       };

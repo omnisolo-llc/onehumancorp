@@ -882,6 +882,92 @@ impl DepartmentOrchestrator {
         }
     }
 
+        pub async fn resolve_customer_identity(&self, tenant_id: &str, provider: &str, identifier: &str) -> Result<String, String> {
+        let query_pg = "SELECT customer_id FROM customer_identities WHERE tenant_id = $1 AND provider = $2 AND identifier = $3 LIMIT 1";
+        let query_lite = "SELECT customer_id FROM customer_identities WHERE tenant_id = ? AND provider = ? AND identifier = ? LIMIT 1";
+        let customer_id_opt: Option<String> = match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query(query_pg).bind(tenant_id).bind(provider).bind(identifier).fetch_optional(&self.db.pool).await.map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Some(r.get("customer_id"))
+                } else {
+                    None
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query(query_lite).bind(tenant_id).bind(provider).bind(identifier).fetch_optional(pool).await.map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Some(r.get("customer_id"))
+                } else {
+                    None
+                }
+            }
+        };
+
+        if let Some(c_id) = customer_id_opt {
+            return Ok(c_id);
+        }
+
+        // Not found, generate new customer_id
+        let customer_id = uuid::Uuid::new_v4().to_string();
+
+        let c = crate::orchestration::departments::types::Customer360 {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            customer_id: customer_id.clone(),
+            email: if provider == "email" { Some(identifier.to_string()) } else { None },
+            phone: if provider == "whatsapp" { Some(identifier.to_string()) } else { None },
+            mood: None,
+            preferences: None,
+            created_at: Some(chrono::Utc::now()),
+            updated_at: Some(chrono::Utc::now()),
+        };
+        self.upsert_customer360(&c).await?;
+
+        // Insert into customer_identities
+        let identity_id = uuid::Uuid::new_v4().to_string();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, provider, identifier) VALUES ($1, $2, $3, $4, $5)")
+                    .bind(&identity_id).bind(tenant_id).bind(&customer_id).bind(provider).bind(identifier)
+                    .execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, provider, identifier) VALUES (?, ?, ?, ?, ?)")
+                    .bind(&identity_id).bind(tenant_id).bind(&customer_id).bind(provider).bind(identifier)
+                    .execute(pool).await.map_err(|e| e.to_string())?;
+            }
+        }
+
+        Ok(customer_id)
+    }
+
+    pub async fn update_inbox_message_draft(&self, id: &str, tenant_id: &str, draft_reply: &str) -> Result<(), String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    .bind(draft_reply)
+                    .bind(id)
+                    .bind(tenant_id)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(draft_reply)
+                    .bind(id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn upsert_customer360(&self, c: &crate::orchestration::departments::types::Customer360) -> Result<(), String> {
         let prefs_str = c.preferences.as_ref().map(|v| v.to_string()).unwrap_or_else(|| "{}".to_string());
         let now = chrono::Utc::now();

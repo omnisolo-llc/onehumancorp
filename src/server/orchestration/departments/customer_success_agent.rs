@@ -59,8 +59,31 @@ impl Department for CustomerSuccessAgent {
                 let orchestrator_clone = self.orchestrator.clone();
                 let id_clone = inbox_id.to_string();
                 let tenant_id_clone = event.tenant_id.clone();
+
+                let customer_id = original.and_then(|orig| orig.get("customer_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
+                let msg = message.to_string();
+
                 tokio::spawn(async move {
                     let _ = orchestrator_clone.update_inbox_message_status(&id_clone, &tenant_id_clone, "sent").await;
+
+                    if !customer_id.is_empty() {
+                        let pool = crate::db::get_pool();
+                        if let Ok(mut tx) = pool.begin().await {
+                            if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id_clone).await.is_ok() {
+                                let timeline_id = uuid::Uuid::new_v4().to_string();
+                                let _ = sqlx::query(
+                                    "INSERT INTO customer_timeline (id, tenant_id, customer_id, event_type, source, content) VALUES ($1, $2, $3, 'message_sent', 'agent_approval', $4)"
+                                )
+                                .bind(timeline_id)
+                                .bind(tenant_id_clone)
+                                .bind(customer_id)
+                                .bind(msg)
+                                .execute(&mut *tx)
+                                .await;
+                                let _ = tx.commit().await;
+                            }
+                        }
+                    }
                 });
             }
 
@@ -88,22 +111,43 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let inbox_message_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
-            // Dummy query embedding for simulation
-            let query_embedding = vec![0.5; 1536];
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
+            // Get timeline
+            let mut timeline_context = String::new();
+            if !customer_id.is_empty() {
+                if let Ok(timeline) = self.orchestrator.get_customer_timeline(&event.tenant_id, customer_id, 10).await {
+                    for timeline_event in timeline {
+                        timeline_context.push_str(&format!("- [{}] {}: {}\n", timeline_event.event_type, timeline_event.source, timeline_event.content));
+                    }
+                }
+            }
 
-            let context_summary = if !memories.is_empty() {
-                memories.join("\n")
+            let context_summary = if !timeline_context.is_empty() {
+                timeline_context
             } else {
                 "No relevant memory found.".to_string()
             };
 
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
-                "Yes, we do vegan cakes!"
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            let generated_response = if !api_key.is_empty() {
+                let prompt = format!(
+                    "Write one concise, warm customer-service reply. Use the following context about the customer's history: {}\n\nCustomer message: {}",
+                    context_summary, message
+                );
+                let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+                let client = crate::minimax::MinimaxClient::new(api_key);
+                client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for reaching out! We will get back to you shortly.".to_string())
+            } else if message.to_lowercase().contains("vegan") {
+                "Yes, we do vegan cakes!".to_string()
             } else {
-                "Thank you for your message. We will get back to you shortly."
+                "Thank you for your message. We will get back to you shortly.".to_string()
             };
+
+            if !inbox_message_id.is_empty() {
+                let _ = self.orchestrator.update_inbox_message_draft(inbox_message_id, &event.tenant_id, &generated_response).await;
+            }
 
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
@@ -116,7 +160,8 @@ impl Department for CustomerSuccessAgent {
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
-                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "inbox_message_id": inbox_message_id,
+                "customer_id": customer_id,
             });
 
             self.orchestrator.execute_action(
