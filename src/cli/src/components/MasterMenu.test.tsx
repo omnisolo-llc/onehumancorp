@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { MasterMenu } from './MasterMenu';
-import { expect, test, describe } from 'vitest';
+import { expect, test, describe, vi } from 'vitest';
 
 describe('MasterMenu', () => {
   test('renders the menu options correctly', () => {
@@ -64,4 +64,16 @@ describe('MasterMenu', () => {
     // Write up arrow to stdin
     stdin.write('\u001B[A');
   });
+
+  test('handles keyboard interaction (return)', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const { stdin } = render(<MasterMenu />);
+
+    // Write return key to stdin (for the first option: Run Developer Setup)
+    stdin.write('\r');
+
+    expect(logSpy).toHaveBeenCalledWith('Executing Run Developer Setup...');
+    logSpy.mockRestore();
+  });
+
 });
