@@ -8,6 +8,7 @@ export default function SubscriptionsPage() {
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [labelStatus, setLabelStatus] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -53,6 +54,7 @@ export default function SubscriptionsPage() {
 
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-3">Upcoming Fulfillments</h2>
+        {labelStatus && <p className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800" role="status">{labelStatus}</p>}
         {batches.map(b => (
           <div key={b.id} className="p-4 rounded-xl shadow-sm mb-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
             <div className="flex justify-between items-start mb-2">
@@ -61,7 +63,7 @@ export default function SubscriptionsPage() {
             </div>
             <button
               className="w-full mt-2 py-2 bg-gray-900 text-white rounded-lg font-bold shadow-sm hover:bg-black transition-colors text-sm"
-              onClick={() => alert('Printing labels...')}
+              onClick={() => setLabelStatus(`Labels queued for ${b.subscriber_count} boxes shipping on ${b.fulfillment_date}.`)}
             >
               Print Labels
             </button>

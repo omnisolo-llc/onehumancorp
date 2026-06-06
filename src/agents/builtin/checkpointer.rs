@@ -55,7 +55,15 @@ impl PgCheckpointer {
     }
 }
 
-/// GitCheckpointer handles time-travel debugging and progress files.
+/// GitCheckpointer implements the Master Catalog "State Management: Git Commit Checkpointing" mechanic
+/// inspired by Claude Code. It handles true time-travel debugging and progress file management
+/// by executing native `git` commands on a local repository scratchpad.
+///
+/// **The Claude Code Mechanic:**
+/// 1. Uses git commits as checkpoints at super-step boundaries.
+/// 2. Maintains local `progress files` as structured scratchpads for the Ralph Loop and agent context.
+/// 3. Enables the orchestrator to revert the entire workspace state reliably on LLM-recoverable errors
+///    or user rollbacks via `git reset --hard` and `git clean -fdx`.
 pub struct GitCheckpointer {
     // State Management: Git Commit Checkpointing Mechanic
     repo_path: PathBuf,
@@ -108,15 +116,29 @@ impl CheckpointSaver for GitCheckpointer {
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
-        let output = Command::new("git")
+        // Try with checkpoint- prefix first (for actual checkpoint_ids),
+        // fallback to raw checkpoint_id (which could be a git hash from list_checkpoints)
+        let mut target_ref = format!("checkpoint-{}", checkpoint_id);
+
+        let mut output = Command::new("git")
             .arg("show")
-            .arg(format!("{}:{}", checkpoint_id, file_name))
+            .arg(format!("{}:{}", target_ref, file_name))
             .current_dir(&self.repo_path)
             .output()
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
-            return Ok(None);
+            target_ref = checkpoint_id.to_string();
+            output = Command::new("git")
+                .arg("show")
+                .arg(format!("{}:{}", target_ref, file_name))
+                .current_dir(&self.repo_path)
+                .output()
+                .map_err(|e| e.to_string())?;
+
+            if !output.status.success() {
+                return Ok(None);
+            }
         }
 
         let content = String::from_utf8_lossy(&output.stdout);
@@ -184,10 +206,11 @@ impl CheckpointSaver for GitCheckpointer {
             return Err(format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr)));
         }
 
+        let tag_name = format!("checkpoint-{}", checkpoint.checkpoint_id);
         let tag_output = Command::new("git")
             .arg("tag")
             .arg("-f")
-            .arg(&checkpoint.checkpoint_id)
+            .arg(&tag_name)
             .current_dir(&self.repo_path)
             .output()
             .map_err(|e| format!("Failed to execute git tag: {}", e))?;
@@ -688,5 +711,40 @@ mod tests {
         // Attempting to restore a missing checkpoint should fail gracefully
         let result = saver.restore_checkpoint("non-existent-checkpoint").await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_tag_prefix_match() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-git-tag".to_string(),
+            checkpoint_id: "cp-tag-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        // Check if the tag exists with the proper prefix
+        let output = std::process::Command::new("git")
+            .arg("tag")
+            .arg("-l")
+            .arg("checkpoint-cp-tag-1")
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+
+        assert!(output.status.success());
+        let tags = String::from_utf8_lossy(&output.stdout);
+        assert!(tags.contains("checkpoint-cp-tag-1"));
+
+        // Verify getting the checkpoint by raw ID works via prefix resolution
+        let retrieved = saver.get_checkpoint("thread-git-tag", "cp-tag-1").await.unwrap();
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().checkpoint_id, "cp-tag-1");
     }
 }
