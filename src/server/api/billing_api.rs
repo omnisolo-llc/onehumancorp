@@ -173,8 +173,9 @@ pub async fn cost_dashboard_handler(
         0.0
     };
 
-    let cost_per_1k_tokens = if total_tokens > 0 {
-        llm_cost_f64 / (total_tokens as f64 / 1000.0)
+    let total_tokens_incl_cached = total_tokens + cached_tokens;
+    let cost_per_1k_tokens = if total_tokens_incl_cached > 0 {
+        llm_cost_f64 / (total_tokens_incl_cached as f64 / 1000.0)
     } else {
         0.0
     };
