@@ -133,6 +133,17 @@ mod tests {
         let token = result.unwrap();
         assert_eq!(token, "tss_mock_token_for_test_tenant");
     }
+
+    #[tokio::test]
+    async fn test_create_terminal_payment_intent_error() {
+        let client = StripeClient::new("sk_test_123".to_string());
+        // Use a dummy tenant id to test network error or invalid api key error since this will make actual http reqwest
+        let result = client.create_terminal_payment_intent("test_tenant", 1500, "usd").await;
+        // Without mocked HTTP, this will fail authentication with stripe.
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("Stripe API error") || err.contains("request failed"));
+    }
 }
 
 impl StripeClient {
