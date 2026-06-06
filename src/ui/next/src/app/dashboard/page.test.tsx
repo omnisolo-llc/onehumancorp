@@ -2,6 +2,7 @@ import { TooltipProvider } from '../../components/TooltipRegistry';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from './page';
 import { expect, test, vi } from 'vitest';
+vi.mock("next/navigation", () => ({ useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() })), usePathname: vi.fn(() => "") }));
 
 // Mock fetch to prevent valid Undici errors regarding absolute URLs or missing globals
 global.fetch = vi.fn(() => Promise.resolve({
