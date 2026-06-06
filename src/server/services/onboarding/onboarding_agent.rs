@@ -294,7 +294,7 @@ impl OnboardingAgent {
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
@@ -373,7 +373,7 @@ impl OnboardingAgent {
         };
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
-        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO products (id, tenant_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(&id)
             .bind(org_id)
             .bind(name)
@@ -2408,7 +2408,7 @@ impl OnboardingAgent {
 
             let hub = self.hub.clone();
             futures.push(tokio::spawn(async move {
-                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                sqlx::query("INSERT INTO products (id, tenant_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                     .bind(&id)
                     .bind(&org_id)
                     .bind(&name)
@@ -2461,7 +2461,7 @@ impl OnboardingAgent {
         let mut futures = vec![];
         for (name, role, role_id) in default_agents {
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
-            let query = sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+            let query = sqlx::query("INSERT INTO agents (id, name, role, tenant_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
                 .bind(id)
                 .bind(name)
                 .bind(role)
@@ -2540,7 +2540,7 @@ mod tests {
 
         let org_id = resp.organization_id;
         use sqlx::Row;
-        let agents = sqlx::query("SELECT id, name, role FROM agents WHERE organization_id = $1 AND is_default = TRUE")
+        let agents = sqlx::query("SELECT id, name, role FROM agents WHERE tenant_id = $1 AND is_default = TRUE")
             .bind(&org_id)
             .fetch_all(&agent.db.pool)
             .await
@@ -2553,7 +2553,7 @@ mod tests {
             assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
         }
 
-        let users = sqlx::query("SELECT username, email, roles FROM users WHERE organization_id = $1")
+        let users = sqlx::query("SELECT username, email, roles FROM users WHERE tenant_id = $1")
             .bind(&org_id)
             .fetch_all(&agent.db.pool)
             .await
@@ -2627,7 +2627,7 @@ mod tests {
         let state_json_service: serde_json::Value = row_service.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
         assert_eq!(state_json_service.get("enable_booking").and_then(|v| v.as_bool()), Some(true));
 
-        let agents_service = sqlx::query("SELECT role FROM agents WHERE organization_id = $1 AND role = 'The Salesperson'")
+        let agents_service = sqlx::query("SELECT role FROM agents WHERE tenant_id = $1 AND role = 'The Salesperson'")
             .bind(&org_id_service)
             .fetch_all(&agent.db.pool)
             .await
