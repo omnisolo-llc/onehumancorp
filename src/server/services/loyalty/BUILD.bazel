@@ -1,0 +1,23 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_loyalty",
+    srcs = glob(["*.rs"]),
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/common:server_common",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "server_services_loyalty_test",
+    crate = ":server_services_loyalty",
+    deps = [
+        "@crates//:tokio",
+    ],
+)
