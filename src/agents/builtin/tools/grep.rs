@@ -39,14 +39,28 @@ impl ToolExecutor for GrepExecutor {
             return Ok("No matches found.".to_string());
         }
 
-        // Just-in-Time (JIT) Retrieval Mechanic:
-        // Limit output
-        if results.len() > 100 {
-            results.truncate(100);
-            results.push("... (truncated to 100 results to save context. Please refine your regex pattern, specify a more restrictive include filter, or use glob/find to narrow the search.)".to_string());
+        // Just-in-Time (JIT) Retrieval Mechanic with proper token accounting:
+        let max_tokens = 4000; // Limit output to roughly 4k tokens to prevent blowing out context
+        let mut current_tokens = 0;
+        let mut output_results = Vec::new();
+        let mut truncated = false;
+
+        for res in results {
+            let tokens = super::token_estimator::estimate_tokens(&res);
+            if current_tokens + tokens > max_tokens {
+                truncated = true;
+                break;
+            }
+            current_tokens += tokens;
+            output_results.push(res);
         }
 
-        Ok(results.join("\n"))
+        if truncated {
+            output_results.push(format!("... (truncated to {} tokens/{} results to save context. Please refine your regex pattern, specify a more restrictive include filter, or use glob/find to narrow the search.)", current_tokens, output_results.len()));
+        }
+
+        Ok(output_results.join("\n"))
+
     }
 }
 

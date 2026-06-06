@@ -39,9 +39,7 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
         if lines_to_read == 0 {
             return Ok(String::new());
         }
-        if lines_to_read > 1000 {
-            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
-        }
+
 
         let metadata = file.metadata().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         let len = metadata.len();
@@ -82,7 +80,7 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
                         file.seek(std::io::SeekFrom::Start(final_start)).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                         let mut final_content = String::new();
                         file.read_to_string(&mut final_content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
-                        return Ok(final_content.trim_end().to_string());
+                        return Ok(super::tail::truncate_tail(&final_content.trim_end().to_string()));
                     }
                 }
             }
@@ -92,14 +90,40 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
         file.seek(std::io::SeekFrom::Start(0)).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         let mut final_content = String::new();
         file.read_to_string(&mut final_content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
-        Ok(final_content.trim_end().to_string())
+        Ok(super::tail::truncate_tail(&final_content.trim_end().to_string()))
     }
+}
+
+pub(crate) fn truncate_tail(content: &str) -> String {
+    let max_tokens = 4000;
+    let tokens = super::token_estimator::estimate_tokens(content);
+    if tokens <= max_tokens {
+        return content.to_string();
+    }
+
+    let lines: Vec<&str> = content.split('\n').collect();
+    let mut current_tokens = 0;
+    let mut kept_lines = Vec::new();
+
+    for line in lines.iter().rev() {
+        let line_tokens = super::token_estimator::estimate_tokens(line) + 1;
+        if current_tokens + line_tokens > max_tokens {
+            break;
+        }
+        current_tokens += line_tokens;
+        kept_lines.push(*line);
+    }
+
+    kept_lines.reverse();
+    let mut result = kept_lines.join("\n");
+    result.insert_str(0, &format!("... (truncated from top to {} tokens to save context. Please paginate using the read tool.)\n", current_tokens));
+    result
 }
 
 pub fn tail_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Tail".to_string(),
-        description: "Read the last N lines of a file (default 10). Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Read the last N lines of a file (default 10). Used for Just-in-Time (JIT) Context Retrieval with proper token accounting.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
@@ -191,13 +215,13 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "test").await.unwrap();
-        let args = serde_json::json!({ "path": file_path.to_str().unwrap(), "lines": 1500 });
-        let result = tool.execute.execute(args).await;
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Cannot read more than 1000 lines"), "msg was: {}", msg);
-        } else {
-            panic!("Expected LlmRecoverable error");
-        }
+        // To trigger token truncation, we need actual lines. We only truncate if token count > max_tokens.
+        let mut content = String::new();
+        for _ in 0..6000 { content.push_str("line\n"); } // ~6000 tokens > 4000
+        fs::write(&file_path, content).await.unwrap();
+        let args = serde_json::json!({ "path": file_path.to_str().unwrap(), "lines": 6000 });
+        let result = tool.execute.execute(args).await.unwrap();
+        assert!(result.contains("... (truncated from top"));
+        assert!(result.contains("Please paginate using the read tool."));
     }
 }

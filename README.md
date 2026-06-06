@@ -279,3 +279,9 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 ### Slint and Flutter UI (Removed)
 
 The old `src/app/` Slint/Flutter UI has been removed. The canonical desktop UI is `src/ui/tauri/`; the remaining Next.js prototype under `src/ui/next/` is retained only while route and asset references are audited.
+
+
+### JIT Context Retrieval
+
+- Added explicit token accounting to `read`, `head`, `tail`, `grep`, and `glob` tools.
+- Ensured these tools stream file contents instead of fully loading them, protecting the LLM's context window.

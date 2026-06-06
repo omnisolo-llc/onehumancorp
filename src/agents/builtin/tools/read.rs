@@ -18,8 +18,8 @@ impl ToolExecutor for ReadExecutor {
         let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
         let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
-        // Just-in-Time (JIT) Retrieval Mechanic:
-        // "Never load full files." We enforce a strict token/line limit and stream the file to prevent loading it entirely into memory.
+        // Just-in-Time (JIT) Retrieval Mechanic with proper token accounting:
+        // "Never load full files." We enforce a strict token limit and stream the file to prevent loading it entirely into memory.
         let file = fs::File::open(&actual_path)
             .await
             .map_err(|e| format!("read: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
@@ -37,36 +37,28 @@ impl ToolExecutor for ReadExecutor {
             if s >= e {
                 return Err(ToolError::LlmRecoverable(format!("read: invalid line range {}-{}", s + 1, e)));
             }
-            if e - s > 1000 {
-                return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Please use start_line and end_line to paginate.".to_string()));
-            }
-        } else {
-            // No range specified, check if file is small enough by just reading it line by line
-            // If it exceeds 1000 lines, reject it early without loading it entirely.
-            let mut test_reader = BufReader::new(fs::File::open(&actual_path).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?);
-            let mut test_buffer = String::new();
-            let mut total_lines = 0;
-            while let Ok(bytes) = test_reader.read_line(&mut test_buffer).await {
-                if bytes == 0 { break; }
-                total_lines += 1;
-                test_buffer.clear();
-                if total_lines > 1000 {
-                    return Err(ToolError::LlmRecoverable(
-                        "JIT Retrieval Error: File is too large (> 1000 lines). Never load full files. Please use start_line and end_line to paginate (max 1000 lines per request).".to_string()
-                    ));
-                }
-            }
         }
 
         let start = req_start.unwrap_or(0);
-        let end = req_end.unwrap_or(1000); // capped at 1000 if not specified (already validated above)
+        let end = req_end.unwrap_or(usize::MAX); // We rely on token limits now instead of arbitrary line limits
+
+        let max_tokens = 4000;
+        let mut current_tokens = 0;
+        let mut truncated = false;
 
         while let Ok(bytes) = reader.read_line(&mut line_buffer).await {
             if bytes == 0 {
                 break;
             }
             if line_count >= start && line_count < end {
-                result_lines.push(line_buffer.trim_end_matches('\n').trim_end_matches('\r').to_string());
+                let clean_line = line_buffer.trim_end_matches(&['\r', '\n'][..]).to_string();
+                let tokens = super::token_estimator::estimate_tokens(&clean_line) + 1; // +1 for newline
+                if current_tokens + tokens > max_tokens {
+                    truncated = true;
+                    break;
+                }
+                current_tokens += tokens;
+                result_lines.push(clean_line);
             }
             line_count += 1;
             line_buffer.clear();
@@ -76,7 +68,12 @@ impl ToolExecutor for ReadExecutor {
             }
         }
 
-        Ok(result_lines.join("\n"))
+        if truncated {
+            result_lines.push(format!("... (truncated to {} tokens. Please use start_line and end_line to paginate.)", current_tokens));
+        }
+
+        Ok(result_lines.join("
+"))
     }
 }
 
@@ -151,29 +148,19 @@ mod tests {
 
         let executor = ReadExecutor { working_dir: None };
 
-        // 1. Try reading the whole file - should fail
+        // 1. Try reading the whole file - should be truncated
         let args = json!({ "path": test_file.to_string_lossy().to_string() });
-        let result = executor.execute(args).await;
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("JIT Retrieval Error: File is too large"));
-        } else {
-            panic!("Expected JIT Retrieval Error");
-        }
+        let result = executor.execute(args).await.unwrap();
+        assert!(result.contains("... (truncated to"));
 
-        // 2. Try reading a slice larger than 1000 lines - should fail
+        // 2. Try reading a slice that is too large in tokens - should be truncated
         let args2 = json!({
             "path": test_file.to_string_lossy().to_string(),
             "start_line": 1,
-            "end_line": 1200
+            "end_line": 1500
         });
-        let result2 = executor.execute(args2).await;
-        assert!(result2.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result2 {
-            assert!(msg.contains("Cannot read more than 1000 lines at once"));
-        } else {
-            panic!("Expected JIT Retrieval Error");
-        }
+        let result2 = executor.execute(args2).await.unwrap();
+        assert!(result2.contains("... (truncated to"));
 
         // 3. Try reading a valid slice - should succeed
         let args3 = json!({

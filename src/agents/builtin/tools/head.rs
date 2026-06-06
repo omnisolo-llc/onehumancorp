@@ -36,13 +36,15 @@ impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
             .map_err(|e| format!("head: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let lines_to_read = args.lines.unwrap_or(10) as usize;
-        if lines_to_read > 1000 {
-            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
-        }
+
 
         let mut reader = BufReader::new(file);
         let mut lines = Vec::new();
         let mut buffer = String::new();
+
+        let max_tokens = 4000;
+        let mut current_tokens = 0;
+        let mut truncated = false;
 
         for _ in 0..lines_to_read {
             buffer.clear();
@@ -51,17 +53,31 @@ impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
             if bytes_read == 0 {
                 break;
             }
-            lines.push(buffer.trim_end_matches(&['\r', '\n'][..]).to_string());
+            let clean_line = buffer.trim_end_matches(&['\r', '\n'][..]).to_string();
+            let tokens = super::token_estimator::estimate_tokens(&clean_line) + 1;
+
+            if current_tokens + tokens > max_tokens {
+                truncated = true;
+                break;
+            }
+
+            current_tokens += tokens;
+            lines.push(clean_line);
         }
 
-        Ok(lines.join("\n"))
+        if truncated {
+            lines.push(format!("... (truncated to {} tokens. Please paginate using the read tool.)", current_tokens));
+        }
+
+        Ok(lines.join("
+"))
     }
 }
 
 pub fn head_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Head".to_string(),
-        description: "Read the first N lines of a file (default 10). Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Read the first N lines of a file (default 10). Used for Just-in-Time (JIT) Context Retrieval with proper token accounting.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
@@ -135,14 +151,13 @@ mod tests {
         let tool = head_tool(None);
         let dir = tempfile::tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
-        fs::write(&file_path, "test").await.unwrap();
-        let args = json!({ "path": file_path.to_str().unwrap(), "lines": 1001 });
-        let result = tool.execute.execute(args).await;
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Cannot read more than 1000 lines"), "msg was: {}", msg);
-        } else {
-            panic!("Expected LlmRecoverable error");
-        }
+        let mut content = String::new();
+        for _ in 0..6000 { content.push_str("line
+"); }
+        fs::write(&file_path, content).await.unwrap();
+        let args = json!({ "path": file_path.to_str().unwrap(), "lines": 6000 });
+        let result = tool.execute.execute(args).await.unwrap();
+        assert!(result.contains("... (truncated to"));
+        assert!(result.contains("Please paginate using the read tool."));
     }
 }

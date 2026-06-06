@@ -46,18 +46,32 @@ impl ToolExecutor for GlobExecutor {
             })
             .collect();
 
-        // Just-in-Time (JIT) Retrieval Mechanic:
-        if matches.is_empty() {
+        // Just-in-Time (JIT) Retrieval Mechanic with proper token accounting:
+        let max_tokens = 4000;
+        let mut current_tokens = 0;
+        let mut output_matches = Vec::new();
+        let mut truncated = false;
+
+        for m in matches {
+            let tokens = super::token_estimator::estimate_tokens(&m);
+            if current_tokens + tokens > max_tokens {
+                truncated = true;
+                break;
+            }
+            current_tokens += tokens;
+            output_matches.push(m);
+        }
+
+        if output_matches.is_empty() && !truncated {
             return Ok("No files found.".to_string());
         }
 
-        let mut output_matches = matches;
-        if output_matches.len() > 50 {
-            output_matches.truncate(50);
-            output_matches.push("... (truncated to 50 results. Please use a more specific glob pattern or use grep/find.)".to_string());
+        if truncated {
+            output_matches.push(format!("... (truncated to {} tokens/{} results. Please use a more specific glob pattern or use grep/find.)", current_tokens, output_matches.len()));
         }
 
         Ok(output_matches.join("\n"))
+
     }
 }
 
