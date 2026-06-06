@@ -585,6 +585,27 @@ impl DepartmentOrchestrator {
         results
     }
 
+    pub async fn update_approval_payload(&self, request_id: &str, tenant_id: &str, payload: serde_json::Value) -> Result<(), String> {
+        let payload_str = serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string());
+        match &self.db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("UPDATE agent_approvals SET payload = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3")
+                    .bind(payload_str)
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("UPDATE agent_approvals SET payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
+                    .bind(payload_str)
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .execute(pool).await.map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
         let lock_key = format!("ohc:lock:agent_approval:{}", request_id);
 

@@ -215,15 +215,51 @@ export function UnifiedAgentFeed() {
                       )}
                     </div>
                   )}
+                  {approval.payload?.feature_type === 'social_post' && approval.payload?.variants && (
+                    <div className="mt-2 flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Suggested Variants</span>
+                      {approval.payload.variants.map((variant: string, index: number) => {
+                        const isSelected = approval.payload.draft_copy === variant;
+                        return (
+                          <div
+                            key={index}
+                            onClick={() => {
+                              // We simulate variant selection here by setting it on the object directly
+                              // (a real app would use a state map of id->selectedVariant)
+                              approval.payload.draft_copy = variant;
+                              setApprovals([...approvals]); // trigger re-render
+                            }}
+                            className={`flex gap-2 items-start p-2 rounded border cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-blue-300 dark:bg-blue-900/20 dark:border-blue-700' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'}`}
+                          >
+                            <span className="text-gray-400 text-xs mt-0.5">{index + 1}.</span>
+                            <p className="text-sm text-gray-800 dark:text-gray-200">{variant}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
                   <button
-                    onClick={() => handleDecision(approval.id, true)}
+                    onClick={() => {
+                      if (approval.payload?.feature_type === 'social_post') {
+                        // The execute_action will handle this via orchestrator decision
+                        // This updates the backend when 'Schedule' is clicked.
+                        const schedulePayload = { ...approval.payload, scheduled_at: new Date().toISOString() };
+                        fetch(`/api/agents/approvals/${approval.id}`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", "x-tenant-id": tenantId(), "x-user-id": "default" },
+                          body: JSON.stringify({ approved: true, payload: schedulePayload }),
+                        }).then(() => handleDecision(approval.id, true)).catch(() => handleDecision(approval.id, true));
+                      } else {
+                        handleDecision(approval.id, true);
+                      }
+                    }}
                     className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
                     aria-label="Approve proposal"
                   >
-                    Approve
+                    {approval.payload?.feature_type === 'social_post' ? 'Schedule' : 'Approve'}
                   </button>
                   <div className="flex gap-3 w-full">
                     <button

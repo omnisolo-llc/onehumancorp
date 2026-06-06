@@ -32,26 +32,6 @@ impl Department for MarketingAgent {
         let risk = ActionRisk::DraftForReview;
 
 
-        if event.event_type == "tenant.product.created" {
-            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");
-
-            let draft_copy = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
-            let payload = serde_json::json!({
-                "feature_type": "social_post",
-                "product_name": product_name,
-                "draft_copy": draft_copy
-            });
-            let description = format!("7-Day Social Calendar: {}", product_name);
-
-            return self.orchestrator.execute_action(
-                DepartmentType::Marketing,
-                description,
-                event.tenant_id.clone(),
-                risk,
-                payload,
-            ).await.map(|_| ());
-        }
-
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
             let media = event.payload.get("media").and_then(|v| v.as_array());
@@ -106,27 +86,36 @@ impl Department for MarketingAgent {
                 "".to_string()
             };
 
-            let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
+            let prompt = format!("Draft 3 short, engaging social media captions for a new or restocked product named '{}'. Description: '{}'. Provide one variant for Instagram (visual/descriptive), one for TikTok (short/punchy), and one for Facebook/Twitter. Format as JSON with an array of strings in a 'variants' key.", product_name, description);
 
             let draft_copy = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
                 if provider == "minimax" {
                     let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
+                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!(r#"{{"variants": ["Check out our new {}! 🚀 #newarrival #ohc", "Just dropped! {} 🔥", "New {} now available!"]}}"#, product_name, product_name, product_name))
                 } else {
-                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
+                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!(r#"{{"variants": ["Check out our new {}! 🚀 #newarrival #ohc", "Just dropped! {} 🔥", "New {} now available!"]}}"#, product_name, product_name, product_name))
                 }
             } else {
-                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
+                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!(r#"{{"variants": ["Check out our new {}! 🚀 #newarrival #ohc", "Just dropped! {} 🔥", "New {} now available!"]}}"#, product_name, product_name, product_name))
+            };
+
+            // Parse response, extract variants or fallback
+            let parsed: serde_json::Value = serde_json::from_str(&draft_copy).unwrap_or_default();
+            let variants = if parsed.get("variants").is_some() && parsed["variants"].is_array() {
+                parsed["variants"].clone()
+            } else {
+                serde_json::json!([format!("Check out our new {}! 🚀", product_name), format!("New arrival! 🔥 {}", product_name), format!("{} is now available!", product_name)])
             };
 
             let payload = serde_json::json!({
                 "feature_type": "social_post",
                 "product_name": product_name,
                 "image_url": optimized_image_url,
-                "draft_copy": draft_copy
+                "variants": variants,
+                "draft_copy": variants[0]
             });
 
-            let action_desc = format!("Draft Instagram post for {}", product_name);
+            let action_desc = format!("Draft social posts for {}", product_name);
             return self.orchestrator.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
         }
 
@@ -165,7 +154,13 @@ impl BaseAgent for MarketingAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
+    async fn execute(&self, payload: Value) -> Result<(), String> {
+        if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+            if feature_type == "social_post" {
+                // Normally we'd call the social API here
+                tracing::info!("MarketingAgent (Promoter) dispatched social post: {:?}", payload);
+            }
+        }
         Ok(())
     }
 }
