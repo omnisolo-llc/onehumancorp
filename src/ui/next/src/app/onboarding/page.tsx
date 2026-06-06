@@ -254,8 +254,8 @@ export default function OnboardingWizard() {
     }
     if (!adminPassword.trim()) {
       errors.adminPassword = 'Password is required';
-    } else if (adminPassword.length < 8 || !/\d/.test(adminPassword)) {
-      errors.adminPassword = 'Password must be at least 8 characters and contain a number';
+    } else if (adminPassword.length < 8 || !/\d/.test(adminPassword) || !/[!@#$%^&*()_+{}\[\]:;<>,.?~\\-]/.test(adminPassword)) {
+      errors.adminPassword = 'Password must be at least 8 characters, contain a number, and a special character';
     }
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);

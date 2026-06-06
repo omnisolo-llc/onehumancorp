@@ -212,7 +212,7 @@ describe('OnboardingWizard', () => {
     await user.type(emailInput, 'maya@example.com');
 
     const passwordInput = screen.getByPlaceholderText(/••••••••/i);
-    await user.type(passwordInput, 'mypassword123');
+    await user.type(passwordInput, 'mypassword123!');
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
     await user.click(launchButton);
@@ -234,7 +234,7 @@ describe('OnboardingWizard', () => {
     }));
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
       method: 'POST',
-      body: expect.stringContaining('"admin_password":"mypassword123"'),
+      body: expect.stringContaining('"admin_password":"mypassword123!"'),
     }));
   });
 
