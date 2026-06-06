@@ -255,7 +255,7 @@ impl MeshTransport for PgTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
-        message.encode(&mut buf).unwrap();
+        message.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let msg_id = if message.msg_id.is_empty() {
             None
@@ -481,7 +481,7 @@ impl MeshTransport for SqliteTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
-        message.encode(&mut buf).unwrap();
+        message.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let msg_id = if message.msg_id.is_empty() {
             None
@@ -618,7 +618,7 @@ impl MeshTransport for RedisPubSubTransport {
         let mut conn = self.publish_conn.lock().await;
 
         let mut buf = Vec::new();
-        message.encode(&mut buf).unwrap();
+        message.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let _: () = conn.publish(topic, buf).await.map_err(|e| e.to_string())?;
         Ok(())

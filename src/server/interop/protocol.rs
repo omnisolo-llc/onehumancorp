@@ -347,7 +347,7 @@ impl InteropProtocol {
         };
 
         let mut buf = Vec::new();
-        update.encode(&mut buf).unwrap();
+        update.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let msg = Message {
             topic: format!("system:job_status:{}", job_id),

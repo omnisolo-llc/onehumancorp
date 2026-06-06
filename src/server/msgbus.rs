@@ -133,7 +133,7 @@ impl Bus for RedisBus {
         let mut conn = self.publish_conn.lock().await;
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
-        msg.encode(&mut buf).unwrap();
+        msg.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let mut retries = 0;
         loop {
@@ -303,7 +303,7 @@ impl Bus for IpcBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut payload = Vec::new();
-        msg.encode(&mut payload).unwrap();
+        msg.encode(&mut payload).map_err(|e| e.to_string())?;
 
         let mut retries = 0;
         loop {
@@ -377,7 +377,7 @@ impl Bus for NatsBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
-        msg.encode(&mut buf).unwrap();
+        msg.encode(&mut buf).map_err(|e| e.to_string())?;
 
         let nats_topic = msg.topic.replace(":", ".");
 
