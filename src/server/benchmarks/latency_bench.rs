@@ -86,6 +86,9 @@ pub async fn bench_api_response_time() {
     // Cloud setup
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pg_pool).await;
         let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
         let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
@@ -541,7 +544,7 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         let start = std::time::Instant::now();
-        let timeout_duration = std::time::Duration::from_millis(60);
+        let timeout_duration = std::time::Duration::from_millis(50);
 
         let result = tokio::time::timeout(timeout_duration, async {
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
@@ -601,6 +604,8 @@ pub async fn bench_advisory_insights_latency() {
 
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&pg_pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&pg_pool).await.unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
         let _store = std::sync::Arc::new(::server_auth::Store::new());
 
@@ -666,25 +671,30 @@ pub async fn bench_advisory_insights_latency() {
     for _ in 0..iterations {
         let start = std::time::Instant::now();
 
+        let pool_org = sqlite_pool.clone();
+        let pool_orders = sqlite_pool.clone();
+        let tenant_id_org = tenant_id.clone();
+        let tenant_id_orders = tenant_id.clone();
+
         let (_org_res, _active_orders_res) = tokio::join!(
-            async {
+            tokio::spawn(async move {
                 sqlx::query_as::<_, (String, String)>(
                     "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
                 )
-                .bind(&tenant_id)
-                .fetch_optional(&sqlite_pool)
+                .bind(&tenant_id_org)
+                .fetch_optional(&pool_org)
                 .await
                 .unwrap()
-            },
-            async {
+            }),
+            tokio::spawn(async move {
                 sqlx::query_scalar::<_, i64>(
                     "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
                 )
-                .bind(&tenant_id)
-                .fetch_one(&sqlite_pool)
+                .bind(&tenant_id_orders)
+                .fetch_one(&pool_orders)
                 .await
                 .unwrap()
-            }
+            })
         );
 
         fetch_times_sqlite.push(start.elapsed().as_micros());

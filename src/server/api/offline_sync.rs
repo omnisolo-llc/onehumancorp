@@ -62,6 +62,32 @@ pub async fn offline_sync_handler(
 
         match result {
             Ok(Some(_)) => {
+                // Also queue an offline_pos_sync job to record the transaction
+                let job_id = uuid::Uuid::new_v4().to_string();
+                let job_payload = serde_json::json!({
+                    "transaction_id": mutation.transaction_id,
+                    "product_id": mutation.product_id,
+                    "quantity_deducted": mutation.quantity_deducted,
+                    "amount": mutation.amount,
+                    "payment_method": mutation.payment_method,
+                    "payment_intent_id": mutation.payment_intent_id,
+                    "currency": mutation.currency,
+                }).to_string();
+
+                let job_res = sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                     VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+                )
+                .bind(&job_id)
+                .bind(&tenant_id)
+                .bind(&job_payload)
+                .execute(&db)
+                .await;
+
+                if let Err(e) = job_res {
+                    tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
+                }
+
                 // Publish mesh event
                 let event = ::server_ohc::orchestration::TeammateMeshEvent {
                     action: "InventoryUpdated".to_string(),

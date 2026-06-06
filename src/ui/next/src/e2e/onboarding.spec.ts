@@ -32,7 +32,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.route('/api/onboarding/start', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -58,6 +58,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
   });
 
   test('Carlos the Handyman sets up his repair business', async ({ page }) => {
@@ -75,7 +77,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.route('/api/onboarding/start', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -100,6 +102,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
   });
 
   test('Leo the Music Tutor configures online bookings', async ({ page }) => {
@@ -117,7 +121,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     await page.route('/api/onboarding/start', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -143,6 +147,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
   });
 
   test('Fatima the Food Cart Operator on a slower network', async ({ page }) => {
@@ -162,7 +168,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.route('/api/onboarding/start', async route => {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched." }) });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org-mocked-123" }) });
     });
 
     await page.goto('/onboarding');
@@ -187,6 +193,58 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Launch Store' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
+    const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
+    expect(storedTenantId).toBe('org-mocked-123');
+  });
+
+  test('User can save a draft and restore it across sessions', async ({ page }) => {
+    let savedWizardState: Record<string, unknown> | undefined;
+    await page.route('/api/onboarding/draft', async route => {
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
+        savedWizardState = body.wizardState;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(savedWizardState ? { wizardState: savedWizardState } : {}),
+      });
+    });
+    await page.route('/api/onboarding/state', async route => {
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
+        savedWizardState = body.wizardState;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(savedWizardState ? { wizardState: savedWizardState } : {}),
+      });
+    });
+
+    // 1. Start Wizard and Save Draft
+    await page.goto('/onboarding');
+    await page.getByText('Start Onboarding').click();
+
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('My Restored Business');
+    await page.getByRole('button', { name: 'Save Draft' }).click();
+    await expect(page.getByText('Draft Saved!')).toBeVisible();
+
+    // 2. Clear local storage to simulate device switch
+    await page.evaluate(() => window.localStorage.clear());
+
+    // 3. Reload page and check restoration
+    await page.reload();
+
+    // We should be restored to the first step of the wizard where we were, with the text filled
+    await expect(page.getByText("What's the name of your business?")).toBeVisible();
+    await expect(page.locator('input[value="My Restored Business"]')).toBeVisible();
   });
 
   test('Validation errors prevent launching without complete admin info', async ({ page }) => {
@@ -217,14 +275,22 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    // Do NOT fill out admin email and password
+    // Do NOT fill out admin email and password initially
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
 
     // Attempt to launch store
     await page.getByRole('button', { name: 'Launch Store' }).click();
 
-    // Expect validation errors to be visible - check exact wording from page.tsx ("Admin email is required") or just general red borders/messages
+    // Expect validation errors to be visible
     await expect(page.getByText(/is required/i).first()).toBeVisible();
+
+    // Fill in invalid email and password without number
+    await page.getByPlaceholder(/you@example.com/i).fill('invalid-email');
+    await page.getByPlaceholder(/••••••••/i).fill('password');
+    await page.getByRole('button', { name: 'Launch Store' }).click();
+
+    await expect(page.getByText('Please enter a valid email address')).toBeVisible();
+    await expect(page.getByText('Password must be at least 8 characters and contain a number')).toBeVisible();
 
     // Ensure it hasn't progressed to the success screen
     await expect(page.getByText("You're Live!")).toBeHidden();
