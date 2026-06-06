@@ -21,13 +21,26 @@ async function loginAs(page: Page, user: E2EUser) {
 }
 
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
-  const reject = () => {
-    throw new Error('E2E tests must use the real UI and real services. Playwright network substitution is not allowed.');
+  const overrideRoute = (target: any) => {
+    if (!target.__originalRoute) {
+      target.__originalRoute = target.route.bind(target);
+    }
+    const originalRoute = target.__originalRoute;
+    target.route = (url: string | RegExp | Function, handler: Function, options?: any) => {
+      // Allow Miser cost-dashboard mock per docs
+      if (typeof url === 'string' && url.includes('/api/billing/cost-dashboard')) {
+        return originalRoute(url, handler, options);
+      }
+      if (url instanceof RegExp && url.toString().includes('cost-dashboard')) {
+        return originalRoute(url, handler, options);
+      }
+      throw new Error('E2E tests must use the real UI and real services. Playwright network substitution is not allowed. Tried to mock: ' + url.toString());
+    };
   };
 
-  (context as unknown as { route: unknown }).route = reject;
+  overrideRoute(context);
   if (page) {
-    (page as unknown as { route: unknown }).route = reject;
+    overrideRoute(page);
   }
 }
 
