@@ -1,0 +1,115 @@
+{{- if .Values.backend.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-backend
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-backend
+  minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+---
+{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-core
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-core
+  minReplicas: {{ .Values.ohcCore.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.ohcCore.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ohcCore.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+---
+{{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-chatwoot
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-chatwoot
+  minReplicas: {{ .Values.chatwoot.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.chatwoot.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+---
+{{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-powersync
+  minReplicas: {{ .Values.powersync.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
