@@ -536,7 +536,7 @@ mod chaos_tests {
             assert!(res.is_ok());
 
             // Despite AI failure, a fallback message should be used and final_status should be PAUSED after retries
-            let row: (String, String) = sqlx::query_as("SELECT status, proposed_content FROM department_tasks JOIN shared_tasks ON department_tasks.tenant_id = shared_tasks.organization_id WHERE department_tasks.id = 'task1' AND shared_tasks.title LIKE '%AI Agent Paused%'")
+            let row: (String, String) = sqlx::query_as("SELECT status, proposed_content FROM department_tasks JOIN shared_tasks ON department_tasks.tenant_id = shared_tasks.organization_id WHERE department_tasks.id = 'task1' AND shared_tasks.title LIKE '%AI Department Paused%'")
                 .fetch_one(&dummy_sqlite_pool).await.unwrap();
 
             assert_eq!(row.0, "PAUSED");

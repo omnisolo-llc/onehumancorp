@@ -489,7 +489,7 @@ impl OperationsWorker {
                                                     let _ = sqlx::query(
                                                         r#"
                                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                        VALUES ($1, $2, 'AI Agent Paused: Operations', 'The AI agent responsible for restocking drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory.')
+                                                        VALUES ($1, $2, 'AI Department Paused: Operations', 'The AI agent responsible for restocking drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory.')
                                                         "#
                                                     )
                                                     .bind(Uuid::new_v4().to_string())
@@ -871,7 +871,7 @@ impl CustomerSuccessWorker {
                                 let _ = sqlx::query(
                                     r#"
                                     INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES ($1, $2, 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
+                                    VALUES ($1, $2, 'AI Department Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
                                     "#
                                 )
                                 .bind(Uuid::new_v4().to_string())
@@ -1170,7 +1170,7 @@ impl AdvisorWorker {
                                     let _ = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, 'AI Agent Paused: The Advisor', 'The AI agent responsible for business health reports is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check business performance.')
+                                        VALUES ($1, $2, 'AI Department Paused: The Advisor', 'The AI agent responsible for business health reports is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check business performance.')
                                         "#
                                     )
                                     .bind(Uuid::new_v4().to_string())

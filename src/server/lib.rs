@@ -3636,7 +3636,7 @@ async fn create_ui_bom_item_handler(
             { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
             { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
             { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
+            { "title": "AI Departments", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Departments' tab.", "link": "/help/ai-agents" },
             { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
             { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
@@ -3670,7 +3670,7 @@ async fn create_ui_bom_item_handler(
                 ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
                 ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
                 ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
+                ("ai department", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Departments' tab."),
                 ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
                 ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
                 ("api", "Interactive API reference for integrations."),
@@ -3690,7 +3690,7 @@ async fn create_ui_bom_item_handler(
             } else if query.contains("payment") {
                 reply = format!("Based on our help center: {}", help_articles[2].1);
                 link_url = "/help/payments";
-            } else if query.contains("ai agent") {
+            } else if query.contains("ai department") {
                 reply = format!("Based on our help center: {}", help_articles[3].1);
                 link_url = "/help/ai-agents";
             } else if query.contains("marketing") {

@@ -43,23 +43,23 @@
         assert!(response.articles.iter().any(|a| a.topic == "Payments"));
         assert!(response.articles.iter().any(|a| a.topic == "Getting Started")); // "accept payments"
 
-        // Test 3: Search by topic "AI Agents"
+        // Test 3: Search by topic "AI Departments"
         let request = Request::new(SearchHelpArticlesRequest {
             query: "".to_string(),
-            topic_filter: "AI Agents".to_string(),
+            topic_filter: "AI Departments".to_string(),
         });
         let response = service.search_help_articles(request).await.unwrap().into_inner();
         assert_eq!(response.articles.len(), 1);
-        assert_eq!(response.articles[0].topic, "AI Agents");
+        assert_eq!(response.articles[0].topic, "AI Departments");
 
         // Test 4: Search by query and topic
         let request = Request::new(SearchHelpArticlesRequest {
             query: "support".to_string(),
-            topic_filter: "AI Agents".to_string(),
+            topic_filter: "AI Departments".to_string(),
         });
         let response = service.search_help_articles(request).await.unwrap().into_inner();
         assert_eq!(response.articles.len(), 1);
-        assert_eq!(response.articles[0].topic, "AI Agents");
+        assert_eq!(response.articles[0].topic, "AI Departments");
     }
 
     #[tokio::test]
@@ -422,7 +422,7 @@
             ("Getting Started", 1),
             ("My Store", 1),
             ("Payments", 1),
-            ("AI Agents", 1),
+            ("AI Departments", 1),
             ("Marketing", 1),
             ("Account & Billing", 1),
             ("Missing Topic 1", 0),
@@ -917,21 +917,21 @@
             ("missing-13", "Payments", 0),
             ("missing-14", "Payments", 0),
             ("missing-15", "Payments", 0),
-            ("missing-1", "AI Agents", 0),
-            ("missing-2", "AI Agents", 0),
-            ("missing-3", "AI Agents", 0),
-            ("missing-4", "AI Agents", 0),
-            ("missing-5", "AI Agents", 0),
-            ("missing-6", "AI Agents", 0),
-            ("missing-7", "AI Agents", 0),
-            ("missing-8", "AI Agents", 0),
-            ("missing-9", "AI Agents", 0),
-            ("missing-10", "AI Agents", 0),
-            ("missing-11", "AI Agents", 0),
-            ("missing-12", "AI Agents", 0),
-            ("missing-13", "AI Agents", 0),
-            ("missing-14", "AI Agents", 0),
-            ("missing-15", "AI Agents", 0),
+            ("missing-1", "AI Departments", 0),
+            ("missing-2", "AI Departments", 0),
+            ("missing-3", "AI Departments", 0),
+            ("missing-4", "AI Departments", 0),
+            ("missing-5", "AI Departments", 0),
+            ("missing-6", "AI Departments", 0),
+            ("missing-7", "AI Departments", 0),
+            ("missing-8", "AI Departments", 0),
+            ("missing-9", "AI Departments", 0),
+            ("missing-10", "AI Departments", 0),
+            ("missing-11", "AI Departments", 0),
+            ("missing-12", "AI Departments", 0),
+            ("missing-13", "AI Departments", 0),
+            ("missing-14", "AI Departments", 0),
+            ("missing-15", "AI Departments", 0),
             ("missing-1", "Marketing", 0),
             ("missing-2", "Marketing", 0),
             ("missing-3", "Marketing", 0),

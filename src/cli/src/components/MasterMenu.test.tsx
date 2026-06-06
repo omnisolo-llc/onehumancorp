@@ -41,7 +41,7 @@ describe('MasterMenu', () => {
     expect(output).toBeDefined();
     expect(output?.length).toBeGreaterThan(0);
     expect(output).toContain('10) Verify Setup');
-    expect(output).toContain('5) Provision AI Agent');
+    expect(output).toContain('5) Provision AI Department');
   });
 
   test('handles keyboard interaction (up and down arrow)', () => {

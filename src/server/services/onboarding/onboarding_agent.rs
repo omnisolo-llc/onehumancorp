@@ -191,7 +191,7 @@ impl OnboardingAgent {
         let business_type_clone_2 = business_type.clone();
 
         let publish_events_future = tokio::task::spawn(async move {
-            // Subscribe default AI Agents to specific tenant events dynamically
+            // Subscribe default AI Departments to specific tenant events dynamically
             let event_topics = vec![
                 ("The Manager", "tenant.booking.created"),
                 ("The Manager", "tenant.order.placed"),

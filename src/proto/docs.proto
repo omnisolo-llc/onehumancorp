@@ -6,7 +6,7 @@ option go_package = "github.com/onehumancorp/mono/src/proto/ohc/docs/v1;docsv1";
 
 message HelpArticle {
   string id = 1;
-  string topic = 2; // e.g. "Getting Started", "My Store", "Payments", "AI Agents", "Marketing", "Account & Billing"
+  string topic = 2; // e.g. "Getting Started", "My Store", "Payments", "AI Departments", "Marketing", "Account & Billing"
   string title = 3;
   string content_markdown = 4;
 }

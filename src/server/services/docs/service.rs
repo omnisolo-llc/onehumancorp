@@ -38,9 +38,9 @@ fn get_articles() -> &'static Vec<HelpArticle> {
             },
             HelpArticle {
                 id: "ai-agents-1".to_string(),
-                topic: "AI Agents".to_string(),
+                topic: "AI Departments".to_string(),
                 title: "Activating your AI Support Agent".to_string(),
-                content_markdown: "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.".to_string(),
+                content_markdown: "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Departments' tab.".to_string(),
             },
             HelpArticle {
                 id: "marketing-1".to_string(),

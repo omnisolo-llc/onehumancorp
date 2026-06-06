@@ -6,7 +6,7 @@ const options = [
   "Configure Environment (.env)",
   "Run Diagnostics",
   "Launch Quick Start (Standalone)",
-  "Provision AI Agent",
+  "Provision AI Department",
   "Standalone DB Health Check",
   "Launch Cloud Start",
   "Seed Database with Mock Data",
