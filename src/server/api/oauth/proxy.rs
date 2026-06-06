@@ -44,9 +44,25 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
+            // Strict allowlist for tunnel_base_url
+            let allowed_hosts = ["https://tunnel.ohc.network", "http://localhost", "http://127.0.0.1"];
+            if !allowed_hosts.iter().any(|&host| tunnel_base_url.starts_with(host)) {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    "Invalid tunnel base URL.",
+                )
+                    .into_response();
+            }
+
+            // Bound state TTL logic could go here if state encodes timestamp.
+            // For now, we rely on the upstream OAuth provider's state validation and ensure we don't log the token.
             let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
                 tunnel_base_url, tunnel_id, query.code, actual_state);
             for (k, v) in query.extra {
+                // Ensure we don't accidentally log or echo any sensitive tokens in errors
+                if k.to_lowercase().contains("token") {
+                    continue;
+                }
                 redirect_url.push_str(&format!("&{}={}", k, v));
             }
             return Redirect::temporary(&redirect_url).into_response();

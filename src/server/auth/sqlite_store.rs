@@ -8,7 +8,7 @@ use super::postgres_store::UserRepository;
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
-        if $org_id.trim() == "system" {
+        if $org_id.trim().to_lowercase() == "system" {
             if ::server_config::get().multitenant {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
             }
@@ -326,7 +326,7 @@ mod tests {
         let res = repo.get_by_id("dummy_id", "system").await;
         if is_multitenant {
             assert!(res.is_err(), "Must reject system id in multitenant mode");
-            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         } else {
             assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
         }

@@ -348,7 +348,7 @@ impl Store {
     }
 
     fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
-        if org_id.trim() == "system" {
+        if org_id.trim().to_lowercase() == "system" {
             if ::server_config::get().multitenant {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
@@ -884,9 +884,9 @@ mod store_tests {
 
         if multitenant {
             assert!(res_system.is_err());
-            assert_eq!(res_system.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+            assert_eq!(res_system.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
             assert!(res_empty.is_err());
-            assert_eq!(res_empty.unwrap_err(), "empty tenant_id is not allowed in multi-tenant mode");
+            assert_eq!(res_empty.unwrap_err(), "empty tenant_id is not allowed in multi-tenant mode".to_string());
             assert!(res_valid.is_ok());
         } else {
             // Standalone mode: we allow empty and system.

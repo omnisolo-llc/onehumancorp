@@ -23,7 +23,7 @@ use sqlx::Row;
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
-        if $org_id.trim() == "system" {
+        if $org_id.trim().to_lowercase() == "system" {
             if ::server_config::get().multitenant {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
@@ -361,7 +361,12 @@ mod security_tests {
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        if is_multitenant {
+            assert!(res.is_err(), "Must reject system id in multitenant mode");
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
+        } else {
+            assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        }
     }
 
     #[tokio::test]

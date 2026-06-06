@@ -236,6 +236,23 @@ impl DB {
                 .connect_with(conn_opts)
                 .await?;
 
+            #[cfg(unix)]
+            {
+                if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
+                    let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                    if db_path.exists() {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(metadata) = std::fs::metadata(&db_path) {
+                            let mode = metadata.permissions().mode();
+                            if mode & 0o777 != 0o600 {
+                                tracing::error!("CRITICAL SECURITY ERROR: SQLite file permissions are insecure: {:o}. Expected 0600.", mode & 0o777);
+                                return Err("CRITICAL SECURITY ERROR: SQLite file permissions are insecure. Aborting.".into());
+                            }
+                        }
+                    }
+                }
+            }
+
             Ok(DB {
                 pool: dummy_pool,
                 store: DbStore::Sqlite(sqlite_pool),
