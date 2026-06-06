@@ -824,7 +824,15 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         value={adminName}
-                        onChange={(e) => setAdminName(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminName(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminName: 'Admin Name is required' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminName, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="e.g. Maya Smith"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
@@ -835,7 +843,17 @@ export default function OnboardingWizard() {
                       <input
                         type="email"
                         value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminEmail(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
+                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="you@example.com"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
@@ -846,7 +864,17 @@ export default function OnboardingWizard() {
                       <input
                         type="password"
                         value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminPassword(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password is required' }));
+                          } else if (val.length < 8 || !/\d/.test(val)) {
+                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password must be at least 8 characters and contain a number' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminPassword, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="••••••••"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
