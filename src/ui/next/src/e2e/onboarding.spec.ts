@@ -2,18 +2,15 @@ import { test, expect } from '@playwright/test';
 
 test.describe('OnboardingWizard CUJ', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear local storage to ensure fresh state
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-    });
+    // Let the real app handle state cleanly between tests via cookies/storage wipe
+    await page.context().clearCookies();
 
-    // Universal mock for draft
-    await page.route('/api/onboarding/draft', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({})
-      });
+    // We navigate directly to onboarding and then wipe local storage
+    // since addInitScript will just be ignored if we route.fulfill things.
+    await page.goto('/onboarding');
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
     });
   });
 
