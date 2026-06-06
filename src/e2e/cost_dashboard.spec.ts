@@ -43,9 +43,10 @@ test.describe('Cost Dashboard', () => {
   test('should display Network and Bandwidth Savings breakdown', async ({ page }) => {
     await page.goto('/cost-dashboard');
     await expect(page.locator('#cost-dashboard-screen')).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Network Cost' })).toBeVisible();
-    await expect(page.locator('#cost-dashboard-total-savings')).toBeVisible();
-    await expect(page.locator('#cost-dashboard-total-savings')).toContainText('$');
+    await expect(page.locator('span', { hasText: 'Network & Bandwidth' })).toBeVisible();
+    await expect(page.locator('#cost-dashboard-network')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-bandwidth-savings')).toBeVisible();
+    await expect(page.locator('#cost-dashboard-bandwidth-savings')).toContainText('$');
   });
 
   test('should return correct JSON payload from backend API', async ({ request }) => {
