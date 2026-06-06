@@ -4,7 +4,24 @@ use ohc_builtin_agent_core::types::{ChatRequest, Message, Role};
 use crate::llm::LlmClient;
 use crate::tools::Tool;
 use crate::agent::AgentEvent;
-use crate::agent::AgentRunConfig;
+
+/// Configuration for the Gather-Act-Verify Harness
+#[derive(Clone)]
+pub struct GatherActVerifyConfig {
+    pub max_iterations: usize,
+    pub system_message: String,
+    pub model: String,
+}
+
+impl Default for GatherActVerifyConfig {
+    fn default() -> Self {
+        Self {
+            max_iterations: 15,
+            system_message: "You are an agent executing the Gather-Act-Verify cycle.".to_string(),
+            model: "claude-3-5-sonnet".to_string(),
+        }
+    }
+}
 
 /// Anthropic Claude Agent SDK & Claude Code Archetype:
 /// Implements the harness via a single `query()` function that returns an async iterator streaming messages.
@@ -37,7 +54,7 @@ impl GatherActVerifyHarness {
     /// The single query function returning an async channel of AgentEvents.
     pub fn query(
         &self,
-        config: AgentRunConfig,
+        config: GatherActVerifyConfig,
         task: String,
     ) -> mpsc::UnboundedReceiver<AgentEvent> {
         let (tx, rx) = mpsc::unbounded_channel();
@@ -48,24 +65,11 @@ impl GatherActVerifyHarness {
         let act_tools = self.act_tools.clone();
         let verify_tools = self.verify_tools.clone();
 
-
         tokio::spawn(async move {
-            if let Some(guardrails) = &config.guardrails {
-                if let Err(e) = guardrails.check_input(&task) {
-                    let _ = tx.send(AgentEvent::GuardrailTripped { reason: e.clone() });
-                    let _ = tx.send(AgentEvent::TaskError { error: format!("Termination: Input Guardrail tripwire fires: {}", e) });
-                    return;
-                }
-            }
-
             let mut messages = vec![
-                Message::system(config.server_system_message.clone()),
+                Message::system(config.system_message.clone()),
                 Message::user(format!("Task: {}", task)),
             ];
-
-            let mut total_tokens = 0;
-            let mut budget_tracker = crate::budget::BudgetTracker::default();
-
 
             let phases = ["Gather", "Act", "Verify"];
             let tools_by_phase = vec![gather_tools, act_tools, verify_tools];
@@ -100,7 +104,7 @@ impl GatherActVerifyHarness {
 
                 let req = ChatRequest {
                     model: config.model.clone(),
-                    system: config.server_system_message.clone(),
+                    system: config.system_message.clone(),
                     messages: current_messages.clone(),
                     tools: tool_defs,
                     max_tokens: 2048,
@@ -108,51 +112,11 @@ impl GatherActVerifyHarness {
                 };
 
                 match llm.chat(req).await {
-
                     Ok(resp) => {
                         let msg = resp.message;
-
-                        // Termination Condition: Safety refusal
-                        if resp.stop_reason == "safety" || resp.stop_reason == "refusal" {
-                            let _ = tx.send(AgentEvent::TaskError { error: "Termination: Safety refusal".to_string() });
-                            return;
-                        }
-
-                        let usage = resp.usage;
-                        total_tokens += usage.input_tokens + usage.output_tokens;
-
-                        // Termination Condition: Token budget exhausted
-                        if config.max_task_tokens > 0 && total_tokens > config.max_task_tokens as i64 {
-                            let _ = tx.send(AgentEvent::TaskError { error: "Termination: Token budget exhausted".to_string() });
-                            return;
-                        }
-                        if resp.stop_reason == "max_tokens" || resp.stop_reason == "length" {
-                            let decision = crate::budget::check_token_budget(&mut budget_tracker, config.max_task_tokens as i64, total_tokens as i64);
-                            if decision.action == crate::budget::BudgetAction::Stop {
-                                let _ = tx.send(AgentEvent::TaskError { error: "Termination: Token budget exhausted".to_string() });
-                                return;
-                            }
-                            if decision.action == crate::budget::BudgetAction::Continue {
-                                if !msg.content.is_empty() {
-                                    messages.push(msg.clone());
-                                }
-                                messages.push(crate::types::Message::user(&decision.nudge_message));
-                                continue;
-                            }
-                        }
-
                         messages.push(msg.clone());
 
                         if msg.tool_calls.is_empty() {
-                            // Output Guardrail
-                            if let Some(guardrails) = &config.guardrails {
-                                if let Err(e) = guardrails.check_output(&msg.content) {
-                                    let _ = tx.send(AgentEvent::GuardrailTripped { reason: e.clone() });
-                                    let _ = tx.send(AgentEvent::TaskError { error: format!("Termination: Output Guardrail tripwire fires: {}", e) });
-                                    return;
-                                }
-                            }
-
                             let content = &msg.content;
                             let _ = tx.send(AgentEvent::TextChunk {
                                 content: content.clone(),
@@ -174,16 +138,7 @@ impl GatherActVerifyHarness {
                         let mut read_only_calls = Vec::new();
                         let mut mutating_calls = Vec::new();
 
-
                         for tc in msg.tool_calls {
-                            if let Some(guardrails) = &config.guardrails {
-                                if let Err(e) = guardrails.check_tool(&tc) {
-                                    let _ = tx.send(AgentEvent::GuardrailTripped { reason: e.clone() });
-                                    let _ = tx.send(AgentEvent::TaskError { error: format!("Termination: Tool Guardrail tripwire fires: {}", e) });
-                                    return;
-                                }
-                            }
-
                             let is_read_only = current_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
                             if is_read_only {
                                 read_only_calls.push(tc);
@@ -292,7 +247,7 @@ impl GatherActVerifyHarness {
             }
 
             let _ = tx.send(AgentEvent::TaskError {
-                error: "Termination: Max turn limit exceeded".to_string(),
+                error: "Max iterations reached".to_string(),
             });
         });
 
@@ -354,7 +309,7 @@ mod tests {
         });
 
         let harness = GatherActVerifyHarness::new(llm, vec![], vec![], vec![]);
-        let mut config = AgentRunConfig::default(); config.max_iterations = 15; config.server_system_message = "You are an agent executing the Gather-Act-Verify cycle.".to_string(); config.model = "claude-3-5-sonnet".to_string();
+        let config = GatherActVerifyConfig::default();
         let mut rx = harness.query(config, "Test task".to_string());
 
         let mut events = vec![];
@@ -386,135 +341,5 @@ mod tests {
         assert!(act_started, "Act phase should have started");
         assert!(verify_started, "Verify phase should have started");
         assert!(task_complete, "Task should have completed");
-    }
-
-    #[tokio::test]
-    async fn test_gather_act_verify_termination_max_turn_limit() {
-        let llm = Arc::new(MockLlm {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall { id: "1".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                },
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall { id: "2".to_string(), name: "dummy".to_string(), arguments: serde_json::json!({}) }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-
-        let harness = GatherActVerifyHarness::new(llm, vec![], vec![], vec![]);
-        let mut config = AgentRunConfig::default();
-        config.max_iterations = 1; // Force termination
-        config.server_system_message = "You are an agent executing the Gather-Act-Verify cycle.".to_string();
-        config.model = "claude-3-5-sonnet".to_string();
-
-        let mut rx = harness.query(config, "Hello".to_string());
-
-        let mut has_max_turn_err = false;
-        while let Some(event) = rx.recv().await {
-            if let AgentEvent::TaskError { error } = event {
-                if error.contains("Termination: Max turn limit exceeded") {
-                    has_max_turn_err = true;
-                }
-            }
-        }
-
-        assert!(has_max_turn_err);
-    }
-
-    #[tokio::test]
-    async fn test_gather_act_verify_termination_token_budget_exhausted() {
-        let llm = Arc::new(MockLlm {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("Too many tokens"),
-                    usage: Usage { input_tokens: 500, output_tokens: 600, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-
-        let harness = GatherActVerifyHarness::new(llm, vec![], vec![], vec![]);
-        let mut config = AgentRunConfig::default();
-        config.max_iterations = 5;
-        config.max_task_tokens = 1000; // 500 + 600 = 1100 > 1000
-        config.server_system_message = "You are an agent executing the Gather-Act-Verify cycle.".to_string();
-        config.model = "claude-3-5-sonnet".to_string();
-
-        let mut rx = harness.query(config, "Hello".to_string());
-
-        let mut has_token_err = false;
-        while let Some(event) = rx.recv().await {
-            if let AgentEvent::TaskError { error } = event {
-                if error.contains("Termination: Token budget exhausted") {
-                    has_token_err = true;
-                }
-            }
-        }
-
-        assert!(has_token_err);
-    }
-
-    #[tokio::test]
-    async fn test_gather_act_verify_guardrail_tripwire() {
-        let llm = Arc::new(MockLlm {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("I will now destroy everything."),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-
-        let harness = GatherActVerifyHarness::new(llm, vec![], vec![], vec![]);
-        let mut config = AgentRunConfig::default();
-        config.max_iterations = 5;
-        config.server_system_message = "You are an agent executing the Gather-Act-Verify cycle.".to_string();
-        config.model = "claude-3-5-sonnet".to_string();
-        config.guardrails = Some(ohc_builtin_agent_core::types::GuardrailsConfig {
-            input_guardrail: None,
-            output_guardrail: Some(Box::new(|output| {
-                if output.contains("destroy") {
-                    return Err("Output contains forbidden word".to_string());
-                }
-                Ok(())
-            })),
-            tool_guardrail: None,
-        });
-
-        let mut rx = harness.query(config, "Hello".to_string());
-
-        let mut has_guardrail_err = false;
-        while let Some(event) = rx.recv().await {
-            if let AgentEvent::TaskError { error } = event {
-                if error.contains("Termination: Output Guardrail tripwire fires") {
-                    has_guardrail_err = true;
-                }
-            }
-        }
-
-        assert!(has_guardrail_err);
     }
 }

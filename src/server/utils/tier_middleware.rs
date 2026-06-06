@@ -12,8 +12,8 @@ pub async fn tier_middleware(
     next: Next,
 ) -> Response {
     let tenant_id = match req.extensions().get::<::server_common::Claims>() {
-        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant()),
-        None => ::server_common::auth_utils::get_default_tenant(), // In tests or unauth paths
+        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
+        None => "system".to_string(), // In tests or unauth paths
     };
 
     // Very simple placeholder: in a real system we might inspect the request path to determine the action cost

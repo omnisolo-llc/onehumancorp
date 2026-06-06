@@ -331,16 +331,10 @@ export default function OnboardingWizard() {
 
   // Progress percentage calculation
   const getProgress = () => {
-    // There are 5 steps, let's make it a more gradual fill
-    if (step === 1) {
-      if (chatStep === 0) return 10;
-      if (chatStep === 1) return 20;
-      if (chatStep === 2) return 30;
-      if (chatStep === 3) return 40;
-    }
-    if (step === 2) return 60;
-    if (step === 3) return 80;
-    if (step === 4) return 95;
+    if (step === 1) return (chatStep / 3) * 33;
+    if (step === 2) return 50;
+    if (step === 3) return 75;
+    if (step === 4) return 90;
     if (step === 5) return 100;
     return 0;
   };

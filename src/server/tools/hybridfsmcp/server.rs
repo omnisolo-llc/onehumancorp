@@ -64,7 +64,7 @@ impl HybridFSMcpServer {
                         Ok(content) => {
                             let content_str = String::from_utf8_lossy(&content).to_string();
                             let resp = serde_json::json!({"content": content_str});
-                            Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(format!("failed to serialize response: {}", e)))? })
+                            Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                         }
                         Err(e) => Err(tonic::Status::internal(format!("failed to read file: {}", e))),
                     }
@@ -80,7 +80,7 @@ impl HybridFSMcpServer {
                     match self.provider.write_file(path, content.as_bytes()).await {
                         Ok(_) => {
                             let resp = serde_json::json!({"status": "success"});
-                            Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(format!("failed to serialize response: {}", e)))? })
+                            Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                         }
                         Err(e) => Err(tonic::Status::internal(format!("failed to write file: {}", e))),
                     }
@@ -94,7 +94,7 @@ impl HybridFSMcpServer {
                 match self.provider.list_dir(path).await {
                     Ok(entries) => {
                         let resp = serde_json::json!({"entries": entries});
-                        Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(format!("failed to serialize response: {}", e)))? })
+                        Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                     }
                     Err(e) => Err(tonic::Status::internal(format!("failed to list dir: {}", e))),
                 }
@@ -106,7 +106,7 @@ impl HybridFSMcpServer {
                 match self.provider.search_files(path, query).await {
                     Ok(entries) => {
                         let resp = serde_json::json!({"entries": entries});
-                        Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(format!("failed to serialize response: {}", e)))? })
+                        Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                     }
                     Err(e) => Err(tonic::Status::internal(format!("failed to search files: {}", e))),
                 }
@@ -142,7 +142,7 @@ impl HybridFSMcpServer {
                         .map_err(|e| tonic::Status::internal(format!("failed to enqueue file sync: {}", e)))?;
 
                     let resp = serde_json::json!({"status": "success", "sync_id": id, "message": "file queued for sync"});
-                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(format!("failed to serialize response: {}", e)))? })
+                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
                 }
                 .instrument(tracing::info_span!("fs_hybrid_sync"))
                 .await

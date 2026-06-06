@@ -36,46 +36,6 @@ struct AppState {
     orders: RwLock<Vec<Order>>,
 }
 
-#[derive(Deserialize)]
-pub struct FetchRatesRequest {
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-    pub weight: String,
-    pub dimensions: String,
-}
-
-#[derive(Serialize)]
-pub struct Rate {
-    pub id: String,
-    pub carrier: String,
-    pub service: String,
-    pub amount: String,
-    pub days: u32,
-}
-
-#[derive(Serialize)]
-pub struct FetchRatesResponse {
-    pub rates: Vec<Rate>,
-}
-
-#[derive(Deserialize)]
-pub struct PurchaseLabelRequest {
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-    #[serde(rename = "rateId")]
-    pub rate_id: String,
-}
-
-#[derive(Serialize)]
-pub struct PurchaseLabelResponse {
-    pub success: bool,
-    #[serde(rename = "labelUrl")]
-    pub label_url: String,
-    #[serde(rename = "trackingNumber")]
-    pub tracking_number: String,
-    pub carrier: String,
-}
-
 pub fn router<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -115,62 +75,7 @@ where
     Router::new()
         .route("/", get(get_queue))
         .route("/execute/:id", post(execute_action))
-        .route("/rates", post(fetch_rates))
-        .route("/label", post(purchase_label))
         .with_state(state)
-}
-
-async fn fetch_rates(
-    Extension(_claims): Extension<Claims>,
-    Json(payload): Json<FetchRatesRequest>,
-) -> impl IntoResponse {
-    let weight: f64 = payload.weight.parse().unwrap_or(16.0);
-
-    let client = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
-    let _ = client.fetch_rates(weight, &payload.dimensions).await;
-
-    let mock_rates = vec![
-        Rate { id: "rate_usps_1".to_string(), carrier: "USPS".to_string(), service: "Priority Mail".to_string(), amount: "8.50".to_string(), days: 2 },
-        Rate { id: "rate_usps_2".to_string(), carrier: "USPS".to_string(), service: "First-Class Mail".to_string(), amount: "4.20".to_string(), days: 4 },
-        Rate { id: "rate_ups_1".to_string(), carrier: "UPS".to_string(), service: "Ground".to_string(), amount: "9.75".to_string(), days: 3 },
-    ];
-
-    (StatusCode::OK, Json(FetchRatesResponse { rates: mock_rates })).into_response()
-}
-
-async fn purchase_label(
-    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
-    Json(payload): Json<PurchaseLabelRequest>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => "default".to_string(),
-    };
-
-    let client = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
-    let label_url = client.purchase_label(&payload.rate_id).await.unwrap_or("https://api.goshippo.com/v1/mock_label.pdf".to_string());
-
-    let carrier = if payload.rate_id.contains("ups") { "UPS".to_string() } else { "USPS".to_string() };
-    let rand_num = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos() % 1000;
-    let tracking_number = format!("1Z999999999999999{}", rand_num);
-
-    let mut orders = state.orders.write().unwrap();
-    for order in orders.iter_mut() {
-        if order.id == payload.order_id && order.organization_id == tenant_id {
-            if order.fulfillment_mode == "Shipping" {
-                order.status = "Shipped".to_string();
-            }
-            break;
-        }
-    }
-
-    (StatusCode::OK, Json(PurchaseLabelResponse {
-        success: true,
-        label_url,
-        tracking_number,
-        carrier,
-    })).into_response()
 }
 
 async fn get_queue(

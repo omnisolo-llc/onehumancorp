@@ -78,8 +78,6 @@ rust_library(
         "//src/server/services/sync:telemetry_sync.rs",
         "//src/server/services/pos:mod.rs",
         "//src/server/services/pos:service.rs",
-        "//src/server/services/collective:mod.rs",
-        "//src/server/services/collective:service.rs",
         "//src/server/services/syndication:adapter.rs",
         "//src/server/services/syndication:mesh.rs",
         "//src/server/services/syndication:mod.rs",

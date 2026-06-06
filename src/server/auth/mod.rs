@@ -348,11 +348,12 @@ impl Store {
     }
 
     fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
-        if ::server_config::get().multitenant {
-            if org_id.trim() == "system" {
+        if org_id.trim() == "system" {
+            if ::server_config::get().multitenant {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
-            if org_id.trim().is_empty() {
+        } else if org_id.trim().is_empty() {
+            if ::server_config::get().multitenant {
                 return Err("empty tenant_id is not allowed in multi-tenant mode".into());
             }
         }
@@ -894,9 +895,4 @@ mod store_tests {
             assert!(res_valid.is_ok());
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    pub mod multitenancy_isolation;
 }

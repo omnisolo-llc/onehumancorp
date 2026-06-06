@@ -27,11 +27,11 @@ describe('TooltipRegistry', () => {
     // Wait for context to be populated via fetch call in TooltipProvider
     await waitFor(() => {
         expect(global.fetch).toHaveBeenCalled();
-    });
+    })
 
     // Create a mock getBoundingClientRect
     Element.prototype.getBoundingClientRect = vi.fn(() => ({
-      width: 100, height: 20, top: 10, left: 10, bottom: 30, right: 110, x: 10, y: 10, toJSON: () => {}
+      width: 100, height: 20, top: 0, left: 0, bottom: 20, right: 100, x: 0, y: 0, toJSON: () => {}
     }));
 
     fireEvent.mouseEnter(button.parentElement!);
