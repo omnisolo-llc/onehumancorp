@@ -4,6 +4,7 @@ use reqwest::Client;
 
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 use super::LlmClient;
+use ::server_pricing::prompt_caching::PromptCache;
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -68,6 +69,7 @@ pub struct GeminiClient {
     api_key: String,
     base_url: String,
     client: Client,
+    cache: PromptCache,
 }
 
 impl GeminiClient {
@@ -79,6 +81,7 @@ impl GeminiClient {
                 .timeout(std::time::Duration::from_secs(60))
                 .build()
                 .unwrap(),
+            cache: PromptCache::new(Duration::from_secs(600)),
         }
     }
 }
@@ -155,6 +158,30 @@ impl LlmClient for GeminiClient {
         }
 
         let req = super::minify_chat_request(req);
+
+        // 💰 Miser: Check Prompt Cache
+        let cache_key = format!("{}:{:?}:{}", req.model, req.messages, req.system);
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(&cache_key) {
+            return Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: cached.text,
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage {
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    cache_read_input_tokens: cached.token_count as i32,
+                    cache_creation_input_tokens: 0,
+                },
+                stop_reason: "stop".to_string(),
+                response_id: None,
+            });
+        }
+
         let mut contents = Vec::new();
 
         for m in &req.messages {
@@ -223,15 +250,20 @@ impl LlmClient for GeminiClient {
 
 
         let candidate = result.candidates.into_iter().next().ok_or("no candidates")?;
-        let finish_reason = candidate.finish_reason.unwrap_or_default();
 
-        let text = candidate
+        let finish_reason = candidate.finish_reason.clone().unwrap_or_default();
+
+        let response_text = candidate
             .content
             .parts
-            .into_iter()
-            .filter_map(|p| p.text)
+            .iter()
+            .filter_map(|p| p.text.as_ref())
+            .cloned()
             .collect::<Vec<String>>()
             .join("");
+
+        // 💰 Miser: Update Cache
+        self.cache.set(&cache_key, &response_text, result.usage_metadata.as_ref().map(|u| u.prompt_token_count as usize).unwrap_or(0));
 
         let usage = result
             .usage_metadata
@@ -246,7 +278,7 @@ impl LlmClient for GeminiClient {
         Ok(ChatResponse {
             message: Message {
                 role: Role::Assistant,
-                content: text,
+                content: response_text,
                 tool_calls: vec![], // Tools not supported in this simple impl
                 tool_results: vec![],
                 response_id: None,

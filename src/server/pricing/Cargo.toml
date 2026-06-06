@@ -22,3 +22,6 @@ hex = "0.4"
 
 [lib]
 path = "mod.rs"
+
+[dev-dependencies]
+temp-env = "0.3.6"

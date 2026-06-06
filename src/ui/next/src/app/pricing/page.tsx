@@ -30,71 +30,71 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Free Tier */}
-          <div className="p-8 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+          <div className="p-8 shadow-sm flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '20px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Free</h3>
               <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 1 Agent Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500MB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> 1 Agent Limit</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> 100 AI actions / month</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> 500MB Storage Quota</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors flex items-center justify-center" disabled>
+            <button className="w-full min-h-[48px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium hover:bg-gray-300 transition-all active:scale-95 flex items-center justify-center" disabled>
               Current Plan
             </button>
           </div>
 
           {/* Starter Tier */}
-          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between relative" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(79, 70, 229, 0.5)', borderRadius: '16px', boxShadow: '0 12px 48px rgba(79, 70, 229, 0.15)' }}>
-            <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Recommended</div>
+          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between relative transition-all hover:-translate-y-1 hover:shadow-2xl" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(79, 70, 229, 0.5)', borderRadius: '20px', boxShadow: '0 12px 48px rgba(79, 70, 229, 0.15)' }}>
+            <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-[20px]">Recommended</div>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Starter</h3>
               <p className="text-xl font-semibold mb-2" style={{ color: '#1D1D1F' }}>$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>
+              <p className="text-xs text-indigo-600 font-medium mb-4 uppercase tracking-wider">Suggested for growing stores</p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 3 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 1,000 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 5GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
+                <li className="flex items-center gap-2"><span className="text-indigo-600">✓</span> 3 Agents Limit</li>
+                <li className="flex items-center gap-2"><span className="text-indigo-600">✓</span> 1,000 AI actions / month</li>
+                <li className="flex items-center gap-2"><span className="text-indigo-600">✓</span> 5GB Storage Quota</li>
+                <li className="flex items-center gap-2"><span className="text-indigo-600">✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
+            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[48px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-all active:scale-95 shadow-md flex items-center justify-center">
               Upgrade to Starter via Stripe
             </button>
           </div>
 
           {/* Pro Tier */}
-          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '20px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Pro</h3>
               <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 10 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 50GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> 10 Agents Limit</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> Unlimited AI actions</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> 50GB Storage Quota</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center">
+            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[48px] px-4 py-2 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-900 transition-all active:scale-95 shadow-md flex items-center justify-center">
               Upgrade to Pro via Stripe
             </button>
           </div>
 
           {/* Business Tier */}
-          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '20px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Business</h3>
               <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Agents</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> Unlimited Agents</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> Unlimited AI actions</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> 500GB Storage Quota</li>
+                <li className="flex items-center gap-2"><span className="text-green-500">✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center">
+            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[48px] px-4 py-2 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-900 transition-all active:scale-95 shadow-md flex items-center justify-center">
               Upgrade to Business via Stripe
             </button>
           </div>
@@ -104,7 +104,7 @@ export default function PricingPage() {
             <p className="text-sm text-gray-600 px-2">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
         </div>
 
-        <div className="mt-8 p-6 md:p-8 shadow-sm w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+        <div className="mt-8 p-6 md:p-8 shadow-sm w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '20px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <h2 className="text-xl font-bold font-outfit mb-4">Frequently Asked Questions</h2>
             <div className="mb-4">
                 <h3 className="font-semibold">How do I upgrade, downgrade, or cancel?</h3>

@@ -77,13 +77,25 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Advisory Summary</h2>
-            <p className="text-gray-700 font-medium leading-relaxed">
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-[20px] saturate-200 border border-white/40 rounded-2xl md:rounded-[32px] hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">💡</span>
+                <h2 className="text-xl font-bold font-outfit text-gray-900">Advisory Summary</h2>
+            </div>
+            <p className="text-gray-700 font-medium leading-relaxed font-inter">
               Here's what happened this week and what you should do next:<br/><br/>
-              - Your revenue is steady, but your AI marketing campaigns are driving more traffic.<br/>
-              - <strong>Recommendation:</strong> Consider running a seasonal promotion to capitalize on the recent influx of visitors.<br/>
-              - We also noticed a few unread messages in your central inbox. Using the AI draft feature might help you save time!
+              <span className="flex items-start gap-2 mb-2">
+                <span className="text-indigo-500 mt-1">●</span>
+                <span>Your revenue is steady, but your AI marketing campaigns are driving more traffic.</span>
+              </span>
+              <span className="flex items-start gap-2 mb-2">
+                <span className="text-green-500 mt-1">●</span>
+                <span><strong>Recommendation:</strong> Consider running a seasonal promotion to capitalize on the recent influx of visitors.</span>
+              </span>
+              <span className="flex items-start gap-2">
+                <span className="text-amber-500 mt-1">●</span>
+                <span>We also noticed a few unread messages in your central inbox. Using the AI draft feature might help you save time!</span>
+              </span>
             </p>
         </section>
 

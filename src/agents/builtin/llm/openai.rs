@@ -5,6 +5,7 @@ use serde_json::Value;
 
 use super::LlmClient;
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+use ::server_pricing::prompt_caching::PromptCache;
 
 use std::sync::Mutex;
 use std::sync::OnceLock;
@@ -82,6 +83,7 @@ pub struct OpenAIClient {
     organization: Option<String>,
     project: Option<String>,
     client: Client,
+    cache: PromptCache,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -185,6 +187,7 @@ impl OpenAIClient {
                 .timeout(config.timeout)
                 .build()
                 .unwrap(),
+            cache: PromptCache::new(Duration::from_secs(600)),
         }
     }
 
@@ -380,6 +383,30 @@ impl LlmClient for OpenAIClient {
         }
 
         let req = super::minify_chat_request(req);
+
+        // 💰 Miser: Check Prompt Cache
+        let cache_key = format!("{}:{:?}:{}", req.model, req.messages, req.system);
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(&cache_key) {
+            return Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: cached.text,
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage {
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    cache_read_input_tokens: cached.token_count as i32,
+                    cache_creation_input_tokens: 0,
+                },
+                stop_reason: "stop".to_string(),
+                response_id: None,
+            });
+        }
+
         let mut messages = Vec::new();
 
         if !req.system.is_empty() {
@@ -508,6 +535,13 @@ impl LlmClient for OpenAIClient {
         cb.record_success();
 
         let choice = result.choices.into_iter().next().ok_or("no choices")?;
+
+        // 💰 Miser: Update Cache (if no tool calls)
+        if choice.message.tool_calls.is_none() || choice.message.tool_calls.as_ref().unwrap().is_empty() {
+            if let Some(ref content) = choice.message.content {
+                self.cache.set(&cache_key, content, result.usage.as_ref().map(|u| u.prompt_tokens as usize).unwrap_or(0));
+            }
+        }
         let finish_reason = choice.finish_reason.unwrap_or_default();
 
         let text = choice.message.content.unwrap_or_default();

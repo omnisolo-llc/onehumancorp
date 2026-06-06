@@ -8985,6 +8985,7 @@ dependencies = [
  "server_harness",
  "sha2",
  "sqlx",
+ "temp-env",
  "tokio",
  "tracing",
 ]

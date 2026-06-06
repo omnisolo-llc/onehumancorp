@@ -67,7 +67,11 @@ pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
 }
 
 pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> ChatRequest {
-    if req.messages.len() <= 1 {
+    // 💰 Miser: Intelligent Context Truncation
+    // Always preserve system prompt and the latest user turn.
+    // Truncate intermediate history to stay within budget.
+    let original_msg_count = req.messages.len();
+    if original_msg_count <= 1 {
         return req;
     }
 
@@ -120,6 +124,14 @@ pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> 
     final_messages.extend(truncated_messages);
 
     req.messages = final_messages;
+
+    tracing::info!(
+        original_msg_count = original_msg_count,
+        truncated_msg_count = req.messages.len(),
+        "💰 Miser: Truncated chat request to {} words",
+        current_words
+    );
+
     req
 }
 

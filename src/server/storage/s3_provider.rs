@@ -95,12 +95,34 @@ impl Provider for S3Provider {
             }
         }
 
+        let pool = crate::db::get_pool();
         let _ = ::server_telemetry::record_storage_rw_cost(
-            &crate::db::get_pool(),
+            &pool,
             t_id,
             "write",
             reported_size as i64
         ).await;
+
+        // 💰 Miser: Record bandwidth savings if the size was reduced
+        if data.len() > reported_size {
+            let savings_bytes = (data.len() - reported_size) as i64;
+            if let Some(auditor) = &self.tracker.auditor {
+                auditor.record_bandwidth_savings(t_id, data.len() as i64, reported_size as i64);
+            }
+
+            // Track savings in telemetry as well
+            let labels = serde_json::json!({
+                "tenant_id": t_id,
+                "action": "image_optimize",
+            });
+            let _ = ::server_telemetry::buffer_metric_i64(
+                &pool,
+                "ohc_bandwidth_savings_bytes",
+                "counter",
+                savings_bytes,
+                labels
+            ).await;
+        }
 
         Ok(())
     }

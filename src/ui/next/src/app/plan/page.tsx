@@ -70,7 +70,7 @@ export default function MyPlanPage() {
       <main id="my-plan-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="p-6 md:p-8 shadow-sm w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+        <section className="p-6 md:p-8 shadow-sm w-full transition-all hover:shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
@@ -82,7 +82,7 @@ export default function MyPlanPage() {
                     <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
-                    <button onClick={() => router.push('/pricing')} className="w-full min-h-[44px] py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
+                    <button onClick={() => router.push('/pricing')} className="w-full min-h-[48px] py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-all active:scale-95 shadow-md flex items-center justify-center">
                         Upgrade Plan
                     </button>
                 </div>
@@ -90,7 +90,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Usage Section */}
-        <section className="p-6 md:p-8 shadow-sm w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
+        <section className="p-6 md:p-8 shadow-sm w-full transition-all hover:shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Your Current Usage</h2>
 
             <div className="space-y-6">
@@ -150,20 +150,20 @@ export default function MyPlanPage() {
 
         {/* Management Actions */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-            <button onClick={() => router.push('/cost-dashboard')} className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
-                <h3 className="font-medium text-gray-900">View Cost Details</h3>
+            <button onClick={() => router.push('/cost-dashboard')} className="p-6 min-h-[64px] bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all active:scale-[0.98]">
+                <h3 className="font-bold text-gray-900 font-outfit">View Cost Details</h3>
                 <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and storage details.</p>
             </button>
-            <button onClick={() => router.push('/pricing')} className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
-                <h3 className="font-medium text-gray-900">Change Plan</h3>
+            <button onClick={() => router.push('/pricing')} className="p-6 min-h-[64px] bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all active:scale-[0.98]">
+                <h3 className="font-bold text-gray-900 font-outfit">Change Plan</h3>
                 <p className="text-sm text-gray-500 mt-1">Upgrade or downgrade your current subscription.</p>
             </button>
-            <button className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
-                <h3 className="font-medium text-gray-900">Download Invoice</h3>
+            <button className="p-6 min-h-[64px] bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all active:scale-[0.98]">
+                <h3 className="font-bold text-gray-900 font-outfit">Download Invoice</h3>
                 <p className="text-sm text-gray-500 mt-1">Get a PDF copy of your recent billing statements.</p>
             </button>
-            <button className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
-                <h3 className="font-medium text-red-600">Cancel Subscription</h3>
+            <button className="p-6 min-h-[64px] bg-white/70 backdrop-blur-lg border border-white/40 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all active:scale-[0.98]">
+                <h3 className="font-bold text-red-600 font-outfit">Cancel Subscription</h3>
                 <p className="text-sm text-gray-500 mt-1">Cancel your subscription. You will lose access to premium features at the end of your billing cycle.</p>
             </button>
         </section>

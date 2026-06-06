@@ -432,7 +432,29 @@ mod tests {
             if let Some(products) = tier.max_products() {
                 assert!(products > 0);
             }
+
+            // Prompt cache TTL should be positive
+            assert!(tier.get_prompt_cache_ttl().as_secs() > 0);
         }
+    }
+
+    #[test]
+    fn test_plan_tier_env_overrides() {
+        temp_env::with_vars([
+            ("OHC_FREE_TIER_ACTIONS", Some("500")),
+            ("OHC_STARTER_TIER_ACTIONS", Some("5000")),
+            ("OHC_FREE_TIER_STORAGE_MB", Some("1000")),
+            ("OHC_STARTER_TIER_STORAGE_MB", Some("10000")),
+            ("OHC_PRO_TIER_STORAGE_MB", Some("100000")),
+            ("OHC_BUSINESS_TIER_STORAGE_MB", Some("1000000")),
+        ], || {
+            assert_eq!(PlanTier::Free.monthly_action_limit(), Some(500));
+            assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(5000));
+            assert_eq!(PlanTier::Free.storage_limit_mb(), Some(1000));
+            assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(10000));
+            assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(100000));
+            assert_eq!(PlanTier::Business.storage_limit_mb(), Some(1000000));
+        });
     }
 
     #[tokio::test]

@@ -21,10 +21,6 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         "gpt-4-turbo" => ModelPricing { input_cost: 10.00, output_cost: 30.00, cached_cost: 0.0 },
         "gpt-4o" => ModelPricing { input_cost: 5.00, output_cost: 15.00, cached_cost: 2.50 },
         "gpt-4o-mini" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.075 },
-        // OpenAI — GPT-4.1 family
-        "gpt-4.1" => ModelPricing { input_cost: 2.00, output_cost: 8.00, cached_cost: 0.0 },
-        "gpt-4.1-mini" => ModelPricing { input_cost: 0.40, output_cost: 1.60, cached_cost: 0.0 },
-        "gpt-4.1-nano" => ModelPricing { input_cost: 0.10, output_cost: 0.40, cached_cost: 0.0 },
         // OpenAI — o-series reasoning models
         "o1" => ModelPricing { input_cost: 15.00, output_cost: 60.00, cached_cost: 0.0 },
         "o1-mini" => ModelPricing { input_cost: 3.00, output_cost: 12.00, cached_cost: 0.0 },
@@ -35,9 +31,6 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         // Google — Gemini 2.0 family
         "gemini-2.0-flash" => ModelPricing { input_cost: 0.10, output_cost: 0.40, cached_cost: 0.0 },
         "gemini-2.0-flash-lite" => ModelPricing { input_cost: 0.075, output_cost: 0.30, cached_cost: 0.0 },
-        // Google — Gemini 2.5 family
-        "gemini-2.5-pro" => ModelPricing { input_cost: 1.25, output_cost: 10.00, cached_cost: 0.0 },
-        "gemini-2.5-flash" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.0 },
         // MiniMax — M2.7 family
         "minimax-m2.7" => ModelPricing { input_cost: 1.00, output_cost: 1.00, cached_cost: 0.0 },
         "minimax-m2.7-turbo" => ModelPricing { input_cost: 0.50, output_cost: 0.50, cached_cost: 0.0 },
@@ -189,6 +182,25 @@ mod tests {
         // Test with cached tokens
         let cost = calculate_cost("claude-3.5-sonnet", 1000000, 0, 1000000);
         assert_eq!(cost, 3.00 + 0.30);
+
+        // Test with various models to ensure coverage
+        assert!(calculate_cost("claude-3-sonnet", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("claude-3-haiku", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("claude-3.5-haiku", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("claude-3.7-sonnet", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gpt-4", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gpt-4-turbo", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gpt-4o", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gpt-4o-mini", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("o1", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("o1-mini", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("o3-mini", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gemini-1.5-pro", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gemini-1.5-flash", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gemini-2.0-flash", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("gemini-2.0-flash-lite", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("minimax-m2.7", 1000, 1000, 0) > 0.0);
+        assert!(calculate_cost("minimax-m2.7-turbo", 1000, 1000, 0) > 0.0);
 
         // Test with unknown model (fallback)
         let cost = calculate_cost("unknown-model", 1000000, 1000000, 1000000);
