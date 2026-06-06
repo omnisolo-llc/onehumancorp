@@ -1,5 +1,5 @@
 use sqlx::{PgPool, Row};
-use serde::{Deserialize, Serialize};
+
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct DailyCost {
@@ -9,6 +9,7 @@ pub struct DailyCost {
     pub storage_cost: i64,
     pub network_cost: i64,
     pub compute_cost: i64,
+    pub payment_fees: i64,
 }
 
 pub struct TelemetryRow {
@@ -31,6 +32,7 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
             storage_cost: 0,
             network_cost: 0,
             compute_cost: 0,
+            payment_fees: 0,
         });
     }
 
@@ -44,9 +46,10 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                     "ohc_storage_rw_cost" => daily.storage_cost += (val as f64 * 0.00000001).round() as i64,
                     "ohc_network_cost_cents" => daily.network_cost += val,
                     "ohc_compute_cost_cents" => daily.compute_cost += val,
+                    "ohc_payment_fees_cents" => daily.payment_fees += val,
                     _ => {}
                 }
-                daily.total_cost = daily.llm_cost + daily.storage_cost + daily.network_cost + daily.compute_cost;
+                daily.total_cost = daily.llm_cost + daily.storage_cost + daily.network_cost + daily.compute_cost + daily.payment_fees;
             }
         }
     }
@@ -65,7 +68,7 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
             SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
         WHERE json_extract_path_text(labels_json::json, 'tenant_id') = $1
-          AND metric_name IN ('ohc_mission_cost_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents')
+          AND metric_name IN ('ohc_mission_cost_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents', 'ohc_payment_fees_cents')
           AND timestamp >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(timestamp), metric_name
         ORDER BY DATE(timestamp) ASC
@@ -113,6 +116,11 @@ mod tests {
                 metric_name: "ohc_compute_cost_cents".to_string(),
                 total: Some(200.0),
             },
+            TelemetryRow {
+                date: Some(today),
+                metric_name: "ohc_payment_fees_cents".to_string(),
+                total: Some(50.0),
+            },
         ];
         let res = process_telemetry_rows(rows);
         assert_eq!(res.len(), 7);
@@ -120,7 +128,8 @@ mod tests {
         let today_data = res.iter().find(|r| r.date == today_str).unwrap();
         assert_eq!(today_data.llm_cost, 500);
         assert_eq!(today_data.compute_cost, 200);
-        assert_eq!(today_data.total_cost, 700);
+        assert_eq!(today_data.payment_fees, 50);
+        assert_eq!(today_data.total_cost, 750);
     }
 
     #[test]
@@ -151,6 +160,7 @@ mod tests {
         assert_eq!(today_data.network_cost, 150);
         assert_eq!(today_data.llm_cost, 0);
         assert_eq!(today_data.compute_cost, 0);
+        assert_eq!(today_data.payment_fees, 0);
         assert_eq!(today_data.total_cost, 151);
     }
 
