@@ -39,8 +39,12 @@ impl MyDashboardService {
             for agent in agents.iter_mut() {
                 agent.name = String::new();
             }
+        } else {
+            for agent in agents.iter_mut() {
+                agent.name = ::server_pricing::compression::reduce_tokens(&agent.name);
+            }
         }
-        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set_with_tags(&cache_key, agents.clone(), vec![format!("org:{}", org_id), "agents".to_string()], std::time::Duration::from_secs(5)).await;
         Ok(agents)
     }
 
@@ -63,7 +67,7 @@ impl MyDashboardService {
             }
         }
         let meetings = Arc::new(filtered);
-        cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set_with_tags(&cache_key, meetings.clone(), vec![format!("org:{}", org_id), "meetings".to_string()], std::time::Duration::from_secs(5)).await;
         Ok(meetings)
     }
 
@@ -93,7 +97,7 @@ impl MyDashboardService {
             )
         }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
 
-        cache.set(&cache_key, cost_data.clone(), std::time::Duration::from_secs(60)).await;
+        cache.set_with_tags(&cache_key, cost_data.clone(), vec![format!("org:{}", org_id), "cost".to_string()], std::time::Duration::from_secs(60)).await;
         Ok(cost_data)
     }
 
@@ -160,7 +164,7 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
+        cache.set_with_tags(&cache_key, results.clone(), vec![format!("org:{}", org_id), "products".to_string()], std::time::Duration::from_secs(3600)).await;
         Ok(results)
     }
 
@@ -215,7 +219,7 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set_with_tags(&cache_key, results.clone(), vec![format!("org:{}", org_id), "orders".to_string()], std::time::Duration::from_secs(5)).await;
         Ok(results)
     }
 
@@ -282,7 +286,7 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set_with_tags(&cache_key, results.clone(), vec![format!("org:{}", org_id), "orders".to_string()], std::time::Duration::from_secs(5)).await;
         Ok(results)
     }
 
@@ -295,11 +299,7 @@ impl MyDashboardService {
             return Ok(org);
         }
 
-        let q = if mobile_optimized {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
-        } else {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
-        };
+        let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
         use sqlx::Row;
         let mut org = None;
         match &self.db.store {
@@ -333,7 +333,17 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+        if mobile_optimized {
+            if let Some(ref mut o) = org {
+                o.domain = String::new();
+                o.members = vec![];
+                o.role_profiles = vec![];
+                o.ceo_id = String::new();
+                o.created_at_unix = 0;
+            }
+        }
+
+        cache.set_with_tags(&cache_key, org.clone(), vec![format!("org:{}", org_id), "org".to_string()], std::time::Duration::from_secs(3600)).await;
         Ok(org)
     }
 }
@@ -465,11 +475,7 @@ impl DashboardService for MyDashboardService {
                     _ => ::server_ohc::common::Role::Unspecified as i32,
                 };
 
-                let name = if req.mobile_optimized {
-                    String::new()
-                } else {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
-                };
+                let name = a.name.clone();
 
                 ::server_ohc::agent::Agent {
                     id: a.id.clone(),
@@ -547,18 +553,7 @@ impl DashboardService for MyDashboardService {
 
         }
 
-        let org = if req.mobile_optimized {
-            org.map(|mut o| {
-                o.domain = String::new();
-                o.members = vec![];
-                o.role_profiles = vec![];
-                o.ceo_id = String::new();
-                o.created_at_unix = 0;
-                o
-            })
-        } else {
-            org
-        };
+
 
         Ok(Response::new(DashboardSnapshot {
             organization: org,
@@ -617,13 +612,13 @@ impl DashboardService for MyDashboardService {
 
             let response = GetOnboardingStateResponse {
                 state: Some(OnboardingState {
-                    organization_id: org_id,
+                    organization_id: org_id.clone(),
                     user_id: row.try_get("user_id").unwrap_or_default(),
                     current_step: row.try_get("current_step").unwrap_or_default(),
                     state_json: state_json.to_string(),
                 }),
             };
-            cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+            cache.set_with_tags(&cache_key, response.clone(), vec![format!("org:{}", org_id), "onboarding".to_string()], std::time::Duration::from_secs(60)).await;
             Ok(Response::new(response))
         } else {
             Err(Status::not_found("Onboarding state not found"))

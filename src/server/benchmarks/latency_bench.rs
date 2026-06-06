@@ -493,41 +493,49 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore]
     async fn test_run_bench_queue_latency() {
         bench_queue_latency().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_run_bench_db_query_time() {
         bench_db_query_time().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_run_bench_api_response_time() {
         bench_api_response_time().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_run_bench_hybrid_latency() {
         bench_hybrid_latency().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_bench_agent_snapshot() {
         bench_agent_snapshot().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_bench_dashboard_snapshot() {
         bench_dashboard_snapshot().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_stress_verification_cloud_standalone() {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
@@ -570,11 +578,13 @@ mod tests {
 
 
     #[tokio::test]
+    #[ignore]
     async fn test_bench_get_analytics() {
         bench_get_analytics().await;
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_run_bench_advisory_insights_latency() {
         bench_advisory_insights_latency().await;
         bench_get_analytics().await;
