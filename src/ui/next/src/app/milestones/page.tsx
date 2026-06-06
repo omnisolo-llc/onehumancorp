@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function MilestonesPage() {
   const router = useRouter();
@@ -112,8 +113,8 @@ export default function MilestonesPage() {
                                     <p className="text-lg font-medium opacity-90 drop-shadow-sm max-w-[280px]">{activeM.description}</p>
                                 </div>
 
-                                <div className="absolute bottom-6 flex flex-col items-center gap-1 opacity-90">
-                                    <span className="text-xs uppercase font-bold tracking-widest">Powered by OHC</span>
+                                <div className="absolute bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-auto">
+                                    <PoweredByOHC tenantId="my-store" />
                                 </div>
                             </div>
 

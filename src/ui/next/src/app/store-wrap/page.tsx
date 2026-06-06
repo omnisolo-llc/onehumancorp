@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function StoreWrapPage() {
   const router = useRouter();
@@ -161,8 +162,8 @@ export default function StoreWrapPage() {
               )}
             </div>
 
-            <div className="absolute bottom-8 text-white/60 text-sm font-semibold tracking-widest uppercase">
-              Powered by OHC
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center z-50 pointer-events-auto">
+              <PoweredByOHC tenantId={tenant} />
             </div>
           </div>
         ))}

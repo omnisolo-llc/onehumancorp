@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function LinkInBioGeneratorPage() {
   const router = useRouter();
@@ -205,9 +206,7 @@ export default function LinkInBioGeneratorPage() {
                      </div>
 
                      <div className="mt-auto pt-10 pb-6 w-full flex justify-center">
-                         <a href={`https://ohc.store/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
-                             Powered by OHC
-                         </a>
+                         <PoweredByOHC tenantId={tenant} />
                      </div>
                  </div>
              </div>

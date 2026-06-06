@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { PoweredByOHC } from '../../components/PoweredByOHC';
 
 export default function LinkInBioPublicPage() {
     const params = useParams();
@@ -97,9 +98,7 @@ export default function LinkInBioPublicPage() {
                      </div>
 
                      <div className="mt-auto pt-12 pb-6 w-full flex justify-center">
-                         <a href={`https://ohc.store/join?ref=${tenantId}`} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
-                             Powered by OHC
-                         </a>
+                         <PoweredByOHC tenantId={tenantId} />
                      </div>
                  </div>
              </div>

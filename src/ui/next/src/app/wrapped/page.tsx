@@ -8,12 +8,14 @@ export default function Wrapped() {
   const [copied, setCopied] = useState(false);
   const [metrics, setMetrics] = useState({ revenue: 0, orders: 0, topProduct: '' });
   const [loading, setLoading] = useState(true);
+  const [tenantId, setTenantId] = useState('e2e-tenant');
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
         const token = localStorage.getItem('token') || 'test-token';
         const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
+        setTenantId(tenant);
 
         const res = await fetch('/api/v1/dashboard/metrics', {
           method: 'POST',
@@ -120,7 +122,7 @@ export default function Wrapped() {
              <div className="mt-auto pt-6 border-t border-white/20 flex flex-col items-center gap-1 z-10">
                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Join my journey</span>
                  <span className="text-xs font-medium">{shareLink.replace('https://', '')}</span>
-                 <a href={shareLink} target="_blank" rel="noopener noreferrer" className="mt-2 text-sm font-bold opacity-90 hover:opacity-100 transition-opacity">⚡ Powered by OHC</a>
+                 <PoweredByOHC tenantId={tenantId} />
              </div>
           </div>
 
@@ -150,7 +152,9 @@ export default function Wrapped() {
       <div className="absolute left-6 bottom-6 z-50 rounded-2xl bg-white/15 px-4 py-3 text-white backdrop-blur-md border border-white/20 shadow-xl">
         <h2 className="text-sm font-bold uppercase tracking-widest">Top Seller</h2>
         <p className="text-base font-semibold">{metrics.topProduct}</p>
-        <span className="mt-1 inline-block text-xs font-bold opacity-90">Powered by OHC</span>
+        <div className="mt-1 inline-block pointer-events-auto">
+          <PoweredByOHC tenantId={tenantId} />
+        </div>
       </div>
       {/* Progress Bars */}
       <div className="absolute top-0 left-0 right-0 p-4 flex gap-2 z-50">

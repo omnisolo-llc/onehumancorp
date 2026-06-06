@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function StorefrontWidgetPage() {
   const router = useRouter();
@@ -149,10 +150,8 @@ export default function StorefrontWidgetPage() {
                     </div>
                 </div>
                 {!removeBranding && (
-                    <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <a href={`https://ohc.app/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-                            ⚡ Powered by OHC
-                        </a>
+                    <div className="flex justify-center mt-2 pointer-events-auto">
+                        <PoweredByOHC tenantId={tenant} />
                     </div>
                 )}
             </div>
