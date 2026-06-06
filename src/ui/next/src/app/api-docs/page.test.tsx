@@ -8,7 +8,13 @@ import { TooltipProvider } from '../../components/TooltipRegistry';
 // Mock SwaggerUI to avoid running an actual parser in tests
 vi.mock('swagger-ui-react', () => {
   return {
-    default: () => <div data-testid="swagger-ui-mock">Mocked Swagger UI</div>
+    default: (props: any) => (
+      <div data-testid="swagger-ui-mock">
+        Mocked Swagger UI
+        {props.spec?.paths?.['/api/help'] && <span>HasHelpPath</span>}
+        {props.spec?.paths?.['/api/tooltips'] && <span>HasTooltipsPath</span>}
+      </div>
+    )
   };
 });
 
@@ -23,5 +29,7 @@ describe('ApiDocsPage', () => {
     expect(screen.getByText('Advanced:')).toBeInTheDocument();
     expect(screen.getByText('This section is for developers directly integrating with our APIs. Not required for normal use.')).toBeInTheDocument();
     expect(screen.getByTestId('swagger-ui-mock')).toBeInTheDocument();
+    expect(screen.getByText('HasHelpPath')).toBeInTheDocument();
+    expect(screen.getByText('HasTooltipsPath')).toBeInTheDocument();
   });
 });
