@@ -130,7 +130,7 @@ export function UnifiedAgentFeed() {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 mac-glass-container rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
+      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
         {error}
       </div>
     );
@@ -165,12 +165,12 @@ export function UnifiedAgentFeed() {
         {activeTab === "proposals" && (
           <>
             {loading && (
-              <div className="w-full p-4 mac-glass-container rounded-[16px] text-center text-gray-500">
+              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
                 Loading Agent Proposals...
               </div>
             )}
             {!loading && approvals.length === 0 && (
-              <div className="w-full p-6 mac-glass-container rounded-[16px] text-center">
+              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -181,7 +181,7 @@ export function UnifiedAgentFeed() {
             {approvals.map((approval) => (
               <div
                 key={approval.id}
-                className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -250,12 +250,12 @@ export function UnifiedAgentFeed() {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 mac-glass-container rounded-[16px] text-center text-gray-500">
+              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 mac-glass-container rounded-[16px] text-center">
+              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   No recent activity found.
                 </p>
@@ -264,7 +264,7 @@ export function UnifiedAgentFeed() {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="mac-glass-container p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90"
+                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">

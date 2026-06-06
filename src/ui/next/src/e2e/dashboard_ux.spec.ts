@@ -23,7 +23,7 @@ test.describe('Dashboard UX', () => {
     const gridContainer = shareCardsLink.locator('..');
 
     await expect(gridContainer).toHaveClass(/grid-cols-1/);
-    await expect(gridContainer).toHaveClass(/md:grid-cols-3/);
+    await expect(gridContainer).toHaveClass(/lg:grid-cols-3/);
   });
 
   test('should verify Social Share Cards card description', async ({ page }) => {
