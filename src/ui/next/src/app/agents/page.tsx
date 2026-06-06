@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import AgentAutomations from './components/AgentAutomations';
+import { InteractiveWalkthrough } from "../../components/Walkthrough";
 
 export default function AgentsPage() {
  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals' | 'automations'>('departments');
@@ -19,6 +20,40 @@ export default function AgentsPage() {
  const [workflowLoading, setWorkflowLoading] = useState(false);
  const [loading, setLoading] = useState(false);
  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+ const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+ const walkthroughStarted = useRef(false);
+
+ useEffect(() => {
+   if (typeof window !== "undefined") {
+     const searchParams = new URLSearchParams(window.location.search);
+     const forceWalkthrough =
+       window.localStorage.getItem("TEST_WALKTHROUGH") === "true" ||
+       window.location.search.includes("test_walkthrough=true");
+
+     if ((searchParams.get("walkthrough") === "true" || forceWalkthrough) && !walkthroughStarted.current) {
+       setTimeout(() => {
+         setIsWalkthroughOpen(true);
+       }, 500);
+       walkthroughStarted.current = true;
+     }
+   }
+ }, []);
+
+ const walkthroughSteps = [
+   {
+     targetId: "hire-agent-btn",
+     title: "Activate your AI Support Agent",
+     content: "Hire AI agents to automate your business.",
+     position: "top" as const,
+   },
+   {
+     targetId: "workflow-name",
+     title: "Workflows",
+     content: "Give them tasks to execute.",
+     position: "bottom" as const,
+   },
+ ];
 
  const fetchFeed = async () => {
  setFeedLoading(true);
@@ -263,7 +298,7 @@ export default function AgentsPage() {
  </div>
  </button>
  ))}
- <button type="button" className="w-full rounded-[16px] border border-indigo-200 bg-indigo-50 p-4 text-left font-bold text-indigo-700">
+ <button id="hire-agent-btn" type="button" className="w-full rounded-[16px] border border-indigo-200 bg-indigo-50 p-4 text-left font-bold text-indigo-700">
  Hire Agent
  </button>
  <div className="rounded-[16px] border border-gray-100 bg-white/65 p-4 text-sm text-gray-700">
@@ -434,6 +469,11 @@ export default function AgentsPage() {
  )}
  </main>
  </div>
+ <InteractiveWalkthrough
+   steps={walkthroughSteps.filter(s => typeof document !== 'undefined' && document.getElementById(s.targetId) !== null)}
+   isOpen={isWalkthroughOpen}
+   onClose={() => setIsWalkthroughOpen(false)}
+ />
  <style dangerouslySetInnerHTML={{__html: `
  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
  .font-inter { font-family: 'Inter', sans-serif; }

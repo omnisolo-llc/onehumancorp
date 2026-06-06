@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useOnboardingStore } from './store';
+import { InteractiveWalkthrough } from "../../components/Walkthrough";
+
 type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
 
 function SetupIcon({ name }: { name: SetupIconName }) {
@@ -327,6 +329,26 @@ export default function OnboardingWizard() {
     }
   };
 
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const walkthroughStarted = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const forceWalkthrough =
+        window.localStorage.getItem("TEST_WALKTHROUGH") === "true" ||
+        window.location.search.includes("test_walkthrough=true");
+
+      if ((searchParams.get("walkthrough") === "true" || forceWalkthrough) && !walkthroughStarted.current) {
+        // slight delay to let elements render
+        setTimeout(() => {
+          setIsWalkthroughOpen(true);
+        }, 500);
+        walkthroughStarted.current = true;
+      }
+    }
+  }, [step, chatStep]);
+
   if (!isLoaded) return null;
 
   // Progress percentage calculation
@@ -344,6 +366,21 @@ export default function OnboardingWizard() {
     if (step === 5) return 100;
     return 0;
   };
+
+  const walkthroughSteps = [
+    {
+      targetId: "setup-screen",
+      title: "Set up your store",
+      content: "Welcome! This wizard will help you set up your store. We'll guide you step by step.",
+      position: "bottom" as const,
+    },
+    {
+      targetId: "business-name-input",
+      title: "Business Name",
+      content: "Enter the name of your business here.",
+      position: "bottom" as const,
+    },
+  ];
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] flex items-center justify-center p-4">
@@ -624,6 +661,7 @@ export default function OnboardingWizard() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
+                    id="business-name-input"
                     type="text"
                     autoFocus
                     value={businessName}
@@ -933,6 +971,12 @@ export default function OnboardingWizard() {
           )}
         </div>
       </div>
+
+      <InteractiveWalkthrough
+        steps={walkthroughSteps.filter(s => typeof document !== 'undefined' && document.getElementById(s.targetId) !== null)}
+        isOpen={isWalkthroughOpen}
+        onClose={() => setIsWalkthroughOpen(false)}
+      />
     </div>
   );
 }

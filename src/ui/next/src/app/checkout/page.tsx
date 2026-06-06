@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
+import { InteractiveWalkthrough } from "../../components/Walkthrough";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -11,6 +12,40 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const walkthroughStarted = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const forceWalkthrough =
+        window.localStorage.getItem("TEST_WALKTHROUGH") === "true" ||
+        window.location.search.includes("test_walkthrough=true");
+
+      if ((searchParams.get("walkthrough") === "true" || forceWalkthrough) && !walkthroughStarted.current) {
+        setTimeout(() => {
+          setIsWalkthroughOpen(true);
+        }, 500);
+        walkthroughStarted.current = true;
+      }
+    }
+  }, []);
+
+  const walkthroughSteps = [
+    {
+      targetId: "checkout-screen",
+      title: "Accept your first payment",
+      content: "Here is where your customers will pay.",
+      position: "bottom" as const,
+    },
+    {
+      targetId: "payment-options",
+      title: "Payment Methods",
+      content: "Customers can pay securely online, or in-person.",
+      position: "top" as const,
+    },
+  ];
   const [tenant, setTenant] = useState("my-store");
 
   useEffect(() => {
@@ -120,7 +155,7 @@ export default function CheckoutPage() {
 
         <p className="text-gray-700 font-medium">Payment Details</p>
 
-        <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <div id="payment-options" className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
           {deliveryFee !== null && (
             <div className="flex justify-between py-2 border-b border-gray-200">
@@ -205,6 +240,12 @@ export default function CheckoutPage() {
           <PoweredByOHC tenantId={tenant} />
         </div>
       </main>
+
+      <InteractiveWalkthrough
+        steps={walkthroughSteps.filter(s => typeof document !== 'undefined' && document.getElementById(s.targetId) !== null)}
+        isOpen={isWalkthroughOpen}
+        onClose={() => setIsWalkthroughOpen(false)}
+      />
 
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
