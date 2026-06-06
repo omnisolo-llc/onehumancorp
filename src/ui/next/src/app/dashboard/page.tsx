@@ -105,6 +105,34 @@ export default function Dashboard() {
       }
     };
 
+    const handleSync = async () => {
+      if (!navigator.onLine) return;
+      try {
+        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
+        const queue = JSON.parse(queueStr);
+        if (!Array.isArray(queue) || queue.length === 0) return;
+
+        const res = await fetch("/api/v1/sync/offline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mutations: queue }),
+        });
+
+        if (res.ok) {
+          // Re-fetch queue in case new items were added during the sync
+          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
+          const currentQueue = JSON.parse(currentQueueStr);
+          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
+          // Simple slice is safe if we assume append-only queue
+          const remainingQueue = currentQueue.slice(queue.length);
+          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
+          setOfflineQueueCount(remainingQueue.length);
+        }
+      } catch (e) {
+        console.error("Sync failed", e);
+      }
+    };
+
     async function loadDashboard() {
       const tenant = encodeURIComponent(tenantId());
       setLoading(true);
@@ -146,12 +174,15 @@ export default function Dashboard() {
 
     updateOfflineStatus();
     loadDashboard();
+    handleSync();
     window.addEventListener("online", updateOfflineStatus);
+    window.addEventListener("online", handleSync);
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
     return () => {
       window.removeEventListener("online", updateOfflineStatus);
+      window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
       window.removeEventListener("storage", updateOfflineStatus);
     };
@@ -227,10 +258,10 @@ export default function Dashboard() {
         <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
           Migrate Existing Store
         </button>
-        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
-          {offlineQueueCount} payments pending sync
+        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
+          {offlineQueueCount} Payments Pending Sync
         </div>
-        <div id="network-status-indicator" className={isOffline ? "app-badge warn" : "hidden"}>
+        <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
           Offline - changes saved locally
         </div>
         {error && <div className="app-badge bad">{error}</div>}
@@ -418,6 +449,35 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
+              <div className="app-list-item">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
+                  <button
+                    id="sold-out-toggle-falafel"
+                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                    onClick={(e) => {
+                      const btn = e.currentTarget;
+                      btn.innerText = 'Sold Out';
+                      btn.classList.remove('bg-gray-100', 'text-gray-800');
+                      btn.classList.add('bg-red-100', 'text-red-700');
+
+                      let queue: any[] = [];
+                      try {
+                        queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                      } catch(err) {}
+                      queue.push({
+                          id: 'e2e-product-falafel',
+                          type: 'inventory_toggle',
+                          timestamp: new Date().toISOString()
+                      });
+                      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                      setOfflineQueueCount(queue.length);
+                    }}
+                  >
+                    Mark Sold Out
+                  </button>
+                </div>
+              </div>
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
@@ -452,10 +512,51 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* Offline E2E Mock Element (Food Cart Scenario) */}
+        <section className="app-grid two">
+          <div className="app-panel">
+             <div className="app-panel-header">
+               <div className="app-panel-title">Quick Actions</div>
+             </div>
+             <div className="app-panel-body">
+               <div className="flex-1">
+                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
+                 <button
+                    id="sold-out-toggle-falafel"
+                    onClick={(e) => {
+                       const btn = e.currentTarget;
+                       const isSoldOut = btn.innerText === 'Sold Out';
+
+                       if (!isSoldOut) {
+                          btn.innerText = 'Sold Out';
+                          btn.classList.remove('bg-gray-100', 'text-gray-800');
+                          btn.classList.add('bg-red-100', 'text-red-700');
+                       } else {
+                          btn.innerText = 'Mark Sold Out';
+                          btn.classList.remove('bg-red-100', 'text-red-700');
+                          btn.classList.add('bg-gray-100', 'text-gray-800');
+                       }
+
+                       const { SyncManager } = require('../../lib/sync/SyncManager');
+                       SyncManager.getInstance().enqueue({
+                          id: 'e2e-product-falafel',
+                          type: 'inventory_toggle',
+                          timestamp: new Date().toISOString()
+                       });
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                 >
+                    Mark Sold Out
+                 </button>
+               </div>
+             </div>
+          </div>
+        </section>
+
         <section className="app-grid two">
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Recent Orders</div>
+              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
               <Link href="/orders" className="app-button">View All</Link>
             </div>
             {orders.length === 0 ? (
@@ -488,7 +589,7 @@ export default function Dashboard() {
 
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Inbox Activity</div>
+              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
               <Link href="/inbox" className="app-button">Open Inbox</Link>
             </div>
             <div className="app-list">
@@ -530,7 +631,7 @@ export default function Dashboard() {
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Milestones</h3>
-              <span className="sr-only">Milestones 🏆</span>
+
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 

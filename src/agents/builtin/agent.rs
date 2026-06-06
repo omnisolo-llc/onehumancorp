@@ -3135,7 +3135,14 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
+            let args_str = match serde_json::to_string(&args) {
+                Ok(s) => if s.chars().count() > 100 { format!("{}...", s.chars().take(100).collect::<String>()) } else { s },
+                Err(_) => "<unprintable>".to_string(),
+            };
+            return Err(ToolError::LlmRecoverable(format!(
+                "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.",
+                e, args_str
+            )));
         }
 
         let mut modified_tc = tc.clone();
@@ -3244,6 +3251,163 @@ mod tests {
             }
         });
         assert!(has_recoverable_event);
+    }
+
+
+    #[tokio::test]
+    async fn test_end_to_end_pydantic_self_correction_loop() {
+        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use serde::Deserialize;
+
+        #[derive(Deserialize)]
+        struct ComplexArgs {
+            required_field: String,
+            amount: u32,
+        }
+
+        struct RealPydanticExecutor;
+
+        #[async_trait::async_trait]
+        impl PydanticToolExecutor<ComplexArgs> for RealPydanticExecutor {
+            async fn execute_typed(&self, args: ComplexArgs) -> Result<String, ToolError> {
+                Ok(format!("Processed {} for {}", args.amount, args.required_field))
+            }
+        }
+
+        struct MockLlmClientPydanticRecovery {
+            call_count: tokio::sync::Mutex<i32>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientPydanticRecovery {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut c = self.call_count.lock().await;
+                *c += 1;
+
+                if *c == 1 {
+                    // Turn 1: LLM returns invalid arguments (missing `amount`)
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: String::new(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_pydantic_1".to_string(),
+                                name: "typed_tool".to_string(),
+                                arguments: serde_json::json!({
+                                    "required_field": "test_item"
+                                }),
+                            }],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: None,
+                    })
+                } else if *c == 2 {
+                    // Turn 2: LLM should see the Validation Error in the tool_results.
+                    let last_msg = req.messages.last().unwrap();
+
+                    assert_eq!(last_msg.role, Role::Tool);
+
+                    let has_pydantic_error = last_msg.tool_results.iter().any(|r| {
+
+                        r.error.contains("Validation Error (Pydantic-first tool schema)") &&
+                        r.error.contains("missing required parameter: 'amount'")
+                    });
+
+                    if has_pydantic_error {
+                        // The LLM self-corrects and provides the missing field
+                        Ok(ChatResponse {
+                            message: Message {
+                                role: Role::Assistant,
+                                content: String::new(),
+                                tool_calls: vec![ToolCall {
+                                    id: "call_pydantic_2".to_string(),
+                                    name: "typed_tool".to_string(),
+                                    arguments: serde_json::json!({
+                                        "required_field": "test_item",
+                                        "amount": 42
+                                    }),
+                                }],
+                                tool_results: vec![],
+                                response_id: None,
+                                previous_response_id: None,
+                            },
+                            usage: Usage::default(),
+                            stop_reason: "tool_calls".to_string(),
+                            response_id: None,
+                        })
+                    } else {
+                        Ok(ChatResponse {
+                            message: Message::assistant("I didn't see the Pydantic error"),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: None,
+                        })
+                    }
+                } else {
+                    // Turn 3: LLM sees the success message and responds to the user
+                    Ok(ChatResponse {
+                        message: Message::assistant("I successfully processed the item!"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: None,
+                    })
+                }
+            }
+        }
+
+        let pydantic_adapter = PydanticAdapter::new(RealPydanticExecutor);
+
+        let tools = vec![
+            crate::tools::Tool {
+                name: "typed_tool".to_string(),
+                description: "A strongly typed tool".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "required_field": { "type": "string" },
+                        "amount": { "type": "integer" }
+                    },
+                    "required": ["required_field", "amount"]
+                }),
+                execute: std::sync::Arc::new(pydantic_adapter),
+            },
+        ];
+
+        let client = std::sync::Arc::new(MockLlmClientPydanticRecovery { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Process 42 test_items", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "I successfully processed the item!");
+
+        // Verify the event sequence captured the error and the recovery
+        let has_recoverable_event = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                result.contains("Validation Error (Pydantic-first tool schema)") && result.contains("missing required parameter: 'amount'")
+            } else {
+                false
+            }
+        });
+        assert!(has_recoverable_event, "The Pydantic error was not emitted in the event stream");
+
+        let has_success_event = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                result == "Processed 42 for test_item"
+            } else {
+                false
+            }
+        });
+        assert!(has_success_event, "The successful tool execution was not emitted after self-correction");
     }
 
     #[derive(serde::Deserialize, PartialEq, Debug)]

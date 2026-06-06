@@ -3299,6 +3299,83 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/settings/voice", axum::routing::get({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                let settings = settings_store.get();
+                axum::response::Json(serde_json::json!({
+                    "voice_receptionist_enabled": settings.voice_receptionist_enabled,
+                    "voice_receptionist_number": settings.voice_receptionist_number,
+                    "voice_receptionist_persona": settings.voice_receptionist_persona,
+                }))
+            }
+        }))
+        .route("/api/settings/voice", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let enabled = req.get("voice_receptionist_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+                let number = req.get("voice_receptionist_number").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let persona = req.get("voice_receptionist_persona").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+                if let Err(e) = settings_store.set_voice_settings(enabled, number, persona) {
+                    ::server_telemetry::record_error_signal("Failed to save voice settings");
+                    tracing::error!("Failed to save voice settings: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false }));
+                }
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
+        .route("/api/settings/voice/provision", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                // Mock Twilio number provisioning
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                let last_four: u32 = rng.gen_range(1000..9999);
+                let mock_number = format!("+1555123{}", last_four);
+
+                let settings = settings_store.get();
+                if let Err(e) = settings_store.set_voice_settings(
+                    settings.voice_receptionist_enabled,
+                    Some(mock_number.clone()),
+                    settings.voice_receptionist_persona,
+                ) {
+                    ::server_telemetry::record_error_signal("Failed to provision voice number");
+                    tracing::error!("Failed to provision voice number: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false, "error": "Internal error" }));
+                }
+
+                axum::response::Json(serde_json::json!({ "success": true, "number": mock_number }))
+            }
+        }))
+        .route("/api/voice/incoming", axum::routing::post({
+            let settings_store = settings_store.clone();
+            let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
+            let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
+                std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+                std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+            ));
+            let voice_router = Arc::new(crate::voice::VoiceContextRouter::new(voice_engine.clone(), twilio_client));
+
+            move |axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let caller_phone = req.get("caller_phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let user_text = req.get("user_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+                let settings = settings_store.get();
+                if !settings.voice_receptionist_enabled {
+                    return axum::response::Json(serde_json::json!({ "reply": "The voice receptionist is currently disabled." }));
+                }
+
+                let merchant_phone = settings.voice_receptionist_number.clone().unwrap_or_default();
+                let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone).await;
+
+                let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone).await;
+
+                voice_engine.end_call(&session_id).await;
+
+                axum::response::Json(serde_json::json!({ "reply": reply }))
+            }
+        }))
         .route("/api/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
@@ -3615,6 +3692,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
 
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
@@ -3841,4 +3919,22 @@ async fn api_not_found_handler(req: axum::extract::Request) -> impl axum::respon
         .into_response()
 }
 pub mod crypto;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settings::Store;
+
+    #[tokio::test]
+    async fn test_voice_settings_logic() {
+        let store = Arc::new(Store::new());
+        // Enable Voice Settings
+        store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+
+        let current = store.get();
+        assert_eq!(current.voice_receptionist_enabled, true);
+        assert_eq!(current.voice_receptionist_number, Some("+15551112222".to_string()));
+        assert_eq!(current.voice_receptionist_persona, Some("Professional".to_string()));
+    }
+}
 // resolves #9690
