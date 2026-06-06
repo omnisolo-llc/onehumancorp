@@ -91,6 +91,7 @@ rust_library(
     "ruflo_plugins.rs",
         "agentic_seek.rs",
         "pi.rs",
+        "subagent_orchestration.rs",
         "scalable_multi_agent.rs",
         "service.rs",
         "sona_patterns.rs",

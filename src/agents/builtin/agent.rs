@@ -252,6 +252,7 @@ pub struct Agent {
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+    pub subagent_orchestrator: Option<Arc<dyn crate::subagent_orchestration::SubagentOrchestrator>>,
 }
 
 impl Agent {
@@ -268,11 +269,17 @@ impl Agent {
             observation_store: Arc::new(dashmap::DashMap::new()),
             event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
+            subagent_orchestrator: None,
         }
     }
 
     pub fn with_memory_store(mut self, store: Arc<dyn crate::memory_store::LongTermMemory>) -> Self {
         self.memory_store = Some(store);
+        self
+    }
+
+    pub fn with_subagent_orchestrator(mut self, orchestrator: Arc<dyn crate::subagent_orchestration::SubagentOrchestrator>) -> Self {
+        self.subagent_orchestrator = Some(orchestrator);
         self
     }
 
@@ -738,6 +745,7 @@ impl Agent {
 
         let coord_agent = std::sync::Arc::new(Self {
             event_stream: self.event_stream.clone(),
+            subagent_orchestrator: self.subagent_orchestrator.clone(),
             llm: self.llm.clone(),
             tools: session_tools.clone(),
             progress: self.progress.clone(),
@@ -1760,6 +1768,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
+            subagent_orchestrator: self.subagent_orchestrator.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1872,6 +1881,7 @@ impl Agent {
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
+            subagent_orchestrator: self.subagent_orchestrator.clone(),
             };
             self_with_memory = &owned_agent;
         }
@@ -3125,6 +3135,14 @@ impl Agent {
                         let _ = std::fs::write(&file_path, &context_json);
                         obj.insert("parent_context_file".to_string(), serde_json::json!(file_path));
                     }
+                }
+            }
+        }
+
+        if tc.name == "spawn_subagent" {
+            if let Some(orchestrator) = &self.subagent_orchestrator {
+                if let Some(task) = args.get("task").and_then(|v| v.as_str()) {
+                    return orchestrator.dispatch_task(task).await.map_err(|e| ToolError::LlmRecoverable(e));
                 }
             }
         }
