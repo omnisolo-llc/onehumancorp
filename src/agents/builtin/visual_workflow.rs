@@ -51,14 +51,8 @@ impl WorkflowExecutor {
         Self { graph, agent, tools, sub_agents, config }
     }
 
-    pub async fn execute(&self, input_vars: HashMap<String, String>) -> Result<String, String> {
+        pub async fn execute(&self, input_vars: HashMap<String, String>) -> Result<String, String> {
         let mut state: HashMap<String, String> = input_vars.clone();
-
-        // Find input node to start
-        let mut current_node_id = self.graph.nodes.iter()
-            .find(|n| matches!(n.node_type, NodeType::Input { .. }))
-            .map(|n| n.id.clone())
-            .ok_or_else(|| "No input node found in graph".to_string())?;
 
         let nodes_map: HashMap<String, Node> = self.graph.nodes.iter()
             .map(|n| (n.id.clone(), n.clone()))
@@ -69,19 +63,55 @@ impl WorkflowExecutor {
             outgoing_edges.entry(edge.source.clone()).or_default().push(edge.target.clone());
         }
 
-        let mut visited = std::collections::HashSet::new();
-
-        loop {
-            let node = nodes_map.get(&current_node_id).ok_or_else(|| format!("Node not found: {}", current_node_id))?;
-
-            if visited.contains(&current_node_id) {
-                return Err("Visual Orchestrator cycle detected".to_string());
+        // Kahn's algorithm for topological sorting to ensure DAG
+        let mut in_degree: HashMap<String, usize> = HashMap::new();
+        for node in &self.graph.nodes {
+            in_degree.insert(node.id.clone(), 0);
+        }
+        for edge in &self.graph.edges {
+            *in_degree.entry(edge.target.clone()).or_insert(0) += 1;
+        }
+        let mut queue = std::collections::VecDeque::new();
+        for (node_id, degree) in &in_degree {
+            if *degree == 0 { queue.push_back(node_id.clone()); }
+        }
+        let mut sorted_nodes = Vec::new();
+        while let Some(node_id) = queue.pop_front() {
+            sorted_nodes.push(node_id.clone());
+            if let Some(targets) = outgoing_edges.get(&node_id) {
+                for target in targets {
+                    let degree = in_degree.get_mut(target).unwrap();
+                    *degree -= 1;
+                    if *degree == 0 { queue.push_back(target.clone()); }
+                }
             }
-            visited.insert(current_node_id.clone());
+        }
+        if sorted_nodes.len() != self.graph.nodes.len() { return Err("Visual Orchestrator cycle detected".to_string()); }
+
+        let mut active_nodes = std::collections::HashSet::new();
+
+        let start_nodes: Vec<String> = self.graph.nodes.iter()
+            .filter(|n| matches!(n.node_type, NodeType::Input { .. }))
+            .map(|n| n.id.clone())
+            .collect();
+
+        if start_nodes.is_empty() {
+             return Err("No input node found in graph".to_string());
+        }
+
+        for n in start_nodes {
+             active_nodes.insert(n);
+        }
+
+        for current_node_id in sorted_nodes {
+            if !active_nodes.contains(&current_node_id) { continue; }
+            let node = nodes_map.get(&current_node_id).unwrap();
 
             match &node.node_type {
                 NodeType::Input { name: _ } => {
-                    // Start execution
+                    if let Some(targets) = outgoing_edges.get(&current_node_id) {
+                        for t in targets { active_nodes.insert(t.clone()); }
+                    }
                 }
                 NodeType::Llm { prompt_template } => {
                     let mut prompt = prompt_template.clone();
@@ -94,6 +124,9 @@ impl WorkflowExecutor {
                         .map_err(|e| format!("LLM node {} failed: {}", node.id, e))?;
 
                     state.insert(node.id.clone(), result);
+                    if let Some(targets) = outgoing_edges.get(&current_node_id) {
+                        for t in targets { active_nodes.insert(t.clone()); }
+                    }
                 }
                 NodeType::Tool { tool_name, args_template } => {
                     let mut args_json = args_template.clone();
@@ -111,6 +144,9 @@ impl WorkflowExecutor {
                         .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
 
                     state.insert(node.id.clone(), result);
+                    if let Some(targets) = outgoing_edges.get(&current_node_id) {
+                        for t in targets { active_nodes.insert(t.clone()); }
+                    }
                 }
                 NodeType::Condition { condition_expression, true_target, false_target } => {
                     let mut expr = condition_expression.clone();
@@ -118,7 +154,6 @@ impl WorkflowExecutor {
                         expr = expr.replace(&format!("{{{{{}}}}}", k), v);
                     }
 
-                    // A very naive evaluation for demo purposes: e.g. "success == success"
                     let parts: Vec<&str> = expr.split("==").collect();
                     let is_true = if parts.len() == 2 {
                         parts[0].trim() == parts[1].trim()
@@ -126,9 +161,16 @@ impl WorkflowExecutor {
                         false
                     };
 
-                    current_node_id = if is_true { true_target.clone() } else { false_target.clone() };
-                    // Condition nodes dictate explicit routing, skip standard edge traversal
-                    continue;
+                    let activated_target = if is_true { true_target.clone() } else { false_target.clone() };
+                    active_nodes.insert(activated_target.clone());
+
+                    if let Some(edge) = self.graph.edges.iter().find(|e| e.target == current_node_id) {
+                        let v_opt = state.get(&edge.source).cloned();
+                        if let Some(val) = v_opt {
+                            state.insert(current_node_id.clone(), val.clone());
+                            state.insert(activated_target.clone(), val);
+                        }
+                    }
                 }
                 NodeType::SubAgent { agent_name, task_template } => {
                     let mut task = task_template.clone();
@@ -144,6 +186,9 @@ impl WorkflowExecutor {
                         .map_err(|e| format!("SubAgent node {} failed: {}", node.id, e))?;
 
                     state.insert(node.id.clone(), result);
+                    if let Some(targets) = outgoing_edges.get(&current_node_id) {
+                        for t in targets { active_nodes.insert(t.clone()); }
+                    }
                 }
                 NodeType::Merge { state_keys, output_key } => {
                     let mut merged_data = Vec::new();
@@ -153,33 +198,30 @@ impl WorkflowExecutor {
                         }
                     }
                     let merged_string = serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
-                    state.insert(output_key.clone(), merged_string);
+                    state.insert(output_key.clone(), merged_string.clone());
+                    state.insert(node.id.clone(), merged_string); // Make merge accessible via its own ID too
+                    if let Some(targets) = outgoing_edges.get(&current_node_id) {
+                        for t in targets { active_nodes.insert(t.clone()); }
+                    }
                 }
                 NodeType::Output => {
                     if let Some(edge) = self.graph.edges.iter().find(|e| e.target == current_node_id) {
                         if let Some(val) = state.get(&edge.source) {
-                            return Ok(val.clone());
+                            state.insert(current_node_id.clone(), val.clone());
                         }
                     }
-                    return Ok("Visual orchestration completed with no data".to_string());
+                    if let Some(targets) = outgoing_edges.get(&current_node_id) {
+                        for t in targets { active_nodes.insert(t.clone()); }
+                    }
                 }
-            }
-
-            // Move to next node
-            let next_nodes = outgoing_edges.get(&current_node_id);
-            if let Some(nexts) = next_nodes {
-                if !nexts.is_empty() {
-                    current_node_id = nexts[0].clone();
-                } else {
-                    break;
-                }
-            } else {
-                break;
             }
         }
 
-        Ok("Execution halted without reaching output".to_string())
+        let output_node = self.graph.nodes.iter().find(|n| matches!(n.node_type, NodeType::Output)).ok_or_else(|| "No output node found".to_string())?;
+        let final_val = self.graph.edges.iter().find(|e| e.target == output_node.id && active_nodes.contains(&e.source)).and_then(|e| state.get(&e.source).cloned());
+        Ok(final_val.unwrap_or("Visual orchestration completed with no data".to_string()))
     }
+
 }
 
 #[cfg(test)]
@@ -265,6 +307,8 @@ mod tests {
             ],
             edges: vec![
                 Edge { source: "in".to_string(), target: "cond1".to_string() },
+                Edge { source: "cond1".to_string(), target: "out_true".to_string() },
+                Edge { source: "cond1".to_string(), target: "out_false".to_string() },
                 Edge { source: "out_true".to_string(), target: "out".to_string() },
             ],
         };
@@ -277,7 +321,7 @@ mod tests {
         inputs.insert("in".to_string(), "trigger".to_string());
 
         let result = executor.execute(inputs).await.unwrap();
-        assert_eq!(result, "Processed: True branch");
+        assert_eq!(result, "Processed: True branch", "Expected Llm node output");
     }
 
     #[tokio::test]
@@ -382,5 +426,44 @@ mod tests {
 
         let result = executor.execute(inputs).await.unwrap();
         assert_eq!(result, "Processed: Merged is [\"val1\",\"val2\"]");
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_diamond() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
+                Node { id: "cond1".to_string(), node_type: NodeType::Condition {
+                    condition_expression: "{{in}} == trigger".to_string(),
+                    true_target: "branch1".to_string(),
+                    false_target: "branch2".to_string()
+                }},
+                Node { id: "branch1".to_string(), node_type: NodeType::Llm { prompt_template: "Branch 1".to_string() } },
+                Node { id: "branch2".to_string(), node_type: NodeType::Llm { prompt_template: "Branch 2".to_string() } },
+                Node { id: "merge1".to_string(), node_type: NodeType::Merge { state_keys: vec!["branch1".to_string(), "branch2".to_string()], output_key: "merged".to_string() } },
+                Node { id: "out".to_string(), node_type: NodeType::Output },
+            ],
+            edges: vec![
+                Edge { source: "in".to_string(), target: "cond1".to_string() },
+                Edge { source: "cond1".to_string(), target: "branch1".to_string() },
+                Edge { source: "cond1".to_string(), target: "branch2".to_string() },
+                Edge { source: "branch1".to_string(), target: "merge1".to_string() },
+                Edge { source: "branch2".to_string(), target: "merge1".to_string() },
+                Edge { source: "merge1".to_string(), target: "out".to_string() },
+            ],
+        };
+
+        let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "trigger".to_string());
+
+        let result = executor.execute(inputs).await.unwrap();
+        // The condition goes to branch1, branch2 never executes.
+        // So merge only receives branch1's output.
+        assert_eq!(result, "[\"Processed: Branch 1\"]");
     }
 }
