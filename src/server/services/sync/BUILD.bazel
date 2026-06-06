@@ -3,7 +3,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "cloud_synchronizer.rs",
-        "escalator.rs",
         "local_repository.rs",
         "local_repository_impl.rs",
         "mod.rs",
@@ -20,7 +19,6 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "cloud_synchronizer.rs",
-        "escalator.rs",
         "local_repository.rs",
         "local_repository_impl.rs",
         "mod.rs",

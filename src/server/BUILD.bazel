@@ -230,7 +230,6 @@ SERVER_RS_SRCS = [
     "//src/server/services/scheduler:mod.rs",
     "//src/server/services/scheduler:service.rs",
     "//src/server/services/sync:cloud_synchronizer.rs",
-    "//src/server/services/sync:escalator.rs",
     "//src/server/services/sync:local_repository.rs",
     "//src/server/services/sync:local_repository_impl.rs",
     "//src/server/services/sync:mod.rs",
