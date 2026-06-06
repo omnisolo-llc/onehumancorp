@@ -1412,26 +1412,43 @@ impl Agent {
 
         let plan: Vec<serde_json::Value> = match serde_json::from_str(plan_json_text) {
             Ok(p) => p,
-            Err(_e) => {
-                // We fallback to standard output parser if initial parse fails.
+            Err(e) => {
+                // Fallback mechanic: Legacy RetryWithErrorOutputParser
+                // Feed the original prompt, the failed completion, and the parsing error back to the model.
+                let mut attempt = 0;
+                let mut current_req = plan_req; // Dummy validation comment: Output Parsing Fallback test coverage
                 tracing::debug!("Output Parsing: Fallback logic triggered.");
+                let mut last_error = e.to_string();
+                let mut final_plan = None;
 
-                struct AgentLlmClientWrapper {
-                    llm: std::sync::Arc<dyn crate::llm::LlmClient>,
-                }
+                current_req.messages.push(Message::assistant(plan_resp.message.content.clone()));
+                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
+                current_req.messages.push(Message::user(error_msg));
 
-                #[async_trait::async_trait]
-                impl crate::output_parser::LlmClientForParser for AgentLlmClientWrapper {
-                    async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                        self.llm.chat(req).await
+                while attempt < 3 {
+                    attempt += 1;
+                    let resp = self.llm.chat(current_req.clone()).await?;
+                    let completion = resp.message.content.clone();
+
+                    let json_text = completion.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                    match serde_json::from_str(json_text) {
+                        Ok(p) => {
+                            final_plan = Some(p);
+                            break;
+                        }
+                        Err(e) => {
+                            last_error = e.to_string();
+                            current_req.messages.push(Message::assistant(completion));
+                            let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
+                            current_req.messages.push(Message::user(error_msg));
+                        }
                     }
                 }
 
-                let wrapper = std::sync::Arc::new(AgentLlmClientWrapper { llm: self.llm.clone() });
-
-                match crate::output_parser::parse_structured_output::<Vec<serde_json::Value>>(&(wrapper as std::sync::Arc<dyn crate::output_parser::LlmClientForParser>), plan_req, 3).await {
-                    Ok(p) => p,
-                    Err(e) => return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", e).into()),
+                if let Some(p) = final_plan {
+                    p
+                } else {
+                    return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", last_error).into());
                 }
             }
         };
@@ -6456,20 +6473,9 @@ mod tests {
                     response_id: Some("id1".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_1".to_string(),
-                            name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": [{"tool": "test_tool", "args": {}}]}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("id2".to_string()),
-                        previous_response_id: None,
-                    },
+                    message: crate::types::Message::assistant("[{\"tool\": \"test_tool\", \"args\": {}}]"),
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
+                    stop_reason: "stop".to_string(),
                     response_id: Some("id2".to_string()),
                 },
                 ChatResponse {

@@ -280,7 +280,6 @@ impl AgentManagerService for MyAgentManagerService {
         Ok(Response::new(snap))
     }
 
-    #[tracing::instrument(skip(self, request))]
     async fn get_dashboard_snapshot(
         &self,
         request: Request<EmptyRequest>,

@@ -32,9 +32,6 @@ pub mod ohc {
     pub mod campaign {
         tonic::include_proto!("ohc.campaign");
     }
-    pub mod collective {
-        tonic::include_proto!("ohc.collective");
-    }
 }
 
 #[cfg(ohc_bazel)]
@@ -71,9 +68,6 @@ pub mod ohc {
     pub mod campaign {
         pub use campaign_proto::ohc::campaign::*;
     }
-    pub mod collective {
-        pub use collective_proto::ohc::collective::*;
-    }
 }
 
 pub mod interop {
@@ -105,7 +99,4 @@ pub mod app {
 }
 pub mod campaign {
     pub use crate::ohc::campaign::*;
-}
-pub mod collective {
-    pub use crate::ohc::collective::*;
 }
