@@ -33,10 +33,6 @@ export async function GET(request: Request) {
     return NextResponse.json(cached);
   }
 
-  if (process.env.NEXT_PUBLIC_E2E === 'true') {
-    return NextResponse.json({});
-  }
-
   try {
     const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
       headers: {
