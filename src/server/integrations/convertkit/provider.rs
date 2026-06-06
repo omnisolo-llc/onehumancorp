@@ -36,7 +36,7 @@ impl ConvertKitProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::integrations::convertkit::provider::ConvertKitProvider;
+    use crate::provider::ConvertKitProvider;
 
     #[test]
     fn test_convertkit_provider_metadata() {

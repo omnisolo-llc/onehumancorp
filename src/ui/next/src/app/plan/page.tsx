@@ -1,5 +1,6 @@
 "use client";
 
+// My Plan Page Implementation
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -20,8 +21,8 @@ export default function MyPlanPage() {
   useEffect(() => {
     async function fetchPlanData() {
       try {
-        const token = localStorage.getItem('token') || 'test-token';
-        const res = await fetch('http://127.0.0.1:18789/my-plan', {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/billing/my-plan', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -54,22 +55,22 @@ export default function MyPlanPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>My Plan</h1>
-        <div className="flex gap-2">
-            <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <h1 className="text-2xl font-bold font-outfit text-center md:text-left" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>My Plan</h1>
+        <div className="flex flex-wrap justify-center gap-2">
+            <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors flex items-center justify-center">
             Back to Dashboard
             </button>
-            <button onClick={() => router.push('/pricing')} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+            <button onClick={() => router.push('/pricing')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center">
             View Upgrade Plans
             </button>
         </div>
       </header>
 
-      <main id="my-plan-screen" className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
+      <main id="my-plan-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <section className="p-6 md:p-8 shadow-sm w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
@@ -81,7 +82,7 @@ export default function MyPlanPage() {
                     <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
-                    <button onClick={() => router.push('/pricing')} className="w-full py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                    <button onClick={() => router.push('/pricing')} className="w-full min-h-[44px] py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
                         Upgrade Plan
                     </button>
                 </div>
@@ -89,7 +90,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Usage Section */}
-        <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <section className="p-6 md:p-8 shadow-sm w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Your Current Usage</h2>
 
             <div className="space-y-6">
@@ -148,20 +149,20 @@ export default function MyPlanPage() {
         </section>
 
         {/* Management Actions */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button onClick={() => router.push('/cost-dashboard')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            <button onClick={() => router.push('/cost-dashboard')} className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">View Cost Details</h3>
                 <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and storage details.</p>
             </button>
-            <button onClick={() => router.push('/pricing')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button onClick={() => router.push('/pricing')} className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">Change Plan</h3>
                 <p className="text-sm text-gray-500 mt-1">Upgrade or downgrade your current subscription.</p>
             </button>
-            <button className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">Download Invoice</h3>
                 <p className="text-sm text-gray-500 mt-1">Get a PDF copy of your recent billing statements.</p>
             </button>
-            <button className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button className="p-4 min-h-[44px] bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-red-600">Cancel Subscription</h3>
                 <p className="text-sm text-gray-500 mt-1">Cancel your subscription. You will lose access to premium features at the end of your billing cycle.</p>
             </button>

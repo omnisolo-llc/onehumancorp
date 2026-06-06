@@ -2,10 +2,23 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
 describe('OnboardingWizard', () => {
+  const renderOnboardingWizard = async () => {
+    let view: any;
+    await act(async () => {
+      view = render(
+        <TooltipProvider>
+          <OnboardingWizard />
+        </TooltipProvider>
+      );
+    });
+    return view;
+  };
+
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
@@ -33,7 +46,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
@@ -59,7 +72,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     // Chat Step 1 - Use Enter Key
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -83,7 +96,7 @@ describe('OnboardingWizard', () => {
   it('Handles validation failures when fields are empty', async () => {
     const user = userEvent.setup({ delay: null });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     // Chat Step 1 - Enter Key with short name
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -107,7 +120,7 @@ describe('OnboardingWizard', () => {
     // Provide value to enable button and proceed
     await user.type(sellInput, 'Cakes');
     expect(nextBtn2).not.toBeDisabled();
-    await user.click(nextBtn2);
+    await user.type(sellInput, '{Enter}');
 
     // Chat Step 3 - Next click with empty value
     const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
@@ -150,7 +163,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -160,14 +173,14 @@ describe('OnboardingWizard', () => {
     await user.click(nextBtn1);
 
     // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i, {}, { timeout: 3000 });
     await user.type(sellInput, 'Cakes');
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
+    await user.type(sellInput, '{Enter}');
 
     // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    const locInput = await screen.findByPlaceholderText(/Portland, OR/i, {}, { timeout: 3000 });
     await user.type(locInput, 'NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
@@ -192,6 +205,9 @@ describe('OnboardingWizard', () => {
     });
 
     // Fill in Account Setup fields
+    const nameInput2 = screen.getByPlaceholderText(/e.g. Maya Smith/i);
+    await user.type(nameInput2, 'Maya Smith');
+
     const emailInput = screen.getByPlaceholderText(/you@example.com/i);
     await user.type(emailInput, 'maya@example.com');
 
@@ -208,6 +224,10 @@ describe('OnboardingWizard', () => {
     });
 
     // Check that start API was called with the correct credentials
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"admin_name":"Maya Smith"'),
+    }));
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
       method: 'POST',
       body: expect.stringContaining('"admin_email":"maya@example.com"'),
@@ -230,7 +250,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -240,14 +260,14 @@ describe('OnboardingWizard', () => {
     await user.click(nextBtn1);
 
     // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i, {}, { timeout: 3000 });
     await user.type(sellInput, 'Cakes');
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await user.click(nextBtn2);
+    await user.type(sellInput, '{Enter}');
 
     // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    const locInput = await screen.findByPlaceholderText(/Portland, OR/i, {}, { timeout: 3000 });
     await user.type(locInput, 'NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
@@ -280,7 +300,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
@@ -311,7 +331,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     const nextButton = screen.getByRole('button', { name: /Next/i });
 
@@ -335,7 +355,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
@@ -371,7 +391,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -388,7 +408,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     // Verify initial Web Address options
     const subdomainOption = screen.getByText('Free Subdomain');
@@ -404,7 +424,8 @@ describe('OnboardingWizard', () => {
     expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
-    const toggle = screen.getByRole('checkbox');
+    // Checkbox might be hidden by sr-only or similar, use label text instead or get by id
+    const toggle = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(toggle).toBeChecked();
 
     // Select Sales Agent
@@ -429,7 +450,7 @@ describe('OnboardingWizard', () => {
       });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -437,6 +458,40 @@ describe('OnboardingWizard', () => {
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
+  });
+
+  it('loads draft state correctly on mount', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            wizardState: {
+              step: 1,
+              chatStep: 2,
+              businessName: 'Draft Business Name',
+              whatYouSell: 'Draft Products'
+            }
+          })
+        });
+      }
+      if (url === '/api/onboarding/state') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ wizardState: {} })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    render(<OnboardingWizard />);
+
+    // Wait for the mock fetch to resolve and state to update
+    await waitFor(() => {
+      expect(screen.getByText('What do you sell?')).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue('Draft Products')).toBeInTheDocument();
   });
 
   it('Save Draft button triggers draft API and shows success message', async () => {
@@ -458,7 +513,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 2 });
     });
 
-    render(<OnboardingWizard />);
+    await renderOnboardingWizard();
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();

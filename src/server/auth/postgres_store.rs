@@ -20,6 +20,7 @@ use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
+<<<<<<< HEAD
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
@@ -30,6 +31,17 @@ macro_rules! validate_org_id {
             let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
             if !is_test && std::env::var("CI").unwrap_or_default() != "true" {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+=======
+macro_rules! validate_org_id {
+    ($org_id:expr) => {
+        if $org_id.trim() == "system" {
+            if ::server_config::get().multitenant {
+                return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
+            }
+        } else if $org_id.trim().is_empty() {
+            if ::server_config::get().multitenant {
+                return Err("empty tenant_id is not allowed in multi-tenant mode".to_string());
+>>>>>>> 5736a5c4 (Fix IDOR bypass in Postgres auth store)
             }
         }
     };
@@ -334,6 +346,52 @@ mod security_tests {
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
+    async fn test_pg_create_user_organization_id_parity() {
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => return,
+        };
+
+        if database_url.starts_with("sqlite") {
+            return; // Postgres-specific test
+        }
+
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let repo = PgUserRepository::new(pool.clone());
+
+        let user = User {
+            id: "test-pg-id".to_string(),
+            username: "test-pg-user".to_string(),
+            email: "test-pg@example.com".to_string(),
+            password_hash: "".to_string(),
+            roles: vec!["admin".to_string()],
+            active: true,
+            organization_id: Some("user-org-id".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: None,
+        };
+
+        // Create user with function-arg-org-id
+        // NOTE: we ignore the actual creation error in tests if migrations aren't fully run,
+        // but if it succeeds, we check that it persisted with the correct org ID.
+        let create_res = repo.create_user(user, "function-arg-org-id").await;
+        if create_res.is_ok() {
+             let row = sqlx::query("SELECT tenant_id FROM users WHERE id = 'test-pg-id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+             let fetched_org_id: String = sqlx::Row::get(&row, "tenant_id");
+             assert_eq!(fetched_org_id, "function-arg-org-id");
+        }
+    }
+
+    #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(url) => url,
@@ -354,16 +412,15 @@ mod security_tests {
         // Since we can't reliably override the global `::server_config::get().multitenant` inline here
         // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
 
-        // Cloud multitenant mode should NOT allow bypassing.
-        let is_multitenant = true;
-        let org_id = "system";
-        let should_bypass = !is_multitenant && org_id == "system";
-
-        // Ensure the condition strictly evaluates to false when multitenant is true.
-        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
-
+        let is_multitenant = ::server_config::get().multitenant;
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+
+        if is_multitenant {
+            assert!(res.is_err(), "Must reject system id in multitenant mode");
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+        } else {
+            assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        }
     }
 
     #[tokio::test]

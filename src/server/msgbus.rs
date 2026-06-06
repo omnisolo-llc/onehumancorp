@@ -3,7 +3,6 @@ use tokio::sync::Mutex;
 use async_trait::async_trait;
 
 #[derive(Clone, prost::Message)]
-#[allow(dead_code)]
 pub struct Message {
     #[prost(string, tag = "1")]
     pub topic: String,
@@ -18,19 +17,16 @@ pub trait DistributedLock: Send + Sync {
 }
 
 #[async_trait]
-#[allow(dead_code)]
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
     async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
-#[allow(dead_code)]
 pub struct MemoryBus {
     subs: Mutex<std::collections::HashMap<String, broadcast::Sender<Message>>>,
     locks: Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>,
 }
 
-#[allow(dead_code)]
 impl MemoryBus {
     pub fn new() -> Self {
         MemoryBus {
@@ -114,13 +110,11 @@ impl DistributedLock for MemoryBus {
     }
 }
 
-#[allow(dead_code)]
 pub struct RedisBus {
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
 }
 
-#[allow(dead_code)]
 impl RedisBus {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
@@ -190,13 +184,11 @@ impl Bus for RedisBus {
     }
 }
 
-#[allow(dead_code)]
 pub struct IpcBus {
     pool: sqlx::SqlitePool,
     subs: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>>>,
 }
 
-#[allow(dead_code)]
 impl IpcBus {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -355,13 +347,11 @@ impl Bus for IpcBus {
     }
 }
 
-#[allow(dead_code)]
 pub struct NatsBus {
     client: async_nats::Client,
     kv: async_nats::jetstream::kv::Store,
 }
 
-#[allow(dead_code)]
 impl NatsBus {
     pub async fn new(nats_url: &str) -> Result<Self, String> {
         let client = async_nats::connect(nats_url).await.map_err(|e| e.to_string())?;
@@ -677,7 +667,7 @@ mod tests {
         assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
 
         // Allow lock to expire
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(2100)).await;
         assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
 
         bus.release_lock(resource, owner2).await.unwrap();

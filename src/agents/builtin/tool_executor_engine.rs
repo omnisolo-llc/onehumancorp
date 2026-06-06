@@ -2,7 +2,7 @@
 use tokio::time::{sleep, Duration};
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
-use tracing::warn;
+use tracing::{info, warn, error};
 
 pub struct ToolExecutionEngine;
 
@@ -23,8 +23,8 @@ impl ToolExecutionEngine {
 
         #[cfg(not(test))]
         {
-            println!("\n[Agent Harness] USER INTERVENTION REQUIRED:");
-            println!("{}", msg);
+            tracing::info!("\n[Agent Harness] USER INTERVENTION REQUIRED:");
+            tracing::info!("{}", msg);
             print!("Please provide input to resolve this (or type 'abort' to cancel): ");
             tokio::task::spawn_blocking(|| {
                 use std::io::{self, Write};
@@ -37,6 +37,7 @@ impl ToolExecutionEngine {
     }
 
     /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic (Compounding Error Prevention).
+    #[tracing::instrument(skip(tool, tc), fields(tool_name = %tc.name, tool_call_id = %tc.id))]
     pub async fn execute_tool_with_langgraph_mechanics(
         tool: &Tool,
         tc: &ToolCall,
@@ -47,7 +48,10 @@ impl ToolExecutionEngine {
 
         loop {
             match tool.execute.execute(tc.arguments.clone()).await {
-                Ok(res) => return Ok(res),
+                Ok(res) => {
+                    info!("Tool execution successful");
+                    return Ok(res);
+                }
                 Err(ToolError::Transient(msg)) => {
                     // 1) Transient errors: orchestrator should retry with backoff.
                     if retry_count < max_retries {
@@ -59,31 +63,39 @@ impl ToolExecutionEngine {
                         sleep(backoff).await;
                         continue;
                     } else {
+                        error!("Transient error retries exhausted: {}", msg);
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
                         return Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
+                    info!("LLM-recoverable error encountered: {}", msg);
                     return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.
+                    warn!("User-fixable error encountered, prompting user: {}", msg);
                     let input = Self::prompt_user(&msg).await;
                     if input.is_empty() || input.to_lowercase() == "abort" {
+                        warn!("User aborted resolution for: {}", msg);
                         return Err(ToolError::UserFixable(format!("User aborted. Original error: {}", msg)));
                     } else {
+                        info!("User provided resolution input");
                         return Ok(format!("User provided input to resolve the issue: {}", input));
                     }
                 }
                 Err(ToolError::Fatal(msg)) => {
                     // 4) Fatal: bubbles up to debug/halt immediately.
+                    error!("Fatal tool error encountered: {}", msg);
                     return Err(ToolError::Fatal(msg));
                 }
                 Err(ToolError::Unexpected(msg)) => {
+                    error!("Unexpected tool error encountered: {}", msg);
                     return Err(ToolError::Unexpected(msg));
                 }
                 Err(ToolError::HandoffRequested(msg)) => {
+                    info!("Tool execution requested handoff to: {}", msg);
                     return Err(ToolError::HandoffRequested(msg));
                 }
             }
