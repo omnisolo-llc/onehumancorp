@@ -50,14 +50,14 @@ impl RepoMapExecutor {
             }
             "go" => {
                 for line in content.lines() {
-                    if let Some(_) = GO_REGEX.captures(line) {
+                    if GO_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "c" | "cpp" | "h" | "hpp" => {
                 for line in content.lines() {
-                    if let Some(_) = CPP_REGEX.captures(line) {
+                    if CPP_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
