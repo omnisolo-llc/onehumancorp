@@ -16,6 +16,7 @@ export default function AutoCatalogPage() {
     isSubscription?: boolean;
     subscriptionInterval?: string;
     subscriptionDiscount?: string;
+    requiresDeposit?: boolean;
   } | null>(null);
   const [published, setPublished] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +99,8 @@ export default function AutoCatalogPage() {
           item_type: productData.category,
           is_subscription: productData.isSubscription,
           subscription_interval: productData.subscriptionInterval,
-          subscription_discount: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined
+          subscription_discount: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined,
+          requires_deposit: productData.requiresDeposit
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -236,6 +238,17 @@ export default function AutoCatalogPage() {
                   </div>
               </div>
               <div className="mt-4 border-t border-white/40 pt-4">
+                  <label className="flex items-center cursor-pointer mb-3">
+                      <div className="relative">
+                          <input type="checkbox" className="sr-only" checked={productData?.requiresDeposit || false} onChange={(e) => setProductData({...productData!, requiresDeposit: e.target.checked})} />
+                          <div className={`block w-10 h-6 rounded-full transition-colors ${productData?.requiresDeposit ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                          <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.requiresDeposit ? 'transform translate-x-4' : ''}`}></div>
+                      </div>
+                      <div className="ml-3 text-gray-800 font-semibold text-sm">
+                          Require Deposit
+                      </div>
+                  </label>
+
                   <label className="flex items-center cursor-pointer">
                       <div className="relative">
                           <input type="checkbox" className="sr-only" checked={productData?.isSubscription || false} onChange={(e) => setProductData({...productData!, isSubscription: e.target.checked})} />
