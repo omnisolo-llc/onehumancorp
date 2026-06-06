@@ -956,14 +956,16 @@ impl Agent {
             let cfg_arc_node = cfg_arc.clone();
             Box::pin(async move {
                 let last_msg = state.get("last_message").unwrap();
-                let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
+                let empty_arr = vec![];
+                let tool_calls = last_msg.get("tool_calls").and_then(|v| v.as_array()).unwrap_or(&empty_arr);
 
-                let mut error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
+                let empty_obj = serde_json::Map::new();
+                let mut error_counts = state.get("error_counts").and_then(|v| v.as_object()).unwrap_or(&empty_obj).clone();
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
 
                 for tc_val in tool_calls {
-                    let name = tc_val["name"].as_str().unwrap();
+                    let name = tc_val["name"].as_str().unwrap_or_default();
                     let is_read_only = tt.iter().find(|t| t.name == name).map(|t| t.is_read_only).unwrap_or(false);
                     if is_read_only {
                         read_only_calls.push(tc_val.clone());
@@ -980,9 +982,9 @@ impl Agent {
                     let tt_clone = tt.clone();
                     let cfg_arc_clone = cfg_arc_node.clone();
                     read_only_futures.push(async move {
-                        let name = tc_val["name"].as_str().unwrap();
+                        let name = tc_val["name"].as_str().unwrap_or_default();
                         let args = tc_val["arguments"].clone();
-                        let id = tc_val["id"].as_str().unwrap().to_string();
+                        let id = tc_val["id"].as_str().unwrap_or_default().to_string();
 
                         let tc = crate::types::ToolCall {
                             id: id.clone(),
@@ -1016,10 +1018,10 @@ impl Agent {
                 let ro_results = futures::future::join_all(read_only_futures).await;
 
                 for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap_or_default() == id).unwrap_or(0);
                     match final_res {
                         Ok(res) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
+                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap_or_default() == id).and_then(|tc| tc["name"].as_str()).unwrap_or_default().to_string();
                             error_counts.insert(tool_name, serde_json::json!(0));
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
@@ -1028,8 +1030,8 @@ impl Agent {
                             });
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap_or_default() == id).and_then(|tc| tc["name"].as_str()).unwrap_or_default().to_string();
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
@@ -1061,10 +1063,10 @@ impl Agent {
 
                 // Execute mutating calls sequentially
                 for tc_val in mutating_calls {
-                    let name = tc_val["name"].as_str().unwrap();
+                    let name = tc_val["name"].as_str().unwrap_or_default();
                     let args = tc_val["arguments"].clone();
-                    let id = tc_val["id"].as_str().unwrap();
-                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+                    let id = tc_val["id"].as_str().unwrap_or_default();
+                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap_or_default() == id).unwrap_or(0);
 
                     let tc = crate::types::ToolCall {
                         id: id.to_string(),
@@ -1078,7 +1080,7 @@ impl Agent {
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > cfg_max_retries as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
@@ -1102,7 +1104,7 @@ impl Agent {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
                             let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
@@ -1134,7 +1136,7 @@ impl Agent {
                                 });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap_or(0) + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));

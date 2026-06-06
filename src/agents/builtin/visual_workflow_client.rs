@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use crate::visual_workflow::{WorkflowGraph, WorkflowExecutor};
 use crate::agent::{Agent, AgentRunConfig};
-use crate::llm::LlmClient;
+
 
 /// HTTP Server AppState
 pub struct VisualWorkflowState {
@@ -67,6 +67,7 @@ pub fn create_router(state: Arc<VisualWorkflowState>) -> Router {
 
 #[cfg(test)]
 mod tests {
+    use crate::llm::LlmClient;
     use super::*;
     use axum::{
         body::Body,
