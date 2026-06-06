@@ -20,8 +20,8 @@ describe('HelpCenterPage', () => {
       if (url === '/api/videos') {
         return Promise.resolve({
           json: () => Promise.resolve([
-            { id: 1, title: "Set up your store", duration: "1:20" },
-            { id: 2, title: "Accept your first payment", duration: "0:45" }
+            { id: 1, title: "How to set up your first store easily", duration: "1:20" },
+            { id: 2, title: "Linking your own website name", duration: "0:45" }
           ])
         });
       }
@@ -83,8 +83,8 @@ describe('HelpCenterPage', () => {
     render(<HelpCenterPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Set up your store')).toBeInTheDocument();
-      expect(screen.getByText('Accept your first payment')).toBeInTheDocument();
+      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
+      expect(screen.getByText('Linking your own website name')).toBeInTheDocument();
     });
   });
 });
