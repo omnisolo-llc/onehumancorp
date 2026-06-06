@@ -63,7 +63,12 @@ export default function TeamPage() {
 
   const fetchApprovals = async () => {
     try {
-      const response = await fetch('/api/agents/approvals');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+      const response = await fetch('/api/agents/approvals', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setApprovals(data.pending_approvals || []);
@@ -86,10 +91,14 @@ export default function TeamPage() {
 
   const handleApprove = async (id: string) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
       const response = await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ approved: true })
       });
       if (!response.ok) fetchApprovals();
@@ -101,10 +110,14 @@ export default function TeamPage() {
 
   const handleReject = async (id: string) => {
      try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
       const response = await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ approved: false })
       });
       if (!response.ok) fetchApprovals();
