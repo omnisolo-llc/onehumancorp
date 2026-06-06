@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CheckoutPage from './page';
 
 vi.mock('next/navigation', () => ({
@@ -20,6 +20,10 @@ vi.mock('../components/PoweredByOHC', () => ({
 describe('CheckoutPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders the checkout page', () => {
@@ -42,6 +46,38 @@ describe('CheckoutPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Payment Successful!')).toBeDefined();
+    });
+  });
+
+  it('includes browser coordinates when checking delivery eligibility', async () => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition: vi.fn((success) => success({
+          coords: { latitude: 37.77, longitude: -122.41 },
+        })),
+      },
+    });
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ success: true, fee: 8.5 }),
+    } as any);
+
+    render(<CheckoutPage />);
+
+    fireEvent.change(screen.getByPlaceholderText('Enter delivery address...'), {
+      target: { value: '123 Market St' },
+    });
+    fireEvent.click(screen.getByText('Check'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/delivery-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deliveryAddress: '123 Market St',
+          coordinates: { lat: 37.77, lng: -122.41 },
+        }),
+      });
     });
   });
 });

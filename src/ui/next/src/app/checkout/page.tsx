@@ -31,10 +31,32 @@ export default function CheckoutPage() {
     setDeliveryError(null);
 
     try {
+      const coordinates = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+        if (typeof navigator === "undefined" || !navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          }),
+          () => resolve(null),
+          { maximumAge: 300000, timeout: 2000 },
+        );
+      });
+      const payload: {
+        deliveryAddress: string;
+        coordinates?: { lat: number; lng: number };
+      } = { deliveryAddress };
+      if (coordinates) {
+        payload.coordinates = coordinates;
+      }
+
       const response = await fetch("/api/checkout/delivery-quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deliveryAddress }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
       if (data.success) {

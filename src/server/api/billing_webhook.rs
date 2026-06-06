@@ -31,6 +31,43 @@ pub struct StripeEventData {
     pub object: Value,
 }
 
+pub fn inventory_locks_for_payment_success(object: &Value) -> Vec<String> {
+    let Some(metadata) = object.get("metadata") else {
+        return Vec::new();
+    };
+    let mut locks = Vec::new();
+    if let Some(lock_id) = metadata.get("inventory_lock_id").and_then(|v| v.as_str()) {
+        if !lock_id.trim().is_empty() {
+            locks.push(lock_id.to_string());
+        }
+    }
+    if let Some(lock_ids) = metadata.get("inventory_lock_ids").and_then(|v| v.as_array()) {
+        for lock_id in lock_ids.iter().filter_map(|v| v.as_str()) {
+            if !lock_id.trim().is_empty() && !locks.iter().any(|existing| existing == lock_id) {
+                locks.push(lock_id.to_string());
+            }
+        }
+    }
+    locks
+}
+
+async fn release_inventory_locks_for_payment(webhook_state: &WebhookState, object: &Value) {
+    let locks = inventory_locks_for_payment_success(object);
+    if locks.is_empty() {
+        return;
+    }
+    match webhook_state.rate_limiter.get_connection().await {
+        Ok(mut conn) => {
+            for lock_id in locks {
+                let _: Result<(), _> = redis::cmd("DEL").arg(&lock_id).query_async(&mut conn).await;
+            }
+        }
+        Err(err) => {
+            ::server_telemetry::record_error_signal("Failed to get redis connection for payment inventory lock release");
+            tracing::warn!("Failed to release payment inventory locks: {}", err);
+        }
+    }
+}
 
 pub async fn webhook_security_middleware(
     State(webhook_state): State<WebhookState>,
@@ -227,6 +264,9 @@ pub async fn stripe_webhook_handler(
         },
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
+            if payload.r#type == "checkout.session.completed" {
+                release_inventory_locks_for_payment(&webhook_state, obj).await;
+            }
 
             // Extract tenant ID. Depending on your Stripe setup, this might be in metadata
             // or client_reference_id. Here we assume it's in metadata.tenant_id.

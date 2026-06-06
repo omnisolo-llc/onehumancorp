@@ -1491,6 +1491,7 @@ mod tests {
                 .fetch_one(pool).await.unwrap();
             assert_eq!(status, "PAUSED");
         } // end of test_customer_success_worker_draft_reply
+    }
 
     #[tokio::test]
     async fn test_promoter_worker_social_post_draft() {
@@ -1546,6 +1547,4 @@ mod tests {
             }
         }
     }
-}
-
 }

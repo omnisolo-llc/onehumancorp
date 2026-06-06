@@ -8,6 +8,27 @@ use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 use crate::db::DB;
 
+#[test]
+fn payment_success_extracts_inventory_locks_for_release() {
+    let object = json!({
+        "metadata": {
+            "inventory_lock_id": "ohc:lock:tenant-1:inventory:prod-1:sess-1",
+            "inventory_lock_ids": [
+                "ohc:lock:tenant-1:inventory:prod-2:sess-1",
+                "ohc:lock:tenant-1:inventory:prod-3:sess-1"
+            ]
+        }
+    });
+
+    let locks = crate::api::billing_webhook::inventory_locks_for_payment_success(&object);
+
+    assert_eq!(locks, vec![
+        "ohc:lock:tenant-1:inventory:prod-1:sess-1".to_string(),
+        "ohc:lock:tenant-1:inventory:prod-2:sess-1".to_string(),
+        "ohc:lock:tenant-1:inventory:prod-3:sess-1".to_string(),
+    ]);
+}
+
 #[tokio::test]
 async fn test_stripe_webhook_handler_completed() {
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());

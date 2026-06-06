@@ -28,3 +28,17 @@ rust_library(
         "@crates//:sqlx",
     ],
 )
+
+rust_test(
+    name = "server_services_subscription_unit_test",
+    size = "small",
+    crate = ":server_services_subscription",
+    edition = "2024",
+    deps = [
+        "@crates//:tokio",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)

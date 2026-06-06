@@ -1,8 +1,70 @@
-use ::server_domain::subscription::{SubscriptionPlan, Subscriber, FulfillmentBatch, FulfillmentStatus, SubscriptionStatus};
+use ::server_domain::subscription::{SubscriptionPlan, Subscriber, SubscriptionStatus};
 use sqlx::PgPool as DbPool;
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
+
+#[async_trait::async_trait]
+pub trait DunningNotifier: Send + Sync {
+    async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String>;
+}
+
+#[async_trait::async_trait]
+pub trait DunningMessageGenerator: Send + Sync {
+    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String;
+}
+
+pub struct CriticalSmsDunningNotifier;
+pub struct LlmDunningMessageGenerator;
+
+#[async_trait::async_trait]
+impl DunningNotifier for CriticalSmsDunningNotifier {
+    async fn send_payment_failure_sms(&self, _subscriber_id: &str, message: &str) -> Result<(), String> {
+        server_lib::dispatch_critical_sms("failed_payment", message).await
+    }
+}
+
+#[async_trait::async_trait]
+impl DunningMessageGenerator for LlmDunningMessageGenerator {
+    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String {
+        let fallback = build_payment_failure_sms(business_name);
+        let prompt = format!(
+            "Write a concise, helpful SMS for subscription payment recovery. Business: {}. Subscriber id: {}. Mention the payment could not be processed and ask them to update their saved payment method. Avoid blame and keep it under 240 characters.",
+            business_name,
+            subscriber_id
+        );
+        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            Ok("minimax") => {
+                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                server_lib::minimax::MinimaxClient::new(api_key)
+                    .reason(&prompt)
+                    .await
+                    .unwrap_or(fallback)
+            }
+            _ => server_lib::minimax::LocalLLMClient::new()
+                .reason(&prompt)
+                .await
+                .unwrap_or(fallback),
+        }
+    }
+}
+
+pub fn build_payment_failure_sms(business_name: &str) -> String {
+    format!(
+        "{} subscription payment could not be processed. Please update the saved payment method to keep the subscription active.",
+        business_name
+    )
+}
+
+pub async fn send_dunning_sms<N: DunningNotifier, G: DunningMessageGenerator>(
+    notifier: &N,
+    generator: &G,
+    subscriber_id: &str,
+    business_name: &str,
+) -> Result<(), String> {
+    let message = generator.generate_payment_failure_message(subscriber_id, business_name).await;
+    notifier.send_payment_failure_sms(subscriber_id, &message).await
+}
 
 pub struct SubscriptionService {
     db: Arc<DbPool>,
@@ -121,6 +183,19 @@ impl SubscriptionService {
     }
 
     pub async fn trigger_dunning(&self, subscriber_id: &str) -> Result<(), String> {
+        self.trigger_dunning_with_notifier(subscriber_id, &CriticalSmsDunningNotifier).await
+    }
+
+    pub async fn trigger_dunning_with_notifier<N: DunningNotifier>(&self, subscriber_id: &str, notifier: &N) -> Result<(), String> {
+        self.trigger_dunning_with_notifier_and_generator(subscriber_id, notifier, &LlmDunningMessageGenerator).await
+    }
+
+    pub async fn trigger_dunning_with_notifier_and_generator<N: DunningNotifier, G: DunningMessageGenerator>(
+        &self,
+        subscriber_id: &str,
+        notifier: &N,
+        generator: &G,
+    ) -> Result<(), String> {
         let db = self.db.clone();
 
         let q = "
@@ -135,8 +210,7 @@ impl SubscriptionService {
             .await
             .map_err(|e| e.to_string())?;
 
-        // In a real application, this would trigger an event or queue a job
-        // to send an SMS via CRM agent.
+        send_dunning_sms(notifier, generator, subscriber_id, "Your business").await?;
 
         Ok(())
     }
@@ -157,5 +231,46 @@ impl SubscriptionService {
             .map_err(|e| e.to_string())?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+
+    struct RecordingDunningNotifier {
+        sent: Arc<Mutex<Vec<(String, String)>>>,
+    }
+
+    struct FixedDunningMessageGenerator;
+
+    #[async_trait::async_trait]
+    impl DunningMessageGenerator for FixedDunningMessageGenerator {
+        async fn generate_payment_failure_message(&self, _subscriber_id: &str, _business_name: &str) -> String {
+            "LLM generated dunning response".to_string()
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl DunningNotifier for RecordingDunningNotifier {
+        async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String> {
+            self.sent.lock().unwrap().push((subscriber_id.to_string(), message.to_string()));
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn dunning_notifier_sends_generated_payment_failure_sms() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let notifier = RecordingDunningNotifier { sent: sent.clone() };
+        let generator = FixedDunningMessageGenerator;
+
+        send_dunning_sms(&notifier, &generator, "sub_123", "Maya's Cakes").await.unwrap();
+
+        let messages = sent.lock().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].0, "sub_123");
+        assert_eq!(messages[0].1, "LLM generated dunning response");
     }
 }

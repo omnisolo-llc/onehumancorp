@@ -17,10 +17,15 @@ This manifest records the first 50 open issues reviewed from `onehumancorp/mono`
 After the first 50, the next 300 open issues were scanned for code-resolvable feature follow-ups. Most were generated `agent-report` architecture/research issues, but the following were implemented with code and tests in this branch:
 
 - #24045: `MarketingAgent` now accepts an injected marketing copy client instead of reading LLM provider environment variables inline.
+- #24023: Subscription dunning now uses an injectable LLM-backed message generator for payment-failure SMS copy.
 - #23999: The Conversational Checkout generated-card API route now proxies to the Rust backend instead of manufacturing mock checkout sessions.
+- #23998: `trigger_dunning` now updates subscriber state and dispatches payment-failure SMS through a notifier abstraction.
+- #23997: Payment-success webhook handling can extract and release conversational checkout `inventory_lock_id` values.
 - #23956: The frontend `CreateConversationalCheckout` path is wired to the backend route contract for the booking service.
+- #23924: Checkout delivery checks now include browser coordinates and proxy delivery eligibility requests to the Rust backend.
 - #23519: The `/sites/{site_id}` builder endpoint now fetches site, pages, and blocks with a single joined query instead of per-page block queries.
 - #23425: Removed unused Rust imports that were surfacing during shared `server_lib` builds.
+- #22300: SIP database retry loops now share PostgreSQL-aware retry classification for lock, deadlock, and serialization failures.
 - #22508: Integration connect buttons now request backend-generated OAuth URLs through `/api/integrations/{id}/connect`.
 - #22181: Added an AutoDream sync-duration metric recorder and a dashboard-backed test for `ohc_autodream_sync_duration_seconds`.
 - #22180: Added a test to prevent `hybrid-telemetry.json` drift and synchronized deploy dashboard mirrors to the canonical dashboard.
