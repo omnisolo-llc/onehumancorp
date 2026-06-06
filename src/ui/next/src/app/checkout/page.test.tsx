@@ -42,6 +42,8 @@ describe('CheckoutPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Payment Successful!')).toBeDefined();
+      expect(screen.getByText('Want a beautiful storefront like this?')).toBeDefined();
+      expect(screen.getByText('Create Free Store')).toBeDefined();
     });
   });
 });

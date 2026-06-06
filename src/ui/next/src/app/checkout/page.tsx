@@ -253,6 +253,20 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              <div className="mt-4 mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 flex flex-col items-center text-center">
+                <span className="text-2xl mb-2">🚀</span>
+                <h3 className="text-sm font-bold font-outfit text-gray-900 mb-1">Want a beautiful storefront like this?</h3>
+                <p className="text-xs text-gray-600 mb-3">Launch your own free storefront in 10 minutes. Zero coding required.</p>
+                <a
+                  href={`https://ohc.store/join?ref=${tenant}&source=checkout_success_modal`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Create Free Store
+                </a>
+              </div>
+
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
                 <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">Or Share Via</span></div>

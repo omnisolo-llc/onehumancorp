@@ -19,6 +19,11 @@ test.describe('Checkout Flow', () => {
     // In e2e, the fetch may be too fast to see Processing... text, we just verify success modal shows.
     // Should show success modal
     await expect(page.getByText('Payment Successful!')).toBeVisible();
+
+    // Assert the presence of the Merchant Acquisition Viral Loop
+    await expect(page.getByText('Want a beautiful storefront like this?')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create Free Store' })).toBeVisible();
+
     await expect(page.getByRole('button', { name: 'Continue to Dashboard' })).toBeVisible();
   });
 });
