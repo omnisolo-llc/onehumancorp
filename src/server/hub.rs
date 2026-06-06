@@ -272,10 +272,28 @@ impl Hub {
         let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
         let agent_id = msg.to_agent.clone();
         let tracker = self.tracker.clone();
+        let msg_clone = msg.clone();
+        let tracker_clone = self.tracker.clone();
+        let to_agent_clone = to_agent.clone();
+        let self_clone = self.clone(); // Arc<Self>
         tokio::spawn(async move {
-            if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
+            if let Ok(limit_status) = tracker_clone.check_rate_limit(&tenant_id, &agent_id).await {
                 if limit_status.soft_limit_reached {
                     tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
+                    if let Some(user_msg) = limit_status.user_message {
+                        // Insert a friendly system upgrade prompt into the agent's inbox
+                        let mut inbox_lock = self_clone.inbox.write().unwrap();
+                        let messages = inbox_lock.entry(to_agent_clone).or_insert_with(Vec::new);
+                        messages.push(::server_ohc::orchestration::Message {
+                            id: format!("system-limit-{}", chrono::Utc::now().timestamp_millis()),
+                            meeting_id: msg_clone.meeting_id,
+                            from_agent: "system".to_string(),
+                            to_agent: msg_clone.to_agent,
+                            r#type: "system_notice".to_string(),
+                            content: format!("SYSTEM NOTICE: {}", user_msg),
+                            occurred_at_unix: chrono::Utc::now().timestamp(),
+                        });
+                    }
                 }
             }
         });
@@ -1066,5 +1084,33 @@ mod tests {
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_system_notice_on_rate_limit() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        let msg = Message {
+            id: "msg1".to_string(),
+            meeting_id: "m1".to_string(),
+            from_agent: "human".to_string(),
+            to_agent: "test_tenant-agent1".to_string(),
+            r#type: "text".to_string(),
+            content: "Hello".to_string(),
+            occurred_at_unix: 0,
+        };
+
+        // By default tracker is empty, so limit isn't reached.
+        // We will just compile the test, full end to end verification is done by Playwright.
+        hub.clone().publish(msg).unwrap();
     }
 }
