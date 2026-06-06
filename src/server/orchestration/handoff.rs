@@ -69,11 +69,14 @@ impl HandoffManager {
                                         }
                                     }
                                     DbStore::Sqlite(sqlite_pool) => {
-                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, datetime(?, 'unixepoch')) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
+                                        let dt_str = chrono::DateTime::from_timestamp(handoff.timestamp, 0)
+                                            .unwrap_or(chrono::Utc::now())
+                                            .to_rfc3339();
+                                        if let Err(e) = sqlx::query("INSERT INTO agent_memories (id, organization_id, raw_content, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET raw_content = excluded.raw_content, updated_at = excluded.updated_at WHERE agent_memories.updated_at < excluded.updated_at")
                                             .bind(&handoff.state_id)
                                             .bind(&handoff.tenant_id)
                                             .bind(&handoff.serialized_state)
-                                            .bind(handoff.timestamp)
+                                            .bind(&dt_str)
                                             .execute(sqlite_pool)
                                             .await
                                         {
@@ -105,11 +108,14 @@ impl HandoffManager {
                                         }
                                     }
                                     DbStore::Sqlite(sqlite_pool) => {
-                                        if let Err(e) = sqlx::query("UPDATE shared_tasks_decomposition SET payload = ?, updated_at = datetime(?, 'unixepoch') WHERE id = ? AND updated_at < datetime(?, 'unixepoch')")
+                                        let dt_str = chrono::DateTime::from_timestamp(handoff.timestamp, 0)
+                                            .unwrap_or(chrono::Utc::now())
+                                            .to_rfc3339();
+                                        if let Err(e) = sqlx::query("UPDATE shared_tasks_decomposition SET payload = ?, updated_at = ? WHERE id = ? AND updated_at < ?")
                                             .bind(&payload_str)
-                                            .bind(handoff.timestamp)
+                                            .bind(&dt_str)
                                             .bind(&handoff.state_id)
-                                            .bind(handoff.timestamp)
+                                            .bind(&dt_str)
                                             .execute(sqlite_pool)
                                             .await
                                         {

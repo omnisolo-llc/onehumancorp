@@ -81,14 +81,23 @@ impl HybridSyncDaemon {
             let metric_type: String = row.get("metric_type");
             let value: f32 = row.get("value");
             let labels_json: String = row.get("labels_json");
-            let timestamp: chrono::NaiveDateTime = row.get("timestamp");
+
+            // SQLite natively fetches dates as Strings when queried via type bindings without explicit type converters.
+            // When querying standalone telemetry, parse as string and normalize to NativeDateTime for Postgres upstream
+            let timestamp_str: String = row.get("timestamp");
+
+            // Try RFC3339 first. If that fails, fallback to parsing as NaiveDateTime which is the standard SQLite fallback text format
+            let parsed_ts = chrono::DateTime::parse_from_rfc3339(&timestamp_str)
+                .map(|dt| dt.with_timezone(&chrono::Utc).naive_utc())
+                .or_else(|_| chrono::NaiveDateTime::parse_from_str(&timestamp_str, "%Y-%m-%d %H:%M:%S"))
+                .unwrap_or_else(|_| chrono::Utc::now().naive_utc());
 
             let res = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'synced')")
                 .bind(metric_name)
                 .bind(metric_type)
                 .bind(value)
                 .bind(labels_json)
-                .bind(chrono::DateTime::<Utc>::from_naive_utc_and_offset(timestamp, Utc))
+                .bind(parsed_ts)
                 .execute(&mut *tx)
                 .await;
 
