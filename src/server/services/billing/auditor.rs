@@ -338,8 +338,18 @@ impl CostAuditor {
         {
             let mut tenant_payment_fees = self.tenant_payment_fees.lock().unwrap();
             let current_tenant_fee = tenant_payment_fees.entry(tenant_id.to_string()).or_insert(0.0);
-            // Using Stripe's standard fee calculation: 2.9% + 30 cents per transaction
-            *current_tenant_fee += amount * 0.029 + 0.30;
+
+            use crate::integrations::stripe::routing::{PaymentRouter, PaymentMethod};
+            let method = PaymentRouter::optimize_payment_method(amount);
+
+            let fee = match method {
+                PaymentMethod::Ach => (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP),
+                PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago => {
+                    (amount * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED
+                }
+            };
+
+            *current_tenant_fee += fee;
         }
     }
 
@@ -485,6 +495,11 @@ mod tests {
         assert_eq!(auditor.get_tenant_revenue("tenant1"), 5.0);
         assert_eq!(auditor.get_tenant_payment_fees("tenant1"), 5.0 * 0.029 + 0.30);
         
+        auditor.record_revenue("agent1", "tenant1", 1000.0);
+        assert_eq!(auditor.get_tenant_revenue("tenant1"), 1005.0);
+        // $1000 uses ACH: 1000 * 0.008 = 8.0, capped at 5.0 -> fee is 5.0
+        assert_eq!(auditor.get_tenant_payment_fees("tenant1"), (5.0 * 0.029 + 0.30) + 5.0);
+
         auditor.set_agent_budget("agent1", 1.0);
         assert!(auditor.is_agent_over_budget("agent1"));
         
