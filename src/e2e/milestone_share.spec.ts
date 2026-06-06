@@ -21,6 +21,10 @@ test.describe('Growth Loop: Milestone Viral Share', () => {
     // Create a mock for window.open to prevent new tabs from opening and failing the test unexpectedly
     await page.addInitScript(() => {
         (window as any).open = function(url: string, target: string) {
+<<<<<<< HEAD
+            console.debug('Intercepted window.open:', url);
+=======
+>>>>>>> 8b7f683c (Fix multi-tenant safety on shared_tasks and prevent tenant data leakage)
             return null;
         };
     });

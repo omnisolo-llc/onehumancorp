@@ -8,27 +8,39 @@ test.describe('Login Screen Visual Audit', () => {
     await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
   });
 
-  test('should display dashboard', async ({ page }) => {
-    await page.goto('/');
+  test('should navigate to dashboard', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Log In' }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  });
+
+  test('should navigate to onboarding', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'Start Business Setup' }).click();
+    await expect(page.getByText('Start Onboarding')).toBeVisible();
+  });
+
+  test('should display dashboard directly', async ({ page }) => {
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   test('should display agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 });
 
 test.describe('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('nav')).toBeVisible();
-    await page.locator('nav a:has-text("Agents")').click();
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await page.goto('/dashboard');
+    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    await page.getByRole('link', { name: 'Agents' }).click();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should show welcome message', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 });

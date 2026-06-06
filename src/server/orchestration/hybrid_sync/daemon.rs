@@ -119,8 +119,13 @@ impl HybridSyncDaemon {
 
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
+<<<<<<< HEAD
+        // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
+        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100")
+=======
 
         let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100")
+>>>>>>> 8b7f683c (Fix multi-tenant safety on shared_tasks and prevent tenant data leakage)
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -130,7 +135,14 @@ impl HybridSyncDaemon {
         for row in rows {
             let id: String = row.get("id");
             let payload: String = row.get("payload");
-            total_payload_size += payload.len();
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+
+            // Sanitize PII
+            let parsed_payload: Value = serde_json::from_str(&payload).unwrap_or_else(|_| json!({ "raw": payload }));
+            let sanitized_payload = ::server_telemetry::redact_interface_pii(parsed_payload);
+            let final_payload = sanitized_payload.to_string();
+
+            total_payload_size += final_payload.len();
 
             let mut tx = match self.pg_pool.begin().await {
                 Ok(t) => t,
@@ -152,9 +164,10 @@ impl HybridSyncDaemon {
                 }
             };
 
-            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, 'system') ON CONFLICT (id) DO UPDATE SET payload = $2")
+            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, $3) ON CONFLICT (id) DO UPDATE SET payload = $2")
                 .bind(&id)
-                .bind(&payload)
+                .bind(&final_payload)
+                .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await;
 
@@ -244,7 +257,7 @@ impl HybridSyncDaemon {
     pub async fn sync_step(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
         // Find tasks requiring cloud escalation
-        let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute'))")
+        let rows = sqlx::query("SELECT memory_id, context, tenant_id FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute'))")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -255,6 +268,7 @@ impl HybridSyncDaemon {
         for row in rows {
             let id: String = row.get("memory_id");
             let context: String = row.get("context");
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
             // Sanitize PII
             let parsed: Value = serde_json::from_str(&context).unwrap_or(json!({ "raw": context }));
@@ -294,9 +308,10 @@ impl HybridSyncDaemon {
                 }
             };
 
-            let mission_res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, 'system')")
+            let mission_res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, $3)")
                 .bind(&queue_id)
                 .bind(payload.to_string())
+                .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await;
 
@@ -311,10 +326,11 @@ impl HybridSyncDaemon {
                 continue;
             }
 
-            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, 'system', NULL, $2, 'QUEUED', $3, $3, $3)")
+            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $4, NULL, $2, 'QUEUED', $3, $3, $3)")
                 .bind(&queue_id)
                 .bind(payload.to_string())
                 .bind(now)
+                .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await;
 
@@ -343,7 +359,7 @@ impl HybridSyncDaemon {
                     success_count += 1;
 
                     if let Err(e) =
-                        ::server_telemetry::record_rag_escalation(&self.pg_pool, "system", "").await
+                        ::server_telemetry::record_rag_escalation(&self.pg_pool, &tenant_id, "").await
                     {
                         warn!("Failed to record RAG escalation telemetry: {}", e);
                     }
