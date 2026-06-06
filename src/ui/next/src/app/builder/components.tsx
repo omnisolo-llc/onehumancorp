@@ -8,9 +8,9 @@ import React from 'react';
 export function SkeletonBlock() {
   return (
     <div className="w-full p-6 animate-pulse">
-      <div className="h-40 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] mb-4 border border-white/50 dark:border-white/10" />
-      <div className="h-4 w-3/4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] mb-2 border border-white/50 dark:border-white/10" />
-      <div className="h-4 w-1/2 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10" />
+      <div className="h-40 mac-glass-container rounded-[16px] mb-4" />
+      <div className="h-4 w-3/4 mac-glass-container rounded-[8px] mb-2" />
+      <div className="h-4 w-1/2 mac-glass-container rounded-[8px]" />
     </div>
   );
 }
@@ -20,7 +20,7 @@ export function ActionSheet({ isOpen, onClose, title, children }: { isOpen: bool
   return (
     <div className="absolute inset-0 z-[100] flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-xl border-t border-white/40 dark:border-white/10 w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up relative z-10">
+      <div className="mac-glass-container w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up relative z-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{title}</h2>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-white/40 dark:hover:bg-black/40 transition-colors">
@@ -98,7 +98,7 @@ export function DraggableBlock({
 
 export function QRCode({ value }: { value: string }) {
   return (
-    <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 rounded-[16px] shadow-sm border border-white/50 dark:border-white/10 inline-block">
+    <div className="mac-glass-container p-4 rounded-[16px] shadow-sm inline-block">
       <svg className="w-32 h-32 rounded-[8px]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" rx="12" fill="white" className="dark:fill-[#1D1D1F]"/>
         <rect x="10" y="10" width="20" height="20" fill="black"/>
@@ -131,7 +131,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
         </div>
-        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 rounded-[16px] backdrop-blur-md bg-white/20 border border-white/40 shadow-lg">
+        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 rounded-[16px] mac-glass-container shadow-lg">
           <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>
           <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.copy}</p>
         </div>
@@ -145,7 +145,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">Our Services</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
-            <div key={i} className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-4 rounded-[16px] flex flex-col">
+            <div key={i} className="mac-glass-container shadow-sm p-4 rounded-[16px] flex flex-col">
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.name}</h3>
                 <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
@@ -161,7 +161,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Booking") {
     return (
       <div className="p-6 bg-transparent font-inter min-w-[375px]">
-        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px] text-center">
+        <div className="mac-glass-container shadow-sm p-5 rounded-[16px] text-center">
           <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{props.title}</h2>
           <p className="text-sm text-gray-600 dark:text-[#A1A1A6] mb-4">{props.availability}</p>
           <button className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white font-semibold py-3 rounded-[8px] shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
@@ -174,7 +174,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Referral") {
     return (
-      <div className="builder-block p-6 bg-gradient-to-br from-[#0066FF]/10 to-[#00C24B]/10 font-inter text-center border-t border-b border-white/40 dark:border-white/10 my-4 shadow-sm backdrop-blur-sm">
+      <div className="builder-block p-6 mac-glass-container font-inter text-center my-4 shadow-sm">
         <h2 className="text-xl font-bold font-outfit mb-2 text-[#1D1D1F] dark:text-[#F5F5F7]">{props.offerTitle || "Refer a Friend & Earn"}</h2>
         <p className="text-sm text-gray-700 dark:text-[#A1A1A6] mb-5">{props.offerDescription || "Get 20% off your next purchase when a friend buys from us!"}</p>
 
@@ -210,7 +210,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Contact") {
     return (
-      <div className="p-6 bg-white/40 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] font-inter text-center border-y border-white/50 dark:border-white/10">
+      <div className="p-6 mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] font-inter text-center">
         <h2 className="text-lg font-bold font-outfit mb-4">Get in Touch</h2>
         <div className="space-y-2 text-sm text-gray-700 dark:text-[#A1A1A6]">
           <p>Email: <a href={`mailto:${props.email}`} className="text-[#0066FF] hover:underline">{props.email}</a></p>
