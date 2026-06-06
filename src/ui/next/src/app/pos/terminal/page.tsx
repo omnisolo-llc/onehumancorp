@@ -28,6 +28,8 @@ export default function TerminalPage() {
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [loyaltyData, setLoyaltyData] = useState<any>(null);
 
   // Background sync
   useEffect(() => {
@@ -111,6 +113,40 @@ export default function TerminalPage() {
       setTimeout(() => setOfflineConversion(false), 3000);
     }
     setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+  };
+
+  const lookupCustomer = async () => {
+    if (!customerPhone) return;
+    const currentTenant = localStorage.getItem('tenant_id') || 'default_tenant';
+    try {
+      const res = await fetch(`/api/v1/loyalty/${currentTenant}/customer/${customerPhone}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLoyaltyData(data);
+      } else {
+        setLoyaltyData({ points_balance: 0 });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const redeemPoints = async () => {
+    if (!customerPhone || !loyaltyData || loyaltyData.points_balance < 100) return;
+    const currentTenant = localStorage.getItem('tenant_id') || 'default_tenant';
+    try {
+      const res = await fetch(`/api/v1/loyalty/${currentTenant}/customer/${customerPhone}/redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ points: 100 })
+      });
+      if (res.ok) {
+        setLoyaltyData({ ...loyaltyData, points_balance: loyaltyData.points_balance - 100 });
+        setOrderStatus(t('Reward Redeemed! $5 Off Applied.'));
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   if (!activeStaff) {
@@ -217,6 +253,42 @@ export default function TerminalPage() {
                >
                  {t('Clock In')}
                </button>
+             )}
+           </div>
+
+           {/* Loyalty Section */}
+           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
+             <h3 className="text-sm font-bold text-gray-900 mb-3">{t('Customer Lookup & Loyalty')}</h3>
+             <div className="flex gap-2 mb-3">
+               <input
+                 type="text"
+                 placeholder={t('Phone Number')}
+                 value={customerPhone}
+                 onChange={(e) => setCustomerPhone(e.target.value)}
+                 className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+               />
+               <button
+                 onClick={lookupCustomer}
+                 className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800"
+               >
+                 {t('Lookup')}
+               </button>
+             </div>
+             {loyaltyData && (
+               <div className="flex items-center justify-between bg-blue-50 rounded-lg p-3">
+                 <div>
+                   <p className="text-xs text-blue-600 font-medium">{t('Available Points')}</p>
+                   <p className="text-lg font-bold text-blue-900">{loyaltyData.points_balance}</p>
+                 </div>
+                 {loyaltyData.points_balance >= 100 && (
+                   <button
+                     onClick={redeemPoints}
+                     className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold shadow hover:bg-blue-700 transition-colors"
+                   >
+                     {t('Redeem 100 pts')}
+                   </button>
+                 )}
+               </div>
              )}
            </div>
 

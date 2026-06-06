@@ -181,6 +181,28 @@ impl LedgerRepository {
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
+                // Hook: Enqueue PaymentCompleted event to CustomerSuccessAgent
+                let customer_id = match sqlx::query("SELECT customer_id FROM invoices WHERE tenant_id = $1 AND id = $2")
+                    .bind(&event.tenant_id)
+                    .bind(&event.invoice_id)
+                    .fetch_optional(&mut *tx)
+                    .await.map_err(|e| e.to_string())? {
+                        Some(row) => {
+                            use sqlx::Row;
+                            row.get::<String, _>("customer_id")
+                        },
+                        None => "customer_unknown".to_string()
+                    };
+                let payload = serde_json::json!({
+                    "amount": event.amount,
+                    "customer_id": customer_id
+                }).to_string();
+                sqlx::query(r#"INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'customer_success', 'PaymentCompleted', $3, 'PENDING')"#)
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&event.tenant_id)
+                .bind(payload)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
                 tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -201,6 +223,28 @@ impl LedgerRepository {
 
                 sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = ? WHERE tenant_id = ? AND id = ?"#)
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                // Hook: Enqueue PaymentCompleted event to CustomerSuccessAgent
+                let customer_id = match sqlx::query("SELECT customer_id FROM invoices WHERE tenant_id = ? AND id = ?")
+                    .bind(&event.tenant_id)
+                    .bind(&event.invoice_id)
+                    .fetch_optional(&mut *tx)
+                    .await.map_err(|e| e.to_string())? {
+                        Some(row) => {
+                            use sqlx::Row;
+                            row.get::<String, _>("customer_id")
+                        },
+                        None => "customer_unknown".to_string()
+                    };
+                let payload = serde_json::json!({
+                    "amount": event.amount,
+                    "customer_id": customer_id
+                }).to_string();
+                sqlx::query(r#"INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, 'customer_success', 'PaymentCompleted', ?, 'PENDING')"#)
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&event.tenant_id)
+                .bind(payload)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;

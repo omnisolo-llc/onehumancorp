@@ -837,7 +837,74 @@ impl CustomerSuccessWorker {
                 ("Draft Reply".to_string(), format!("Hi! Thanks for reaching out. We received your message: '{}'. One of our team members will get back to you shortly.", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")))
             };
 
-            if event_type == "CustomerMessageReceived" {
+
+            if event_type == "PaymentCompleted" {
+                if let (Some(amount_val), Some(customer_id_val)) = (payload.get("amount"), payload.get("customer_id")) {
+                    if let (Some(amount), Some(customer_id)) = (amount_val.as_f64(), customer_id_val.as_str()) {
+                        let points = (amount / 100.0).floor() as i32;
+                        if points > 0 {
+                            let now = chrono::Utc::now();
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let exists = sqlx::query("SELECT 1 FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
+                                        .bind(&tenant_id)
+                                        .bind(customer_id)
+                                        .fetch_optional(&db.pool)
+                                        .await
+                                        .unwrap_or(None).is_some();
+                                    if exists {
+                                        let _ = sqlx::query("UPDATE loyalty_ledger SET points_balance = points_balance + $1, last_updated = $2 WHERE tenant_id = $3 AND customer_id = $4")
+                                            .bind(points)
+                                            .bind(&now)
+                                            .bind(&tenant_id)
+                                            .bind(customer_id)
+                                            .execute(&db.pool)
+                                            .await;
+                                    } else {
+                                        let ledger_id = uuid::Uuid::new_v4().to_string();
+                                        let _ = sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5)")
+                                            .bind(&ledger_id)
+                                            .bind(&tenant_id)
+                                            .bind(customer_id)
+                                            .bind(points)
+                                            .bind(&now)
+                                            .execute(&db.pool)
+                                            .await;
+                                    }
+                                }
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let exists = sqlx::query("SELECT 1 FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
+                                        .bind(&tenant_id)
+                                        .bind(customer_id)
+                                        .fetch_optional(pool)
+                                        .await
+                                        .unwrap_or(None).is_some();
+                                    if exists {
+                                        let _ = sqlx::query("UPDATE loyalty_ledger SET points_balance = points_balance + ?, last_updated = ? WHERE tenant_id = ? AND customer_id = ?")
+                                            .bind(points)
+                                            .bind(&now)
+                                            .bind(&tenant_id)
+                                            .bind(customer_id)
+                                            .execute(pool)
+                                            .await;
+                                    } else {
+                                        let ledger_id = uuid::Uuid::new_v4().to_string();
+                                        let _ = sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES (?, ?, ?, ?, ?)")
+                                            .bind(&ledger_id)
+                                            .bind(&tenant_id)
+                                            .bind(customer_id)
+                                            .bind(points)
+                                            .bind(&now)
+                                            .execute(pool)
+                                            .await;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if event_type == "CustomerMessageReceived" {
+
                 let customer_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
                 let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, customer_message);
 

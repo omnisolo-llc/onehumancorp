@@ -1023,16 +1023,33 @@ impl DepartmentOrchestrator {
         let now = chrono::Utc::now();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                let id = uuid::Uuid::new_v4().to_string();
-                sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated")
-                    .bind(&id)
+                let exists = sqlx::query("SELECT 1 FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
                     .bind(tenant_id)
                     .bind(customer_id)
-                    .bind(points)
-                    .bind(&now)
-                    .execute(&self.db.pool)
+                    .fetch_optional(&self.db.pool)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e| e.to_string())?.is_some();
+                if exists {
+                    sqlx::query("UPDATE loyalty_ledger SET points_balance = points_balance + $1, last_updated = $2 WHERE tenant_id = $3 AND customer_id = $4")
+                        .bind(points)
+                        .bind(&now)
+                        .bind(tenant_id)
+                        .bind(customer_id)
+                        .execute(&self.db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                } else {
+                    let id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5)")
+                        .bind(&id)
+                        .bind(tenant_id)
+                        .bind(customer_id)
+                        .bind(points)
+                        .bind(&now)
+                        .execute(&self.db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
             }
             crate::db::DbStore::Sqlite(pool) => {
                 let exists = sqlx::query("SELECT 1 FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
