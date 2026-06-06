@@ -162,7 +162,7 @@ mod tests {
                 .fetch_one(&sqlite_pool)
                 .await
                 .unwrap();
-        assert_eq!(row_local_mission.get::<bool, _>("synced_to_cloud"), true);
+        assert!(row_local_mission.get::<bool, _>("synced_to_cloud"));
 
         let row_cloud_mission =
             sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_cloud_1'")
@@ -180,7 +180,7 @@ mod tests {
                 .fetch_one(&sqlite_pool)
                 .await
                 .unwrap();
-        assert_eq!(row_local_burst.get::<bool, _>("synced_to_cloud"), true);
+        assert!(row_local_burst.get::<bool, _>("synced_to_cloud"));
 
         let row_cloud_burst =
             sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_burst_1'")
