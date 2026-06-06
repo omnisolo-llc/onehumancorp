@@ -602,6 +602,8 @@ impl AgentServiceImpl {
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             enable_serverless_hibernation: false,
+            enable_ralph_loop: false,
+            ralph_progress_file: String::new(),
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
@@ -1046,6 +1048,8 @@ impl AgentService for AgentServiceImpl {
             curated_memory_nudge_threshold: 5,
                 enable_time_travel_rewind: false,
                 enable_serverless_hibernation: false,
+            enable_ralph_loop: false,
+            ralph_progress_file: String::new(),
                 max_rewind_attempts: 3,
                 long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,

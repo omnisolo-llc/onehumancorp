@@ -94,6 +94,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub curated_memory_nudge_threshold: i32,
     pub enable_time_travel_rewind: bool,
     pub enable_serverless_hibernation: bool,
+    pub enable_ralph_loop: bool,
+    pub ralph_progress_file: String,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
@@ -155,6 +157,8 @@ enable_llmcompiler_plan_and_execute: false,
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             enable_serverless_hibernation: false,
+            enable_ralph_loop: false,
+            ralph_progress_file: String::new(),
             max_rewind_attempts: 3,
             long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
@@ -1820,6 +1824,15 @@ impl Agent {
         } else {
             Err("Checkpointer not configured".into())
         }
+    }
+
+    pub async fn run_ralph_loop(
+        self: Arc<Self>,
+        cfg: &AgentRunConfig,
+        initial_task: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let ralph = crate::ralph_loop::RalphLoop::new(self.clone(), cfg.clone(), &cfg.ralph_progress_file);
+        ralph.run(initial_task).await
     }
 
     pub async fn run<F>(
@@ -7611,5 +7624,62 @@ mod guardrail_tests {
 
         let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
         assert!(has_tripped_event);
+    }
+}
+
+#[cfg(test)]
+mod ralph_loop_integration_tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage, ToolCall};
+    use crate::llm::LlmClient;
+
+    struct TestLlmClient {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for TestLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if *count == 1 {
+                Ok(ChatResponse {
+                    message: Message::assistant(r#"["Feat1", "Feat2"]"#),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("Feature implemented"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_ralph_loop_integration() {
+        let dir = tempfile::tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+
+        let llm = Arc::new(TestLlmClient { call_count: Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let mut config = AgentRunConfig::default();
+        config.enable_ralph_loop = true;
+        config.ralph_progress_file = progress_file.to_str().unwrap().to_string();
+
+        let result = agent.run_ralph_loop(&config, "Build a web server").await;
+        assert!(result.is_ok());
+
+        assert!(progress_file.exists());
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        assert!(saved_progress_str.contains("Feat1"));
+        assert!(saved_progress_str.contains("Feat2"));
     }
 }
