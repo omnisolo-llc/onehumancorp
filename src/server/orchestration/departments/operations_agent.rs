@@ -23,6 +23,7 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "LowStockAlert".to_string(),
         ]
     }
 
@@ -38,8 +39,8 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
-        let action_description = match event.event_type.as_str() {
-            "tenant.order.created" => "Process Order & Update Inventory".to_string(),
+        let (action_description, actual_risk) = match event.event_type.as_str() {
+            "tenant.order.created" => ("Process Order & Update Inventory".to_string(), risk),
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event
                     .payload
@@ -51,23 +52,28 @@ impl Department for OperationsAgent {
                     .get("subscriber_count")
                     .and_then(|value| value.as_i64())
                     .unwrap_or(0);
-                format!(
+                (format!(
                     "Prepare subscription fulfillment batch {} for {} subscribers",
                     batch_id, subscriber_count
-                )
+                ), risk)
             }
-            _ => "Create order and booking".to_string(),
+            "LowStockAlert" => {
+                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                (format!("Low stock alert for product {}: only {} remaining. Draft a restock order?", product_id, stock), ActionRisk::DraftForReview)
+            }
+            _ => ("Create order and booking".to_string(), risk),
         };
 
         self.orchestrator.execute_action(
             DepartmentType::Operations,
             action_description,
             event.tenant_id.clone(),
-            risk,
+            actual_risk,
             event.payload.clone(),
         ).await?;
 
-        if event.event_type == "tenant.subscription.fulfillment_batch.created" {
+        if event.event_type == "tenant.subscription.fulfillment_batch.created" || event.event_type == "LowStockAlert" {
             return Ok(());
         }
 
