@@ -935,7 +935,7 @@ mod tests {
         let start = std::time::Instant::now();
         let _res = service.get_dashboard(request).await.unwrap().into_inner();
         let elapsed = start.elapsed();
-        println!("Hybrid benchmark completed in {} ms", elapsed.as_millis());
+        tracing::info!("Hybrid benchmark completed in {} ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 500, "Dashboard fetch took too long: {}ms", elapsed.as_millis());
     }
 }

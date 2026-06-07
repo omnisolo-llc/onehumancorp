@@ -5,7 +5,7 @@ use serde_json::json;
 use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 #[derive(Deserialize)]
 struct GrepArgs {
