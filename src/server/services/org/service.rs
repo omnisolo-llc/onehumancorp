@@ -134,26 +134,48 @@ impl OrgService for MyOrgService {
 
         let org_id_for_metrics = org_id.clone();
         let total_agents = agents.len() as i32;
-        let (total_msgs, audited_msgs) = tokio::task::spawn_blocking(move || {
-            let mut total_msgs = 0;
-            let mut audited_msgs = 0;
-            let mut agent_set = std::collections::HashSet::new();
-            for a in agents.iter() {
-                agent_set.insert(a.id.clone());
-            }
 
-            for m in all_meetings.iter() {
-                if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
-                    for msg in &m.transcript {
-                        total_msgs += 1;
-                        if agent_set.contains(&msg.from_agent) {
-                            audited_msgs += 1;
+        let mut agent_set = std::collections::HashSet::new();
+        for a in agents.iter() {
+            agent_set.insert(a.id.clone());
+        }
+        let agent_set = std::sync::Arc::new(agent_set);
+
+        let cpus = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        let chunk_size = (all_meetings.len() / cpus).max(10);
+        let mut handles = Vec::new();
+
+        // all_meetings is an Arc<Vec<MeetingRoom>> so we can clone it and pass it to threads safely
+        for i in (0..all_meetings.len()).step_by(chunk_size) {
+            let end = (i + chunk_size).min(all_meetings.len());
+            let agent_set = agent_set.clone();
+            let org_id = org_id_for_metrics.clone();
+            let meetings_arc = all_meetings.clone();
+
+            handles.push(tokio::task::spawn_blocking(move || {
+                let mut total_msgs = 0;
+                let mut audited_msgs = 0;
+                for m in &meetings_arc[i..end] {
+                    if m.id.starts_with(&org_id) || m.id.contains(&org_id) {
+                        for msg in &m.transcript {
+                            total_msgs += 1;
+                            if agent_set.contains(&msg.from_agent) {
+                                audited_msgs += 1;
+                            }
                         }
                     }
                 }
-            }
-            (total_msgs, audited_msgs)
-        }).await.map_err(|e| Status::internal(e.to_string()))?;
+                (total_msgs, audited_msgs)
+            }));
+        }
+
+        let mut total_msgs = 0;
+        let mut audited_msgs = 0;
+        for handle in handles {
+            let (t, a) = handle.await.map_err(|e| Status::internal(e.to_string()))?;
+            total_msgs += t;
+            audited_msgs += a;
+        }
         
         let audit_fidelity_pct = if total_msgs > 0 {
             (audited_msgs as f64 / total_msgs as f64) * 100.0
