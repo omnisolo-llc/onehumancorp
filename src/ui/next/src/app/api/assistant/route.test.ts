@@ -23,6 +23,8 @@ import { GET as getClaw, PATCH as patchClaw } from './claw/route';
 import { GET as getApprovals, POST as postApproval, PATCH as patchApproval } from './approvals/route';
 import { GET as getSettings, PATCH as patchSettings } from './settings/route';
 import { POST as postSupport } from './support/route';
+import { GET as getExplore, POST as postExplore, PATCH as patchExplore } from './explore/route';
+import { GET as getCloud, POST as postCloud, PATCH as patchCloud } from './cloud/route';
 import { resetAssistantStore } from './store';
 
 function jsonRequest(url: string, body: unknown) {
@@ -88,14 +90,18 @@ describe('assistant API contract', () => {
     ]);
     expect(body.capabilities.modelProviders).toEqual([
       'Auto',
-      'OpenAI',
-      'Anthropic',
-      'MiniMax',
-      'DeepSeek',
-      'Kimi',
+      'WorkBuddy',
+      'MiniMax M2.5',
+      'GLM-4.6',
+      'Kimi K2',
+      'DeepSeek V3.2',
+      'Claude Sonnet',
+      'GPT-5-Codex',
       'Local Ollama',
       'Custom OpenAI Compatible',
     ]);
+    expect(body.capabilities.workModes).toEqual(['Ask', 'Agent', 'Cloud Agent', 'Craft', 'Plan', 'Coding']);
+    expect(body.capabilities.computerUseModes).toEqual(['Normal', 'Auto', 'Full Access']);
     expect(body.capabilities.sharingTargets).toEqual(['Share Link', 'WeChat', 'Slack', 'Download', 'Copy']);
     expect(body.capabilities.workspaceControls).toEqual(['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup']);
     expect(body.capabilities.commandSurfaces).toEqual(['/skill', '/compact', '/summarize', '/clear']);
@@ -875,5 +881,99 @@ describe('assistant API contract', () => {
       status: 'received',
       logBundle: expect.stringContaining('jarvis-logs'),
     });
+  });
+
+  test('lists explores shares and remixes community tasks as personal Jarvis agents', async () => {
+    let body = await (await getExplore()).json();
+    expect(body.templates).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Investor Update Agent',
+        source: 'community',
+        remixable: true,
+      }),
+      expect.objectContaining({
+        name: 'Local File Cleanup Agent',
+        useCases: expect.arrayContaining(['batch_rename', 'merge_pdfs']),
+      }),
+    ]));
+    expect(body.exploreActions).toEqual(expect.arrayContaining(['Try Task', 'Remix Agent', 'Share Exploration']));
+
+    body = await (await postExplore(jsonRequest('http://localhost/api/assistant/explore', {
+      templateId: 'explore-investor-update',
+      workspace: 'Founder OS',
+      ownerGoal: 'Prepare my own investor update every Friday',
+    }))).json();
+    expect(body.remix).toMatchObject({
+      sourceTemplateId: 'explore-investor-update',
+      workspace: 'Founder OS',
+      visibility: 'private',
+      attribution: expect.stringContaining('Investor Update Agent'),
+    });
+    expect(body.task).toMatchObject({
+      workspace: 'Founder OS',
+      mode: 'Agent',
+      permissionProfile: 'Guarded',
+    });
+    expect(body.task.skills).toEqual(expect.arrayContaining(['Web Research', 'Document Writer']));
+
+    body = await (await patchExplore(patchRequest('http://localhost/api/assistant/explore', {
+      action: 'share',
+      remixId: body.remix.id,
+      target: 'Share Link',
+    }))).json();
+    expect(body.remixes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ target: 'Share Link', visibility: 'shared' }),
+    ]));
+  });
+
+  test('runs Cloud Agent sessions in background with pause resume cancel lifecycle', async () => {
+    let body = await (await getCloud()).json();
+    expect(body.sessions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ mode: 'Cloud Agent', status: 'running', background: true }),
+    ]));
+    expect(body.runtime).toMatchObject({
+      isolation: 'cloud',
+      asyncTasks: true,
+      uploadedFiles: expect.arrayContaining(['workspace-notes.md']),
+    });
+
+    body = await (await postCloud(jsonRequest('http://localhost/api/assistant/cloud', {
+      prompt: 'Monitor competitors and prepare a launch brief',
+      workspace: 'Launch Room',
+      model: 'DeepSeek V3.2',
+      files: ['competitors.csv'],
+      screenshot: 'launch-dashboard.png',
+    }))).json();
+    expect(body.session).toMatchObject({
+      workspace: 'Launch Room',
+      mode: 'Cloud Agent',
+      model: 'DeepSeek V3.2',
+      status: 'running',
+      background: true,
+      files: expect.arrayContaining(['competitors.csv', 'launch-dashboard.png']),
+    });
+    expect(body.task).toMatchObject({
+      workspace: 'Launch Room',
+      mode: 'Cloud Agent',
+      model: 'DeepSeek V3.2',
+    });
+
+    body = await (await patchCloud(patchRequest('http://localhost/api/assistant/cloud', {
+      action: 'pause',
+      id: body.session.id,
+    }))).json();
+    expect(body.session.status).toBe('paused');
+
+    body = await (await patchCloud(patchRequest('http://localhost/api/assistant/cloud', {
+      action: 'resume',
+      id: body.session.id,
+    }))).json();
+    expect(body.session.status).toBe('running');
+
+    body = await (await patchCloud(patchRequest('http://localhost/api/assistant/cloud', {
+      action: 'cancel',
+      id: body.session.id,
+    }))).json();
+    expect(body.session.status).toBe('canceled');
   });
 });

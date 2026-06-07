@@ -56,6 +56,7 @@ type AssistantCapabilities = {
   remotePlatforms: string[];
   outputFormats: string[];
   workModes: string[];
+  computerUseModes?: string[];
   permissionProfiles: string[];
   modelProviders: string[];
   sharingTargets: string[];
@@ -64,7 +65,7 @@ type AssistantCapabilities = {
   mcpFeatures: string[];
 };
 
-type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'permissions' | 'models' | 'system';
+type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'explore' | 'cloud' | 'permissions' | 'models' | 'system';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -72,9 +73,10 @@ const defaultCapabilities: AssistantCapabilities = {
   resultTabs,
   remotePlatforms: ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot'],
   outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
-  workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
+  workModes: ['Ask', 'Agent', 'Cloud Agent', 'Craft', 'Plan', 'Coding'],
+  computerUseModes: ['Normal', 'Auto', 'Full Access'],
   permissionProfiles: ['Guarded', 'Full Access'],
-  modelProviders: ['Auto', 'OpenAI', 'Anthropic', 'MiniMax', 'DeepSeek', 'Kimi', 'Local Ollama', 'Custom OpenAI Compatible'],
+  modelProviders: ['Auto', 'WorkBuddy', 'MiniMax M2.5', 'GLM-4.6', 'Kimi K2', 'DeepSeek V3.2', 'Claude Sonnet', 'GPT-5-Codex', 'Local Ollama', 'Custom OpenAI Compatible'],
   sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
   workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
   commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
@@ -319,6 +321,31 @@ export default function AssistantPage() {
         parameters: { temperature: 0.2 },
         skipChatCompletions: true,
       }, 'Custom model saved');
+    } else if (action === 'remix_template') {
+      await runApiAction('/api/assistant/explore', 'POST', {
+        templateId: 'explore-investor-update',
+        workspace,
+        ownerGoal: 'Turn this community workflow into my Jarvis agent.',
+      }, 'Template remixed');
+    } else if (action === 'share_exploration') {
+      await runApiAction('/api/assistant/explore', 'PATCH', {
+        action: 'share',
+        remixId: 'remix-1',
+        target: 'Share Link',
+      }, 'Exploration shared');
+    } else if (action === 'start_cloud_session') {
+      await runApiAction('/api/assistant/cloud', 'POST', {
+        prompt,
+        workspace,
+        model,
+        files: attachments.split(',').map((item) => item.trim()).filter(Boolean),
+        screenshot: 'assistant-screenshot.png',
+      }, 'Cloud session started');
+    } else if (action === 'pause_cloud_session') {
+      await runApiAction('/api/assistant/cloud', 'PATCH', {
+        action: 'pause',
+        id: 'cloud-1',
+      }, 'Cloud session paused');
     } else if (action === 'install_plugin') {
       await runApiAction('/api/assistant/plugins', 'PATCH', {
         action: 'install',
@@ -380,6 +407,8 @@ export default function AssistantPage() {
               ['skills', 'Skills'],
               ['connectors', 'Connectors'],
               ['data', 'Data Management'],
+              ['explore', 'Explore'],
+              ['cloud', 'Cloud Runtime'],
               ['permissions', 'Permissions'],
               ['models', 'Models & Runtime'],
               ['system', 'System & Safety'],
@@ -522,12 +551,10 @@ export default function AssistantPage() {
                 </label>
                 <label className={styles.fieldLabel}>
                   Model
-                  <select value={model} onChange={(event) => setModel(event.target.value)} className={styles.select}>
-                    <option>Auto</option>
-                    <option>MiniMax-M3</option>
-                    <option>OpenAI GPT-4.1</option>
-                    <option>Claude Sonnet</option>
-                    <option>Local Ollama</option>
+                  <select aria-label="Model" value={model} onChange={(event) => setModel(event.target.value)} className={styles.select}>
+                    {capabilities.modelProviders.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
                   </select>
                 </label>
                 <label className={styles.fieldLabel}>
@@ -829,6 +856,68 @@ function FeaturePanel({
     );
   }
 
+  if (panel === 'explore') {
+    return (
+      <section aria-label="Explore panel" className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Explore</h2>
+        <div className={styles.featureGridThree}>
+          {[
+            ['Community Templates', 'Browse shared task patterns and try them against your own workspace.'],
+            ['Investor Update Agent', 'Remix metrics, notes, and tasks into a private Jarvis agent.'],
+            ['Local File Cleanup Agent', 'Adapt batch rename, conversion, and PDF merge workflows safely.'],
+            ['Research Deck Agent', 'Turn public research workflows into cited decks and charts.'],
+            ['Remix as Jarvis Agent', 'Copy a useful workflow into your own workspace with attribution.'],
+            ['Review & Share', 'Share your remixed result only after review.'],
+          ].map(([title, detail]) => (
+            <div key={title} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('remix_template')} className={styles.smallButton}>
+            Remix Template
+          </button>
+          <button type="button" onClick={() => onAction('share_exploration')} className={styles.smallButton}>
+            Share Exploration
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (panel === 'cloud') {
+    return (
+      <section aria-label="Cloud runtime panel" className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Cloud Runtime</h2>
+        <div className={styles.featureGridThree}>
+          {[
+            ['Cloud Agent', 'Run long tasks asynchronously with the same Jarvis task contract.'],
+            ['Background Session', 'Keep research, generation, and file prep active while you leave the page.'],
+            ['Uploaded Files', 'Attach local files, workspace files, and screenshots to cloud runs.'],
+            ['Pause/Resume', 'Pause or resume background execution without deleting the task.'],
+            ['Task Search', 'Find cloud and local tasks from the same workspace list.'],
+            ['Runtime Manifest', 'Track isolation, files, model, and session state before actions.'],
+          ].map(([title, detail]) => (
+            <div key={title} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('start_cloud_session')} className={styles.smallButton}>
+            Start Cloud Session
+          </button>
+          <button type="button" onClick={() => onAction('pause_cloud_session')} className={cx(styles.smallButton, styles.warningButton)}>
+            Pause Cloud Session
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   if (panel === 'models') {
     return (
       <section aria-label="Models and runtime panel" className={styles.panel}>
@@ -911,6 +1000,7 @@ function FeaturePanel({
           ['Revoke Folder', 'Remove folder access from future tasks.'],
           ['Sandbox Execution', 'Run tools in an isolated execution boundary.'],
           ['Full Access Confirmation', 'Require explicit confirmation before fully opening permissions.'],
+          ...((capabilities.computerUseModes || ['Normal', 'Auto', 'Full Access']).map((mode) => [`${mode} computer use`, 'WorkBuddy-style computer operation scope.'])),
         ].map(([title, detail]) => (
           <div key={title} className={styles.featureCard}>
             <div className={styles.cardTitle}>{title}</div>
