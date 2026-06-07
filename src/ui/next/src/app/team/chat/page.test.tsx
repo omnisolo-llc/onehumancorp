@@ -1,3 +1,4 @@
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import TeamChatPage from './page';
@@ -27,7 +28,7 @@ test('shows a latency state while an AI action is being drafted', async () => {
     }),
   );
 
-  render(<TeamChatPage />);
+  render(<AppRouterContext.Provider value={{} as any}><TeamChatPage /></AppRouterContext.Provider>);
 
   fireEvent.change(screen.getByTestId('team-chat-input'), {
     target: { value: 'Quote the sink repair' },
@@ -61,7 +62,7 @@ test('renders an actionable error card when AI action execution fails', async ()
     }),
   );
 
-  render(<TeamChatPage />);
+  render(<AppRouterContext.Provider value={{} as any}><TeamChatPage /></AppRouterContext.Provider>);
 
   fireEvent.change(screen.getByTestId('team-chat-input'), {
     target: { value: 'Run the agent action' },
