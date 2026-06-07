@@ -105,14 +105,33 @@ impl Department for CustomerSuccessAgent {
 
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
-            let context_summary = if !memories.is_empty() {
+            let mut context_summary = if !memories.is_empty() {
                 memories.join("\n")
             } else {
                 "No relevant memory found.".to_string()
             };
 
+            let pool = crate::db::get_pool();
+            let rows = sqlx::query("SELECT title, inventory_count FROM products WHERE tenant_id = $1")
+                .bind(&event.tenant_id)
+                .fetch_all(&pool)
+                .await
+                .unwrap_or_default();
+
+            if !rows.is_empty() {
+                let mut inventory_context = String::from("\n\nAvailable Inventory:\n");
+                for row in rows {
+                    let title: Option<String> = sqlx::Row::try_get(&row, "title").ok();
+                    let count: Option<i32> = sqlx::Row::try_get(&row, "inventory_count").ok();
+                    if let (Some(t), Some(c)) = (title, count) {
+                        inventory_context.push_str(&format!("- {}: {} remaining\n", t, c));
+                    }
+                }
+                context_summary.push_str(&inventory_context);
+            }
+
             let prompt = format!(
-                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the following context, especially inventory counts. Tenant: {}. Customer message: {}\n\nContext:\n{}",
                 event.tenant_id, message, context_summary
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);

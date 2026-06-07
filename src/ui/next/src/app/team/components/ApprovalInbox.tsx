@@ -161,7 +161,7 @@ export default function ApprovalInbox({
                   </p>
 
                   {req.payload?.feature_type === "ambassador_reply" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-[16px] flex flex-col gap-3 w-full max-w-[375px] mx-auto shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"

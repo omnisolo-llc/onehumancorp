@@ -25,6 +25,8 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // 2. Trigger the Ambassador's draft reply via a real API call (no mocks)
     // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
     const tenantId = 'e2e-tenant';
+
+
     const webhookPayload = {
       tenant_id: tenantId,
       message: 'Do you have vegan chocolate cake available for Saturday?',
@@ -57,6 +59,12 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     const draftLocator = page.getByText(/Draft Reply/i).first();
     if (await draftLocator.isVisible()) {
        await expect(draftLocator).toBeVisible();
+    }
+
+    // Verify that the inventory count explicitly appeared in the RAG context or drafted text
+    const contextLocator = page.getByText(/100 remaining|100/i).first();
+    if (await draftLocator.isVisible()) {
+        await expect(contextLocator).toBeVisible({ timeout: 10000 });
     }
 
     if (await approveButton.isVisible()) {
