@@ -97,28 +97,18 @@ export default function CampaignOrchestrationPage() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
-          fetch(`/api/ui/orders?tenant_id=${tenant}`),
-          fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
-          fetch(`/api/ui/supply?tenant_id=${tenant}`),
-        ]);
+        const dashboardRes = await fetch(`/api/ui/dashboard/all?tenant_id=${tenant}`);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!dashboardRes.ok) {
           throw new Error("Campaign context could not be loaded from the backend UI endpoints.");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
-          metricsRes.json(),
-          ordersRes.json(),
-          inboxRes.json(),
-          supplyRes.json(),
-        ]);
+        const dashboardData = await dashboardRes.json();
 
-        setMetrics({ ...emptyMetrics, ...metricsData });
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
-        setMessages(Array.isArray(inboxData) ? inboxData : []);
-        setSupply(supplyData && typeof supplyData === "object" ? supplyData : {});
+        setMetrics({ ...emptyMetrics, ...(dashboardData.metrics || {}) });
+        setOrders(Array.isArray(dashboardData.orders) ? dashboardData.orders : []);
+        setMessages(Array.isArray(dashboardData.messages) ? dashboardData.messages : []);
+        setSupply(dashboardData.supply && typeof dashboardData.supply === "object" ? dashboardData.supply : {});
       } catch (err: any) {
         setError(err?.message || "Campaign context could not be loaded.");
       } finally {

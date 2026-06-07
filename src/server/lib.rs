@@ -2714,35 +2714,37 @@ pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
-    let (active_customers, pending_orders, total_sales, total_campaigns_sent) = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_as::<_, (i64, i64, f64, i64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
-            )
-            .bind(tenant_id)
-            .fetch_one(&db.pool)
-            .await?
+    let (active_customers_res, pending_orders_res, sales_res, campaigns_res) = tokio::join!(
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1").bind(tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(pool).await,
+            }
         }
-        crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, (i64, i64, f64, i64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
-            )
-            .bind(tenant_id)
-            .bind(tenant_id)
-            .bind(tenant_id)
-            .bind(tenant_id)
-            .fetch_one(pool)
-            .await?
-        }
-    };
+    );
+
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
+    let total_sales = sales_res.unwrap_or(0.0);
+    let total_campaigns_sent = campaigns_res.unwrap_or(0);
 
     Ok(UiDashboardMetrics {
         active_customers,
@@ -3017,6 +3019,266 @@ async fn ui_dashboard_metrics_handler(
             }))).into_response()
         }
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub(crate) struct UiDashboardAllResponse {
+    metrics: UiDashboardMetrics,
+    orders: Vec<serde_json::Value>,
+    messages: Vec<serde_json::Value>,
+    supply: serde_json::Value,
+}
+
+async fn ui_dashboard_all_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_dashboard_all:{}", tenant_id);
+    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
+    let metrics_future = load_ui_dashboard_metrics(&db, &tenant_id);
+
+    let orders_future = async {
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                match sqlx::query(
+                    "SELECT o.id, COALESCE(c.name, '') AS customer_name, COALESCE(o.total_amount, 0.0) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at \
+                     FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id \
+                     WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await {
+                    Ok(rows) => rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "customer_name": row.get::<String, _>("customer_name"),
+                        "total_amount": row.get::<f64, _>("total_amount"),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": row.get::<String, _>("created_at"),
+                    })).collect::<Vec<_>>(),
+                    Err(_) => vec![],
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                match sqlx::query(
+                    "SELECT o.id, COALESCE(c.name, '') AS customer_name, COALESCE(o.total_amount, 0.0) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(CAST(o.created_at AS TEXT), '') AS created_at \
+                     FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id \
+                     WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await {
+                    Ok(rows) => rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "customer_name": row.get::<String, _>("customer_name"),
+                        "total_amount": row.get::<f64, _>("total_amount"),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": row.get::<String, _>("created_at"),
+                    })).collect::<Vec<_>>(),
+                    Err(_) => vec![],
+                }
+            }
+        }
+    };
+
+    let messages_future = async {
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                match sqlx::query(
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(content, '') AS content,
+                            COALESCE(original_content, content, '') AS original_content,
+                            COALESCE(translated_from_language, '') AS translated_from_language,
+                            COALESCE(draft_reply, '') AS draft_reply,
+                            COALESCE(status, '') AS status,
+                            COALESCE(created_at::text, '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = $1
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await {
+                    Ok(rows) => rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "source": row.get::<String, _>("source"),
+                        "content": row.get::<String, _>("content"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": row.get::<String, _>("created_at"),
+                    })).collect::<Vec<_>>(),
+                    Err(_) => vec![],
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                match sqlx::query(
+                    "SELECT id,
+                            COALESCE(source, '') AS source,
+                            COALESCE(content, '') AS content,
+                            COALESCE(original_content, content, '') AS original_content,
+                            COALESCE(translated_from_language, '') AS translated_from_language,
+                            COALESCE(draft_reply, '') AS draft_reply,
+                            COALESCE(status, '') AS status,
+                            COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                     FROM inbox_messages
+                     WHERE tenant_id = ?
+                     ORDER BY created_at DESC
+                     LIMIT 50"
+                )
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await {
+                    Ok(rows) => rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "source": row.get::<String, _>("source"),
+                        "content": row.get::<String, _>("content"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": row.get::<String, _>("created_at"),
+                    })).collect::<Vec<_>>(),
+                    Err(_) => vec![],
+                }
+            }
+        }
+    };
+
+    let supply_future = async {
+        let (vendors, raw_materials, bom_items) = match &db.store {
+            crate::db::DbStore::Postgres => {
+                let (v_res, rm_res, bi_res) = tokio::join!(
+                    sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
+                        .bind(&tenant_id)
+                        .fetch_all(&db.pool),
+                    sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
+                        .bind(&tenant_id)
+                        .fetch_all(&db.pool),
+                    sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
+                        .bind(&tenant_id)
+                        .fetch_all(&db.pool)
+                );
+
+                let vendors = v_res.unwrap_or_default()
+                    .into_iter()
+                    .map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "name": row.get::<String, _>("name"),
+                        "contact_info": row.get::<String, _>("contact_info"),
+                    }))
+                    .collect::<Vec<_>>();
+
+                let raw_materials = rm_res.unwrap_or_default()
+                    .into_iter()
+                    .map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "name": row.get::<String, _>("name"),
+                        "current_quantity": row.get::<i32, _>("current_quantity"),
+                        "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
+                    }))
+                    .collect::<Vec<_>>();
+
+                let bom_items = bi_res.unwrap_or_default()
+                    .into_iter()
+                    .map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "finished_good_id": row.get::<String, _>("finished_good_id"),
+                        "raw_material_id": row.get::<String, _>("raw_material_id"),
+                        "quantity_required": row.get::<i32, _>("quantity_required"),
+                    }))
+                    .collect::<Vec<_>>();
+
+                (vendors, raw_materials, bom_items)
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let (v_res, rm_res, bi_res) = tokio::join!(
+                    sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
+                        .bind(&tenant_id)
+                        .fetch_all(pool),
+                    sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
+                        .bind(&tenant_id)
+                        .fetch_all(pool),
+                    sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
+                        .bind(&tenant_id)
+                        .fetch_all(pool)
+                );
+
+                let vendors = v_res.unwrap_or_default()
+                    .into_iter()
+                    .map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "name": row.get::<String, _>("name"),
+                        "contact_info": row.get::<String, _>("contact_info"),
+                    }))
+                    .collect::<Vec<_>>();
+
+                let raw_materials = rm_res.unwrap_or_default()
+                    .into_iter()
+                    .map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "name": row.get::<String, _>("name"),
+                        "current_quantity": row.get::<i32, _>("current_quantity"),
+                        "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
+                    }))
+                    .collect::<Vec<_>>();
+
+                let bom_items = bi_res.unwrap_or_default()
+                    .into_iter()
+                    .map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "finished_good_id": row.get::<String, _>("finished_good_id"),
+                        "raw_material_id": row.get::<String, _>("raw_material_id"),
+                        "quantity_required": row.get::<i32, _>("quantity_required"),
+                    }))
+                    .collect::<Vec<_>>();
+
+                (vendors, raw_materials, bom_items)
+            }
+        };
+
+        serde_json::json!({
+            "vendors": vendors,
+            "raw_materials": raw_materials,
+            "bom_items": bom_items,
+        })
+    };
+
+    let (metrics_res, orders, messages, supply) = tokio::join!(
+        metrics_future,
+        orders_future,
+        messages_future,
+        supply_future
+    );
+
+    let metrics = metrics_res.unwrap_or_else(|_| UiDashboardMetrics {
+        active_customers: 0,
+        pending_orders: 0,
+        total_sales: 0.0,
+        total_campaigns_sent: 0,
+    });
+
+    let resp = UiDashboardAllResponse {
+        metrics,
+        orders,
+        messages,
+        supply,
+    };
+
+    let res = serde_json::to_value(&resp).unwrap_or_else(|_| serde_json::json!({}));
+    cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
+
+    (axum::http::StatusCode::OK, axum::Json(res)).into_response()
 }
 
 async fn list_ui_supply_handler(
@@ -3480,6 +3742,7 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/ui/dashboard/all", axum::routing::get(ui_dashboard_all_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))

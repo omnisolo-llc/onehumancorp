@@ -160,23 +160,17 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
-          fetch(`/api/ui/orders?tenant_id=${tenant}`),
-          fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
-          fetch(`/api/ui/supply?tenant_id=${tenant}`),
+        const [dashboardRes, onboardingRes] = await Promise.all([
+          fetch(`/api/ui/dashboard/all?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!dashboardRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
-          metricsRes.json(),
-          ordersRes.json(),
-          inboxRes.json(),
-          supplyRes.json(),
+        const [dashboardData, onboardingData] = await Promise.all([
+          dashboardRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
         ]);
 
@@ -186,13 +180,13 @@ export default function Dashboard() {
           setActiveDepartments([]);
         }
 
-        setMetrics({ ...emptyMetrics, ...metricsData });
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
-        setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setMetrics({ ...emptyMetrics, ...(dashboardData.metrics || {}) });
+        setOrders(Array.isArray(dashboardData.orders) ? dashboardData.orders : []);
+        setMessages(Array.isArray(dashboardData.messages) ? dashboardData.messages : []);
         setSupply({
-          vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
-          raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
-          bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
+          vendors: Array.isArray(dashboardData.supply?.vendors) ? dashboardData.supply.vendors : [],
+          raw_materials: Array.isArray(dashboardData.supply?.raw_materials) ? dashboardData.supply.raw_materials : [],
+          bom_items: Array.isArray(dashboardData.supply?.bom_items) ? dashboardData.supply.bom_items : [],
         });
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
