@@ -111,9 +111,21 @@ impl Department for CustomerSuccessAgent {
                 "Draft email for review".to_string()
             };
 
-            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
-            if !inbox_id.is_empty() {
-                let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, generated_response).await;
+            // Save to inbox_messages
+            let id = uuid::Uuid::new_v4().to_string();
+            let status = "pending";
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let pool = crate::db::get_pool();
+            if let Ok(mut tx) = pool.begin().await {
+                if crate::common::auth_utils::set_org_context(&mut *tx, &event.tenant_id).await.is_ok() {
+                    let _ = sqlx::query(
+                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                    )
+                    .bind(&id).bind(&event.tenant_id).bind(&source).bind(&message).bind(&generated_response).bind(&status)
+                    .execute(&mut *tx)
+                    .await;
+                    let _ = tx.commit().await;
+                }
             }
 
             let action_payload = serde_json::json!({
@@ -121,7 +133,7 @@ impl Department for CustomerSuccessAgent {
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
-                "inbox_message_id": inbox_id,
+                "inbox_message_id": id,
             });
 
             self.orchestrator.execute_action(
