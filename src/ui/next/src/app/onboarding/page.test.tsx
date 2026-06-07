@@ -402,12 +402,8 @@ describe('OnboardingWizard', () => {
     // Clear the input to trigger validation
     await user.clear(businessTypeInput);
 
-    // Button should now be disabled because businessType is empty
-    expect(continueButton).toBeDisabled();
-
-    // Type something to make it empty string on blur or just type and clear
-    await user.type(businessTypeInput, 'A');
-    await user.clear(businessTypeInput);
+    // Click continue to trigger validation
+    await user.click(continueButton);
 
     await waitFor(() => {
       expect(screen.getByText('Business Type is required to configure your agents.')).toBeInTheDocument();
