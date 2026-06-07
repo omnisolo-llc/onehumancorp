@@ -107,7 +107,7 @@ describe('CostDashboardPage', () => {
     });
 
     // My Plan assertions
-    expect(screen.getByText('My Plan')).toBeDefined();
+    expect(screen.getAllByText('My Plan')[0]).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
     // AI actions used: 150 / 1000. Text split.
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
