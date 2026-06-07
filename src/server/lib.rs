@@ -3820,7 +3820,7 @@ async fn create_ui_bom_item_handler(
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let link_title = "Read the full article →";
+            let mut link_title = "Read the full article →".to_string();
             let mut link_url = "/help/getting-started";
 
             if query.contains("getting started") {
@@ -3844,6 +3844,10 @@ async fn create_ui_bom_item_handler(
             } else if query.contains("api") || query.contains("advanced") {
                 reply = format!("Based on our help center: {}", help_articles[6].1);
                 link_url = "/api-docs";
+            } else if query.contains("operations") {
+                reply = "I have routed your request to the Operations department. They will take care of it!".to_string();
+                link_title = "Check your inbox for updates →".to_string();
+                link_url = "/inbox";
             }
 
             axum::Json(serde_json::json!({

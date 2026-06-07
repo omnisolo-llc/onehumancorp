@@ -62,7 +62,7 @@ fn get_video_tutorials() -> &'static Vec<VideoTutorial> {
     VIDEO_TUTORIALS.get_or_init(|| {
         vec![
             VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string() },
-            VideoTutorial { id: 2, title: "Setting up payments".to_string(), duration: "1:15".to_string() },
+            VideoTutorial { id: 2, title: "Accept your first payment".to_string(), duration: "1:15".to_string() },
             VideoTutorial { id: 3, title: "Managing inventory".to_string(), duration: "0:50".to_string() },
             VideoTutorial { id: 4, title: "Adding staff to your account".to_string(), duration: "1:05".to_string() },
             VideoTutorial { id: 5, title: "Reviewing orders".to_string(), duration: "1:10".to_string() },
