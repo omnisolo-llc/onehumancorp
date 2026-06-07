@@ -162,4 +162,35 @@ mod tests {
             assert!(msg.contains("ApprovalOnAll"));
         }
     }
+
+    #[test]
+    fn test_guardrails_check_tool_failure() {
+        use crate::guardrails::{GuardrailRegistry, ToolGuardrail};
+        use std::sync::Arc;
+
+        struct MockFailingGuardrail;
+        impl ToolGuardrail for MockFailingGuardrail {
+            fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
+                if tc.name == "forbidden_tool" {
+                    return Err("Tool is forbidden".to_string());
+                }
+                Ok(())
+            }
+        }
+
+        let mut registry = GuardrailRegistry::new();
+        registry.tool_guardrails.push(Arc::new(MockFailingGuardrail));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.project_trusted = true;
+
+        let tc = create_tool_call("1", "forbidden_tool");
+        let res = ToolGater::check_gating(&tc, false, &cfg);
+        assert!(matches!(res, Err(ToolError::Fatal(_))));
+        if let Err(ToolError::Fatal(msg)) = res {
+            assert!(msg.contains("Tool Guardrail tripped"));
+            assert!(msg.contains("Tool is forbidden"));
+        }
+    }
 }
