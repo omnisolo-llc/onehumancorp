@@ -121,45 +121,9 @@ impl PlanAndExecuteOrchestrator {
                 return Err("Deadlock detected: unresolved dependencies in plan".to_string());
             }
 
-            fn replace_in_json(value: &mut serde_json::Value, results: &std::collections::HashMap<String, String>) {
-                match value {
-                    serde_json::Value::String(s) => {
-                        let mut new_s = s.clone();
-                        for (k, v) in results.iter() {
-                            new_s = new_s.replace(&format!("${{{}}}", k), v);
-                        }
-                        *s = new_s;
-                    }
-                    serde_json::Value::Array(arr) => {
-                        for item in arr {
-                            replace_in_json(item, results);
-                        }
-                    }
-                    serde_json::Value::Object(obj) => {
-                        for (_, val) in obj.iter_mut() {
-                            replace_in_json(val, results);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            // Split ready tasks into read_only and mutating
-            let mut read_only_tasks = Vec::new();
-            let mut mutating_tasks = Vec::new();
-
+            // Run ready tasks concurrently
+            let mut handles = Vec::new();
             for task in ready_tasks {
-                let tool = self.tools.get(&task.tool_name).ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
-                if tool.is_read_only {
-                    read_only_tasks.push(task);
-                } else {
-                    mutating_tasks.push(task);
-                }
-            }
-
-            // Run read-only tasks concurrently
-            let mut ro_handles = Vec::new();
-            for task in read_only_tasks {
                 let tools_clone = self.tools.clone();
                 let results_clone = results.clone();
 
@@ -171,6 +135,28 @@ impl PlanAndExecuteOrchestrator {
                     let mut resolved_args = task.arguments.clone();
 
                     let r = results_clone.read().await;
+                    fn replace_in_json(value: &mut serde_json::Value, results: &std::collections::HashMap<String, String>) {
+                        match value {
+                            serde_json::Value::String(s) => {
+                                let mut new_s = s.clone();
+                                for (k, v) in results.iter() {
+                                    new_s = new_s.replace(&format!("${{{}}}", k), v);
+                                }
+                                *s = new_s;
+                            }
+                            serde_json::Value::Array(arr) => {
+                                for item in arr {
+                                    replace_in_json(item, results);
+                                }
+                            }
+                            serde_json::Value::Object(obj) => {
+                                for (_, val) in obj.iter_mut() {
+                                    replace_in_json(val, results);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
                     replace_in_json(&mut resolved_args, &r);
                     drop(r);
 
@@ -184,27 +170,12 @@ impl PlanAndExecuteOrchestrator {
                         Err(e) => Err(format!("Tool execution failed: {}", e)),
                     }
                 });
-                ro_handles.push(handle);
+                handles.push(handle);
             }
 
-            for handle in ro_handles {
+            for handle in handles {
                 let (task_id, output) = handle.await.map_err(|e| e.to_string())??;
                 results.write().await.insert(task_id, output);
-            }
-
-            // Run mutating tasks serially
-            for task in mutating_tasks {
-                let tool = self.tools.get(&task.tool_name).ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
-                let mut resolved_args = task.arguments.clone();
-
-                let r = results.read().await;
-                replace_in_json(&mut resolved_args, &r);
-                drop(r);
-
-                let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2)
-                    .await
-                    .map_err(|e| format!("Tool execution failed: {}", e))?;
-                results.write().await.insert(task.task_id.clone(), res);
             }
 
             tasks_to_run = remaining_tasks;
@@ -342,71 +313,5 @@ mod tests {
         assert_eq!(results.get("task_1").unwrap(), "result_a");
         // task_2 should have received result_a as input due to dependency resolution
         assert_eq!(results.get("task_2").unwrap(), "result_b + result_a");
-    }
-
-    #[tokio::test]
-    async fn test_orchestrator_executes_read_only_concurrently_mutating_serially() {
-        struct TimingToolExecutor {
-            sleep_ms: u64,
-            response: String,
-        }
-
-        #[async_trait::async_trait]
-        impl ToolExecutor for TimingToolExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                tokio::time::sleep(std::time::Duration::from_millis(self.sleep_ms)).await;
-                Ok(self.response.clone())
-            }
-        }
-
-        let tool_ro1 = Tool {
-            name: "tool_ro1".to_string(),
-            description: "".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(TimingToolExecutor { sleep_ms: 100, response: "ro1".to_string() }),
-        };
-
-        let tool_ro2 = Tool {
-            name: "tool_ro2".to_string(),
-            description: "".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(TimingToolExecutor { sleep_ms: 100, response: "ro2".to_string() }),
-        };
-
-        let tool_mut = Tool {
-            name: "tool_mut".to_string(),
-            description: "".to_string(),
-            is_read_only: false,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(TimingToolExecutor { sleep_ms: 100, response: "mut".to_string() }),
-        };
-
-        let orchestrator = PlanAndExecuteOrchestrator::new(vec![tool_ro1, tool_ro2, tool_mut]);
-
-        let plan = ExecutionPlan {
-            tasks: vec![
-                TaskNode { task_id: "ro1".to_string(), tool_name: "tool_ro1".to_string(), arguments: serde_json::json!({}), dependencies: vec![] },
-                TaskNode { task_id: "ro2".to_string(), tool_name: "tool_ro2".to_string(), arguments: serde_json::json!({}), dependencies: vec![] },
-                TaskNode { task_id: "mut".to_string(), tool_name: "tool_mut".to_string(), arguments: serde_json::json!({}), dependencies: vec![] },
-            ],
-        };
-
-        let start = std::time::Instant::now();
-        let results = orchestrator.execute_plan(plan).await.unwrap();
-        let elapsed = start.elapsed().as_millis();
-
-        assert_eq!(results.get("ro1").unwrap(), "ro1");
-        assert_eq!(results.get("ro2").unwrap(), "ro2");
-        assert_eq!(results.get("mut").unwrap(), "mut");
-
-        // The 2 read-only tools should run concurrently (taking ~100ms total).
-        // The 1 mutating tool should run sequentially (taking ~100ms total).
-        // The total time should be roughly 200ms.
-        // If all ran sequentially, it would take ~300ms.
-        // We will assert that it took less than 280ms, but more than 150ms to ensure it didn't all run concurrently.
-        assert!(elapsed >= 150, "Execution was too fast, expected >= 150ms, got {}ms", elapsed);
-        assert!(elapsed < 280, "Execution was too slow, expected < 280ms (concurrent RO), got {}ms", elapsed);
     }
 }

@@ -24,7 +24,7 @@ use sqlx::Row;
 macro_rules! validate_org_id {
     ($org_id:expr) => {
         if ::server_config::get().multitenant {
-            if $org_id.trim().eq_ignore_ascii_case("system") {
+            if $org_id.trim() == "system" {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
             if $org_id.trim().is_empty() {

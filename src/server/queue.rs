@@ -406,7 +406,7 @@ impl Worker {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
                             tracing::debug!("Worker processing job: {}", job.id);
-                            let handle_res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), self.handler.handle(job.clone())).await;
+                            let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), self.handler.handle(job.clone())).await;
                             let handler_res = match handle_res {
                                 Ok(Ok(())) => Ok(()),
                                 Ok(Err(e)) => Err(e),
@@ -735,7 +735,7 @@ impl QueueManager {
                                 let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                                 let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
                                 attempts += 1;
-                                let handle_res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), handler(job.clone())).await;
+                                let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), handler(job.clone())).await;
                                 let handler_res = match handle_res {
                                     Ok(Ok(())) => Ok(()),
                                     Ok(Err(e)) => Err(e),

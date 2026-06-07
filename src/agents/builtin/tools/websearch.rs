@@ -1,27 +1,23 @@
 use ohc_builtin_agent_core::types::ToolError;
 use reqwest::Client;
-use serde_json::json;
-use serde::Deserialize;
+use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-
-#[derive(Deserialize)]
-struct WebSearchArgs {
-    query: String,
-}
+use super::{Tool, ToolExecutor};
 
 struct WebSearchExecutor {
     client: Client,
 }
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<WebSearchArgs> for WebSearchExecutor {
-    async fn execute_typed(
+impl ToolExecutor for WebSearchExecutor {
+    async fn execute(
         &self,
-        args: WebSearchArgs,
+        args: Value,
     ) -> Result<String, ToolError> {
-        let query = &args.query;
+        let query = args["query"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("websearch: query is required".to_string()))?;
 
         // Use DuckDuckGo HTML endpoint (no API key required).
         let url = format!(
@@ -115,11 +111,11 @@ pub fn websearch_tool() -> Tool {
             },
             "required": ["query"]
         }),
-        execute: Arc::new(PydanticAdapter::new(WebSearchExecutor {
+        execute: Arc::new(WebSearchExecutor {
             client: Client::builder()
                 .timeout(std::time::Duration::from_secs(15))
                 .build()
                 .unwrap(),
-        })),
+        }),
     }
 }

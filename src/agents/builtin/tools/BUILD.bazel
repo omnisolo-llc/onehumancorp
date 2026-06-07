@@ -21,7 +21,6 @@ rust_library(
         "marketing.rs",
         "mcp_dynamic.rs",
         "mod.rs",
-        "expert_team_tool.rs",
         "marketplace.rs",
         "marketplace_tool.rs",
         "pydantic.rs",
@@ -55,7 +54,6 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/agents/builtin:core",
-        "//src/agents/builtin/llm",
         "//src/proto:agent_service_tonic",
         "//src/server/ohc:server_ohc",
         "@crates//:base64",

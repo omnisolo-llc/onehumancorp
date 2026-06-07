@@ -162,7 +162,7 @@ impl DeliveryService for DeliveryServiceImpl {
                  r#"
                  SELECT id, organization_id, order_id, driver_id, route_plan_id, status,
                         EXTRACT(EPOCH FROM estimated_arrival)::BIGINT as estimated_arrival_unix,
-                        delivery_location_lat as lat, delivery_location_lng as lng,
+                        ST_Y(delivery_location) as lat, ST_X(delivery_location) as lng,
                         EXTRACT(EPOCH FROM created_at)::BIGINT as created_at_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at_unix
                  FROM delivery_tasks
@@ -217,7 +217,7 @@ impl DeliveryService for DeliveryServiceImpl {
              WHERE id = $2 AND organization_id = $3
              RETURNING id, organization_id, order_id, driver_id, route_plan_id, status,
                        EXTRACT(EPOCH FROM estimated_arrival)::BIGINT as estimated_arrival_unix,
-                       delivery_location_lat as lat, delivery_location_lng as lng,
+                       ST_Y(delivery_location) as lat, ST_X(delivery_location) as lng,
                        EXTRACT(EPOCH FROM created_at)::BIGINT as created_at_unix,
                        EXTRACT(EPOCH FROM updated_at)::BIGINT as updated_at_unix
              "#

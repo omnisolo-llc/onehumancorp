@@ -45,12 +45,9 @@ pub async fn handle_oauth_callback(
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
             let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
-                tunnel_base_url,
-                urlencoding::encode(&tunnel_id),
-                urlencoding::encode(&query.code),
-                urlencoding::encode(&actual_state));
+                tunnel_base_url, tunnel_id, query.code, actual_state);
             for (k, v) in query.extra {
-                redirect_url.push_str(&format!("&{}={}", urlencoding::encode(&k), urlencoding::encode(&v)));
+                redirect_url.push_str(&format!("&{}={}", k, v));
             }
             return Redirect::temporary(&redirect_url).into_response();
         }

@@ -7,7 +7,6 @@ export default function HelpCenterPage() {
   const [articles, setArticles] = useState<{title: string, desc: string, link: string}[]>([]);
   const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string} | null>(null);
 
   useEffect(() => {
     const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
@@ -72,7 +71,7 @@ export default function HelpCenterPage() {
                 <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Video Tutorials</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {filteredVideos.map((v) => (
-                    <div key={v.id} onClick={() => setSelectedVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group shadow-sm border border-white/30 cursor-pointer hover:shadow-md transition-all">
+                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group shadow-sm border border-white/30 cursor-pointer hover:shadow-md transition-all">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
                       <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -89,36 +88,6 @@ export default function HelpCenterPage() {
           </div>
         )}
       </div>
-
-      {selectedVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl">
-            <div className="absolute top-4 right-4 z-10 flex space-x-2">
-              <button
-                aria-label="Close video"
-                onClick={() => setSelectedVideo(null)}
-                className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 backdrop-blur-md transition-all font-inter text-sm px-4 flex items-center gap-2 border border-white/20 shadow-lg"
-              >
-                Close video
-              </button>
-            </div>
-            <div className="aspect-video w-full bg-gray-900 flex items-center justify-center relative">
-              <video
-                src="/placeholder-video.mp4"
-                controls
-                autoPlay
-                className="w-full h-full object-contain"
-              >
-                Your browser does not support the video tag.
-              </video>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-              <h3 className="text-white font-outfit text-xl font-bold">{selectedVideo.title}</h3>
-              <p className="text-white/80 font-inter text-sm">{selectedVideo.duration}</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
