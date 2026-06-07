@@ -84,15 +84,14 @@ async fn handle_create_product(
         }
     };
 
-    let tier = hub
-        .tracker()
-        .get_tenant_tier(&tenant_id)
-        .await
-        .unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+    let tier_future = hub.tracker().get_tenant_tier(&tenant_id);
+    let cache_future = cache.get(&tenant_id);
+
+    let (tier_res, count_opt) = tokio::join!(tier_future, cache_future);
+    let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
 
     if let Some(limit) = tier.max_products() {
-        let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
-        let count_opt = cache.get(&tenant_id).await;
 
         let total_products = if let Some(count) = count_opt {
             count
