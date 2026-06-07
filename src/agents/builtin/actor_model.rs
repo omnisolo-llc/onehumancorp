@@ -89,7 +89,13 @@ impl Actor for ToolActor {
                     let tool = agent.tools.iter().find(|t| t.name == tc.name);
                     match tool {
                         Some(t) => {
-                            let res = t.execute.execute(tc.arguments.clone()).await;
+                            // Using the ToolExecutionEngine gives us the LangGraph 4-tier error handling mechanics
+                            let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                t,
+                                &tc,
+                                2 // Max retries
+                            ).await;
+
                             match res {
                                 Ok(content) => {
                                     tool_results.push(ToolResult {
@@ -339,6 +345,124 @@ mod tests {
     impl ToolExecutor for MockEchoTool {
         async fn execute(&self, args: serde_json::Value) -> Result<String, ToolError> {
             Ok(format!("Echo: {}", args["val"].as_str().unwrap_or("")))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_actor_model_4_tier_error_handling_e2e() {
+        // This test proves that by using the ToolExecutionEngine in the ToolActor,
+        // we successfully replaced the classic ReAct loop and brought the 4-tier error handling mechanics
+        // (Transient, LlmRecoverable, UserFixable, Fatal) into the Actor-model message passing paradigm.
+
+        let system = Arc::new(ActorSystem::new());
+
+        struct MockRecoverableTool;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MockRecoverableTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): missing field".to_string()))
+            }
+        }
+
+        let tools = vec![Tool {
+            name: "failing_tool".to_string(),
+            description: "fails recoverably".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(MockRecoverableTool),
+        }];
+
+        struct MockRecoveringLlm {
+            pub calls: Arc<Mutex<usize>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockRecoveringLlm {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.calls.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: ohc_builtin_agent_core::types::Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                                id: "call_1".to_string(),
+                                name: "failing_tool".to_string(),
+                                arguments: serde_json::json!({}),
+                            }],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: Some("mock-id-1".to_string()),
+                    })
+                } else {
+                    let prev_msg = req.messages.last().unwrap();
+                    assert!(prev_msg.tool_results.len() > 0);
+                    assert!(prev_msg.tool_results[0].error.contains("Validation Error (Pydantic-first tool schema): missing field"));
+
+                     Ok(ChatResponse {
+                        message: Message::assistant("Final response after recovering"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-2".to_string()),
+                    })
+                }
+            }
+        }
+
+        let coord_llm = Arc::new(MockRecoveringLlm {
+            calls: Arc::new(Mutex::new(0)),
+        });
+
+        let mut config = AgentRunConfig::default();
+        config.max_retries = 1;
+
+        let coord_agent = Arc::new(Agent::new(coord_llm, tools));
+
+        let coord_actor = AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: config.clone(),
+        };
+
+        let tool_actor = ToolActor {
+            name: "ToolActor".to_string(),
+            agent: coord_agent.clone(),
+        };
+
+        let (coord_tx, coord_rx) = mpsc::channel(10);
+        let (tool_tx, tool_rx) = mpsc::channel(10);
+
+        system.register(coord_actor.name(), coord_tx).await;
+        system.register(tool_actor.name(), tool_tx).await;
+
+        coord_actor.start(coord_rx, system.clone());
+        tool_actor.start(tool_rx, system.clone());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        system.register("ProductionHarness".to_string(), test_tx).await;
+
+        system.send(ActorMessage {
+            sender: "ProductionHarness".to_string(),
+            recipient: "Coordinator".to_string(),
+            content: "Trigger tool failure".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-recoverable".to_string(),
+            original_sender: "ProductionHarness".to_string(),
+        }).await.unwrap();
+
+        if let Some(reply) = test_rx.recv().await {
+            assert_eq!(reply.sender, "Coordinator");
+            assert_eq!(reply.content, "Final response after recovering");
+            assert_eq!(reply.correlation_id, "tx-recoverable");
+        } else {
+            panic!("Did not receive reply from Coordinator");
         }
     }
 
