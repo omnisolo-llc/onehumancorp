@@ -1,5 +1,4 @@
-"use client";
-
+'use client';
 import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
@@ -27,33 +26,31 @@ const OfflineStore = {
   clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
 };
 
-export default function TerminalPage() {
+export default function POSTerminalScreen() {
   const { t } = useTranslation();
   const { currency, convert } = useCurrency();
   const [pin, setPin] = useState('');
-  const [activeStaff, setActiveStaff] = useState<any | null>(null);
-  const [clockedIn, setClockedIn] = useState(false);
+  const [activeStaff, setActiveStaff] = useState<any>(null);
   const [error, setError] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [offlineConversion, setOfflineConversion] = useState(false);
-  const [orderStatus, setOrderStatus] = useState('');
   const [isOffline, setIsOffline] = useState(false);
+  const [clockedIn, setClockedIn] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [orderStatus, setOrderStatus] = useState('');
+  const [offlineConversion, setOfflineConversion] = useState(false);
 
-  // Network listener
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    // Set initial state safely
-    setIsOffline(!navigator.onLine);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    // Initial load sync check
+    if (typeof window !== 'undefined') {
+      setIsOffline(!navigator.onLine);
+      const handleOnline = () => setIsOffline(false);
+      const handleOffline = () => setIsOffline(true);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
   }, []);
 
   // Background sync
@@ -67,7 +64,7 @@ export default function TerminalPage() {
           setSyncing(true);
           try {
             if (events.length > 0) {
-              const res = await fetch('/api/staff/timecard', {
+              const res = await fetch('/api/pos/events/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(events)
@@ -100,14 +97,14 @@ export default function TerminalPage() {
           }
         }
       }
-    }, 10000); // Try syncing every 10 seconds
+    }, 10000); // Check every 10 seconds
 
     return () => clearInterval(syncInterval);
   }, []);
 
-  const handlePinEntry = (digit: string) => {
+  const handlePinEntry = (num: string) => {
     if (pin.length < 4) {
-      const newPin = pin + digit;
+      const newPin = pin + num;
       setPin(newPin);
       setError('');
 

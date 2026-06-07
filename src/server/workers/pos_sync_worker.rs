@@ -1,4 +1,3 @@
-
 use std::sync::Arc;
 use crate::db::DB;
 
@@ -13,7 +12,7 @@ impl PosSyncWorker {
 
     pub async fn handle(&self, job: crate::queue::Job) -> Result<Result<(), String>, String> {
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
-        let transaction_id = payload["transaction_id"].as_str().unwrap();
+        let transaction_id = payload.get("pos_transaction_id").or_else(|| payload.get("transaction_id")).and_then(|v| v.as_str()).unwrap_or("");
 
         let mut tx = match self.db.pool.begin().await {
             Ok(tx) => tx,
