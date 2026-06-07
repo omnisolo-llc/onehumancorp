@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import GrowthReferralWidget from "../components/GrowthReferralWidget";
 
 type ApprovalRequest = {
   id: string;
@@ -170,12 +171,15 @@ export function UnifiedAgentFeed() {
               </div>
             )}
             {!loading && approvals.length === 0 && (
-              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
+              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Your agents are currently monitoring the business.
+                  Your agents are currently monitoring the business. While you're here, why not help us grow?
                 </p>
+                <div className="w-full max-w-md text-left">
+                   <GrowthReferralWidget />
+                </div>
               </div>
             )}
             {approvals.map((approval) => (
