@@ -1,4 +1,6 @@
+import { FloatingActionButton } from "./FAB";
 "use client";
+
 
 
 
@@ -247,6 +249,7 @@ export default function Dashboard() {
       </div>
 
       <NeighborhoodPulseCard tenant={tenantId()} />
+      <FloatingActionButton />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
