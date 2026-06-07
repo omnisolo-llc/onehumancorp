@@ -53,6 +53,12 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     const approveButton = page.getByRole('button', { name: 'Approve' }).first();
     await expect(page.getByText(/All Caught Up!|Do you have vegan chocolate cake available for Saturday?/)).toBeVisible({ timeout: 15000 });
 
+    // Since we are now using LLM generation, we wait for a draft to be generated in the UI
+    const draftLocator = page.getByText(/Draft Reply/i).first();
+    if (await draftLocator.isVisible()) {
+       await expect(draftLocator).toBeVisible();
+    }
+
     if (await approveButton.isVisible()) {
       await approveButton.click();
 
