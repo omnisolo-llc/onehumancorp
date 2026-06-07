@@ -124,6 +124,21 @@ beforeEach(() => {
     if (urlString.includes('/api/assistant/models')) {
       return new Response(JSON.stringify({ models: [{ provider: 'Custom OpenAI Compatible' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    if (urlString.includes('/api/assistant/plugins')) {
+      return new Response(JSON.stringify({ plugins: [{ id: 'plugin-office-suite', status: 'installed' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/claw')) {
+      return new Response(JSON.stringify({ channels: [{ platform: 'Slack', status: 'connected' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/approvals')) {
+      return new Response(JSON.stringify({ approval: { id: 'approval-1', status: 'approved' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/settings')) {
+      return new Response(JSON.stringify({ settings: { fontSize: 'large' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/support')) {
+      return new Response(JSON.stringify({ ticket: { id: 'ticket-1', status: 'received' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
     if (urlString.includes('/api/assistant/tasks')) {
       return new Response(JSON.stringify(tasksPayload), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
@@ -150,6 +165,7 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   expect(screen.getByRole('button', { name: 'Data Management' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Permissions' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Models & Runtime' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'System & Safety' })).toBeDefined();
   expect(screen.getByText('Task List')).toBeDefined();
   expect(screen.getByText('Conversation')).toBeDefined();
   expect(screen.getByText('Results Panel')).toBeDefined();
@@ -276,6 +292,13 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   expect(screen.getByText('Custom Model UI')).toBeDefined();
   expect(screen.getByText('Runtime Detection')).toBeDefined();
   expect(screen.getAllByText('Local Ollama').length).toBeGreaterThan(0);
+
+  fireEvent.click(screen.getByRole('button', { name: 'System & Safety' }));
+  expect(screen.getByText('Plugin Marketplace')).toBeDefined();
+  expect(screen.getByText('Claw Setup')).toBeDefined();
+  expect(screen.getByText('High-risk Confirmations')).toBeDefined();
+  expect(screen.getByText('UI Settings')).toBeDefined();
+  expect(screen.getByText('Feedback & Logs')).toBeDefined();
 });
 
 test('supports WorkBuddy-style mode and artifact options including Coding and Code App', async () => {
@@ -325,12 +348,24 @@ test('backs parity controls with assistant API actions', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Models & Runtime' }));
   fireEvent.click(screen.getByRole('button', { name: 'Save Custom Model' }));
 
+  fireEvent.click(screen.getByRole('button', { name: 'System & Safety' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Install Office Suite' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect Slack Claw' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create High-risk Approval' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save UI Settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Upload Logs' }));
+
   await waitFor(() => {
-    expect(screen.getByText('Custom model saved')).toBeDefined();
+    expect(screen.getByText('Logs uploaded')).toBeDefined();
   });
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/experts', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/commands', expect.objectContaining({ method: 'POST' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/mcp', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/workspaces', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/models', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/plugins', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/claw', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/approvals', expect.objectContaining({ method: 'POST' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/settings', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/support', expect.objectContaining({ method: 'POST' }));
 });

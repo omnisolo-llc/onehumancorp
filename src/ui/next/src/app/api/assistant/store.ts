@@ -56,6 +56,7 @@ export type AssistantTask = {
   changes: AssistantChange[];
   messages: AssistantMessage[];
   actions: AssistantAction[];
+  pinned?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -75,10 +76,14 @@ export type Automation = {
   schedule: string;
   prompt: string;
   workspace: string;
+  type: 'recurring' | 'one_time';
+  temporaryWorkspace: boolean;
+  peakScheduling: boolean;
   status: 'active' | 'paused';
   notificationChannel: string;
   permissionProfile: PermissionProfile;
   nextRunLabel: string;
+  runHistory: { id: string; ranAt: string; status: 'completed' | 'failed'; taskId?: string }[];
 };
 
 export type MemoryItem = {
@@ -191,6 +196,53 @@ export type PreviewRecord = {
   renderedAt: string;
 };
 
+export type PluginRecord = {
+  id: string;
+  name: string;
+  type: 'skill' | 'suite' | 'mcp';
+  version: string;
+  status: 'available' | 'installed' | 'disabled';
+  securityStatus: 'pending' | 'passed' | 'blocked';
+  updateAvailable: boolean;
+  loading: boolean;
+  linkedSkillNames: string[];
+  linkedMcpNames: string[];
+};
+
+export type ClawChannelRecord = {
+  platform: string;
+  status: 'available' | 'connected' | 'disabled';
+  markdownRendering: boolean;
+  qrCodeUrl: string;
+  credentialsConfigured: boolean;
+};
+
+export type ClawConfirmationRecord = {
+  id: string;
+  platform: string;
+  commandId: string;
+  decision: 'approve' | 'deny';
+  decidedAt: string;
+};
+
+export type ApprovalRecord = {
+  id: string;
+  taskId: string;
+  action: string;
+  summary: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  status: 'pending' | 'approved' | 'denied';
+  reviewer?: string;
+  decidedAt?: string;
+};
+
+export type AssistantSettings = {
+  fontSize: 'small' | 'medium' | 'large';
+  systemLanguage: 'auto' | 'en-US' | 'zh-CN';
+  aiGeneratedMarker: boolean;
+  contentFilter: 'friendly_notice' | 'hide_filtered_answer';
+};
+
 export const assistantCapabilities = {
   resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
   remotePlatforms: [
@@ -265,6 +317,19 @@ let deletedWorkspaces: WorkspaceRecord[] = [];
 let shares: ShareRecord[] = [];
 let uploads: UploadRecord[] = [];
 let previews: PreviewRecord[] = [];
+let plugins: PluginRecord[] = [];
+let pluginVersionCache: { lastSyncedAt: string; source: string } = { lastSyncedAt: '', source: 'seed' };
+let clawChannels: ClawChannelRecord[] = [];
+let clawGuides: { platform: string; steps: string[] }[] = [];
+let clawConfirmations: ClawConfirmationRecord[] = [];
+let approvals: ApprovalRecord[] = [];
+let settings: AssistantSettings = {
+  fontSize: 'medium',
+  systemLanguage: 'auto',
+  aiGeneratedMarker: true,
+  contentFilter: 'friendly_notice',
+};
+let supportTickets: { id: string; kind: string; message: string; status: 'received'; logBundle?: string; createdAt: string }[] = [];
 
 function now() {
   return new Date().toISOString();
@@ -525,7 +590,7 @@ export function getAssistantCapabilities() {
   return assistantCapabilities;
 }
 
-export function mutateTask(taskId: string, action: string) {
+export function mutateTask(taskId: string, action: string, payload: Record<string, any> = {}) {
   const task = tasks.find((item) => item.id === taskId);
   if (!task) throw new Error('task not found');
   if (action === 'approve_changes') {
@@ -540,6 +605,36 @@ export function mutateTask(taskId: string, action: string) {
   } else if (action === 'archive') {
     task.status = 'archived';
     task.currentStep = 'Archived';
+  } else if (action === 'pin') {
+    task.pinned = true;
+  } else if (action === 'unpin') {
+    task.pinned = false;
+  } else if (action === 'rename') {
+    if (!payload.title?.trim()) throw new Error('title is required');
+    task.title = payload.title.trim();
+  } else if (action === 'rename_archived') {
+    if (task.status !== 'archived') throw new Error('task is not archived');
+    if (!payload.title?.trim()) throw new Error('title is required');
+    task.title = payload.title.trim();
+  } else if (action === 'save_to_workspace') {
+    if (!payload.workspace?.trim()) throw new Error('workspace is required');
+    task.workspace = payload.workspace.trim();
+    task.workDirectory = payload.workDirectory || task.workDirectory;
+    if (!workspaces.some((workspace) => workspace.name === task.workspace)) {
+      workspaces.push({
+        id: id('workspace'),
+        name: task.workspace,
+        collapsed: false,
+        pinned: false,
+        archived: false,
+        sortOrder: workspaces.length,
+        memoryFile: 'MEMORY.md',
+      });
+    }
+  } else if (action === 'hard_delete') {
+    if (payload.confirm !== 'DELETE') throw new Error('hard delete requires confirmation');
+    tasks = tasks.filter((item) => item.id !== taskId);
+    return { deletedTask: task };
   } else {
     throw new Error('unsupported task action');
   }
@@ -603,21 +698,29 @@ export function createAutomation(payload: {
   schedule?: string;
   prompt?: string;
   workspace?: string;
+  type?: 'recurring' | 'one_time';
+  temporaryWorkspace?: boolean;
+  peakScheduling?: boolean;
   notificationChannel?: string;
   permissionProfile?: PermissionProfile;
 }) {
   if (!payload.name?.trim()) throw new Error('name is required');
   if (!payload.prompt?.trim()) throw new Error('prompt is required');
+  const temporaryWorkspace = Boolean(payload.temporaryWorkspace);
   const automation: Automation = {
     id: id('automation'),
     name: payload.name.trim(),
     schedule: payload.schedule || 'Daily 09:00',
     prompt: payload.prompt.trim(),
-    workspace: payload.workspace || 'Personal OS',
+    workspace: temporaryWorkspace ? 'Temporary Workspace' : payload.workspace || 'Personal OS',
+    type: payload.type || 'recurring',
+    temporaryWorkspace,
+    peakScheduling: Boolean(payload.peakScheduling),
     status: 'active',
     notificationChannel: payload.notificationChannel || 'In app',
     permissionProfile: payload.permissionProfile || 'Guarded',
     nextRunLabel: `Next run follows: ${payload.schedule || 'Daily 09:00'}`,
+    runHistory: [],
   };
   automations.unshift(automation);
   return automation;
@@ -625,6 +728,35 @@ export function createAutomation(payload: {
 
 export function listAutomations() {
   return automations;
+}
+
+export function mutateAutomation(payload: {
+  action?: 'pause' | 'resume' | 'delete' | 'run_now';
+  id?: string;
+}) {
+  const automation = automations.find((item) => item.id === payload.id);
+  if (!automation) throw new Error('automation not found');
+  if (payload.action === 'pause') {
+    automation.status = 'paused';
+  } else if (payload.action === 'resume') {
+    automation.status = 'active';
+  } else if (payload.action === 'run_now') {
+    const task = createAssistantTask({
+      prompt: automation.prompt,
+      workspace: automation.workspace,
+      mode: 'Plan',
+      outputFormat: 'Document',
+      connectors: [automation.notificationChannel],
+      permissionProfile: automation.permissionProfile,
+    });
+    automation.runHistory.unshift({ id: id('run'), ranAt: now(), status: 'completed', taskId: task.id });
+  } else if (payload.action === 'delete') {
+    automations = automations.filter((item) => item.id !== automation.id);
+    return { automations };
+  } else {
+    throw new Error('unsupported automation action');
+  }
+  return { automation, automations };
 }
 
 export function listMemories() {
@@ -1132,6 +1264,173 @@ export function mutatePreview(payload: {
   return preview;
 }
 
+export function listPlugins() {
+  return {
+    plugins,
+    versionCache: pluginVersionCache,
+    skills,
+    mcpServers,
+  };
+}
+
+export function mutatePlugin(payload: {
+  action?: 'install' | 'update' | 'uninstall' | 'try';
+  id?: string;
+  version?: string;
+  taskId?: string;
+}) {
+  const plugin = plugins.find((item) => item.id === payload.id);
+  if (!plugin) throw new Error('plugin not found');
+  if (payload.action === 'install') {
+    plugin.loading = true;
+    plugin.securityStatus = plugin.securityStatus === 'blocked' ? 'blocked' : 'passed';
+    if (plugin.securityStatus === 'blocked') throw new Error('plugin blocked by security scan');
+    plugin.status = 'installed';
+    for (const name of plugin.linkedSkillNames) {
+      const existing = skills.find((skill) => skill.name === name);
+      if (existing) existing.status = 'installed';
+      else skills.unshift({ id: id('skill'), name, category: 'Plugin', status: 'installed' });
+    }
+    for (const name of plugin.linkedMcpNames) {
+      if (!mcpServers.some((server) => server.name === name)) {
+        mcpServers.unshift({
+          id: id('mcp'),
+          name,
+          url: `mcp://${slug(name)}`,
+          status: 'needs_trust',
+          trusted: false,
+          oauth: false,
+          headers: { 'User-Agent': 'Jarvis-Assistant' },
+          features: [...assistantCapabilities.mcpFeatures],
+          tools: [{ name: 'run_tool', enabled: true }],
+        });
+      }
+    }
+    plugin.loading = false;
+  } else if (payload.action === 'update') {
+    plugin.version = payload.version || plugin.version;
+    plugin.updateAvailable = false;
+    pluginVersionCache = { lastSyncedAt: now(), source: 'marketplace' };
+  } else if (payload.action === 'try') {
+    const task = tasks.find((item) => item.id === payload.taskId);
+    if (!task) throw new Error('task not found');
+    task.messages.push({ id: id('msg'), role: 'assistant', content: `${plugin.name} is ready to try on this task.`, createdAt: now() });
+    return { ...listPlugins(), task };
+  } else if (payload.action === 'uninstall') {
+    plugin.status = 'available';
+    skills = skills.filter((skill) => !plugin.linkedSkillNames.includes(skill.name));
+    mcpServers = mcpServers.filter((server) => !plugin.linkedMcpNames.includes(server.name));
+  } else {
+    throw new Error('unsupported plugin action');
+  }
+  return listPlugins();
+}
+
+export function listClawSettings() {
+  return {
+    channels: clawChannels,
+    guides: clawGuides,
+    confirmations: clawConfirmations,
+  };
+}
+
+export function mutateClawSettings(payload: {
+  action?: 'connect' | 'disconnect' | 'confirm_command';
+  platform?: string;
+  credentials?: Record<string, string>;
+  commandId?: string;
+  decision?: 'approve' | 'deny';
+}) {
+  const platform = payload.platform || 'WeChat ClawBot';
+  const channel = clawChannels.find((item) => item.platform === platform);
+  if (!channel) throw new Error('claw channel not found');
+  if (payload.action === 'connect') {
+    channel.status = 'connected';
+    channel.credentialsConfigured = Boolean(payload.credentials);
+  } else if (payload.action === 'disconnect') {
+    channel.status = 'available';
+    channel.credentialsConfigured = false;
+  } else if (payload.action === 'confirm_command') {
+    if (!payload.commandId?.trim()) throw new Error('command id is required');
+    clawConfirmations.unshift({
+      id: id('clawconfirm'),
+      platform,
+      commandId: payload.commandId,
+      decision: payload.decision || 'deny',
+      decidedAt: now(),
+    });
+  } else {
+    throw new Error('unsupported claw action');
+  }
+  return listClawSettings();
+}
+
+export function listApprovals() {
+  return { approvals };
+}
+
+export function createApproval(payload: {
+  taskId?: string;
+  action?: string;
+  summary?: string;
+  riskLevel?: ApprovalRecord['riskLevel'];
+}) {
+  if (!payload.taskId?.trim()) throw new Error('task id is required');
+  if (!tasks.some((task) => task.id === payload.taskId)) throw new Error('task not found');
+  const approval: ApprovalRecord = {
+    id: id('approval'),
+    taskId: payload.taskId,
+    action: payload.action || 'unknown',
+    summary: payload.summary || 'Approval requested.',
+    riskLevel: payload.riskLevel || 'medium',
+    status: 'pending',
+  };
+  approvals.unshift(approval);
+  return approval;
+}
+
+export function mutateApproval(payload: {
+  id?: string;
+  decision?: 'approve' | 'deny';
+  reviewer?: string;
+}) {
+  const approval = approvals.find((item) => item.id === payload.id);
+  if (!approval) throw new Error('approval not found');
+  approval.status = payload.decision === 'approve' ? 'approved' : 'denied';
+  approval.reviewer = payload.reviewer || 'owner';
+  approval.decidedAt = now();
+  return approval;
+}
+
+export function getAssistantSettings() {
+  return { settings };
+}
+
+export function mutateAssistantSettings(payload: Partial<AssistantSettings>) {
+  settings = {
+    ...settings,
+    ...payload,
+  };
+  return { settings };
+}
+
+export function createSupportTicket(payload: {
+  kind?: string;
+  message?: string;
+  includeLogs?: boolean;
+}) {
+  const ticket = {
+    id: id('support'),
+    kind: payload.kind || 'feedback',
+    message: payload.message || '',
+    status: 'received' as const,
+    logBundle: payload.includeLogs ? `jarvis-logs-${Date.now()}.zip` : undefined,
+    createdAt: now(),
+  };
+  supportTickets.unshift(ticket);
+  return ticket;
+}
+
 export function resetAssistantStore() {
   tasks = [
     {
@@ -1190,6 +1489,7 @@ export function resetAssistantStore() {
         { id: 'action-seed-approve', label: 'Approve Changes', kind: 'approval', approvalRequired: true },
         { id: 'action-seed-download', label: 'Download File', kind: 'download', approvalRequired: false },
       ],
+      pinned: true,
       createdAt: '2026-06-07T00:00:00.000Z',
       updatedAt: '2026-06-07T00:01:00.000Z',
     },
@@ -1225,6 +1525,7 @@ export function resetAssistantStore() {
       actions: [
         { id: 'action-seed-grant', label: 'Grant Folder Access', kind: 'permission', approvalRequired: true },
       ],
+      pinned: false,
       createdAt: '2026-06-07T00:02:00.000Z',
       updatedAt: '2026-06-07T00:03:00.000Z',
     },
@@ -1368,6 +1669,69 @@ export function resetAssistantStore() {
       renderedAt: '2026-06-07T00:01:00.000Z',
     },
   ];
+  plugins = [
+    {
+      id: 'plugin-office-suite',
+      name: 'Office Suite',
+      type: 'suite',
+      version: '1.0.0',
+      status: 'available',
+      securityStatus: 'passed',
+      updateAvailable: true,
+      loading: false,
+      linkedSkillNames: ['Office Suite Writer'],
+      linkedMcpNames: ['Office Suite MCP'],
+    },
+    {
+      id: 'plugin-image-generator',
+      name: 'Image Generator',
+      type: 'skill',
+      version: '2.3.0',
+      status: 'available',
+      securityStatus: 'passed',
+      updateAvailable: false,
+      loading: false,
+      linkedSkillNames: ['Image Generator'],
+      linkedMcpNames: [],
+    },
+    {
+      id: 'plugin-data-suite',
+      name: 'Data Suite',
+      type: 'suite',
+      version: '1.4.2',
+      status: 'installed',
+      securityStatus: 'passed',
+      updateAvailable: false,
+      loading: false,
+      linkedSkillNames: ['Chart Builder'],
+      linkedMcpNames: [],
+    },
+  ];
+  pluginVersionCache = { lastSyncedAt: '2026-06-07T00:00:00.000Z', source: 'marketplace' };
+  clawChannels = assistantCapabilities.remotePlatforms.map((platform) => ({
+    platform,
+    status: platform === 'WeChat ClawBot' ? 'connected' : 'available',
+    markdownRendering: platform === 'WeChat ClawBot',
+    qrCodeUrl: `/assistant/claw/${slug(platform)}/qr`,
+    credentialsConfigured: platform === 'WeChat ClawBot',
+  }));
+  clawGuides = assistantCapabilities.remotePlatforms.map((platform) => ({
+    platform,
+    steps: [
+      `Create or select the ${platform} app.`,
+      'Configure bot permissions and callback URL.',
+      'Paste credentials into Jarvis and run a connection test.',
+    ],
+  }));
+  clawConfirmations = [];
+  approvals = [];
+  settings = {
+    fontSize: 'medium',
+    systemLanguage: 'auto',
+    aiGeneratedMarker: true,
+    contentFilter: 'friendly_notice',
+  };
+  supportTickets = [];
 }
 
 resetAssistantStore();

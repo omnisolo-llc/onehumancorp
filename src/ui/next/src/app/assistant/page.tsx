@@ -64,7 +64,7 @@ type AssistantCapabilities = {
   mcpFeatures: string[];
 };
 
-type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'permissions' | 'models';
+type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'permissions' | 'models' | 'system';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -319,6 +319,36 @@ export default function AssistantPage() {
         parameters: { temperature: 0.2 },
         skipChatCompletions: true,
       }, 'Custom model saved');
+    } else if (action === 'install_plugin') {
+      await runApiAction('/api/assistant/plugins', 'PATCH', {
+        action: 'install',
+        id: 'plugin-office-suite',
+      }, 'Office Suite installed');
+    } else if (action === 'connect_claw') {
+      await runApiAction('/api/assistant/claw', 'PATCH', {
+        action: 'connect',
+        platform: 'Slack',
+        credentials: { appId: 'A123', botToken: 'xoxb-token' },
+      }, 'Slack Claw connected');
+    } else if (action === 'create_approval') {
+      await runApiAction('/api/assistant/approvals', 'POST', {
+        taskId: activeTask.id,
+        action: 'external_send',
+        summary: 'Send artifact outside Jarvis',
+        riskLevel: 'high',
+      }, 'High-risk approval created');
+    } else if (action === 'save_ui_settings') {
+      await runApiAction('/api/assistant/settings', 'PATCH', {
+        fontSize: 'large',
+        systemLanguage: 'en-US',
+        contentFilter: 'hide_filtered_answer',
+      }, 'UI settings saved');
+    } else if (action === 'upload_logs') {
+      await runApiAction('/api/assistant/support', 'POST', {
+        kind: 'upload_logs',
+        message: 'User feedback from assistant surface',
+        includeLogs: true,
+      }, 'Logs uploaded');
     }
   }
 
@@ -352,6 +382,7 @@ export default function AssistantPage() {
               ['data', 'Data Management'],
               ['permissions', 'Permissions'],
               ['models', 'Models & Runtime'],
+              ['system', 'System & Safety'],
             ] as [Panel, string][]).map(([id, label]) => (
               <PanelButton key={id} active={panel === id} onClick={() => setPanel(id)}>
                 {label}
@@ -825,6 +856,45 @@ function FeaturePanel({
         <div className={styles.actionRow}>
           <button type="button" onClick={() => onAction('save_custom_model')} className={styles.smallButton}>
             Save Custom Model
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (panel === 'system') {
+    return (
+      <section aria-label="System and safety panel" className={styles.panel}>
+        <h2 className={styles.sectionTitle}>System & Safety</h2>
+        <div className={styles.featureGridThree}>
+          {[
+            ['Plugin Marketplace', 'Install, update, try, and uninstall skill or suite packages with security checks.'],
+            ['Claw Setup', 'Connect or disconnect mobile bot channels and confirm remote commands.'],
+            ['High-risk Confirmations', 'Review external sends, destructive changes, and full-access operations.'],
+            ['UI Settings', 'Adjust font size, language, generated-content markers, and filter handling.'],
+            ['Feedback & Logs', 'Send product feedback and upload diagnostic logs for support.'],
+          ].map(([title, detail]) => (
+            <div key={title} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('install_plugin')} className={styles.smallButton}>
+            Install Office Suite
+          </button>
+          <button type="button" onClick={() => onAction('connect_claw')} className={styles.smallButton}>
+            Connect Slack Claw
+          </button>
+          <button type="button" onClick={() => onAction('create_approval')} className={cx(styles.smallButton, styles.warningButton)}>
+            Create High-risk Approval
+          </button>
+          <button type="button" onClick={() => onAction('save_ui_settings')} className={styles.smallButton}>
+            Save UI Settings
+          </button>
+          <button type="button" onClick={() => onAction('upload_logs')} className={styles.smallButton}>
+            Upload Logs
           </button>
         </div>
       </section>

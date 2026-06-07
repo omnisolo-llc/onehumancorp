@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach } from 'vitest';
 import { GET as getTasks, POST as postTask } from './tasks/route';
 import { POST as postRemote, GET as getRemote } from './remote/route';
-import { POST as postAutomation, GET as getAutomations } from './automations/route';
+import { POST as postAutomation, GET as getAutomations, PATCH as patchAutomation } from './automations/route';
 import { GET as getMemory, PATCH as patchMemory } from './memory/route';
 import { PATCH as patchTaskAction } from './tasks/[id]/route';
 import { GET as getSkills, PATCH as patchSkills } from './skills/route';
@@ -18,6 +18,11 @@ import { GET as getWorkspaces, PATCH as patchWorkspaces } from './workspaces/rou
 import { GET as getShares, POST as postShare } from './share/route';
 import { GET as getUploads, POST as postUpload } from './uploads/route';
 import { GET as getPreviews, PATCH as patchPreviews } from './previews/route';
+import { GET as getPlugins, PATCH as patchPlugins } from './plugins/route';
+import { GET as getClaw, PATCH as patchClaw } from './claw/route';
+import { GET as getApprovals, POST as postApproval, PATCH as patchApproval } from './approvals/route';
+import { GET as getSettings, PATCH as patchSettings } from './settings/route';
+import { POST as postSupport } from './support/route';
 import { resetAssistantStore } from './store';
 
 function jsonRequest(url: string, body: unknown) {
@@ -649,5 +654,226 @@ describe('assistant API contract', () => {
       autoRefresh: true,
     });
     expect(body.preview.renderedAt).toEqual(expect.any(String));
+  });
+
+  test('manages plugin and suite marketplace install update try and uninstall cleanup', async () => {
+    let body = await (await getPlugins()).json();
+    expect(body.plugins).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Office Suite', type: 'suite', version: '1.0.0' }),
+      expect.objectContaining({ name: 'Image Generator', type: 'skill', securityStatus: 'passed' }),
+    ]));
+    expect(body.versionCache).toEqual(expect.objectContaining({ lastSyncedAt: expect.any(String) }));
+
+    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+      action: 'install',
+      id: 'plugin-office-suite',
+    }))).json();
+    expect(body.plugins).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'plugin-office-suite', status: 'installed', loading: false }),
+    ]));
+    expect(body.skills).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Office Suite Writer', status: 'installed' }),
+    ]));
+    expect(body.mcpServers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Office Suite MCP', status: 'needs_trust' }),
+    ]));
+
+    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+      action: 'update',
+      id: 'plugin-office-suite',
+      version: '1.1.0',
+    }))).json();
+    expect(body.plugins).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'plugin-office-suite', version: '1.1.0', updateAvailable: false }),
+    ]));
+
+    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+      action: 'try',
+      id: 'plugin-office-suite',
+      taskId: 'task-weekly-brief',
+    }))).json();
+    expect(body.task.messages.at(-1).content).toContain('Office Suite');
+
+    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+      action: 'uninstall',
+      id: 'plugin-office-suite',
+    }))).json();
+    expect(body.plugins).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'plugin-office-suite', status: 'available' }),
+    ]));
+    expect(body.mcpServers.some((server: any) => server.name === 'Office Suite MCP')).toBe(false);
+  });
+
+  test('runs one-time and temporary-workspace automations through pause resume run and delete lifecycle', async () => {
+    let body = await (await postAutomation(jsonRequest('http://localhost/api/assistant/automations', {
+      name: 'One-time invoice cleanup',
+      schedule: '2026-06-08T09:00:00.000Z',
+      prompt: 'Clean invoice attachments once',
+      type: 'one_time',
+      temporaryWorkspace: true,
+      peakScheduling: true,
+      notificationChannel: 'WeChat ClawBot',
+    }))).json();
+    expect(body.automation).toMatchObject({
+      type: 'one_time',
+      temporaryWorkspace: true,
+      peakScheduling: true,
+      workspace: 'Temporary Workspace',
+    });
+
+    const automationId = body.automation.id;
+    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+      action: 'run_now',
+      id: automationId,
+    }))).json();
+    expect(body.automation.runHistory).toEqual(expect.arrayContaining([
+      expect.objectContaining({ status: 'completed' }),
+    ]));
+
+    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+      action: 'pause',
+      id: automationId,
+    }))).json();
+    expect(body.automation.status).toBe('paused');
+
+    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+      action: 'resume',
+      id: automationId,
+    }))).json();
+    expect(body.automation.status).toBe('active');
+
+    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+      action: 'delete',
+      id: automationId,
+    }))).json();
+    expect(body.automations.some((automation: any) => automation.id === automationId)).toBe(false);
+  });
+
+  test('supports task pin rename save to workspace archived rename and hard delete', async () => {
+    let body = await (await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'pin' }),
+      { params: { id: 'task-weekly-brief' } },
+    )).json();
+    expect(body.task.pinned).toBe(true);
+
+    body = await (await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'rename', title: 'Weekly operating review' }),
+      { params: { id: 'task-weekly-brief' } },
+    )).json();
+    expect(body.task.title).toBe('Weekly operating review');
+
+    body = await (await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', {
+        action: 'save_to_workspace',
+        workspace: 'Leadership',
+        workDirectory: '/workspace/leadership',
+      }),
+      { params: { id: 'task-weekly-brief' } },
+    )).json();
+    expect(body.task).toMatchObject({ workspace: 'Leadership', workDirectory: '/workspace/leadership' });
+
+    body = await (await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
+      { params: { id: 'task-weekly-brief' } },
+    )).json();
+    expect(body.task.status).toBe('archived');
+
+    body = await (await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'rename_archived', title: 'Archived review' }),
+      { params: { id: 'task-weekly-brief' } },
+    )).json();
+    expect(body.task.title).toBe('Archived review');
+
+    body = await (await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'hard_delete', confirm: 'DELETE' }),
+      { params: { id: 'task-weekly-brief' } },
+    )).json();
+    expect(body.deletedTask.id).toBe('task-weekly-brief');
+  });
+
+  test('manages Claw bot setup disconnect markdown and command confirmation', async () => {
+    let body = await (await getClaw()).json();
+    expect(body.channels).toEqual(expect.arrayContaining([
+      expect.objectContaining({ platform: 'WeChat ClawBot', markdownRendering: true, qrCodeUrl: expect.stringContaining('/assistant/claw/') }),
+    ]));
+
+    body = await (await patchClaw(patchRequest('http://localhost/api/assistant/claw', {
+      action: 'connect',
+      platform: 'Slack',
+      credentials: { appId: 'A123', botToken: 'xoxb-token' },
+    }))).json();
+    expect(body.channels).toEqual(expect.arrayContaining([
+      expect.objectContaining({ platform: 'Slack', status: 'connected' }),
+    ]));
+    expect(body.guides).toEqual(expect.arrayContaining([
+      expect.objectContaining({ platform: 'Slack', steps: expect.arrayContaining([expect.stringContaining('app')]) }),
+    ]));
+
+    body = await (await patchClaw(patchRequest('http://localhost/api/assistant/claw', {
+      action: 'confirm_command',
+      platform: 'WeChat ClawBot',
+      commandId: 'cmd-danger-1',
+      decision: 'approve',
+    }))).json();
+    expect(body.confirmations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ commandId: 'cmd-danger-1', decision: 'approve' }),
+    ]));
+  });
+
+  test('records high-risk approvals before external sends and destructive actions', async () => {
+    let body = await (await getApprovals()).json();
+    expect(body.approvals).toEqual([]);
+
+    body = await (await postApproval(jsonRequest('http://localhost/api/assistant/approvals', {
+      taskId: 'task-weekly-brief',
+      action: 'external_send',
+      summary: 'Send weekly brief to WeChat',
+      riskLevel: 'high',
+    }))).json();
+    expect(body.approval).toMatchObject({
+      taskId: 'task-weekly-brief',
+      action: 'external_send',
+      riskLevel: 'high',
+      status: 'pending',
+    });
+
+    body = await (await patchApproval(patchRequest('http://localhost/api/assistant/approvals', {
+      id: body.approval.id,
+      decision: 'approve',
+      reviewer: 'owner',
+    }))).json();
+    expect(body.approval).toMatchObject({ status: 'approved', reviewer: 'owner' });
+  });
+
+  test('updates UI settings content filter font size language and support uploads', async () => {
+    let body = await (await getSettings()).json();
+    expect(body.settings).toMatchObject({
+      fontSize: 'medium',
+      systemLanguage: 'auto',
+      aiGeneratedMarker: true,
+      contentFilter: 'friendly_notice',
+    });
+
+    body = await (await patchSettings(patchRequest('http://localhost/api/assistant/settings', {
+      fontSize: 'large',
+      systemLanguage: 'en-US',
+      contentFilter: 'hide_filtered_answer',
+    }))).json();
+    expect(body.settings).toMatchObject({
+      fontSize: 'large',
+      systemLanguage: 'en-US',
+      contentFilter: 'hide_filtered_answer',
+    });
+
+    body = await (await postSupport(jsonRequest('http://localhost/api/assistant/support', {
+      kind: 'upload_logs',
+      message: 'Investigate Claw reconnect issue',
+      includeLogs: true,
+    }))).json();
+    expect(body.ticket).toMatchObject({
+      kind: 'upload_logs',
+      status: 'received',
+      logBundle: expect.stringContaining('jarvis-logs'),
+    });
   });
 });
