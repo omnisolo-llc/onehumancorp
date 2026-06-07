@@ -1,4 +1,5 @@
 pub mod rag_sync;
+pub mod cart_recovery;
 pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
@@ -330,6 +331,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod subscription;
     pub mod pos;
     pub mod collective;
 }
@@ -2281,6 +2283,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
+    if matches!(&db.store, crate::db::DbStore::Postgres) {
+        crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
+    }
+
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
@@ -2624,7 +2630,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
 
-    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+    match sqlx::query(
+        "SELECT id, tenant_id, source, content,
+                COALESCE(original_content, content) AS original_content,
+                COALESCE(translated_from_language, '') AS translated_from_language,
+                draft_reply, status, created_at
+         FROM inbox_messages
+         ORDER BY created_at DESC"
+    )
         .fetch_all(&mut *tx)
         .await
     {
@@ -2639,6 +2652,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
+                    "original_content": row.get::<String, _>("original_content"),
+                    "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "draft_reply": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
                     "created_at": created_at_str,
@@ -2878,7 +2893,20 @@ async fn list_ui_inbox_handler(
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_from_language, '') AS translated_from_language,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(created_at::text, '') AS created_at
+                 FROM inbox_messages
+                 WHERE tenant_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
                 .bind(&tenant_id)
                 .fetch_all(&db.pool)
                 .await {
@@ -2886,6 +2914,8 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
@@ -2894,7 +2924,20 @@ async fn list_ui_inbox_handler(
                 }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_from_language, '') AS translated_from_language,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                 FROM inbox_messages
+                 WHERE tenant_id = ?
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await {
@@ -2902,6 +2945,8 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
@@ -3629,7 +3674,8 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
-        .nest("/api/subscriptions", api::subscription::router(hub.clone()))
+        .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
+        .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))

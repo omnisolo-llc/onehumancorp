@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -107,5 +107,15 @@ rust_library(
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
         "@crates//:walkdir",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_google_calendar_unit_test",
+    size = "small",
+    crate = ":server_integrations_google_calendar",
+    edition = "2024",
+    deps = [
+        "@crates//:tokio",
     ],
 )

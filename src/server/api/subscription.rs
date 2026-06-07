@@ -11,6 +11,9 @@ use sha2::Sha256;
 use std::sync::Arc;
 use crate::hub::Hub;
 use axum::http::StatusCode;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::departments::types::DepartmentEvent;
+use crate::services::subscription::service::SubscriptionService;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -34,9 +37,15 @@ pub struct SubscriberResponse {
 #[derive(Serialize)]
 pub struct FulfillmentBatchResponse {
     pub id: String,
-    pub target_date: i64,
+    pub fulfillment_date: String,
     pub status: String,
     pub subscriber_count: i64,
+}
+
+#[derive(Deserialize)]
+pub struct CreateFulfillmentBatchRequest {
+    pub subscription_plan_id: String,
+    pub fulfillment_date: String,
 }
 
 async fn get_plans(
@@ -125,10 +134,11 @@ async fn get_fulfillment_batches(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
     };
 
-    // Note: the count relies on subscriber_count logic, which we can join or approximate. For now we will return 0 if no subscribers exist for batch.
-    // Usually target_date and batch are managed dynamically by Ops agent.
     let result = sqlx::query(
-        "SELECT id, target_date, status FROM fulfillment_batches WHERE tenant_id = $1"
+        "SELECT id, fulfillment_date::text AS fulfillment_date, status, subscriber_count
+         FROM fulfillment_batches
+         WHERE tenant_id = $1
+         ORDER BY fulfillment_date ASC, created_at ASC"
     )
     .bind(tenant_id)
     .fetch_all(&mut *conn)
@@ -139,9 +149,9 @@ async fn get_fulfillment_batches(
             use sqlx::Row;
             let batches: Vec<FulfillmentBatchResponse> = rows.into_iter().map(|r| FulfillmentBatchResponse {
                 id: r.try_get("id").unwrap_or_default(),
-                target_date: r.try_get("target_date").unwrap_or(0),
+                fulfillment_date: r.try_get("fulfillment_date").unwrap_or_default(),
                 status: r.try_get("status").unwrap_or_default(),
-                subscriber_count: 0, // This should normally be computed via join
+                subscriber_count: r.try_get("subscriber_count").unwrap_or(0),
             }).collect();
             (StatusCode::OK, Json(batches)).into_response()
         },
@@ -151,6 +161,59 @@ async fn get_fulfillment_batches(
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
         }
     }
+}
+
+async fn create_fulfillment_batch(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Extension(orchestrator): Extension<Option<Arc<DepartmentOrchestrator>>>,
+    Json(payload): Json<CreateFulfillmentBatchRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+    let service = SubscriptionService::new(Arc::new(hub.pool.clone()));
+    let batch = match service
+        .generate_fulfillment_batch(
+            &tenant_id,
+            &payload.subscription_plan_id,
+            &payload.fulfillment_date,
+        )
+        .await
+    {
+        Ok(batch) => batch,
+        Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to generate fulfillment batch");
+            tracing::error!("Failed to generate fulfillment batch: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response();
+        }
+    };
+
+    let event_payload = service.fulfillment_batch_event_payload(&batch);
+    if let Some(orchestrator) = orchestrator {
+        let event = DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.subscription.fulfillment_batch.created".to_string(),
+            payload: event_payload,
+        };
+        if let Err(e) = orchestrator.dispatch_event(event).await {
+            ::server_telemetry::record_error_signal("Failed to dispatch fulfillment batch event");
+            tracing::error!("Failed to dispatch fulfillment batch event: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Operations dispatch failed").into_response();
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(FulfillmentBatchResponse {
+            id: batch.id,
+            fulfillment_date: batch.fulfillment_date,
+            status: "PENDING".to_string(),
+            subscriber_count: batch.subscriber_count,
+        }),
+    )
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -270,11 +333,19 @@ async fn handle_magic_link(
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
+    router_with_orchestrator(hub, None)
+}
+
+pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
+    hub: Arc<Hub>,
+    orchestrator: Option<Arc<DepartmentOrchestrator>>,
+) -> Router<S> {
     Router::new()
         .route("/plans", get(get_plans))
         .route("/subscribers", get(get_subscribers))
-        .route("/fulfillment-batches", get(get_fulfillment_batches))
+        .route("/fulfillment-batches", get(get_fulfillment_batches).post(create_fulfillment_batch))
         .route("/magic-link", post(handle_magic_link))
+        .layer(Extension(orchestrator))
         .layer(Extension(hub))
 }
 

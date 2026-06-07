@@ -8,20 +8,56 @@ pub trait MarketingCopyClient: Send + Sync {
     async fn draft_caption(&self, prompt: &str, fallback: &str) -> String;
 }
 
-struct EnvMarketingCopyClient;
-
 #[async_trait::async_trait]
-impl MarketingCopyClient for EnvMarketingCopyClient {
-    async fn draft_caption(&self, prompt: &str, fallback: &str) -> String {
+pub trait MarketingImageOptimizer: Send + Sync {
+    async fn optimize_product_image(&self, image_url: &str) -> Result<String, String>;
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MarketingCopyBackend {
+    Local,
+    Minimax { api_key: String },
+}
+
+impl MarketingCopyBackend {
+    pub fn from_env() -> Self {
         match std::env::var("OHC_LLM_PROVIDER").as_deref() {
             Ok("minimax") => {
-                let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                crate::minimax::MinimaxClient::new(minimax_key)
+                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                if api_key.trim().is_empty() {
+                    Self::Local
+                } else {
+                    Self::Minimax { api_key }
+                }
+            }
+            _ => Self::Local,
+        }
+    }
+}
+
+struct RuntimeMarketingCopyClient {
+    backend: MarketingCopyBackend,
+}
+
+impl RuntimeMarketingCopyClient {
+    fn from_env() -> Self {
+        Self {
+            backend: MarketingCopyBackend::from_env(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl MarketingCopyClient for RuntimeMarketingCopyClient {
+    async fn draft_caption(&self, prompt: &str, fallback: &str) -> String {
+        match &self.backend {
+            MarketingCopyBackend::Minimax { api_key } => {
+                crate::minimax::MinimaxClient::new(api_key.clone())
                     .reason(prompt)
                     .await
                     .unwrap_or_else(|_| fallback.to_string())
             }
-            _ => crate::minimax::LocalLLMClient::new()
+            MarketingCopyBackend::Local => crate::minimax::LocalLLMClient::new()
                 .reason(prompt)
                 .await
                 .unwrap_or_else(|_| fallback.to_string()),
@@ -29,26 +65,138 @@ impl MarketingCopyClient for EnvMarketingCopyClient {
     }
 }
 
+struct RuntimeMarketingImageOptimizer {
+    api_url: Option<String>,
+    api_key: Option<String>,
+}
+
+impl RuntimeMarketingImageOptimizer {
+    fn from_env() -> Self {
+        Self {
+            api_url: std::env::var("OHC_VISION_API_URL")
+                .ok()
+                .map(|value| value.trim().trim_end_matches('/').to_string())
+                .filter(|value| !value.is_empty()),
+            api_key: std::env::var("OHC_VISION_API_KEY")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty()),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl MarketingImageOptimizer for RuntimeMarketingImageOptimizer {
+    async fn optimize_product_image(&self, image_url: &str) -> Result<String, String> {
+        let image_url = image_url.trim();
+        if image_url.is_empty() {
+            return Ok(String::new());
+        }
+
+        let Some(api_url) = self.api_url.as_deref() else {
+            return Ok(image_url.to_string());
+        };
+
+        let mut request = reqwest::Client::new()
+            .post(format!("{api_url}/optimize-product-image"))
+            .json(&serde_json::json!({
+                "image_url": image_url,
+                "purpose": "marketing_product_post",
+            }));
+
+        if let Some(api_key) = self.api_key.as_deref() {
+            request = request.bearer_auth(api_key);
+        }
+
+        let response = request
+            .send()
+            .await
+            .map_err(|e| format!("Vision image optimization request failed: {e}"))?;
+        let status = response.status();
+        let body: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("Vision image optimization response was not JSON: {e}"))?;
+
+        if !status.is_success() {
+            return Err(format!("Vision image optimization API error {status}: {body}"));
+        }
+
+        body.get("optimized_image_url")
+            .or_else(|| body.get("cropped_image_url"))
+            .or_else(|| body.get("image_url"))
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToString::to_string)
+            .ok_or_else(|| "Vision image optimization response missing optimized image URL".to_string())
+    }
+}
+
+#[cfg(test)]
+struct PassthroughImageOptimizer;
+
+#[cfg(test)]
+#[async_trait::async_trait]
+impl MarketingImageOptimizer for PassthroughImageOptimizer {
+    async fn optimize_product_image(&self, image_url: &str) -> Result<String, String> {
+        Ok(image_url.to_string())
+    }
+}
+
 pub struct MarketingAgent {
     orchestrator: Option<Arc<DepartmentOrchestrator>>,
     copy_client: Arc<dyn MarketingCopyClient>,
+    image_optimizer: Arc<dyn MarketingImageOptimizer>,
 }
 
 impl MarketingAgent {
     pub fn new(orchestrator: Arc<DepartmentOrchestrator>) -> Self {
-        Self::new_with_copy_client(orchestrator, Arc::new(EnvMarketingCopyClient))
+        Self::new_with_clients(
+            orchestrator,
+            Arc::new(RuntimeMarketingCopyClient::from_env()),
+            Arc::new(RuntimeMarketingImageOptimizer::from_env()),
+        )
     }
 
     pub fn new_with_copy_client(
         orchestrator: Arc<DepartmentOrchestrator>,
         copy_client: Arc<dyn MarketingCopyClient>,
     ) -> Self {
-        Self { orchestrator: Some(orchestrator), copy_client }
+        Self::new_with_clients(
+            orchestrator,
+            copy_client,
+            Arc::new(RuntimeMarketingImageOptimizer::from_env()),
+        )
+    }
+
+    pub fn new_with_clients(
+        orchestrator: Arc<DepartmentOrchestrator>,
+        copy_client: Arc<dyn MarketingCopyClient>,
+        image_optimizer: Arc<dyn MarketingImageOptimizer>,
+    ) -> Self {
+        Self {
+            orchestrator: Some(orchestrator),
+            copy_client,
+            image_optimizer,
+        }
     }
 
     #[cfg(test)]
     fn new_for_test(copy_client: Arc<dyn MarketingCopyClient>) -> Self {
-        Self { orchestrator: None, copy_client }
+        Self::new_for_test_with_optimizer(copy_client, Arc::new(PassthroughImageOptimizer))
+    }
+
+    #[cfg(test)]
+    fn new_for_test_with_optimizer(
+        copy_client: Arc<dyn MarketingCopyClient>,
+        image_optimizer: Arc<dyn MarketingImageOptimizer>,
+    ) -> Self {
+        Self {
+            orchestrator: None,
+            copy_client,
+            image_optimizer,
+        }
     }
 
     fn orchestrator(&self) -> Result<&Arc<DepartmentOrchestrator>, String> {
@@ -61,6 +209,16 @@ impl MarketingAgent {
         let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
         let fallback = format!("Check out our new {}!", product_name);
         self.copy_client.draft_caption(&prompt, &fallback).await
+    }
+
+    pub async fn optimize_product_image_url(&self, image_url: &str) -> String {
+        match self.image_optimizer.optimize_product_image(image_url).await {
+            Ok(url) => url,
+            Err(err) => {
+                tracing::warn!("Marketing image optimization failed: {}", err);
+                image_url.to_string()
+            }
+        }
     }
 }
 
@@ -83,26 +241,6 @@ impl Department for MarketingAgent {
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
 
-
-        if event.event_type == "tenant.product.created" {
-            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");
-
-            let draft_copy = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
-            let payload = serde_json::json!({
-                "feature_type": "social_post",
-                "product_name": product_name,
-                "draft_copy": draft_copy
-            });
-            let description = format!("7-Day Social Calendar: {}", product_name);
-
-            return self.orchestrator()?.execute_action(
-                DepartmentType::Marketing,
-                description,
-                event.tenant_id.clone(),
-                risk,
-                payload,
-            ).await.map(|_| ());
-        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
@@ -149,14 +287,7 @@ impl Department for MarketingAgent {
                 ""
             };
 
-            // Vision API: Optimize/Crop Image
-            // In a real implementation this would call a Vision API or image processing service.
-            // For now, we simulate the optimized image URL.
-            let optimized_image_url = if !image_url.is_empty() {
-                format!("{}_optimized.jpg", image_url.trim_end_matches(".jpg"))
-            } else {
-                "".to_string()
-            };
+            let optimized_image_url = self.optimize_product_image_url(image_url).await;
 
             let draft_copy = self.draft_product_caption(product_name, description).await;
 
@@ -217,11 +348,19 @@ mod tests {
     use std::sync::Arc;
 
     struct FixedCopyClient;
+    struct FixedImageOptimizer;
 
     #[async_trait::async_trait]
     impl MarketingCopyClient for FixedCopyClient {
         async fn draft_caption(&self, _prompt: &str, _fallback: &str) -> String {
             "Injected caption from test client".to_string()
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl MarketingImageOptimizer for FixedImageOptimizer {
+        async fn optimize_product_image(&self, image_url: &str) -> Result<String, String> {
+            Ok(format!("{image_url}?vision=cropped"))
         }
     }
 
@@ -234,5 +373,72 @@ mod tests {
             .await;
 
         assert_eq!(caption, "Injected caption from test client");
+    }
+
+    #[tokio::test]
+    async fn marketing_agent_uses_injected_vision_optimizer_for_product_images() {
+        let agent = MarketingAgent::new_for_test_with_optimizer(
+            Arc::new(FixedCopyClient),
+            Arc::new(FixedImageOptimizer),
+        );
+
+        let optimized = agent
+            .optimize_product_image_url("https://cdn.example.test/mug.jpg")
+            .await;
+
+        assert_eq!(optimized, "https://cdn.example.test/mug.jpg?vision=cropped");
+    }
+
+    #[test]
+    fn marketing_copy_backend_falls_back_to_local_without_minimax_key() {
+        let old_provider = std::env::var("OHC_LLM_PROVIDER").ok();
+        let old_key = std::env::var("MINIMAX_API_KEY").ok();
+
+        unsafe {
+            std::env::set_var("OHC_LLM_PROVIDER", "minimax");
+            std::env::remove_var("MINIMAX_API_KEY");
+        }
+
+        assert_eq!(MarketingCopyBackend::from_env(), MarketingCopyBackend::Local);
+
+        unsafe {
+            match old_provider {
+                Some(value) => std::env::set_var("OHC_LLM_PROVIDER", value),
+                None => std::env::remove_var("OHC_LLM_PROVIDER"),
+            }
+            match old_key {
+                Some(value) => std::env::set_var("MINIMAX_API_KEY", value),
+                None => std::env::remove_var("MINIMAX_API_KEY"),
+            }
+        }
+    }
+
+    #[test]
+    fn marketing_copy_backend_captures_minimax_key_at_construction() {
+        let old_provider = std::env::var("OHC_LLM_PROVIDER").ok();
+        let old_key = std::env::var("MINIMAX_API_KEY").ok();
+
+        unsafe {
+            std::env::set_var("OHC_LLM_PROVIDER", "minimax");
+            std::env::set_var("MINIMAX_API_KEY", "configured-key");
+        }
+
+        assert_eq!(
+            MarketingCopyBackend::from_env(),
+            MarketingCopyBackend::Minimax {
+                api_key: "configured-key".to_string()
+            }
+        );
+
+        unsafe {
+            match old_provider {
+                Some(value) => std::env::set_var("OHC_LLM_PROVIDER", value),
+                None => std::env::remove_var("OHC_LLM_PROVIDER"),
+            }
+            match old_key {
+                Some(value) => std::env::set_var("MINIMAX_API_KEY", value),
+                None => std::env::remove_var("MINIMAX_API_KEY"),
+            }
+        }
     }
 }

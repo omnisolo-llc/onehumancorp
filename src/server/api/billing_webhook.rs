@@ -31,6 +31,69 @@ pub struct StripeEventData {
     pub object: Value,
 }
 
+#[async_trait::async_trait]
+pub trait PaymentFailureNotifier: Send + Sync {
+    async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String>;
+}
+
+#[async_trait::async_trait]
+pub trait PaymentFailureMessageGenerator: Send + Sync {
+    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String;
+}
+
+pub struct CriticalSmsPaymentFailureNotifier;
+pub struct LlmPaymentFailureMessageGenerator;
+
+#[async_trait::async_trait]
+impl PaymentFailureNotifier for CriticalSmsPaymentFailureNotifier {
+    async fn send_payment_failure_sms(&self, _subscriber_id: &str, message: &str) -> Result<(), String> {
+        crate::dispatch_critical_sms("failed_payment", message).await
+    }
+}
+
+#[async_trait::async_trait]
+impl PaymentFailureMessageGenerator for LlmPaymentFailureMessageGenerator {
+    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String {
+        let fallback = format!(
+            "{} subscription payment could not be processed. Please update the saved payment method to keep the subscription active.",
+            business_name
+        );
+        let prompt = format!(
+            "Write a concise, helpful SMS for subscription payment recovery. Business: {}. Subscriber id: {}. Mention the payment could not be processed and ask them to update their saved payment method. Avoid blame and keep it under 240 characters.",
+            business_name,
+            subscriber_id
+        );
+
+        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            Ok("minimax") => {
+                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                crate::minimax::MinimaxClient::new(api_key)
+                    .reason(&prompt)
+                    .await
+                    .unwrap_or(fallback)
+            }
+            _ => crate::minimax::LocalLLMClient::new()
+                .reason(&prompt)
+                .await
+                .unwrap_or(fallback),
+        }
+    }
+}
+
+pub async fn send_payment_failure_dunning<N, G>(
+    notifier: &N,
+    generator: &G,
+    subscriber_id: &str,
+    business_name: &str,
+) -> Result<(), String>
+where
+    N: PaymentFailureNotifier,
+    G: PaymentFailureMessageGenerator,
+{
+    let message = generator.generate_payment_failure_message(subscriber_id, business_name).await;
+    notifier.send_payment_failure_sms(subscriber_id, &message).await
+}
+
 pub fn inventory_locks_for_payment_success(object: &Value) -> Vec<String> {
     let Some(metadata) = object.get("metadata") else {
         return Vec::new();
@@ -67,6 +130,133 @@ async fn release_inventory_locks_for_payment(webhook_state: &WebhookState, objec
             tracing::warn!("Failed to release payment inventory locks: {}", err);
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PaymentFailureLookup {
+    pub stripe_subscription_id: Option<String>,
+    pub customer_id: Option<String>,
+}
+
+pub fn payment_failure_lookup(object: &Value) -> PaymentFailureLookup {
+    let stripe_subscription_id = object
+        .get("subscription")
+        .and_then(|value| value.as_str())
+        .or_else(|| {
+            object
+                .get("parent")
+                .and_then(|parent| parent.get("subscription_details"))
+                .and_then(|details| details.get("subscription"))
+                .and_then(|value| value.as_str())
+        })
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string);
+
+    let customer_id = object
+        .get("customer")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string);
+
+    PaymentFailureLookup {
+        stripe_subscription_id,
+        customer_id,
+    }
+}
+
+async fn find_subscriber_for_payment_failure(
+    webhook_state: &WebhookState,
+    lookup: &PaymentFailureLookup,
+) -> Result<Option<String>, String> {
+    let subscription_id = lookup.stripe_subscription_id.as_deref().unwrap_or("");
+    let customer_id = lookup.customer_id.as_deref().unwrap_or("");
+    if subscription_id.is_empty() && customer_id.is_empty() {
+        return Ok(None);
+    }
+
+    match &webhook_state.db.store {
+        DbStore::Sqlite(pool) => {
+            let row: Option<(String,)> = sqlx::query_as(
+                "SELECT id FROM subscribers \
+                 WHERE (?1 != '' AND stripe_subscription_id = ?1) \
+                    OR (?2 != '' AND customer_id = ?2) \
+                 LIMIT 1",
+            )
+            .bind(subscription_id)
+            .bind(customer_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| format!("Failed to lookup failed-payment subscriber: {e}"))?;
+            Ok(row.map(|(id,)| id))
+        }
+        DbStore::Postgres => {
+            let row: Option<(String,)> = sqlx::query_as(
+                "SELECT id FROM subscribers \
+                 WHERE ($1 != '' AND stripe_subscription_id = $1) \
+                    OR ($2 != '' AND customer_id = $2) \
+                 LIMIT 1",
+            )
+            .bind(subscription_id)
+            .bind(customer_id)
+            .fetch_optional(&webhook_state.db.pool)
+            .await
+            .map_err(|e| format!("Failed to lookup failed-payment subscriber: {e}"))?;
+            Ok(row.map(|(id,)| id))
+        }
+    }
+}
+
+async fn mark_subscriber_past_due(
+    webhook_state: &WebhookState,
+    subscriber_id: &str,
+) -> Result<(), String> {
+    match &webhook_state.db.store {
+        DbStore::Sqlite(pool) => {
+            sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = ?")
+                .bind(subscriber_id)
+                .execute(pool)
+                .await
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        }
+        DbStore::Postgres => {
+            sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = $1")
+                .bind(subscriber_id)
+                .execute(&webhook_state.db.pool)
+                .await
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        }
+    }
+    .map_err(|e| format!("Failed to mark subscriber past due: {e}"))
+}
+
+pub async fn process_invoice_payment_failed<N, G>(
+    webhook_state: &WebhookState,
+    object: &Value,
+    notifier: &N,
+    generator: &G,
+) -> Result<Option<String>, String>
+where
+    N: PaymentFailureNotifier,
+    G: PaymentFailureMessageGenerator,
+{
+    let lookup = payment_failure_lookup(object);
+    let Some(subscriber_id) = find_subscriber_for_payment_failure(webhook_state, &lookup).await? else {
+        return Ok(None);
+    };
+
+    mark_subscriber_past_due(webhook_state, &subscriber_id).await?;
+    let business_name = object
+        .get("metadata")
+        .and_then(|metadata| metadata.get("business_name"))
+        .and_then(|value| value.as_str())
+        .unwrap_or("Your business");
+    send_payment_failure_dunning(notifier, generator, &subscriber_id, business_name).await?;
+
+    Ok(Some(subscriber_id))
 }
 
 pub async fn webhook_security_middleware(
@@ -379,14 +569,25 @@ pub async fn stripe_webhook_handler(
         },
         "invoice.payment_failed" => {
             let obj = &payload.data.object;
-            let tenant_id_opt = obj.get("customer")
-                .and_then(|id| id.as_str());
-
-            if let Some(_tenant_id) = tenant_id_opt {
-                // Trigger SMS notification
-                tokio::spawn(async move {
-                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
-                });
+            match process_invoice_payment_failed(
+                &webhook_state,
+                obj,
+                &CriticalSmsPaymentFailureNotifier,
+                &LlmPaymentFailureMessageGenerator,
+            )
+            .await
+            {
+                Ok(Some(subscriber_id)) => {
+                    tracing::info!("Processed Stripe failed-payment dunning for subscriber {}", subscriber_id);
+                }
+                Ok(None) => {
+                    tracing::warn!("Stripe invoice.payment_failed did not match an OHC subscriber");
+                }
+                Err(err) => {
+                    ::server_telemetry::record_error_signal("Failed to process Stripe failed-payment dunning");
+                    tracing::error!("Failed to process Stripe failed-payment dunning: {}", err);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
             }
             StatusCode::OK.into_response()
         },

@@ -42,6 +42,29 @@ After the first 50, the next 300 open issues were scanned for code-resolvable fe
 - #22180: Added a test to prevent `hybrid-telemetry.json` drift and synchronized deploy dashboard mirrors to the canonical dashboard.
 - #23937: The dashboard metrics endpoint now reads campaign-sent counts from `agent_actions` instead of hard-coding placeholder values.
 - #23520: Dashboard, order, inbox, and supply UI requests now have Next.js backend proxy routes for the Rust database-backed `/api/ui/*` endpoints.
+- #23651: Billing tier usage now reports department-level usage from persisted usage keys rather than static placeholder values.
+- #22350: Campaign repository queries now support database-backed campaign listing and retrieval for dashboard campaign views.
+- #21334: The dashboard campaigns experience now has a backend-backed Next.js page and route coverage instead of an empty placeholder surface.
+- #22152: Shared task dependency backfill now preserves organization ownership for tenant-safe dependency rows.
+- #23467: The onboarding flow now validates generated localization metadata through typed catalog parsing instead of accepting loose placeholder JSON.
+- #23551: The catalog integration now has regression coverage for real metadata extraction paths.
+- #24044: Marketing campaign activation routing now separates real activation-state decisions from campaign draft construction.
+- #24024: Campaign service code now calls activation routing through a tested service boundary.
+- #22168: Agent inbox translation now stores original content alongside translated content.
+- #22169: Inbox message responses now expose translation source metadata to the UI.
+- #23936: The dashboard overview now uses backend-backed department-tier usage data instead of mocked client metrics.
+- #22859: Billing webhook tests now cover subscription/payment lifecycle updates through real webhook payload extraction.
+- #23995: Billing webhook handling now includes inventory-lock release behavior for conversational checkout payments.
+- #23401: Local SEO review response flow now requires configured OAuth-backed Google Business connectivity.
+- #23521: Local SEO webhook ingestion now has backend route coverage for incoming review updates.
+- #24235: Voice routing now avoids mocked response defaults and uses explicit routing outcomes.
+- #24592: Automated cart recovery now has a real worker/service path for abandoned cart detection and outreach dispatch.
+- #23567: Shipday logistics integration now has a typed provider boundary instead of a placeholder integration.
+- #23923: DoorDash fulfillment webhooks now parse real Dasher tracking payloads, persist provider tracking status/coordinates, and surface live driver location fields in the fulfillment UI.
+
+## User-Requested MiniMax Agent Workspace
+
+The user also asked to verify a WorkBuddy-style multi-agent workspace with MiniMax. This branch adds a real MiniMax-backed five-agent workspace with reusable agent templates, strict JSON repair, exact handoff validation, prior-agent reference validation, and an ignored live integration test for manual provider verification. Unit tests use scripted LLM responses only to make the handoff and validation contract repeatable; production construction rejects fake/mock/dummy MiniMax keys.
 
 ## Mock API/Data Cleanup From The Broader Scan
 
@@ -80,7 +103,6 @@ These issues are research reports, generated report placeholders, or architectur
 - #24611: Unified ledger and multi-currency settlement architecture.
 - #24607: Appointment booking and resource management research.
 - #24597: Automated cart recovery agent architecture report.
-- #24592: Automated cart recovery agent feature brief.
 - #24586: Autonomous hyperlocal lead generation agent report.
 - #24574: Automated cart recovery research report.
 - #24546: Offline-first multi-currency and localized pricing engine architecture.

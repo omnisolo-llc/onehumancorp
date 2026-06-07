@@ -70,8 +70,11 @@ impl StripeClient {
                     let mp_client = MercadoPagoClient::new(token);
                     mp_client.create_checkout_preference(_price_id, customer_id).await
                 } else {
-                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
+                    Err("Mercado Pago access token is required".to_string())
                 }
+            },
+            PaymentMethod::Alipay => {
+                Err("Alipay checkout is not configured for Stripe checkout sessions".to_string())
             }
         }
     }

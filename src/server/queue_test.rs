@@ -48,6 +48,31 @@ mod tests {
         assert!(lib.contains("total_campaigns_sent"));
     }
 
+    #[test]
+    fn test_legacy_json_dependencies_are_backfilled_to_edge_table() {
+        let mut migration_path = std::path::PathBuf::from("src/server/migrations/080_backfill_shared_task_dependencies.sql");
+        if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+            migration_path = std::path::PathBuf::from(workspace_dir).join(&migration_path);
+        }
+
+        let migration = std::fs::read_to_string(&migration_path)
+            .expect("shared task dependency backfill migration should exist");
+
+        for required in [
+            "INSERT INTO shared_task_dependencies",
+            "jsonb_array_elements_text",
+            "depends_on_task_id",
+            "ON CONFLICT DO NOTHING",
+            "UPDATE shared_task_dependencies",
+            "organization_id",
+        ] {
+            assert!(
+                migration.contains(required),
+                "dependency backfill migration missing required fragment: {required}"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn test_sub_agent_queue_isolation() {
         if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {

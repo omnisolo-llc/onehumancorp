@@ -9,6 +9,23 @@ use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 use crate::db::DB;
 
 #[test]
+fn payment_failure_extracts_subscription_and_customer_refs() {
+    let object = json!({
+        "customer": "cus_123",
+        "parent": {
+            "subscription_details": {
+                "subscription": "sub_456"
+            }
+        }
+    });
+
+    let lookup = crate::api::billing_webhook::payment_failure_lookup(&object);
+
+    assert_eq!(lookup.customer_id.as_deref(), Some("cus_123"));
+    assert_eq!(lookup.stripe_subscription_id.as_deref(), Some("sub_456"));
+}
+
+#[test]
 fn payment_success_extracts_inventory_locks_for_release() {
     let object = json!({
         "metadata": {
@@ -27,6 +44,114 @@ fn payment_success_extracts_inventory_locks_for_release() {
         "ohc:lock:tenant-1:inventory:prod-2:sess-1".to_string(),
         "ohc:lock:tenant-1:inventory:prod-3:sess-1".to_string(),
     ]);
+}
+
+#[tokio::test]
+async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
+    use crate::api::billing_webhook::{PaymentFailureMessageGenerator, PaymentFailureNotifier};
+    use std::sync::{Arc, Mutex};
+
+    struct RecordingNotifier {
+        sent: Arc<Mutex<Vec<(String, String)>>>,
+    }
+
+    struct FixedGenerator;
+
+    #[async_trait::async_trait]
+    impl PaymentFailureNotifier for RecordingNotifier {
+        async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String> {
+            self.sent.lock().unwrap().push((subscriber_id.to_string(), message.to_string()));
+            Ok(())
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl PaymentFailureMessageGenerator for FixedGenerator {
+        async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String {
+            format!("{business_name}:{subscriber_id}:update payment")
+        }
+    }
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let db = match DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    if sqlx::query(
+        "CREATE TABLE IF NOT EXISTS subscribers (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            customer_id TEXT NOT NULL,
+            subscription_plan_id TEXT,
+            plan_id TEXT,
+            status TEXT NOT NULL DEFAULT 'ACTIVE',
+            stripe_subscription_id TEXT,
+            created_at BIGINT DEFAULT 0
+        )",
+    )
+    .execute(&db.pool)
+    .await
+    .is_err()
+    {
+        return;
+    }
+
+    if sqlx::query(
+        "INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, stripe_subscription_id)
+         VALUES ('subscriber_failed_payment', 'tenant_1', 'cus_failed', 'plan_1', 'ACTIVE', 'sub_failed')
+         ON CONFLICT DO NOTHING",
+    )
+    .execute(&db.pool)
+    .await
+    .is_err()
+    {
+        return;
+    }
+
+    let state = WebhookState {
+        rate_limiter: std::sync::Arc::new(RedisRateLimiter::new(client)),
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db),
+    };
+    let sent = Arc::new(Mutex::new(Vec::new()));
+    let notifier = RecordingNotifier { sent: sent.clone() };
+    let generator = FixedGenerator;
+    let object = json!({
+        "customer": "cus_failed",
+        "subscription": "sub_failed",
+        "metadata": {
+            "business_name": "Maya Cakes"
+        }
+    });
+
+    let processed = crate::api::billing_webhook::process_invoice_payment_failed(
+        &state,
+        &object,
+        &notifier,
+        &generator,
+    )
+    .await
+    .expect("failed-payment processing should succeed");
+
+    assert_eq!(processed.as_deref(), Some("subscriber_failed_payment"));
+    let row: (String,) = sqlx::query_as("SELECT status FROM subscribers WHERE id = 'subscriber_failed_payment'")
+        .fetch_one(&state.db.pool)
+        .await
+        .expect("subscriber status should be readable");
+    assert_eq!(row.0, "PAST_DUE");
+    assert_eq!(
+        sent.lock().unwrap().as_slice(),
+        &[("subscriber_failed_payment".to_string(), "Maya Cakes:subscriber_failed_payment:update payment".to_string())]
+    );
 }
 
 #[tokio::test]
