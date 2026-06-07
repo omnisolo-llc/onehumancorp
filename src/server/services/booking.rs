@@ -358,9 +358,9 @@ const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(15 * 60);
 const INVENTORY_CAPACITY_LOCK_TTL: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct SoftLockReceipt {
-    key: String,
-    owner: String,
+pub struct SoftLockReceipt {
+    pub key: String,
+    pub owner: String,
 }
 
 #[derive(Debug)]
@@ -370,7 +370,7 @@ struct LocalSoftLock {
 }
 
 #[derive(Debug, Default)]
-struct LocalBookingSoftLockStore {
+pub struct LocalBookingSoftLockStore {
     locks: Mutex<HashMap<String, LocalSoftLock>>,
 }
 
@@ -398,7 +398,7 @@ impl LocalBookingSoftLockStore {
         true
     }
 
-    async fn release(&self, key: &str, owner: &str) -> bool {
+    pub async fn release(&self, key: &str, owner: &str) -> bool {
         let mut locks = self.locks.lock().await;
         Self::prune_expired(&mut locks);
         match locks.get(key) {
@@ -426,13 +426,13 @@ impl LocalBookingSoftLockStore {
 }
 
 #[derive(Clone)]
-struct BookingSoftLockStore {
+pub struct BookingSoftLockStore {
     redis_client: Option<redis::Client>,
     local: Arc<LocalBookingSoftLockStore>,
 }
 
 impl BookingSoftLockStore {
-    fn for_service(redis_client: Option<redis::Client>) -> Self {
+    pub fn for_service(redis_client: Option<redis::Client>) -> Self {
         static LOCAL_LOCKS: OnceLock<Arc<LocalBookingSoftLockStore>> = OnceLock::new();
         Self {
             redis_client,
@@ -474,7 +474,7 @@ impl BookingSoftLockStore {
         self.key_exists(&key).await
     }
 
-    async fn acquire_inventory_lock(
+    pub async fn acquire_inventory_lock(
         &self,
         tenant_id: &str,
         product_id: &str,
@@ -522,7 +522,7 @@ impl BookingSoftLockStore {
         Ok(acquired)
     }
 
-    async fn release(&self, receipt: &SoftLockReceipt) -> Result<bool, String> {
+    pub async fn release(&self, receipt: &SoftLockReceipt) -> Result<bool, String> {
         if let Some(client) = &self.redis_client {
             return redis_release_if_owner(client, &receipt.key, &receipt.owner).await;
         }
@@ -563,7 +563,7 @@ impl BookingSoftLockStore {
         Ok(self.local.exists(key).await)
     }
 
-    async fn active_inventory_lock_count(
+    pub async fn active_inventory_lock_count(
         &self,
         tenant_id: &str,
         product_id: &str,
@@ -698,7 +698,7 @@ impl NativeBookingService {
         BookingSoftLockStore::for_service(self.redis_client.clone())
     }
 
-    async fn product_inventory_capacity(
+    pub async fn product_inventory_capacity(
         tenant_id: &str,
         product_id: &str,
     ) -> Result<i64, Status> {

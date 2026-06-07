@@ -22,13 +22,15 @@ pub mod pos_sync_worker {
     pub struct PosSyncWorker {
         pub db: Arc<DB>,
         pub poll_interval: Duration,
+        pub hub: Arc<crate::hub::Hub>,
     }
 
     impl PosSyncWorker {
-        pub fn new(db: Arc<DB>) -> Self {
+        pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
             Self {
                 db,
                 poll_interval: Duration::from_secs(5),
+                hub,
             }
         }
 

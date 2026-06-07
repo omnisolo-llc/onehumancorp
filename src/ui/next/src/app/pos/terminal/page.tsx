@@ -153,7 +153,7 @@ export default function TerminalPage() {
     setClockedIn(type === 'CLOCK_IN');
   };
 
-  const handleNewOrder = () => {
+  const handleNewOrder = async () => {
     const basePrice = 5000; // $50.00
     const converted = convert(basePrice, 'USD', currency);
     if (converted.isOffline) {
@@ -162,18 +162,59 @@ export default function TerminalPage() {
     }
     setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
+    const productId = 'prod_123';
+    const quantity = 1;
+
     if (isOffline) {
       // Bypass Stripe Terminal and save offline
       const tx = {
         id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         amount_cents: converted.amount,
         currency: currency,
-        payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
+        payload: JSON.stringify([{ product_id: productId, quantity }]),
         client_id: 'terminal_1',
         timestamp: new Date().toISOString()
       };
       OfflineStore.addPosTransaction(tx);
       setOrderStatus(`${t('Payment Saved Offline')} - ${converted.amount / 100} ${currency}`);
+    } else {
+      // Try to acquire inventory lock
+      try {
+        const sessionId = `pos_sess_${Date.now()}`;
+        const spiffeId = localStorage.getItem("tenant_id") ? `spiffe://ohc/org/${localStorage.getItem("tenant_id")}/agent/ui` : 'default';
+        const lockRes = await fetch('/api/pos/inventory_lock', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({
+            product_id: productId,
+            session_id: sessionId
+          })
+        });
+
+        if (!lockRes.ok) {
+           if (lockRes.status === 409) {
+              setOrderStatus(t('Item just sold out'));
+           } else {
+              setOrderStatus(t('Failed to acquire inventory lock'));
+           }
+           return;
+        }
+
+        const lockData = await lockRes.json();
+        if (!lockData.success) {
+           setOrderStatus(t('Item just sold out'));
+           return;
+        }
+
+        // Proceed with Stripe Terminal (simulation)
+        setOrderStatus(`${t('Payment Successful')} - ${converted.amount / 100} ${currency}`);
+      } catch (err) {
+        console.error("Lock error", err);
+        setOrderStatus(t('Item just sold out'));
+      }
     }
   };
 

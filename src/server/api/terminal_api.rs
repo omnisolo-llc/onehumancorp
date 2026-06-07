@@ -25,6 +25,7 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
+        .route("/inventory_lock", axum::routing::post(acquire_inventory_lock_handler))
         .with_state(hub)
 }
 
@@ -252,5 +253,93 @@ pub async fn create_payment_intent_handler(
     match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
         Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
         Err(e) => Json(Err(e)),
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct InventoryLockRequest {
+    pub product_id: String,
+    pub session_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct InventoryLockResponse {
+    pub success: bool,
+    pub lock_id: Option<String>,
+    pub error: Option<String>,
+}
+
+pub async fn acquire_inventory_lock_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<InventoryLockRequest>,
+) -> axum::response::Response {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return (
+                    axum::http::StatusCode::UNAUTHORIZED,
+                    Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" })),
+                )
+                    .into_response();
+            } else {
+                auth.org_id.clone()
+            }
+        }
+        None => {
+            return (
+                axum::http::StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({ "error": "Unauthenticated" })),
+            )
+                .into_response();
+        }
+    };
+
+    info!(tenant_id = %tenant_id, product_id = %req_data.product_id, "Acquiring POS offline inventory lock");
+
+    // Initialize the soft lock store
+    // Use the global redis instance (if available in this context, otherwise default None/local for standalone)
+    // To properly access redis, we'll try to use the shared redis client pattern from the repo.
+    // In booking.rs, it uses `BookingSoftLockStore::for_service(redis_client)`.
+
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| std::env::var("REDIS_URL").unwrap_or_default());
+    let redis_client = if !redis_url.is_empty() {
+        redis::Client::open(redis_url).ok()
+    } else {
+        None
+    };
+
+    let locks = crate::services::booking::BookingSoftLockStore::for_service(redis_client);
+
+    // Retrieve product capacity
+    let inventory_capacity = match crate::services::booking::NativeBookingService::product_inventory_capacity(&tenant_id, &req_data.product_id).await {
+        Ok(c) => c,
+        Err(_) => {
+            return (
+                axum::http::StatusCode::NOT_FOUND,
+                Json(InventoryLockResponse { success: false, lock_id: None, error: Some("Product not found or has no capacity".to_string()) })
+            ).into_response();
+        }
+    };
+
+    // Acquire lock (15s TTL)
+    match locks.acquire_inventory_lock(
+        &tenant_id,
+        &req_data.product_id,
+        &req_data.session_id,
+        inventory_capacity,
+        std::time::Duration::from_secs(15)
+    ).await {
+        Ok(Some(receipt)) => {
+            (axum::http::StatusCode::OK, Json(InventoryLockResponse { success: true, lock_id: Some(receipt.key), error: None })).into_response()
+        }
+        Ok(None) => {
+            (axum::http::StatusCode::CONFLICT, Json(InventoryLockResponse { success: false, lock_id: None, error: Some("Product inventory is currently fully held".to_string()) })).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to acquire inventory lock: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(InventoryLockResponse { success: false, lock_id: None, error: Some(e) })).into_response()
+        }
     }
 }
