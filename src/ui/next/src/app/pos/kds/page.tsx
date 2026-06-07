@@ -118,11 +118,13 @@ export default function KDSPage() {
       inventory: 'Menu Items',
       soldOut: 'Sold Out',
       available: 'Available',
+      pending: 'Pending',
       preparing: 'Preparing',
-      ready: 'Ready',
-      received: 'Received',
+      readyForPickup: 'Ready for Pickup',
+      completed: 'Completed',
       offline: 'Offline Mode',
-      syncing: 'Syncing...'
+      syncing: 'Syncing...',
+      translatedNote: 'Customer Note (Translated)'
     },
     ar: {
       kds: 'نظام عرض المطبخ',
@@ -130,11 +132,13 @@ export default function KDSPage() {
       inventory: 'عناصر القائمة',
       soldOut: 'نفذ',
       available: 'متوفر',
+      pending: 'قيد الانتظار',
       preparing: 'يتم تحضيره',
-      ready: 'جاهز',
-      received: 'تم الاستلام',
+      readyForPickup: 'جاهز للاستلام',
+      completed: 'مكتمل',
       offline: 'وضع غير متصل بالشبكة',
-      syncing: 'جاري المزامنة...'
+      syncing: 'جاري المزامنة...',
+      translatedNote: 'ملاحظة العميل (مترجمة بواسطة الذكاء الاصطناعي)'
     }
   };
 
@@ -169,41 +173,65 @@ export default function KDSPage() {
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-bold text-lg text-gray-900">#{order.id} - {order.customer_name}</h3>
                   <span className={`px-2 py-1 rounded text-xs font-bold ${
-                    order.status === 'Ready' ? 'bg-green-100 text-green-700' :
-                    order.status === 'Preparing' ? 'bg-yellow-100 text-yellow-700' :
+                    order.status === 'ready_for_pickup' ? 'bg-green-100 text-green-700' :
+                    order.status === 'completed' ? 'bg-gray-100 text-gray-700' :
+                    order.status === 'preparing' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-blue-100 text-blue-700'
                   }`}>
-                    {order.status === 'Ready' ? texts.ready : order.status === 'Preparing' ? texts.preparing : texts.received}
+                    {order.status === 'ready_for_pickup' ? texts.readyForPickup :
+                     order.status === 'completed' ? texts.completed :
+                     order.status === 'preparing' ? texts.preparing : texts.pending}
                   </span>
                 </div>
+                {order.customer_notes && (
+                  <div className="mb-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r text-sm">
+                    <div className="flex items-center gap-1 text-yellow-800 font-bold mb-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      {texts.translatedNote}
+                    </div>
+                    <p className="text-yellow-900 font-medium">
+                      {language === 'ar' && order.customer_notes_ar ? order.customer_notes_ar : order.customer_notes}
+                    </p>
+                  </div>
+                )}
                 <ul className="mb-4 text-gray-700 font-medium">
                   {order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
                 </ul>
                 <div className="grid grid-cols-2 gap-2">
-                   {order.status === 'Received' && (
+                   {order.status === 'pending' && (
                       <button
-                        onClick={() => handleUpdateOrderStatus(order.id, 'Preparing')}
+                        onClick={() => handleUpdateOrderStatus(order.id, 'preparing')}
                         className="col-span-2 w-full py-4 bg-yellow-500 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
                         data-testid={`btn-prepare-${order.id}`}
                       >
                         {texts.preparing}
                       </button>
                    )}
-                   {order.status === 'Preparing' && (
+                   {order.status === 'preparing' && (
                       <button
-                        onClick={() => handleUpdateOrderStatus(order.id, 'Ready')}
+                        onClick={() => handleUpdateOrderStatus(order.id, 'ready_for_pickup')}
                         className="col-span-2 w-full py-4 bg-green-500 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
                         data-testid={`btn-ready-${order.id}`}
                       >
-                        {texts.ready}
+                        {texts.readyForPickup}
                       </button>
                    )}
-                   {order.status === 'Ready' && (
+                   {order.status === 'ready_for_pickup' && (
+                      <button
+                        onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                        className="col-span-2 w-full py-4 bg-gray-800 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
+                        data-testid={`btn-complete-${order.id}`}
+                      >
+                         {texts.completed}
+                      </button>
+                   )}
+                   {order.status === 'completed' && (
                       <button
                          className="col-span-2 w-full py-4 bg-gray-300 text-gray-600 font-bold text-lg rounded-xl"
                          disabled
+                         data-testid={`btn-complete-${order.id}`}
                       >
-                         {texts.ready}
+                         {texts.completed}
                       </button>
                    )}
                 </div>
