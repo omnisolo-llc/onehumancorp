@@ -235,6 +235,7 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.customer.cohort_transition".to_string(),
         ]
     }
 
@@ -299,6 +300,23 @@ impl Department for MarketingAgent {
             });
 
             let action_desc = format!("Draft Instagram post for {}", product_name);
+            return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
+        }
+
+        if event.event_type == "tenant.customer.cohort_transition" {
+            let cohort_name = event.payload.get("cohort_name").and_then(|v| v.as_str()).unwrap_or("Segment");
+            let count = event.payload.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let draft_copy = format!("Hi [Name], we missed you! Here's 10% off your next custom cake order.");
+
+            let payload = serde_json::json!({
+                "feature_type": "win_back_campaign",
+                "cohort_name": cohort_name,
+                "customer_count": count,
+                "draft_copy": draft_copy
+            });
+
+            let action_desc = format!("Win-back {} past customers.", count);
             return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
         }
 

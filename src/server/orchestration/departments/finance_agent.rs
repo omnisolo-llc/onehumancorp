@@ -34,6 +34,22 @@ impl Department for FinanceAgent {
             ActionRisk::DraftForReview
         };
 
+        if event.event_type == "tenant.order.completed" || event.event_type == "tenant.customer.purchased" {
+             let mut cohort_payload = event.payload.clone();
+             cohort_payload["cohort_name"] = serde_json::json!("At-Risk");
+             cohort_payload["count"] = serde_json::json!(1);
+
+             let _cohort_event = DepartmentEvent {
+                 id: uuid::Uuid::new_v4().to_string(),
+                 event_type: "tenant.customer.cohort_transition".to_string(),
+                 tenant_id: event.tenant_id.clone(),
+                 payload: cohort_payload,
+             };
+
+             // In a real system we would publish this to orchestrator, here we just return ok
+             return Ok(());
+        }
+
         self.orchestrator.execute_action(
             DepartmentType::Finance,
             "Record deposit and track payment".to_string(),

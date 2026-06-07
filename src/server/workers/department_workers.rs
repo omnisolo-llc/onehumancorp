@@ -1518,3 +1518,38 @@ mod tests {
     }
 
 }
+
+pub struct CustomerCohortWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: Duration,
+}
+
+impl CustomerCohortWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self {
+            db,
+            poll_interval: Duration::from_secs(3600), // Run hourly
+        }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let interval_duration = self.poll_interval;
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(interval_duration);
+            loop {
+                interval.tick().await;
+                if let Err(e) = Self::recalculate_cohorts(&db).await {
+                    tracing::error!("Failed to recalculate cohorts: {}", e);
+                }
+            }
+        });
+    }
+
+    async fn recalculate_cohorts(_db: &Arc<DB>) -> Result<(), String> {
+        // Logic to recalculate cohorts using RFM analysis.
+        // It'd scan customers and orders, update `customer_cohort_members`,
+        // and optionally publish "tenant.customer.cohort_transition"
+        Ok(())
+    }
+}

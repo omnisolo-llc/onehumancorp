@@ -271,3 +271,24 @@ pub struct LeadGenCampaign {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CustomerCohort {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub criteria_json: Option<sqlx::types::Json<serde_json::Value>>,
+    pub is_active: Option<bool>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CustomerCohortMember {
+    pub id: String,
+    pub tenant_id: String,
+    pub cohort_id: String,
+    pub customer_id: String,
+    pub added_at: Option<DateTime<Utc>>,
+}
