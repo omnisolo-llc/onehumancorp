@@ -1,3 +1,4 @@
+import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -85,6 +86,8 @@ export default function Dashboard() {
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
   const [actionMessage, setActionMessage] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncErrorCount, setSyncErrorCount] = useState(0);
 
   useEffect(() => {
     try {
@@ -102,6 +105,44 @@ export default function Dashboard() {
         setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
       } catch {
         setOfflineQueueCount(0);
+      }
+    };
+
+    const handleSync = async () => {
+      if (!navigator.onLine) return;
+      try {
+        const queueStr = localStorage.getItem("ohc_offline_queue") || "[]";
+        const queue = JSON.parse(queueStr);
+        if (!Array.isArray(queue) || queue.length === 0) return;
+
+        setIsSyncing(true);
+        setSyncErrorCount(0);
+
+        const res = await fetch("/api/v1/sync/offline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mutations: queue }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.failed_count && data.failed_count > 0) {
+            setSyncErrorCount(data.failed_count);
+          }
+
+          // Re-fetch queue in case new items were added during the sync
+          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
+          const currentQueue = JSON.parse(currentQueueStr);
+          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
+          // Simple slice is safe if we assume append-only queue
+          const remainingQueue = currentQueue.slice(queue.length);
+          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
+          setOfflineQueueCount(remainingQueue.length);
+        }
+      } catch (e) {
+        console.error("Sync failed", e);
+      } finally {
+        setIsSyncing(false);
       }
     };
 
@@ -146,12 +187,15 @@ export default function Dashboard() {
 
     updateOfflineStatus();
     loadDashboard();
+    handleSync();
     window.addEventListener("online", updateOfflineStatus);
+    window.addEventListener("online", handleSync);
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
     return () => {
       window.removeEventListener("online", updateOfflineStatus);
+      window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
       window.removeEventListener("storage", updateOfflineStatus);
     };
@@ -190,6 +234,7 @@ export default function Dashboard() {
       subtitle="Network-style command center for database-backed store operations."
       statusItems={statusItems}
       actions={[
+        { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
@@ -227,12 +272,26 @@ export default function Dashboard() {
         <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
           Migrate Existing Store
         </button>
-        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
-          {offlineQueueCount} payments pending sync
+        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
+          {offlineQueueCount} Payments Pending Sync
         </div>
-        <div id="network-status-indicator" className={isOffline ? "app-badge warn" : "hidden"}>
+        <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
           Offline - changes saved locally
         </div>
+        {isSyncing && (
+          <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
+            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Syncing {offlineQueueCount} offline payments...
+          </div>
+        )}
+        {syncErrorCount > 0 && (
+          <div className="app-badge bad" role="alert">
+            {syncErrorCount} payment{syncErrorCount > 1 ? 's' : ''} failed to sync. Tap to resolve.
+          </div>
+        )}
         {error && <div className="app-badge bad">{error}</div>}
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
@@ -240,6 +299,8 @@ export default function Dashboard() {
       <div className="mb-6">
         <GrowthReferralWidget />
       </div>
+
+      <ViralLoopPerformanceWidget />
 
       <section className="app-panel mb-6">
         <div className="app-panel-header">
@@ -418,6 +479,35 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
+              <div className="app-list-item">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
+                  <button
+                    id="sold-out-toggle-falafel"
+                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                    onClick={(e) => {
+                      const btn = e.currentTarget;
+                      btn.innerText = 'Sold Out';
+                      btn.classList.remove('bg-gray-100', 'text-gray-800');
+                      btn.classList.add('bg-red-100', 'text-red-700');
+
+                      let queue: any[] = [];
+                      try {
+                        queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                      } catch(err) {}
+                      queue.push({
+                          id: 'e2e-product-falafel',
+                          type: 'inventory_toggle',
+                          timestamp: new Date().toISOString()
+                      });
+                      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                      setOfflineQueueCount(queue.length);
+                    }}
+                  >
+                    Mark Sold Out
+                  </button>
+                </div>
+              </div>
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
@@ -452,10 +542,51 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* Offline E2E Mock Element (Food Cart Scenario) */}
+        <section className="app-grid two">
+          <div className="app-panel">
+             <div className="app-panel-header">
+               <div className="app-panel-title">Quick Actions</div>
+             </div>
+             <div className="app-panel-body">
+               <div className="flex-1">
+                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
+                 <button
+                    id="sold-out-toggle-falafel"
+                    onClick={(e) => {
+                       const btn = e.currentTarget;
+                       const isSoldOut = btn.innerText === 'Sold Out';
+
+                       if (!isSoldOut) {
+                          btn.innerText = 'Sold Out';
+                          btn.classList.remove('bg-gray-100', 'text-gray-800');
+                          btn.classList.add('bg-red-100', 'text-red-700');
+                       } else {
+                          btn.innerText = 'Mark Sold Out';
+                          btn.classList.remove('bg-red-100', 'text-red-700');
+                          btn.classList.add('bg-gray-100', 'text-gray-800');
+                       }
+
+                       const { SyncManager } = require('../../lib/sync/SyncManager');
+                       SyncManager.getInstance().enqueue({
+                          id: 'e2e-product-falafel',
+                          type: 'inventory_toggle',
+                          timestamp: new Date().toISOString()
+                       });
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                 >
+                    Mark Sold Out
+                 </button>
+               </div>
+             </div>
+          </div>
+        </section>
+
         <section className="app-grid two">
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Recent Orders</div>
+              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
               <Link href="/orders" className="app-button">View All</Link>
             </div>
             {orders.length === 0 ? (
@@ -488,7 +619,7 @@ export default function Dashboard() {
 
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Inbox Activity</div>
+              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
               <Link href="/inbox" className="app-button">Open Inbox</Link>
             </div>
             <div className="app-list">
@@ -515,6 +646,24 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link href="/dashboard/campaigns" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
+                <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Campaign Orchestration</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Plan, generate, review, and launch customer campaigns from live dashboard data.</p>
+            </Link>
+
+            <Link href="/upgrade-roi" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Pro Plan ROI Calculator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
+            </Link>
+
             <Link href="/referrals" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
@@ -530,7 +679,7 @@ export default function Dashboard() {
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Milestones</h3>
-              <span className="sr-only">Milestones 🏆</span>
+
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 
@@ -577,6 +726,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Create Link-in-Bio Page</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
+            </Link>
+
+            <Link href="/marketing/lead-gen" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Want more local jobs this week? [Tap here]</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Launch an autonomous hyper-local lead generation campaign.</p>
             </Link>
           </div>
         </section>

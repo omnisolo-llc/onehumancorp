@@ -26,7 +26,7 @@ describe('GrowthReferralWidget', () => {
   it('generates a link successfully', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ invite_url: 'https://ohc.app/invite/123' }),
+      json: async () => ({ invite_link: 'https://ohc.app/invite/123' }),
     });
 
     render(<GrowthReferralWidget />);
@@ -62,7 +62,7 @@ describe('GrowthReferralWidget', () => {
   it('copies link to clipboard', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ invite_url: 'https://ohc.app/invite/123' }),
+      json: async () => ({ invite_link: 'https://ohc.app/invite/123' }),
     });
 
     render(<GrowthReferralWidget />);
