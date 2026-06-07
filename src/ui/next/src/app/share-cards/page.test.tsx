@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import ShareCardsPage from './page';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -29,7 +29,9 @@ describe('ShareCardsPage', () => {
     window.localStorage.setItem('has_pro', 'false');
     render(<ShareCardsPage />);
     const toggle = screen.getByRole('checkbox');
-    toggle.click();
+    act(() => {
+        toggle.click();
+    });
     expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
   });
 
@@ -37,7 +39,9 @@ describe('ShareCardsPage', () => {
     window.localStorage.setItem('has_pro', 'true');
     render(<ShareCardsPage />);
     const toggle = screen.getByRole('checkbox');
-    toggle.click();
+    act(() => {
+        toggle.click();
+    });
     expect(screen.queryByText('Powered by OHC')).toBeNull();
   });
 });
