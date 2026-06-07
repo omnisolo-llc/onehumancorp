@@ -948,43 +948,69 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
-                for row in shared_rows {
-                    let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "shared_tasks".to_string()));
-                }
+                let (shared_res, swarm_res) = tokio::join!(
+                    sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool),
+                    sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool)
+                );
 
-                let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
-                for row in swarm_rows {
-                    let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "swarm_tasks".to_string()));
-                }
-            }
-            DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
-                for tenant_row in tenants {
-                    let tenant_id: String = tenant_row.get("id");
-                    let mut tx = self.pool.begin().await?;
-                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-                    let shared_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                if let Ok(shared_rows) = shared_res {
                     for row in shared_rows {
                         let id: String = row.get("id");
                         let org_id: String = row.get("tenant_id");
                         let payload: String = row.try_get("payload").unwrap_or_default();
                         result.push((id, org_id, payload, "shared_tasks".to_string()));
                     }
+                }
 
-                    let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                    tx.commit().await?;
+                if let Ok(swarm_rows) = swarm_res {
                     for row in swarm_rows {
                         let id: String = row.get("id");
                         let org_id: String = row.get("tenant_id");
                         let payload: String = row.try_get("payload").unwrap_or_default();
                         result.push((id, org_id, payload, "swarm_tasks".to_string()));
+                    }
+                }
+            }
+            DbStore::Postgres => {
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                for tenant_row in tenants {
+                    let tenant_id: String = tenant_row.get("id");
+                    // Fetch for a single tenant concurrently across both task tables
+                    let pool_clone = self.pool.clone();
+                    let tenant_id_clone = tenant_id.clone();
+                    let (shared_res, swarm_res) = tokio::join!(
+                        async {
+                            let mut tx = pool_clone.begin().await.map_err(|e| e.to_string())?;
+                            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id_clone).await.map_err(|e| e.to_string())?;
+                            let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
+                            tx.commit().await.map_err(|e| e.to_string())?;
+                            Ok::<_, String>(rows)
+                        },
+                        async {
+                            let mut tx = pool_clone.begin().await.map_err(|e| e.to_string())?;
+                            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id_clone).await.map_err(|e| e.to_string())?;
+                            let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
+                            tx.commit().await.map_err(|e| e.to_string())?;
+                            Ok::<_, String>(rows)
+                        }
+                    );
+
+                    if let Ok(shared_rows) = shared_res {
+                        for row in shared_rows {
+                            let id: String = row.get("id");
+                            let org_id: String = row.get("tenant_id");
+                            let payload: String = row.try_get("payload").unwrap_or_default();
+                            result.push((id, org_id, payload, "shared_tasks".to_string()));
+                        }
+                    }
+
+                    if let Ok(swarm_rows) = swarm_res {
+                        for row in swarm_rows {
+                            let id: String = row.get("id");
+                            let org_id: String = row.get("tenant_id");
+                            let payload: String = row.try_get("payload").unwrap_or_default();
+                            result.push((id, org_id, payload, "swarm_tasks".to_string()));
+                        }
                     }
                 }
             }
