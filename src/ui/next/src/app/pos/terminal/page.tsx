@@ -180,23 +180,23 @@ export default function TerminalPage() {
       setOrderStatus(t('Processing/Reserving...'));
 
       try {
-        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+        const intentRes = await fetch('/api/terminal/create_payment_intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+          body: JSON.stringify({ amount: converted.amount, currency: currency, product_id: 'prod_123', quantity: 1 })
         });
 
-        const reserveData = await reserveRes.json();
+        const intentData = await intentRes.json();
 
-        if (!reserveData.success) {
-          setOrderStatus(t('Failed to reserve: ') + reserveData.error_message);
+        if (!intentRes.ok || intentData.error) {
+          setOrderStatus(t('Item is currently being checked out by another customer') + (intentData.error ? `: ${intentData.error}` : ''));
           setReserving(false);
           return;
         }
 
         setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
-        // Simulate payment completion
+        // Simulate payment completion using the new terminal client behavior
         setTimeout(async () => {
           await fetch('/api/v1/payments/terminal/commit', {
             method: 'POST',

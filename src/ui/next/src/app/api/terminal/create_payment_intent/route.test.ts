@@ -28,7 +28,7 @@ describe("POST /api/terminal/create_payment_intent", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ client_secret: "pi_live_secret" });
+    await expect(res.json()).resolves.toEqual({ client_secret: "pi_live_secret", lock_id: undefined });
     expect(global.fetch).toHaveBeenCalledWith(
       "http://backend.internal/api/v1/payments/terminal/intent",
       expect.objectContaining({

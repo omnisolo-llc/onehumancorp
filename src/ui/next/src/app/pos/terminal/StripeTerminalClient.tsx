@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
 
-export default function StripeTerminalClient({ amount }: { amount: number }) {
+export default function StripeTerminalClient({ amount, productId }: { amount: number, productId?: string }) {
   const [terminal, setTerminal] = useState<any>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);

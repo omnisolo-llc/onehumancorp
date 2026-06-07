@@ -13,11 +13,14 @@ pub struct TerminalTokenResponse {
 pub struct PaymentIntentRequest {
     pub amount_cents: i64,
     pub currency: String,
+    pub product_id: Option<String>,
+    pub quantity: Option<i32>,
 }
 
 #[derive(serde::Serialize)]
 pub struct PaymentIntentResponse {
     pub client_secret: String,
+    pub lock_id: Option<String>,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -356,7 +359,7 @@ pub async fn sync_offline_transactions_handler(
 
 pub async fn create_payment_intent_handler(
     _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
+    State(hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<PaymentIntentRequest>,
 ) -> Json<Result<PaymentIntentResponse, String>> {
@@ -380,11 +383,45 @@ pub async fn create_payment_intent_handler(
         0.05
     ).await;
 
+    let mut acquired_lock_id = None;
+    if let Some(product_id) = &req_data.product_id {
+        let lock_id = uuid::Uuid::new_v4().to_string();
+        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+
+        if let Some(client) = &hub.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let ttl = 15; // POS terminal lock ttl
+                let acquired: bool = redis::cmd("SET")
+                    .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
+                    .query_async(&mut conn).await.unwrap_or(false);
+
+                if !acquired {
+                    return Json(Err("Item is currently being checked out by another customer".to_string()));
+                }
+                acquired_lock_id = Some(lock_id);
+            }
+        }
+    }
+
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
-        Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
-        Err(e) => Json(Err(e)),
+        Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret, lock_id: acquired_lock_id })),
+        Err(e) => {
+            // Release lock if creation failed
+            if let Some(product_id) = &req_data.product_id {
+                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+                if let Some(client) = &hub.redis_client {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        if let Some(lock_id) = &acquired_lock_id {
+                            let script = redis::Script::new("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end");
+                            let _: () = script.key(&lock_key).arg(lock_id).invoke_async(&mut conn).await.unwrap_or(());
+                        }
+                    }
+                }
+            }
+            Json(Err(e))
+        }
     }
 }

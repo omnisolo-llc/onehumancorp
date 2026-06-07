@@ -12,10 +12,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const amount = Number(body.amount ?? body.amount_cents);
     const currency = String(body.currency || "usd").toLowerCase();
+    const productId = body.product_id;
+    const quantity = body.quantity;
     const res = await fetch(`${backendUrl}/api/v1/payments/terminal/intent`, {
       method: "POST",
       headers: backendHeaders(req, true),
-      body: JSON.stringify({ amount_cents: amount, currency }),
+      body: JSON.stringify({ amount_cents: amount, currency, product_id: productId, quantity: quantity }),
     });
     const data = await res.json();
     if (!res.ok || data?.Err) {
@@ -27,7 +29,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Backend response did not include a PaymentIntent client secret" }, { status: 502 });
     }
 
-    return NextResponse.json({ client_secret: secret });
+    const lockId = data?.Ok?.lock_id || data?.lock_id;
+
+    return NextResponse.json({ client_secret: secret, lock_id: lockId });
   } catch {
     return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
   }
