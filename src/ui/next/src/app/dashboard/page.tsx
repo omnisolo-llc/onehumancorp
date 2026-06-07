@@ -8,6 +8,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
@@ -301,6 +302,10 @@ export default function Dashboard() {
       </div>
 
       <ViralLoopPerformanceWidget />
+
+      <div className="mb-6">
+          <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+      </div>
 
       <section className="app-panel mb-6">
         <div className="app-panel-header">
