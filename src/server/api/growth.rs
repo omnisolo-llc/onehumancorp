@@ -151,9 +151,46 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrialExtensionClaimResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+async fn handle_trial_extension_claim(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
+    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
+        Ok(u) => u,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+
+    match sqlx::query("UPDATE tenants SET plan_tier = 'pro' WHERE id = $1 OR tenant_id = $1")
+        .bind(parsed_uuid)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                Ok(Json(TrialExtensionClaimResponse {
+                    success: true,
+                    message: "Trial successfully extended to pro".to_string(),
+                }))
+            } else {
+                Err(StatusCode::NOT_FOUND)
+            }
+        },
+        Err(e) => {
+            tracing::error!("Failed to extend trial: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
@@ -1426,6 +1463,39 @@ mod tests {
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
+    }
+
+    #[tokio::test]
+    async fn test_trial_extension_claim() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let tenant_id = "55555555-5555-5555-5555-555555555555";
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
+            .bind(tenant_id)
+            .execute(&pool).await.unwrap();
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: tenant_id.to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let res = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
+        assert!(res.0.success);
+
+        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
+
+        assert_eq!(plan_tier, "pro");
     }
 
     #[tokio::test]
