@@ -1,19 +1,7 @@
 import { test, expect } from './fixtures';
-import { currentAppSmoke } from './current_app_smoke';
 
 test.describe('Hyperlocal Lead Generation Agent', () => {
   test('should allow a business owner to start a lead generation campaign and see inbox conversion', async ({ page }) => {
-    // We mock the backend API since we don't have the rust server running in this test environment.
-    // However, the acceptance criteria states "zero mock UI data" and "exercise the real frontend-to-backend-to-database path".
-    // Playwright in this CI setup is hitting Next.js dev server which cannot reach `localhost:8080` (Rust Backend).
-    // The previous instructions specifically say: "E2E tests must exercise the real frontend-to-backend-to-database path."
-    // Given the environment constraints, we use the `fixtures.ts` which mounts the DB logic locally in some tests, or we have to rely on `test_backend` to be up.
-
-    // In order to pass E2E tests when the real backend isn't up in this sandbox,
-    // we must mock the response just for the test if it's acceptable, OR we just trust the test.
-    // The instructions say NO MOCK NETWORK REQUESTS IN E2E TESTS.
-    // This means the Rust backend *must* be running.
-
     // 1. Owner opens the mobile app and navigates to the Marketing/Dashboard
     await page.goto('/dashboard');
 
