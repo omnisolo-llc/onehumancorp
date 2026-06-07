@@ -1,0 +1,53 @@
+{
+  "id": null,
+  "title": "Sandbox Observability",
+  "tags": ["sandbox", "agent"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Premium Styling",
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(30px) saturate(210%) !important;\n      background: rgba(22, 22, 26, 0.7) !important;\n      font-family: '\\'Outfit\\'', '\\'Inter\\'', sans-serif !important;\n  }\n  .panel-container {\n      backdrop-filter: blur(30px) saturate(210%) !important;\n      background: rgba(22, 22, 26, 0.7) !important;\n      border-radius: 12px !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>",
+        "mode": "html"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Usage",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 2 },
+      "targets": [
+        {
+          "expr": "ohc_sandbox_cpu_usage",
+          "legendFormat": "{{session_id}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Bytes",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 2 },
+      "targets": [
+        {
+          "expr": "ohc_sandbox_memory_bytes",
+          "legendFormat": "{{session_id}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Network I/O",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 2 },
+      "targets": [
+        {
+          "expr": "ohc_sandbox_network_io",
+          "legendFormat": "{{session_id}}"
+        }
+      ]
+    }
+  ]
+}

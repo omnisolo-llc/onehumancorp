@@ -730,6 +730,17 @@
         }
       },
       "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Task Claim Contention",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_task_claim_contention_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}"
+        }
+      ]
     }
   ],
   "schemaVersion": 38,

@@ -33,7 +33,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID ORCHESTRATION</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"color: #000; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID ORCHESTRATION</h1>\n  <p style=\"color: #000; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
       },
       "transparent": true
     },
@@ -336,7 +336,7 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(30px) saturate(210%)"
       }
     },
     {
@@ -364,7 +364,7 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(30px) saturate(210%)"
       }
     },
     {
@@ -397,7 +397,7 @@
       },
       "transparent": true,
       "style": {
-        "backdrop-filter": "blur(20px) saturate(200%)"
+        "backdrop-filter": "blur(30px) saturate(210%)"
       }
     },
     {
@@ -492,7 +492,8 @@
         }
       ],
       "title": "Mission Cost per Tenant (Cents/sec)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -586,7 +587,8 @@
         }
       ],
       "title": "RAG Escalation Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -680,7 +682,65 @@
         }
       ],
       "title": "Token Budget Alerts (last 1h)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Sub-Agent Queue Latency (P95) by Mode",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_sub_agent_queue_latency_seconds_bucket[5m])) by (le, mode))",
+          "legendFormat": "{{mode}} P95",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Sub-Agent Spawn Error Rate by Mode",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sub_agent_failures_total[5m])) by (mode)",
+          "legendFormat": "{{mode}} Errors/sec",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Task Claim Contention",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_task_claim_contention_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}"
+        }
+      ]
     }
   ],
   "schemaVersion": 38,

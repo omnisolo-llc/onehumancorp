@@ -24,7 +24,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(30px) saturate(210%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
       },
       "transparent": true
     },
@@ -176,7 +176,7 @@
     },
     {
       "type": "timeseries",
-      "title": "SQLite Lock Contention & PostgreSQL SKIP LOCKED Rate",
+      "title": "PostgreSQL SKIP LOCKED Rate",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -190,13 +190,8 @@
       "targets": [
         {
           "expr": "sum(rate(ohc_postgres_skip_locked_total[5m]))",
-          "legendFormat": "Postgres Lock Contention",
+          "legendFormat": "Lock Contention",
           "refId": "A"
-        },
-        {
-          "expr": "sum(rate(sqlite_lock_contention[5m]))",
-          "legendFormat": "SQLite Lock Contention",
-          "refId": "B"
         }
       ],
       "transparent": true,
