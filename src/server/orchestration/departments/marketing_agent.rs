@@ -273,6 +273,16 @@ impl Department for MarketingAgent {
         }
 
         if event.event_type == "tenant.product.created" || event.event_type == "tenant.inventory.updated" {
+            if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
+                if let Ok(pool) = self.orchestrator().map(|o| o.db().pool.clone()) {
+                    if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_uuid).await {
+                        if let Some(site) = sites.first() {
+                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_uuid, site.id).await;
+                        }
+                    }
+                }
+            }
+
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());

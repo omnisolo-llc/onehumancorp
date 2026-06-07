@@ -22,11 +22,28 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.inventory.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.order.created" || event.event_type == "tenant.inventory.updated" {
+            // Push invalidation event to Redis
+            if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                if let Ok(client) = redis::Client::open(redis_url) {
+                    if let Ok(mut conn) = client.get_async_connection().await {
+                        use redis::AsyncCommands;
+                        let payload = serde_json::json!({
+                            "event": "inventory.updated",
+                            "tags": [format!("tenant-id:{}", event.tenant_id)]
+                        });
+                        let _: Result<(), _> = conn.publish("cache_invalidation_events", serde_json::to_string(&payload).unwrap_or_default()).await;
+                    }
+                }
+            }
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

@@ -322,6 +322,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+    pub mod cache_invalidator;
 
     #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
@@ -2274,6 +2275,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
+
+    tokio::spawn(crate::services::cache_invalidator::start_cache_invalidator());
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
