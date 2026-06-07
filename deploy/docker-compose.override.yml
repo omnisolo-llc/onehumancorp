@@ -1,8 +1,4 @@
 services:
-  ohc-core:
-    pull_policy: never
-    image: onehumancorp/mono-core:latest
-
   server:
     pull_policy: never
     image: onehumancorp/server:latest
