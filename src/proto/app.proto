@@ -258,6 +258,7 @@ message PosOfflineTransaction {
   string payload = 6; // JSON detailing the items bought
   string status = 7; // PENDING, SYNCED, FAILED
   int64 created_at_unix = 8;
+  string session_id = 9;
 }
 
 message SyncOfflineTransactionsRequest {
@@ -272,8 +273,40 @@ message SyncOfflineTransactionsResponse {
   repeated string failed_transaction_ids = 3;
 }
 
+message StartTerminalSessionRequest {
+  string tenant_id = 1;
+  string hardware_id = 2;
+}
+
+message StartTerminalSessionResponse {
+  bool success = 1;
+  string session_id = 2;
+}
+
+message UpdateTerminalSessionStatusRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  string status = 3;
+}
+
+message UpdateTerminalSessionStatusResponse {
+  bool success = 1;
+}
+
+message EndTerminalSessionRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message EndTerminalSessionResponse {
+  bool success = 1;
+}
+
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+  rpc StartTerminalSession(StartTerminalSessionRequest) returns (StartTerminalSessionResponse);
+  rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (UpdateTerminalSessionStatusResponse);
+  rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
 }
 
 message SyncCalendarRequest {

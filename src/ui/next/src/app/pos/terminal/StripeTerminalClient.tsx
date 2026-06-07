@@ -10,6 +10,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
   const [connectedReader, setConnectedReader] = useState<any>(null);
   const [reserving, setReserving] = useState<boolean>(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     async function initTerminal() {
@@ -57,6 +58,20 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     } else {
       setConnectedReader(result.reader);
       setStatus('Connected to reader: ' + result.reader.label);
+      // Ensure we have a valid session ID from the backend
+      try {
+        const res = await fetch('/api/v1/pos/StartTerminalSession', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: tenantId, hardware_id: result.reader.id || "unknown" })
+        });
+        const data = await res.json();
+        if (data.session_id) {
+          setSessionId(data.session_id);
+        }
+      } catch (e) {
+        console.warn('Failed to start terminal session', e);
+      }
     }
   };
 
@@ -76,6 +91,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
              product_id: productId,
              amount: amount,
              quantity: 1,
+             session_id: sessionId,
              idempotency_key: `idemp_${transactionId}`,
              currency: 'usd'
           });

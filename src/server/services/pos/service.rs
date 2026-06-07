@@ -1,5 +1,9 @@
 use ::server_ohc::app::pos_service_server::PosService;
-use ::server_ohc::app::{SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse};
+use ::server_ohc::app::{
+    EndTerminalSessionRequest, EndTerminalSessionResponse, StartTerminalSessionRequest,
+    StartTerminalSessionResponse, SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
+    UpdateTerminalSessionStatusRequest, UpdateTerminalSessionStatusResponse,
+};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -62,8 +66,8 @@ impl PosService for MyPosService {
                 }
 
                 let insert_res = sqlx::query(
-                    "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-                     VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
+                    "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, session_id)
+                     VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', $7)"
                 )
                 .bind(&tx_id)
                 .bind(&tenant_id_clone)
@@ -71,6 +75,7 @@ impl PosService for MyPosService {
                 .bind(tx.amount_cents)
                 .bind(&tx.currency)
                 .bind(&tx.payload)
+                .bind(&tx.session_id)
                 .execute(&mut *db_tx)
                 .await;
 
@@ -135,6 +140,166 @@ impl PosService for MyPosService {
             failed_transaction_ids: failed_ids,
         }))
     }
+
+    async fn start_terminal_session(
+        &self,
+        request: Request<StartTerminalSessionRequest>,
+    ) -> Result<Response<StartTerminalSessionResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+        let session_id = Uuid::new_v4().to_string();
+
+        let pool = crate::db::get_pool();
+        let mut db_tx = pool.begin().await.map_err(|e| {
+            tracing::error!("Failed to begin transaction: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| {
+            tracing::error!("Failed to set org context: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        sqlx::query(
+            "INSERT INTO pos_terminal_sessions (session_id, tenant_id, hardware_id, status)
+             VALUES ($1, $2, $3, 'active')
+             ON CONFLICT (tenant_id, hardware_id) DO UPDATE SET session_id = EXCLUDED.session_id, status = 'active', last_synced_at = CURRENT_TIMESTAMP"
+        )
+        .bind(&session_id)
+        .bind(&tenant_id)
+        .bind(&req.hardware_id)
+        .execute(&mut *db_tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to insert terminal session: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        db_tx.commit().await.map_err(|e| {
+            tracing::error!("Failed to commit transaction: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        Ok(Response::new(StartTerminalSessionResponse {
+            success: true,
+            session_id,
+        }))
+    }
+
+    async fn update_terminal_session_status(
+        &self,
+        request: Request<UpdateTerminalSessionStatusRequest>,
+    ) -> Result<Response<UpdateTerminalSessionStatusResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+        let pool = crate::db::get_pool();
+        let mut db_tx = pool.begin().await.map_err(|e| {
+            tracing::error!("Failed to begin transaction: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| {
+            tracing::error!("Failed to set org context: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        sqlx::query(
+            "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE session_id = $2 AND tenant_id = $3"
+        )
+        .bind(&req.status)
+        .bind(&req.session_id)
+        .bind(&tenant_id)
+        .execute(&mut *db_tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to update terminal session status: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        db_tx.commit().await.map_err(|e| {
+            tracing::error!("Failed to commit transaction: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        Ok(Response::new(UpdateTerminalSessionStatusResponse {
+            success: true,
+        }))
+    }
+
+    async fn end_terminal_session(
+        &self,
+        request: Request<EndTerminalSessionRequest>,
+    ) -> Result<Response<EndTerminalSessionResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+        let pool = crate::db::get_pool();
+        let mut db_tx = pool.begin().await.map_err(|e| {
+            tracing::error!("Failed to begin transaction: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| {
+            tracing::error!("Failed to set org context: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        sqlx::query(
+            "UPDATE pos_terminal_sessions SET status = 'offline', last_synced_at = CURRENT_TIMESTAMP WHERE session_id = $1 AND tenant_id = $2"
+        )
+        .bind(&req.session_id)
+        .bind(&tenant_id)
+        .execute(&mut *db_tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to end terminal session: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        db_tx.commit().await.map_err(|e| {
+            tracing::error!("Failed to commit transaction: {}", e);
+            Status::internal("Database error")
+        })?;
+
+        Ok(Response::new(EndTerminalSessionResponse {
+            success: true,
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -169,6 +334,7 @@ mod tests {
                     payload: "{}".to_string(),
                     status: "PENDING".to_string(),
                     created_at_unix: 0,
+                    session_id: "test_session_id".to_string(),
                 }
             ],
         };

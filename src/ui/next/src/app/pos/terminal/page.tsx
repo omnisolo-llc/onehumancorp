@@ -292,7 +292,10 @@ export default function TerminalPage() {
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
-            {isOffline && <span className="inline-block mt-1 text-red-500 font-bold text-xs bg-red-100 px-2 py-1 rounded">{t('Offline Mode')}</span>}
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`inline-block w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'}`}></span>
+              <span className={`font-bold text-xs ${isOffline ? 'text-red-500' : 'text-green-500'}`}>{isOffline ? t('Terminal Offline') : t('Terminal Online')}</span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
