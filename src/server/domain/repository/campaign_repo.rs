@@ -1,6 +1,5 @@
-use crate::domain::repository::models::{Campaign, CampaignAsset, LeadGenCampaign};
+use crate::domain::repository::models::{Campaign, CampaignAsset, ChannelExecution, PromotionCode, LeadGenCampaign};
 use sqlx::{PgPool, Error};
-use uuid::Uuid;
 
 pub struct CampaignRepository {
     pool: PgPool,
@@ -88,30 +87,6 @@ impl CampaignRepository {
         .bind(campaign_id)
         .fetch_all(&self.pool)
         .await
-    }
-
-    pub async fn record_channel_execution(
-        &self,
-        tenant_id: &str,
-        campaign_id: &str,
-        channel: &str,
-        metrics_sent: i32,
-    ) -> Result<(), Error> {
-        sqlx::query(
-            r#"
-            INSERT INTO channel_executions (id, tenant_id, campaign_id, channel, metrics_sent)
-            VALUES ($1, $2, $3, $4, $5)
-            "#,
-        )
-        .bind(Uuid::new_v4().to_string())
-        .bind(tenant_id)
-        .bind(campaign_id)
-        .bind(channel)
-        .bind(metrics_sent)
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
     }
 
     pub async fn create_lead_gen_campaign(&self, campaign: &LeadGenCampaign) -> Result<(), Error> {

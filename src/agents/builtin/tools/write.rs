@@ -1,16 +1,9 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::json;
-use serde::Deserialize;
+use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-
-#[derive(Deserialize)]
-struct WriteArgs {
-    path: String,
-    content: String,
-}
+use super::{Tool, ToolExecutor};
 
 struct WriteExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -18,13 +11,15 @@ struct WriteExecutor {
 }
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<WriteArgs> for WriteExecutor {
-    async fn execute_typed(
+impl ToolExecutor for WriteExecutor {
+    async fn execute(
         &self,
-        args: WriteArgs,
+        args: Value,
     ) -> Result<String, ToolError> {
-        let path = &args.path;
-        let content = &args.content;
+        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("write: path is required".to_string()))?;
+        let content = args["content"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("write: content is required".to_string()))?;
 
         let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
@@ -108,7 +103,7 @@ pub fn write_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate
             },
             "required": ["path", "content"]
         }),
-        execute: Arc::new(PydanticAdapter::new(WriteExecutor { working_dir, runner })),
+        execute: Arc::new(WriteExecutor { working_dir, runner }),
     }
 }
 
@@ -121,14 +116,14 @@ mod tests {
     async fn test_write_tool_basic() {
         let dir = tempdir().unwrap();
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = PydanticAdapter::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.txt",
             "content": "hello world"
         });
 
-        let result = super::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = executor.execute(args).await.unwrap();
         assert_eq!(result, "File written: test.txt");
 
         let content = fs::read_to_string(dir.path().join("test.txt")).await.unwrap();
@@ -138,14 +133,14 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_missing_args() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = PydanticAdapter::new(WriteExecutor { working_dir: None, runner });
+        let executor = WriteExecutor { working_dir: None, runner };
 
         let args = json!({ "path": "test.txt" });
-        let result = super::ToolExecutor::execute(&executor, args).await;
+        let result = executor.execute(args).await;
         assert!(result.is_err());
 
         let args2 = json!({ "content": "test" });
-        let result2 = super::ToolExecutor::execute(&executor, args2).await;
+        let result2 = executor.execute(args2).await;
         assert!(result2.is_err());
     }
 
@@ -153,7 +148,7 @@ mod tests {
     async fn test_write_tool_rust_verification_success() {
         let dir = tempdir().unwrap();
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = PydanticAdapter::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.rs",
@@ -161,7 +156,7 @@ mod tests {
         });
 
         // Should succeed and pass verification
-        let result = super::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = executor.execute(args).await.unwrap();
         assert_eq!(result, "File written: test.rs");
     }
 
@@ -172,7 +167,7 @@ mod tests {
         // Simulate rustc failure
         runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
 
-        let executor = PydanticAdapter::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
+        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
 
         let args = json!({
             "path": "test.rs",
@@ -180,7 +175,7 @@ mod tests {
         });
 
         // Should fail verification due to syntax error
-        let result = super::ToolExecutor::execute(&executor, args).await;
+        let result = executor.execute(args).await;
         assert!(result.is_err(), "Expected error from mock rustc verification");
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));

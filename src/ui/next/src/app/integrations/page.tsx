@@ -32,7 +32,7 @@ export default function Integrations() {
     sms: true,
   });
 
-  const handleConnect = async (id: string) => {
+  const handleConnect = (id: string) => {
     const integration = integrations.find((item) => item.id === id);
     if (integration?.status === 'connected') {
       setStatusMessage(`${integration.name} settings are ready to manage.`);
@@ -51,26 +51,10 @@ export default function Integrations() {
       setStatusMessage("Choose Twilio channels to finish connecting.");
       return;
     }
-    setStatusMessage(`Connecting ${integration?.name || id}...`);
-    try {
-      const res = await fetch(`/api/integrations/${id}/connect`, { method: "POST" });
-      if (!res.ok) {
-        setStatusMessage(`Unable to start ${integration?.name || id} connection.`);
-        return;
-      }
-      const data = await res.json();
-      const oauthUrl = data.authorization_url || data.url;
-      if (oauthUrl) {
-        window.location.assign(oauthUrl);
-        return;
-      }
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      setStatusMessage(`${integration?.name || id} connected.`);
-    } catch {
-      setStatusMessage(`Unable to start ${integration?.name || id} connection.`);
-    }
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === id ? { ...integration, status: "connected" } : integration
+    ));
+    setStatusMessage(`${integration?.name || id} connected.`);
   };
 
   const saveTwilioIntegration = () => {
