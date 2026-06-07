@@ -157,15 +157,21 @@ export default function OnboardingWizard() {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-    Promise.all([
+    const fetchPromises = [
       fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
         .then(res => res.ok ? res.json() : null)
         .catch(() => null),
       fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
         .then(res => res.ok ? res.json() : null)
         .catch(() => null)
-    ])
-    .then(([draftData, stateData]) => {
+    ];
+
+    // Give it a max timeout of 2s to not block user indefinitely if the server is down or slow
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve([null, null]), 2000));
+
+    Promise.race([Promise.all(fetchPromises), timeoutPromise])
+    .then((result) => {
+      const [draftData, stateData] = result as [any, any];
       const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
         if (data.wizardState.step) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);

@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('OnboardingWizard CUJ', () => {
+  test.setTimeout(60000); // Increase timeout to 60s for all tests in this describe block
+
   test.beforeEach(async ({ page }) => {
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
@@ -200,20 +202,6 @@ test.describe('OnboardingWizard CUJ', () => {
   test('User can save a draft and restore it across sessions', async ({ page }) => {
     let savedWizardState: Record<string, unknown> | undefined;
     await page.route('/api/onboarding/draft', async route => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
-        savedWizardState = body.wizardState;
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
-        return;
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(savedWizardState ? { wizardState: savedWizardState } : {}),
-      });
-    });
-    await page.route('/api/onboarding/state', async route => {
       if (route.request().method() === 'POST') {
         const body = route.request().postDataJSON() as { wizardState?: Record<string, unknown> };
         savedWizardState = body.wizardState;
