@@ -1,3 +1,4 @@
+/// Master Catalog B.11. Subagent Orchestration
 use crate::agent::{Agent, AgentRunConfig};
 use crate::types::Message;
 use std::sync::Arc;
@@ -247,6 +248,15 @@ impl ClaudeSubagentSpawner {
             current_text = resp.message.content;
         }
 
+        if current_text.len() > TARGET_CHARS_MAX {
+            current_text = format!(
+                "{}
+
+[Output truncated. Subagent failed to condense summary.]",
+                current_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
+            );
+        }
+
         Ok(current_text)
     }
 
@@ -254,6 +264,53 @@ impl ClaudeSubagentSpawner {
 
 #[cfg(test)]
 mod tests {
+
+        #[tokio::test]
+        async fn test_claude_subagent_summarize_condensation_fails() {
+            struct BadLlmClient;
+
+            #[async_trait::async_trait]
+            impl crate::llm::LlmClient for BadLlmClient {
+                async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                    let message = ohc_builtin_agent_core::types::Message {
+                        role: ohc_builtin_agent_core::types::Role::Assistant,
+                        content: "A".repeat(9000), // always returns > 8000
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    };
+
+                    Ok(ohc_builtin_agent_core::types::ChatResponse {
+                        message,
+                        usage: Default::default(),
+                        response_id: None,
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+
+            let parent_client = std::sync::Arc::new(BadLlmClient);
+            let parent_agent = std::sync::Arc::new(Agent::new(parent_client.clone(), vec![]));
+
+            let sub_client = std::sync::Arc::new(MockLlmClient { responses: std::sync::Mutex::new(vec![]) });
+            let subagent = std::sync::Arc::new(Agent::new(sub_client, vec![]));
+
+            let spawner = ClaudeSubagentSpawner::new(
+                parent_agent,
+                subagent,
+                ClaudeSubagentMode::Fork,
+            );
+
+            let large_input = "A".repeat(25000);
+            let config = AgentRunConfig::default();
+
+            let result = spawner.summarize_output(&large_input, &config).await.unwrap();
+
+            assert!(result.len() > 8000);
+            assert!(result.contains("[Output truncated. Subagent failed to condense summary.]"));
+        }
+
     use super::*;
     use crate::llm::mock::MockLlmClient;
 

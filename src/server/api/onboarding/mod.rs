@@ -14,6 +14,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
+        .layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
@@ -45,6 +46,8 @@ async fn process_intake_handler(
                 business_type: "Local Business".to_string(),
                 categories: vec!["services".to_string()],
                 initial_products: Vec::new(),
+                location: None,
+                target_audience: None,
             }))
         }
     }

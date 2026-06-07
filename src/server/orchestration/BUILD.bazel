@@ -14,6 +14,7 @@ exports_files(
         "locks.rs",
         "locks_test.rs",
         "mesh.rs",
+        "minimax_swarm.rs",
         "mod.rs",
         "orchestration_test.rs",
         "sandbox.rs",
@@ -28,6 +29,7 @@ exports_files(
         "tasks_db.rs",
         "tasks_db_test.rs",
         "router.rs",
+        "load_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -47,6 +49,7 @@ rust_library(
         "locks.rs",
         "locks_test.rs",
         "mesh.rs",
+        "minimax_swarm.rs",
         "mod.rs",
         "orchestration_test.rs",
         "sandbox.rs",

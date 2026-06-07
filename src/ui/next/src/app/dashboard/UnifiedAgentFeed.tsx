@@ -33,64 +33,58 @@ export function UnifiedAgentFeed() {
   useEffect(() => {
     let mounted = true;
 
-    async function fetchFeed() {
+    async function fetchAll() {
       try {
+        setLoading(true);
+        setActivityLoading(true);
         const tenant = tenantId();
-        // Fetch proposals
-        const res = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
 
-        if (!res.ok) {
+        const [feedRes, activityRes] = await Promise.all([
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          }),
+          fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          })
+        ]);
+
+        if (!feedRes.ok) {
           throw new Error("Failed to load agent feed");
         }
 
-        const data: ApprovalsResponse = await res.json();
-        if (mounted && data.pending_approvals) {
-          setApprovals(data.pending_approvals);
+        const [feedData, activityData] = await Promise.all([
+          feedRes.json(),
+          activityRes.ok ? activityRes.json() : Promise.resolve({ pending_approvals: [] })
+        ]);
+
+        if (mounted) {
+          if (feedData.pending_approvals) {
+            setApprovals(feedData.pending_approvals);
+          }
+          if (activityData.pending_approvals) {
+            setActivities(activityData.pending_approvals);
+          }
         }
       } catch (err: any) {
         if (mounted) {
           setError(err.message || "Failed to load feed");
         }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    async function fetchActivity() {
-      try {
-        setActivityLoading(true);
-        const tenant = tenantId();
-        const res = await fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
-
-        if (res.ok) {
-          const data: ApprovalsResponse = await res.json();
-          if (mounted && data.pending_approvals) {
-            setActivities(data.pending_approvals);
-          }
-        }
-      } catch (err: any) {
         console.error("Failed to load activity", err);
       } finally {
         if (mounted) {
+          setLoading(false);
           setActivityLoading(false);
         }
       }
     }
 
-    fetchFeed();
-    fetchActivity();
+    fetchAll();
     return () => { mounted = false; };
   }, []);
 
@@ -222,19 +216,32 @@ export function UnifiedAgentFeed() {
                         </>
                       ) : (
                         <>
-                          {approval.payload.context.abandoned_carts_count !== undefined && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.context.abandoned_carts_count}</span>
+                          {approval.payload.context.weekly_health_report === true ? (
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="font-semibold">Summary:</span> {approval.payload.context.summary}
+                              </div>
+                              <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">Suggestion:</span> {approval.payload.context.actionable_suggestion}
+                              </div>
                             </div>
-                          )}
-                          {approval.payload.context.potential_revenue !== undefined && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
-                              <span className="font-semibold text-green-600 dark:text-green-400">
-                                ${Number(approval.payload.context.potential_revenue).toFixed(2)}
-                              </span>
-                            </div>
+                          ) : (
+                            <>
+                              {approval.payload.context.abandoned_carts_count !== undefined && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.context.abandoned_carts_count}</span>
+                                </div>
+                              )}
+                              {approval.payload.context.potential_revenue !== undefined && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
+                                  <span className="font-semibold text-green-600 dark:text-green-400">
+                                    ${Number(approval.payload.context.potential_revenue).toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </>
                       )}
@@ -258,6 +265,25 @@ export function UnifiedAgentFeed() {
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Dismiss proposal"
                         data-testid="dismiss-sale"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.context?.weekly_health_report === true ? (
+                    <div className="flex gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Draft it"
+                        data-testid="approve-draft"
+                      >
+                        Yes, draft it!
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss proposal"
+                        data-testid="dismiss-draft"
                       >
                         Dismiss
                       </button>

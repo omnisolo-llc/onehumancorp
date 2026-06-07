@@ -1,23 +1,31 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct GlobArgs {
+    pattern: String,
+    #[serde(default = "default_path")]
+    path: String,
+}
+
+fn default_path() -> String { ".".to_string() }
 
 struct GlobExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for GlobExecutor {
-    async fn execute(
+impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: GlobArgs,
     ) -> Result<String, ToolError> {
-        let pattern = args["pattern"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("glob: pattern is required".to_string()))?;
-        let base_dir = args["path"].as_str().unwrap_or(".");
+        let pattern = &args.pattern;
+        let base_dir = &args.path;
 
         let safe_base = base_dir.strip_prefix("/").unwrap_or(base_dir);
         let safe_pattern = pattern.strip_prefix("/").unwrap_or(pattern);
@@ -64,7 +72,7 @@ impl ToolExecutor for GlobExecutor {
 pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Glob".to_string(),
-        description: "Find files matching a glob pattern. Returns newline-separated paths. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Find files matching a glob pattern. Returns newline-separated paths. Used for Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
@@ -80,6 +88,6 @@ pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["pattern"]
         }),
-        execute: Arc::new(GlobExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(GlobExecutor { working_dir })),
     }
 }
