@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import styles from './assistant.module.css';
 
 type PermissionProfile = 'Guarded' | 'Full Access';
 type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'archived';
@@ -56,9 +57,14 @@ type AssistantCapabilities = {
   outputFormats: string[];
   workModes: string[];
   permissionProfiles: string[];
+  modelProviders: string[];
+  sharingTargets: string[];
+  workspaceControls: string[];
+  commandSurfaces: string[];
+  mcpFeatures: string[];
 };
 
-type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'permissions';
+type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'permissions' | 'models';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -68,6 +74,11 @@ const defaultCapabilities: AssistantCapabilities = {
   outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
   workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
   permissionProfiles: ['Guarded', 'Full Access'],
+  modelProviders: ['Auto', 'OpenAI', 'Anthropic', 'MiniMax', 'DeepSeek', 'Kimi', 'Local Ollama', 'Custom OpenAI Compatible'],
+  sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
+  workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
+  commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
+  mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
 };
 
 const fallbackTasks: AssistantTask[] = [
@@ -99,11 +110,15 @@ const fallbackTasks: AssistantTask[] = [
   },
 ];
 
+function cx(...classes: Array<string | false | undefined>) {
+  return classes.filter(Boolean).join(' ');
+}
+
 function statusClass(status: AssistantTaskStatus) {
-  if (status === 'running') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'blocked') return 'bg-amber-50 text-amber-800 border-amber-200';
-  if (status === 'failed') return 'bg-red-50 text-red-700 border-red-200';
-  return 'bg-zinc-100 text-zinc-700 border-zinc-200';
+  if (status === 'running') return styles.statusRunning;
+  if (status === 'blocked') return styles.statusBlocked;
+  if (status === 'failed') return styles.statusFailed;
+  return styles.statusNeutral;
 }
 
 function PanelButton({
@@ -120,9 +135,7 @@ function PanelButton({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`h-10 rounded-md border px-3 text-sm font-semibold ${
-        active ? 'border-zinc-950 bg-zinc-950 text-white' : 'border-zinc-200 bg-white text-zinc-700 hover:border-teal-300'
-      }`}
+      className={cx(styles.panelButton, active ? styles.panelButtonActive : styles.panelButtonIdle)}
     >
       {children}
     </button>
@@ -218,26 +231,26 @@ export default function AssistantPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className={styles.shell} data-testid="assistant-shell">
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <div className={styles.headerTop}>
             <div>
-              <h1 className="text-3xl font-bold tracking-normal">Jarvis Assistant</h1>
-              <p className="mt-1 max-w-3xl text-sm text-zinc-600">
+              <h1 className={styles.title}>Jarvis Assistant</h1>
+              <p className={styles.subtitle}>
                 Natural-language workstation for tasks, files, artifacts, remote control, automations, memory, skills, and connectors.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/agents" className="inline-flex h-10 items-center rounded-md border border-teal-700 bg-teal-700 px-3 text-sm font-bold text-white">
+            <div className={styles.headerActions}>
+              <Link href="/agents" className={styles.primaryLink}>
                 Expert Center
               </Link>
-              <button type="button" className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+              <button type="button" className={styles.secondaryButton}>
                 New Task
               </button>
             </div>
           </div>
-          <nav className="flex flex-wrap gap-2" aria-label="Assistant utilities">
+          <nav className={styles.utilityNav} aria-label="Assistant utilities">
             {([
               ['remote', 'Remote Control'],
               ['automations', 'Automations'],
@@ -246,6 +259,7 @@ export default function AssistantPage() {
               ['connectors', 'Connectors'],
               ['data', 'Data Management'],
               ['permissions', 'Permissions'],
+              ['models', 'Models & Runtime'],
             ] as [Panel, string][]).map(([id, label]) => (
               <PanelButton key={id} active={panel === id} onClick={() => setPanel(id)}>
                 {label}
@@ -255,79 +269,73 @@ export default function AssistantPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)_360px] lg:px-8">
-        <aside className="rounded-lg border border-zinc-200 bg-white p-4">
-          <div className="flex items-center justify-between">
+      <main className={styles.workstation} data-testid="assistant-workstation">
+        <aside className={styles.panel}>
+          <div className={styles.sectionHeader}>
             <div>
-              <h2 className="text-lg font-bold">Task List</h2>
-              <p className="mt-1 text-xs font-semibold uppercase text-zinc-500">Workspaces</p>
+              <h2 className={styles.sectionTitle}>Task List</h2>
+              <p className={styles.eyebrow}>Workspaces</p>
             </div>
-            <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600">{tasks.length} tasks</span>
+            <span className={styles.countBadge}>{tasks.length} tasks</span>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className={styles.chipRow}>
             {workspaces.map((name) => (
-              <span key={name} className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-semibold text-zinc-700">
+              <span key={name} className={styles.chip}>
                 {name}
               </span>
             ))}
           </div>
-          <div className="mt-4 space-y-2">
+          <div className={styles.taskList}>
             {tasks.map((task) => (
               <button
                 key={task.id}
                 type="button"
                 onClick={() => setActiveTaskId(task.id)}
-                className={`w-full rounded-lg border p-3 text-left ${
-                  activeTask.id === task.id ? 'border-teal-700 bg-teal-50' : 'border-zinc-200 bg-white hover:border-teal-300'
-                }`}
+                className={cx(styles.taskCard, activeTask.id === task.id && styles.taskCardActive)}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold uppercase text-zinc-500">{task.workspace}</span>
-                  <span className={`rounded-md border px-2 py-1 text-xs font-bold ${statusClass(task.status)}`}>{task.status}</span>
+                <div className={styles.metaRow}>
+                  <span className={styles.overline}>{task.workspace}</span>
+                  <span className={cx(styles.statusBadge, statusClass(task.status))}>{task.status}</span>
                 </div>
-                <div className="mt-2 text-sm font-bold leading-5">{task.title}</div>
-                <div className="mt-1 text-xs text-zinc-500">{task.currentStep}</div>
+                <div className={styles.taskTitle}>{task.title}</div>
+                <div className={styles.mutedText}>{task.currentStep}</div>
               </button>
             ))}
           </div>
         </aside>
 
-        <section className="space-y-4">
-          <section className="rounded-lg border border-zinc-200 bg-white p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <section className={styles.centerColumn}>
+          <section className={styles.panel}>
+            <div className={styles.conversationHeader}>
               <div>
-                <div className="mb-1 text-xs font-bold uppercase text-zinc-500">Conversation</div>
-                <h2 className="text-xl font-bold">{activeTask.title}</h2>
-                <p className="mt-1 text-sm text-zinc-600">{activeTask.currentStep}</p>
+                <div className={styles.overline}>Conversation</div>
+                <h2 className={styles.conversationTitle}>{activeTask.title}</h2>
+                <p className={styles.mutedText}>{activeTask.currentStep}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <span className={`rounded-md border px-2 py-1 text-xs font-bold ${statusClass(activeTask.status)}`}>{activeTask.status}</span>
-                <span className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-bold text-zinc-700">
+              <div className={styles.headerBadges}>
+                <span className={cx(styles.statusBadge, statusClass(activeTask.status))}>{activeTask.status}</span>
+                <span className={styles.statusBadge}>
                   {activeTask.permissionProfile}
                 </span>
               </div>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className={styles.messageList}>
               {activeTask.messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`rounded-lg border p-3 ${
-                    message.role === 'user' ? 'border-teal-200 bg-teal-50' : 'border-zinc-200 bg-zinc-50'
-                  }`}
+                  className={cx(styles.message, message.role === 'user' ? styles.userMessage : styles.assistantMessage)}
                 >
-                  <div className="text-xs font-bold uppercase text-zinc-500">{message.role}</div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-800">{message.content}</p>
+                  <div className={styles.overline}>{message.role}</div>
+                  <p className={styles.messageText}>{message.content}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className={styles.actionRow}>
               {(activeTask.actions || []).map((action) => (
                 <button
                   key={action.id}
                   type="button"
-                  className={`rounded-md border px-3 py-2 text-xs font-bold ${
-                    action.approvalRequired ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-zinc-200 bg-zinc-50 text-zinc-700'
-                  }`}
+                  className={cx(styles.smallButton, action.approvalRequired ? styles.warningButton : styles.neutralButton)}
                 >
                   {action.label}
                 </button>
@@ -335,44 +343,44 @@ export default function AssistantPage() {
             </div>
           </section>
 
-          <section className="rounded-lg border border-zinc-200 bg-white p-4">
-            <h2 className="text-lg font-bold">Task Composer</h2>
-            <div className="mt-4 grid gap-3">
-              <label className="text-sm font-bold text-zinc-700">
+          <section className={styles.panel}>
+            <h2 className={styles.sectionTitle}>Task Composer</h2>
+            <div className={styles.fieldGrid}>
+              <label className={styles.fieldLabel}>
                 Task prompt
                 <textarea
                   aria-label="Task prompt"
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
-                  className="mt-1 min-h-[96px] w-full resize-none rounded-md border border-zinc-300 p-3 text-sm leading-6 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                  className={styles.textarea}
                 />
               </label>
-              <div className="grid gap-3 md:grid-cols-3">
-                <label className="text-sm font-bold text-zinc-700">
+              <div className={styles.formGridThree}>
+                <label className={styles.fieldLabel}>
                   Workspace
                   <input
                     aria-label="Workspace"
                     value={workspace}
                     onChange={(event) => setWorkspace(event.target.value)}
-                    className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                    className={styles.input}
                   />
                 </label>
-                <label className="text-sm font-bold text-zinc-700">
+                <label className={styles.fieldLabel}>
                   Work directory
                   <input
                     aria-label="Work directory"
                     value={workDirectory}
                     onChange={(event) => setWorkDirectory(event.target.value)}
-                    className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm"
+                    className={styles.input}
                   />
                 </label>
-                <label className="text-sm font-bold text-zinc-700">
+                <label className={styles.fieldLabel}>
                   Output format
                   <select
                     aria-label="Output format"
                     value={outputFormat}
                     onChange={(event) => setOutputFormat(event.target.value)}
-                    className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
+                    className={styles.select}
                   >
                     {capabilities.outputFormats.map((option) => (
                       <option key={option}>{option}</option>
@@ -380,18 +388,18 @@ export default function AssistantPage() {
                   </select>
                 </label>
               </div>
-              <div className="grid gap-3 md:grid-cols-4">
-                <label className="text-sm font-bold text-zinc-700">
+              <div className={styles.formGridFour}>
+                <label className={styles.fieldLabel}>
                   Mode
-                  <select aria-label="Mode" value={mode} onChange={(event) => setMode(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm">
+                  <select aria-label="Mode" value={mode} onChange={(event) => setMode(event.target.value)} className={styles.select}>
                     {capabilities.workModes.map((option) => (
                       <option key={option}>{option}</option>
                     ))}
                   </select>
                 </label>
-                <label className="text-sm font-bold text-zinc-700">
+                <label className={styles.fieldLabel}>
                   Model
-                  <select value={model} onChange={(event) => setModel(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm">
+                  <select value={model} onChange={(event) => setModel(event.target.value)} className={styles.select}>
                     <option>Auto</option>
                     <option>MiniMax-M3</option>
                     <option>OpenAI GPT-4.1</option>
@@ -399,31 +407,31 @@ export default function AssistantPage() {
                     <option>Local Ollama</option>
                   </select>
                 </label>
-                <label className="text-sm font-bold text-zinc-700">
+                <label className={styles.fieldLabel}>
                   Context
-                  <input value={contextReferences} onChange={(event) => setContextReferences(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" />
+                  <input value={contextReferences} onChange={(event) => setContextReferences(event.target.value)} className={styles.input} />
                 </label>
-                <label className="text-sm font-bold text-zinc-700">
+                <label className={styles.fieldLabel}>
                   Attachments
-                  <input value={attachments} onChange={(event) => setAttachments(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" />
+                  <input value={attachments} onChange={(event) => setAttachments(event.target.value)} className={styles.input} />
                 </label>
               </div>
-              <label className="text-sm font-bold text-zinc-700">
+              <label className={styles.fieldLabel}>
                 Constraints
-                <input value={constraints} onChange={(event) => setConstraints(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" />
+                <input value={constraints} onChange={(event) => setConstraints(event.target.value)} className={styles.input} />
               </label>
-              {error && <p className="text-sm font-semibold text-red-700">{error}</p>}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap gap-2">
+              {error && <p className={styles.error}>{error}</p>}
+              <div className={styles.composerFooter}>
+                <div className={styles.quickChips}>
                   {['@ files', 'Screenshot', 'Guarded', 'Parallel tasks'].map((item) => (
-                    <span key={item} className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-bold text-zinc-700">{item}</span>
+                    <span key={item} className={styles.formatChip}>{item}</span>
                   ))}
                   {outputFormat === 'Code App' && (
                     <>
-                      <button type="button" className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-bold text-zinc-700">
+                      <button type="button" className={styles.smallButton}>
                         Open Preview
                       </button>
-                      <button type="button" className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-900">
+                      <button type="button" className={cx(styles.smallButton, styles.warningButton)}>
                         Run Locally
                       </button>
                     </>
@@ -433,7 +441,7 @@ export default function AssistantPage() {
                   type="button"
                   onClick={startTask}
                   disabled={starting || !prompt.trim()}
-                  className="h-11 rounded-md bg-zinc-950 px-5 text-sm font-bold text-white hover:bg-zinc-800 disabled:bg-zinc-400"
+                  className={styles.startButton}
                 >
                   {starting ? 'Starting...' : 'Start Task'}
                 </button>
@@ -444,27 +452,31 @@ export default function AssistantPage() {
           <FeaturePanel panel={panel} capabilities={capabilities} />
         </section>
 
-        <aside className="rounded-lg border border-zinc-200 bg-white p-4">
-          <h2 className="text-lg font-bold">Results Panel</h2>
-          <div className="mt-3 grid grid-cols-4 gap-2">
+        <aside className={styles.panel}>
+          <h2 className={styles.sectionTitle}>Results Panel</h2>
+          <div className={styles.tabGrid}>
             {resultTabs.map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setResultTab(tab)}
                 aria-pressed={resultTab === tab}
-                className={`h-9 rounded-md border text-xs font-bold ${
-                  resultTab === tab ? 'border-teal-700 bg-teal-700 text-white' : 'border-zinc-200 bg-white text-zinc-700'
-                }`}
+                className={cx(styles.tabButton, resultTab === tab && styles.tabButtonActive)}
               >
                 {tab}
               </button>
             ))}
           </div>
           <ResultContent task={activeTask} tab={resultTab} />
-          <div className="mt-4 flex flex-wrap gap-2">
-            {['Share', 'Download', 'Copy', 'Archive', 'Export DOCX', 'Export XLSX', 'Export PPTX', 'Export PDF', 'Export ZIP'].map((action) => (
-              <button key={action} type="button" className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-700">
+          <div className={styles.resultList}>
+            <div className={styles.resultItem}>
+              <div className={styles.resultTitle}>Preview Auto Refresh</div>
+              <div className={styles.cardDetail}>Generated files and web previews refresh when artifacts change.</div>
+            </div>
+          </div>
+          <div className={styles.resultActions}>
+            {['Share Link', 'Share to WeChat', 'Share to Slack', 'Download', 'Copy', 'Archive', 'Export DOCX', 'Export XLSX', 'Export PPTX', 'Export PDF', 'Export ZIP'].map((action) => (
+              <button key={action} type="button" className={styles.smallButton}>
                 {action}
               </button>
             ))}
@@ -478,12 +490,12 @@ export default function AssistantPage() {
 function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
   if (tab === 'Artifacts') {
     return (
-      <div className="mt-4 space-y-2">
-        {task.artifacts.length === 0 && <p className="text-sm text-zinc-500">No artifacts yet.</p>}
+      <div className={styles.resultList}>
+        {task.artifacts.length === 0 && <p className={styles.emptyText}>No artifacts yet.</p>}
         {task.artifacts.map((artifact) => (
-          <div key={artifact.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-            <div className="text-sm font-bold">{artifact.filename}</div>
-            <div className="text-xs uppercase text-zinc-500">{artifact.type}</div>
+          <div key={artifact.id} className={styles.resultItem}>
+            <div className={styles.resultTitle}>{artifact.filename}</div>
+            <div className={styles.overline}>{artifact.type}</div>
           </div>
         ))}
       </div>
@@ -492,12 +504,12 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
 
   if (tab === 'All Files') {
     return (
-      <div className="mt-4 space-y-2">
+      <div className={styles.resultList}>
         {task.changes.map((change) => (
-          <div key={change.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">{change.path}</div>
+          <div key={change.id} className={styles.resultItem}>{change.path}</div>
         ))}
         {task.artifacts.map((artifact) => (
-          <div key={artifact.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">{artifact.filename}</div>
+          <div key={artifact.id} className={styles.resultItem}>{artifact.filename}</div>
         ))}
       </div>
     );
@@ -505,12 +517,12 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
 
   if (tab === 'Changes') {
     return (
-      <div className="mt-4 space-y-2">
-        {task.changes.length === 0 && <p className="text-sm text-zinc-500">No file changes yet.</p>}
+      <div className={styles.resultList}>
+        {task.changes.length === 0 && <p className={styles.emptyText}>No file changes yet.</p>}
         {task.changes.map((change) => (
-          <div key={change.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-            <div className="text-sm font-bold">{change.summary}</div>
-            <div className="mt-1 text-xs font-semibold text-amber-700">{change.approvalStatus}</div>
+          <div key={change.id} className={styles.resultItem}>
+            <div className={styles.resultTitle}>{change.summary}</div>
+            <div className={cx(styles.statusBadge, styles.warningButton)}>{change.approvalStatus}</div>
           </div>
         ))}
       </div>
@@ -518,10 +530,10 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
   }
 
   return (
-    <div className="mt-4 space-y-2">
-      {task.artifacts.length === 0 && <p className="text-sm text-zinc-500">Preview appears after the first artifact.</p>}
+    <div className={styles.resultList}>
+      {task.artifacts.length === 0 && <p className={styles.emptyText}>Preview appears after the first artifact.</p>}
       {task.artifacts.map((artifact) => (
-        <div key={artifact.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm leading-6 text-zinc-700">
+        <div key={artifact.id} className={styles.resultItem}>
           {artifact.preview}
         </div>
       ))}
@@ -532,13 +544,15 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
 function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: AssistantCapabilities }) {
   if (panel === 'remote') {
     return (
-      <section className="rounded-lg border border-zinc-200 bg-white p-4">
-        <h2 className="text-lg font-bold">Remote Control</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {capabilities.remotePlatforms.map((platform) => (
-            <div key={platform} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-              <div className="font-bold">{platform}</div>
-              <div className="mt-1 text-sm text-zinc-600">Connected task intake</div>
+      <section className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Remote Control</h2>
+        <div className={styles.featureGridThree}>
+          {[...capabilities.remotePlatforms, 'File/Image Upload'].map((platform) => (
+            <div key={platform} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{platform}</div>
+              <div className={styles.cardDetail}>
+                {platform === 'File/Image Upload' ? 'Remote bots can attach files and images to tasks.' : 'Connected task intake'}
+              </div>
             </div>
           ))}
         </div>
@@ -548,17 +562,23 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
 
   if (panel === 'automations') {
     return (
-      <section className="rounded-lg border border-zinc-200 bg-white p-4">
-        <h2 className="text-lg font-bold">Automations</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-            <div className="font-bold">Weekly research brief</div>
-            <div className="mt-1 text-sm text-zinc-600">Every Monday 09:00</div>
+      <section className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Automations</h2>
+        <div className={styles.featureGridTwo}>
+          <div className={styles.featureCard}>
+            <div className={styles.cardTitle}>Weekly research brief</div>
+            <div className={styles.cardDetail}>Every Monday 09:00</div>
           </div>
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-            <div className="font-bold">Execution history</div>
-            <div className="mt-1 text-sm text-zinc-600">Runs, approvals, outputs, and notifications</div>
-          </div>
+          {[
+            ['Execution history', 'Runs, approvals, outputs, and notifications'],
+            ['One-time task', 'Schedule a single future run without binding a permanent workspace.'],
+            ['List mode', 'Scan active, paused, and completed automations in a compact list.'],
+          ].map(([title, detail]) => (
+            <div key={title} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
+            </div>
+          ))}
         </div>
       </section>
     );
@@ -566,13 +586,13 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
 
   if (panel === 'memory') {
     return (
-      <section className="rounded-lg border border-zinc-200 bg-white p-4">
-        <h2 className="text-lg font-bold">Memory</h2>
-        <div className="mt-3 space-y-2">
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">Prefer concise technical summaries with citations.</div>
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm">Ask before sending messages or modifying original files.</div>
+      <section className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Memory</h2>
+        <div className={styles.resultList}>
+          <div className={styles.resultItem}>Prefer concise technical summaries with citations.</div>
+          <div className={styles.resultItem}>Ask before sending messages or modifying original files.</div>
         </div>
-        <button type="button" className="mt-3 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-bold text-zinc-700">
+        <button type="button" className={styles.smallButton}>
           Import Memory
         </button>
       </section>
@@ -581,13 +601,13 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
 
   if (panel === 'skills') {
     return (
-      <section className="rounded-lg border border-zinc-200 bg-white p-4">
-        <h2 className="text-lg font-bold">Skill Marketplace</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {['Web Research', 'Document Writer', 'Chart Builder'].map((skill) => (
-            <div key={skill} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-              <div className="font-bold">{skill}</div>
-              <div className="mt-1 text-sm text-zinc-600">Installed</div>
+      <section className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Skill Marketplace</h2>
+        <div className={styles.featureGridThree}>
+          {['Web Research', 'Document Writer', 'Chart Builder', 'Expert Ranking', 'Custom Expert Builder', 'Slash Command Runner'].map((skill) => (
+            <div key={skill} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{skill}</div>
+              <div className={styles.cardDetail}>{skill.includes('Expert') ? 'Expert Center' : 'Installed'}</div>
             </div>
           ))}
         </div>
@@ -597,13 +617,21 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
 
   if (panel === 'connectors') {
     return (
-      <section aria-label="Connector panel" className="rounded-lg border border-zinc-200 bg-white p-4">
-        <h2 className="text-lg font-bold">Connectors</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {['Google Drive', 'Slack', 'MCP Endpoint'].map((connector) => (
-            <div key={connector} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-              <div className="font-bold">{connector}</div>
-              <div className="mt-1 text-sm text-zinc-600">Available</div>
+      <section aria-label="Connector panel" className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Connectors</h2>
+        <div className={styles.featureGridThree}>
+          {['Google Drive', 'Slack', 'MCP Endpoint', 'Tencent Docs', 'Tencent Meeting', 'WeCom Docs', 'QQ Mail'].map((connector) => (
+            <div key={connector} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{connector}</div>
+              <div className={styles.cardDetail}>Available</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.featureGridThree}>
+          {capabilities.mcpFeatures.map((feature) => (
+            <div key={feature} className={cx(styles.featureCard, styles.featureCardAccent)}>
+              <div className={styles.cardTitle}>{feature}</div>
+              <div className={styles.cardDetail}>MCP connector support</div>
             </div>
           ))}
         </div>
@@ -613,29 +641,60 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
 
   if (panel === 'data') {
     return (
-      <section aria-label="Data management panel" className="rounded-lg border border-zinc-200 bg-white p-4">
-        <h2 className="text-lg font-bold">Data Management</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
+      <section aria-label="Data management panel" className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Data Management</h2>
+        <div className={styles.featureGridThree}>
           {[
             ['Shared Files', 'Review files currently available to tasks.'],
             ['Archived Tasks', 'Restore or permanently clean completed work.'],
             ['Unshare Queue', 'Revoke task and remote-channel file access.'],
+            ['Collapse All', 'Fold every workspace and task group.'],
+            ['Expand All', 'Open every workspace and task group.'],
+            ['Hard Delete', 'Permanently remove selected workspace or task records.'],
           ].map(([title, detail]) => (
-            <div key={title} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-              <div className="font-bold">{title}</div>
-              <div className="mt-1 text-sm text-zinc-600">{detail}</div>
+            <div key={title} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
             </div>
           ))}
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className={styles.featureGridThree}>
           {[
             ['Batch Convert', 'Plan format conversion before writing files.'],
             ['Rename Files', 'Preview filename changes before applying them.'],
             ['Merge PDFs', 'Combine selected PDFs into a tracked artifact.'],
           ].map(([title, detail]) => (
-            <div key={title} className="rounded-md border border-teal-200 bg-teal-50 p-3">
-              <div className="font-bold text-teal-950">{title}</div>
-              <div className="mt-1 text-sm text-teal-800">{detail}</div>
+            <div key={title} className={cx(styles.featureCard, styles.featureCardAccent)}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (panel === 'models') {
+    return (
+      <section aria-label="Models and runtime panel" className={styles.panel}>
+        <h2 className={styles.sectionTitle}>Models & Runtime</h2>
+        <div className={styles.featureGridThree}>
+          {capabilities.modelProviders.map((provider) => (
+            <div key={provider} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{provider}</div>
+              <div className={styles.cardDetail}>Selectable per task or automation.</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.featureGridThree}>
+          {[
+            ['Custom Model UI', 'Configure API keys, endpoints, headers, and model parameters visually.'],
+            ['Runtime Detection', 'Detect Python and Node.js availability before running local skills.'],
+            ['System Proxy', 'Use system proxy settings for model and connector calls.'],
+          ].map(([title, detail]) => (
+            <div key={title} className={cx(styles.featureCard, styles.featureCardAccent)}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
             </div>
           ))}
         </div>
@@ -644,17 +703,19 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
   }
 
   return (
-    <section aria-label="Connector panel" className="rounded-lg border border-zinc-200 bg-white p-4">
-      <h2 className="text-lg font-bold">Permissions</h2>
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
+    <section aria-label="Connector panel" className={styles.panel}>
+      <h2 className={styles.sectionTitle}>Permissions</h2>
+      <div className={styles.featureGridThree}>
         {[
           ['Permission Mode', 'Guarded'],
           ['Grant Folder', 'Authorize a folder for task reads and writes.'],
           ['Revoke Folder', 'Remove folder access from future tasks.'],
+          ['Sandbox Execution', 'Run tools in an isolated execution boundary.'],
+          ['Full Access Confirmation', 'Require explicit confirmation before fully opening permissions.'],
         ].map(([title, detail]) => (
-          <div key={title} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-            <div className="font-bold">{title}</div>
-            <div className="mt-1 text-sm text-zinc-600">{detail}</div>
+          <div key={title} className={styles.featureCard}>
+            <div className={styles.cardTitle}>{title}</div>
+            <div className={styles.cardDetail}>{detail}</div>
           </div>
         ))}
       </div>

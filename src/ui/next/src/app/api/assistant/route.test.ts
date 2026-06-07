@@ -73,6 +73,20 @@ describe('assistant API contract', () => {
       'Code App',
       'ZIP',
     ]);
+    expect(body.capabilities.modelProviders).toEqual([
+      'Auto',
+      'OpenAI',
+      'Anthropic',
+      'MiniMax',
+      'DeepSeek',
+      'Kimi',
+      'Local Ollama',
+      'Custom OpenAI Compatible',
+    ]);
+    expect(body.capabilities.sharingTargets).toEqual(['Share Link', 'WeChat', 'Slack', 'Download', 'Copy']);
+    expect(body.capabilities.workspaceControls).toEqual(['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup']);
+    expect(body.capabilities.commandSurfaces).toEqual(['/skill', '/compact', '/summarize', '/clear']);
+    expect(body.capabilities.mcpFeatures).toEqual(['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It']);
   });
 
   test('creates a guarded assistant task with complete composer payload', async () => {
@@ -277,6 +291,11 @@ describe('assistant API contract', () => {
   test('manages skills connector status and data cleanup queues', async () => {
     let skills = await (await getSkills()).json();
     expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Web Research', status: 'installed' })]));
+    expect(skills.skills).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Expert Ranking', category: 'Expert Center', status: 'available' }),
+      expect.objectContaining({ name: 'Custom Expert Builder', category: 'Expert Center', status: 'available' }),
+      expect.objectContaining({ name: 'Slash Command Runner', category: 'Commands', status: 'installed' }),
+    ]));
 
     skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
       action: 'install',
@@ -293,6 +312,14 @@ describe('assistant API contract', () => {
 
     let connectors = await (await getConnectors()).json();
     expect(connectors.connectors).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'MCP Endpoint' })]));
+    expect(connectors.connectors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'MCP Endpoint',
+        features: expect.arrayContaining(['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It']),
+      }),
+      expect.objectContaining({ name: 'Tencent Docs', kind: 'office' }),
+      expect.objectContaining({ name: 'QQ Mail', kind: 'office' }),
+    ]));
 
     connectors = await (await patchConnectors(patchRequest('http://localhost/api/assistant/connectors', {
       action: 'connect',

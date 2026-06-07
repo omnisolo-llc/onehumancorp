@@ -57,6 +57,11 @@ const tasksPayload = {
     outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
     workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
     permissionProfiles: ['Guarded', 'Full Access'],
+    modelProviders: ['Auto', 'OpenAI', 'Anthropic', 'MiniMax', 'DeepSeek', 'Kimi', 'Local Ollama', 'Custom OpenAI Compatible'],
+    sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
+    workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
+    commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
+    mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
   },
 };
 
@@ -111,6 +116,8 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   expect(screen.getAllByText("Create this week's operating brief").length).toBeGreaterThan(0);
   expect(screen.getByText('Organize Downloads by file type')).toBeDefined();
   expect(screen.getByRole('link', { name: 'Expert Center' })).toHaveAttribute('href', '/agents');
+  expect(screen.getByTestId('assistant-shell')).toBeDefined();
+  expect(screen.getByTestId('assistant-workstation')).toBeDefined();
   expect(screen.getByRole('button', { name: 'Remote Control' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Automations' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Memory' })).toBeDefined();
@@ -118,6 +125,7 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   expect(screen.getByRole('button', { name: 'Connectors' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Data Management' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Permissions' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Models & Runtime' })).toBeDefined();
   expect(screen.getByText('Task List')).toBeDefined();
   expect(screen.getByText('Conversation')).toBeDefined();
   expect(screen.getByText('Results Panel')).toBeDefined();
@@ -145,6 +153,9 @@ test('shows conversation, artifacts, files, changes, and preview for the active 
   expect(screen.getByRole('button', { name: 'Export PPTX' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Export PDF' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Export ZIP' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Share Link' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Share to WeChat' })).toBeDefined();
+  expect(screen.getByText('Preview Auto Refresh')).toBeDefined();
 });
 
 test('submits full WorkBuddy-style composer payload and selects the new task', async () => {
@@ -190,10 +201,13 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   for (const platform of ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot']) {
     expect(screen.getByText(platform)).toBeDefined();
   }
+  expect(screen.getByText('File/Image Upload')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Automations' }));
   expect(screen.getByText('Weekly research brief')).toBeDefined();
   expect(screen.getByText('Execution history')).toBeDefined();
+  expect(screen.getByText('One-time task')).toBeDefined();
+  expect(screen.getByText('List mode')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
   expect(screen.getByText('Prefer concise technical summaries with citations.')).toBeDefined();
@@ -202,16 +216,26 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   fireEvent.click(screen.getByRole('button', { name: 'Skills' }));
   expect(screen.getByText('Skill Marketplace')).toBeDefined();
   expect(screen.getByText('Web Research')).toBeDefined();
+  expect(screen.getByText('Expert Ranking')).toBeDefined();
+  expect(screen.getByText('Custom Expert Builder')).toBeDefined();
+  expect(screen.getByText('Slash Command Runner')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Connectors' }));
   const connectorPanel = screen.getByLabelText('Connector panel');
   expect(within(connectorPanel).getByText('Google Drive')).toBeDefined();
   expect(within(connectorPanel).getByText('MCP Endpoint')).toBeDefined();
+  expect(within(connectorPanel).getByText('Tencent Docs')).toBeDefined();
+  expect(within(connectorPanel).getByText('QQ Mail')).toBeDefined();
+  expect(within(connectorPanel).getByText('Tool Progress')).toBeDefined();
+  expect(within(connectorPanel).getByText('Static Headers')).toBeDefined();
+  expect(within(connectorPanel).getByText('Connector Try It')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Data Management' }));
   expect(screen.getByText('Shared Files')).toBeDefined();
   expect(screen.getByText('Archived Tasks')).toBeDefined();
   expect(screen.getByText('Unshare Queue')).toBeDefined();
+  expect(screen.getByText('Collapse All')).toBeDefined();
+  expect(screen.getByText('Hard Delete')).toBeDefined();
   expect(screen.getByText('Batch Convert')).toBeDefined();
   expect(screen.getByText('Rename Files')).toBeDefined();
   expect(screen.getByText('Merge PDFs')).toBeDefined();
@@ -221,6 +245,13 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   expect(screen.getAllByText('Guarded').length).toBeGreaterThan(0);
   expect(screen.getByText('Grant Folder')).toBeDefined();
   expect(screen.getByText('Revoke Folder')).toBeDefined();
+  expect(screen.getByText('Sandbox Execution')).toBeDefined();
+  expect(screen.getByText('Full Access Confirmation')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Models & Runtime' }));
+  expect(screen.getByText('Custom Model UI')).toBeDefined();
+  expect(screen.getByText('Runtime Detection')).toBeDefined();
+  expect(screen.getAllByText('Local Ollama').length).toBeGreaterThan(0);
 });
 
 test('supports WorkBuddy-style mode and artifact options including Coding and Code App', async () => {

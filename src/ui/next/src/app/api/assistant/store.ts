@@ -101,6 +101,7 @@ export type ConnectorRecord = {
   name: string;
   kind: string;
   status: 'connected' | 'available' | 'needs_setup';
+  features?: string[];
 };
 
 export type SharedFileRecord = {
@@ -126,6 +127,11 @@ export const assistantCapabilities = {
   outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
   workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
   permissionProfiles: ['Guarded', 'Full Access'],
+  modelProviders: ['Auto', 'OpenAI', 'Anthropic', 'MiniMax', 'DeepSeek', 'Kimi', 'Local Ollama', 'Custom OpenAI Compatible'],
+  sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
+  workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
+  commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
+  mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
 } as const;
 
 export type CreateTaskPayload = {
@@ -825,11 +831,18 @@ export function resetAssistantStore() {
     { id: 'skill-web-research', name: 'Web Research', category: 'Research', status: 'installed' },
     { id: 'skill-document-writer', name: 'Document Writer', category: 'Artifacts', status: 'installed' },
     { id: 'skill-chart-builder', name: 'Chart Builder', category: 'Data', status: 'installed' },
+    { id: 'skill-slash-command-runner', name: 'Slash Command Runner', category: 'Commands', status: 'installed' },
+    { id: 'skill-expert-ranking', name: 'Expert Ranking', category: 'Expert Center', status: 'available' },
+    { id: 'skill-custom-expert-builder', name: 'Custom Expert Builder', category: 'Expert Center', status: 'available' },
   ];
   connectors = [
     { id: 'connector-google-drive', name: 'Google Drive', kind: 'files', status: 'connected' },
     { id: 'connector-slack', name: 'Slack', kind: 'remote', status: 'available' },
-    { id: 'connector-mcp', name: 'MCP Endpoint', kind: 'tools', status: 'available' },
+    { id: 'connector-mcp', name: 'MCP Endpoint', kind: 'tools', status: 'available', features: [...assistantCapabilities.mcpFeatures] },
+    { id: 'connector-tencent-docs', name: 'Tencent Docs', kind: 'office', status: 'available' },
+    { id: 'connector-tencent-meeting', name: 'Tencent Meeting', kind: 'office', status: 'available' },
+    { id: 'connector-wecom-docs', name: 'WeCom Docs', kind: 'office', status: 'available' },
+    { id: 'connector-qq-mail', name: 'QQ Mail', kind: 'office', status: 'available' },
   ];
   sharedFiles = [
     { id: 'shared-weekly-brief', filename: 'weekly-brief.md', workspace: 'Personal OS', access: 'shared' },
