@@ -17,7 +17,7 @@ type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_MEMBER_USER;
 async function loginAs(page: Page, user: E2EUser) {
   // Wait, there's no auth in the NextJS local builder mock app
   // Just navigate to the root dashboard route so it doesn't fail.
-  await page.goto('/dashboard');
+  await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}/dashboard` : 'http://localhost:3000/dashboard');
 }
 
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {

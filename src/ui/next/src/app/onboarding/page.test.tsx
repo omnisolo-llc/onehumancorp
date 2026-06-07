@@ -569,3 +569,29 @@ describe('OnboardingWizard', () => {
     }));
   });
 });
+
+describe('Onboarding Wizard Back Navigation', () => {
+  it('allows user to navigate back from step 2 to step 1', async () => {
+    useOnboardingStore.setState({ step: 2 });
+    await act(async () => {
+      render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
+    });
+
+    const backButton = screen.getByRole('button', { name: /Back/i });
+    await userEvent.click(backButton);
+
+    expect(useOnboardingStore.getState().step).toBe(1);
+  });
+
+  it('allows user to navigate back from step 3 to step 2', async () => {
+    useOnboardingStore.setState({ step: 3 });
+    await act(async () => {
+      render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
+    });
+
+    const backButton = screen.getByRole('button', { name: /Back/i });
+    await userEvent.click(backButton);
+
+    expect(useOnboardingStore.getState().step).toBe(2);
+  });
+});
