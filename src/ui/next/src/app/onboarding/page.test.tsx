@@ -58,6 +58,7 @@ describe('OnboardingWizard', () => {
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({
           ok: true,
@@ -143,6 +144,7 @@ describe('OnboardingWizard', () => {
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({
           ok: true,
@@ -244,6 +246,7 @@ describe('OnboardingWizard', () => {
 
     // Mock intake failure
     (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
       }
@@ -294,6 +297,7 @@ describe('OnboardingWizard', () => {
 
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
       }
