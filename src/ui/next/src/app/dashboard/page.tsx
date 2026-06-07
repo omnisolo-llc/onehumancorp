@@ -1,3 +1,4 @@
+import { FloatingActionButton } from "./FAB";
 "use client";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 
@@ -248,6 +249,7 @@ export default function Dashboard() {
       </div>
 
       <NeighborhoodPulseCard tenant={tenantId()} />
+      <FloatingActionButton />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
