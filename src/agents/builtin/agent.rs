@@ -11,7 +11,7 @@ use ohc_builtin_agent_llm::LlmClient;
 use crate::tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
-pub(crate) fn agent_task_timeout() -> std::time::Duration {
+pub fn agent_task_timeout() -> std::time::Duration {
     let secs = std::env::var("OHC_AGENT_TASK_TIMEOUT_SECS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
@@ -94,6 +94,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub curated_memory_nudge_threshold: i32,
     pub enable_time_travel_rewind: bool,
     pub enable_serverless_hibernation: bool,
+    pub enable_sona_patterns: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
@@ -155,6 +156,7 @@ enable_llmcompiler_plan_and_execute: false,
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             enable_serverless_hibernation: false,
+            enable_sona_patterns: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
@@ -252,6 +254,7 @@ pub struct Agent {
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+    pub sona_matcher: Option<Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
 }
 
 impl Agent {
@@ -268,6 +271,7 @@ impl Agent {
             observation_store: Arc::new(dashmap::DashMap::new()),
             event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
+            sona_matcher: None,
         }
     }
 
@@ -297,6 +301,12 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_loop");
 
@@ -339,7 +349,14 @@ impl Agent {
             messages.push(msg.clone());
 
             if msg.tool_calls.is_empty() {
+
                 if *phase == "Verify" {
+                    if let Some(guardrails) = &cfg.guardrails {
+                        if let Err(e) = guardrails.check_output(&msg.content) {
+                            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
+                        }
+                    }
                     return Ok(msg.content);
                 } else {
                     continue;
@@ -351,7 +368,14 @@ impl Agent {
             let mut read_only_calls = vec![];
             let mut mutating_calls = vec![];
 
+
             for tc in &msg.tool_calls {
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = guardrails.check_tool(tc) {
+                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Tool Guardrail tripwire fires: {}", e))));
+                    }
+                }
                 if let Some(tool) = session_tools.iter().find(|t| t.name == tc.name) {
                     if tool.is_read_only {
                         read_only_calls.push(tc.clone());
@@ -541,7 +565,6 @@ impl Agent {
                 return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
             }
         }
-
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
@@ -745,6 +768,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
+                sona_matcher: self.sona_matcher.clone(),
         });
 
         let coord_actor = crate::actor_model::AgentActor {
@@ -1274,6 +1298,12 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
 
         struct WrapperClient {
             llm: std::sync::Arc<dyn LlmClient>,
@@ -1301,6 +1331,13 @@ impl Agent {
         };
 
         on_event(AgentEvent::TaskComplete { content: report.clone() });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_output(&report) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
+            }
+        }
+
         Ok(report)
     }
 
@@ -1410,6 +1447,13 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
         let plan_resp = self.llm.chat(plan_req.clone()).await?;
         let plan_json_text = plan_resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
 
@@ -1765,6 +1809,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
+                sona_matcher: self.sona_matcher.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1877,13 +1922,28 @@ impl Agent {
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
+                sona_matcher: self.sona_matcher.clone(),
             };
             self_with_memory = &owned_agent;
         }
 
         let session_tools = self_with_memory.tools.clone();
 
+
         let mut final_cfg = cfg.clone();
+        let mut actual_initial_message = initial_message.to_string();
+        if final_cfg.enable_sona_patterns {
+            if let Some(matcher_arc) = &self_with_memory.sona_matcher {
+                let matcher = matcher_arc.lock().await;
+                if let Some(pattern) = matcher.find_best_match(initial_message) {
+                    actual_initial_message = format!(
+                        "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
+                        pattern.successful_tools.join(" -> "),
+                        initial_message
+                    );
+                }
+            }
+        }
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
         }
@@ -1974,6 +2034,12 @@ impl Agent {
         }
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = guardrails.check_input(initial_message) {
+                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Input Guardrail tripwire fires: {}", e))));
+            }
+        }
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run");
 
@@ -2049,9 +2115,9 @@ impl Agent {
         }
 
         if messages.is_empty() {
-            messages.push(Message::user(initial_message));
+            messages.push(Message::user(&actual_initial_message));
         } else if !initial_message.is_empty() {
-            messages.push(Message::user(initial_message));
+            messages.push(Message::user(&actual_initial_message));
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -2378,6 +2444,25 @@ impl Agent {
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
+                if final_cfg.enable_sona_patterns {
+                    if let Some(matcher_arc) = &self_with_memory.sona_matcher {
+                        let mut matcher = matcher_arc.lock().await;
+                        let mut successful_tools = Vec::new();
+                        for msg in &messages {
+                            if msg.role == Role::Assistant {
+                                for tc in &msg.tool_calls {
+                                    successful_tools.push(tc.name.clone());
+                                }
+                            }
+                        }
+                        matcher.record_pattern(crate::sona_patterns::TrajectoryPattern {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            initial_context: initial_message.to_string(),
+                            successful_tools,
+                            outcome_score: 1.0,
+                        });
+                    }
+                }
                 return Ok(last_assistant_content);
             }
 
@@ -3135,7 +3220,14 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
+            let args_str = match serde_json::to_string(&args) {
+                Ok(s) => if s.chars().count() > 100 { format!("{}...", s.chars().take(100).collect::<String>()) } else { s },
+                Err(_) => "<unprintable>".to_string(),
+            };
+            return Err(ToolError::LlmRecoverable(format!(
+                "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.",
+                e, args_str
+            )));
         }
 
         let mut modified_tc = tc.clone();
@@ -3244,6 +3336,165 @@ mod tests {
             }
         });
         assert!(has_recoverable_event);
+    }
+
+
+    #[tokio::test]
+    async fn test_end_to_end_pydantic_self_correction_loop() {
+        use crate::tools::ToolExecutor;
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role, ToolResult};
+        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use serde::Deserialize;
+
+        #[derive(Deserialize)]
+        struct ComplexArgs {
+            required_field: String,
+            amount: u32,
+        }
+
+        struct RealPydanticExecutor;
+
+        #[async_trait::async_trait]
+        impl PydanticToolExecutor<ComplexArgs> for RealPydanticExecutor {
+            async fn execute_typed(&self, args: ComplexArgs) -> Result<String, ToolError> {
+                Ok(format!("Processed {} for {}", args.amount, args.required_field))
+            }
+        }
+
+        struct MockLlmClientPydanticRecovery {
+            call_count: tokio::sync::Mutex<i32>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientPydanticRecovery {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut c = self.call_count.lock().await;
+                *c += 1;
+
+                if *c == 1 {
+                    // Turn 1: LLM returns invalid arguments (missing `amount`)
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: String::new(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_pydantic_1".to_string(),
+                                name: "typed_tool".to_string(),
+                                arguments: serde_json::json!({
+                                    "required_field": "test_item"
+                                }),
+                            }],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: None,
+                    })
+                } else if *c == 2 {
+                    // Turn 2: LLM should see the Validation Error in the tool_results.
+                    let last_msg = req.messages.last().unwrap();
+
+                    assert_eq!(last_msg.role, Role::Tool);
+
+                    let has_pydantic_error = last_msg.tool_results.iter().any(|r| {
+
+                        r.error.contains("Validation Error (Pydantic-first tool schema)") &&
+                        r.error.contains("missing required parameter: 'amount'")
+                    });
+
+                    if has_pydantic_error {
+                        // The LLM self-corrects and provides the missing field
+                        Ok(ChatResponse {
+                            message: Message {
+                                role: Role::Assistant,
+                                content: String::new(),
+                                tool_calls: vec![ToolCall {
+                                    id: "call_pydantic_2".to_string(),
+                                    name: "typed_tool".to_string(),
+                                    arguments: serde_json::json!({
+                                        "required_field": "test_item",
+                                        "amount": 42
+                                    }),
+                                }],
+                                tool_results: vec![],
+                                response_id: None,
+                                previous_response_id: None,
+                            },
+                            usage: Usage::default(),
+                            stop_reason: "tool_calls".to_string(),
+                            response_id: None,
+                        })
+                    } else {
+                        Ok(ChatResponse {
+                            message: Message::assistant("I didn't see the Pydantic error"),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: None,
+                        })
+                    }
+                } else {
+                    // Turn 3: LLM sees the success message and responds to the user
+                    Ok(ChatResponse {
+                        message: Message::assistant("I successfully processed the item!"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: None,
+                    })
+                }
+            }
+        }
+
+        let pydantic_adapter = PydanticAdapter::new(RealPydanticExecutor);
+
+        let tools = vec![
+            crate::tools::Tool {
+                name: "typed_tool".to_string(),
+                description: "A strongly typed tool".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "required_field": { "type": "string" },
+                        "amount": { "type": "integer" }
+                    },
+                    "required": ["required_field", "amount"]
+                }),
+                execute: std::sync::Arc::new(pydantic_adapter),
+            },
+        ];
+
+        let client = std::sync::Arc::new(MockLlmClientPydanticRecovery { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Process 42 test_items", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "I successfully processed the item!");
+
+        // Verify the event sequence captured the error and the recovery
+        let has_recoverable_event = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                result.contains("Validation Error (Pydantic-first tool schema)") && result.contains("missing required parameter: 'amount'")
+            } else {
+                false
+            }
+        });
+        assert!(has_recoverable_event, "The Pydantic error was not emitted in the event stream");
+
+        let has_success_event = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                result == "Processed 42 for test_item"
+            } else {
+                false
+            }
+        });
+        assert!(has_success_event, "The successful tool execution was not emitted after self-correction");
     }
 
     #[derive(serde::Deserialize, PartialEq, Debug)]
@@ -7625,5 +7876,128 @@ mod guardrail_tests {
 
         let has_tripped_event = events.iter().any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
         assert!(has_tripped_event);
+    }
+}
+
+#[cfg(test)]
+mod sona_pattern_tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    struct SonaMockLlm {
+        responses: Arc<Mutex<Vec<crate::types::ChatResponse>>>,
+        system_prompts: Arc<Mutex<Vec<String>>>,
+        messages_received: Arc<Mutex<Vec<Vec<crate::types::Message>>>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for SonaMockLlm {
+        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.system_prompts.lock().await.push(req.system.clone());
+            self.messages_received.lock().await.push(req.messages.clone());
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Done"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_agent_sona_pattern_integration() {
+        let responses = Arc::new(Mutex::new(vec![
+            crate::types::ChatResponse {
+                message: crate::types::Message {
+                    role: crate::types::Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![crate::types::ToolCall {
+                        id: "call_1".to_string(),
+                        name: "test_tool".to_string(),
+                        arguments: serde_json::json!({}),
+                    }],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: crate::types::Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("id1".to_string()),
+            },
+            crate::types::ChatResponse {
+                message: crate::types::Message::assistant("Done the first task"),
+                usage: crate::types::Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id2".to_string()),
+            },
+            crate::types::ChatResponse {
+                message: crate::types::Message::assistant("Done the second task"),
+                usage: crate::types::Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id3".to_string()),
+            },
+        ]));
+
+        let system_prompts = Arc::new(Mutex::new(vec![]));
+        let messages_received = Arc::new(Mutex::new(vec![]));
+
+        let llm = Arc::new(SonaMockLlm {
+            responses: responses.clone(),
+            system_prompts: system_prompts.clone(),
+            messages_received: messages_received.clone(),
+        });
+
+        struct DummyToolExecutor;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for DummyToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok("test tool output".to_string())
+            }
+        }
+
+        let tool = Tool {
+            name: "test_tool".to_string(),
+            description: "test tool".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(DummyToolExecutor),
+        };
+
+        let mut agent = Agent::new(llm, vec![tool]);
+        agent.sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(crate::sona_patterns::PatternMatcher::new())));
+
+        let mut config = AgentRunConfig::default();
+        config.enable_sona_patterns = true;
+        config.max_iterations = 5;
+
+        // Run 1: Should execute and save the trajectory pattern
+        let mut on_event = |_| {};
+        let result1 = agent.run(&config, "Task Alpha", &mut on_event).await.unwrap();
+        assert_eq!(result1, "Done the first task");
+
+        // Verify the pattern was stored
+        {
+            let matcher = agent.sona_matcher.as_ref().unwrap().lock().await;
+            let patterns = matcher.get_patterns();
+            assert_eq!(patterns.len(), 1);
+            assert_eq!(patterns[0].initial_context, "Task Alpha");
+            assert_eq!(patterns[0].successful_tools, vec!["test_tool".to_string()]);
+        }
+
+        // Run 2: Similar task. The hint should be injected into the user query.
+        let result2 = agent.run(&config, "Task Alpha again", &mut on_event).await.unwrap();
+        assert_eq!(result2, "Done the second task");
+
+        // Verify the hint was injected into the actual prompt
+        let messages = messages_received.lock().await;
+        let run2_first_msg = messages.last().unwrap().first().unwrap();
+        assert!(run2_first_msg.content.contains("[SONA Trajectory Hint: A similar past task followed this successful trajectory:"));
+        assert!(run2_first_msg.content.contains("test_tool"));
     }
 }

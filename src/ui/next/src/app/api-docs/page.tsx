@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import SwaggerUI from "swagger-ui-react";
-import "swagger-ui-react/swagger-ui.css";
+
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 // OpenAPI spec for OHC backend
@@ -20,6 +20,53 @@ const getSwaggerSpec = (origin: string) => ({
     }
   ],
   paths: {
+    "/api/help": {
+      get: {
+        summary: "Get Help Articles",
+        description: "Retrieves a list of available help articles for the Help Center.",
+        tags: ["Documentation"],
+        responses: {
+          "200": {
+            description: "Success",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string" },
+                      desc: { type: "string" },
+                      link: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tooltips": {
+      get: {
+        summary: "Get Tooltips Registry",
+        description: "Retrieves the key-value dictionary of all UI tooltips.",
+        tags: ["Documentation"],
+        responses: {
+          "200": {
+            description: "Success",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  additionalProperties: { type: "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orgs/register": {
       post: {
         summary: "Register an Organization",

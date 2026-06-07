@@ -178,7 +178,27 @@ pub mod pos_sync_worker {
                         )
                         .bind(adj_job_id)
                         .bind(tenant_id)
-                        .bind(adj_payload)
+                        .bind(&adj_payload)
+                        .execute(&mut *tx)
+                        .await;
+
+                        // Create an Operations AI Agent alert task
+                        let ai_task_id = Uuid::new_v4().to_string();
+                        let ai_payload = json!({
+                            "transaction_id": tx_id,
+                            "product_id": product_id,
+                            "expected_stock": qty,
+                            "actual_stock": stock,
+                            "message": format!("Offline POS transaction {} encountered an inventory discrepancy for product {}.", tx_id, product_id)
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                             VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                        )
+                        .bind(&ai_task_id)
+                        .bind(tenant_id)
+                        .bind(&ai_payload)
                         .execute(&mut *tx)
                         .await;
                     }
@@ -1492,6 +1512,8 @@ mod tests {
             assert_eq!(status, "PAUSED");
         } // end of test_customer_success_worker_draft_reply
 
+<<<<<<< HEAD
+=======
     #[tokio::test]
     #[allow(dead_code, unnameable_test_items)]
     async fn test_promoter_worker_social_post_draft() {
@@ -1547,6 +1569,7 @@ mod tests {
             }
         }
     }
+>>>>>>> 39a2026f (fix(orchestration): implement Postgres state machine parity tests & create_dummy_pg_pool)
 }
 
 }
