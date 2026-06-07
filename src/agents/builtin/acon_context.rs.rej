@@ -1,9 +1,0 @@
---- src/agents/builtin/acon_context.rs
-+++ src/agents/builtin/acon_context.rs
-@@ -34,4 +34,4 @@
-         if messages.len() > self.max_messages {
--            for i in 0..threshold {
--                if let Some(mut msg) = messages.get_mut(i) {
-+            for msg in messages.iter_mut().take(threshold) {
-+                if true {
-                     // In a real Junie implementation, we'd regex out the "tool outputs"
