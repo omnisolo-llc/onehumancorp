@@ -55,7 +55,8 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
     where
         C: Fn(&S) -> String + Send + Sync + 'static,
     {
-        self.conditional_edges.insert(from.to_string(), Arc::new(condition));
+        self.conditional_edges
+            .insert(from.to_string(), Arc::new(condition));
     }
 
     pub fn set_entry_point(&mut self, node: &str) {
@@ -75,7 +76,10 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
             }
             iterations += 1;
 
-            let node_fn = self.nodes.get(&current_node).ok_or_else(|| format!("Node not found: {}", current_node))?;
+            let node_fn = self
+                .nodes
+                .get(&current_node)
+                .ok_or_else(|| format!("Node not found: {}", current_node))?;
 
             let update = node_fn(current_state.clone()).await?;
             self.reducer.reduce(&mut current_state, update);
@@ -120,7 +124,6 @@ impl Reducer<Value> for DefaultReducer {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     // Testing the "typed dictionary" aspect of the mechanic.
     #[derive(Clone, Default)]
@@ -185,7 +188,10 @@ mod tests {
 
         assert_eq!(final_state.messages.len(), 4);
         assert_eq!(final_state.messages[0], "user: What is the weather?");
-        assert_eq!(final_state.messages[1], "assistant: (tool_call: search weather)");
+        assert_eq!(
+            final_state.messages[1],
+            "assistant: (tool_call: search weather)"
+        );
         assert_eq!(final_state.messages[2], "tool: Sunny");
         assert_eq!(final_state.messages[3], "assistant: The weather is sunny.");
     }

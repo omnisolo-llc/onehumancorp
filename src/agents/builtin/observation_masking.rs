@@ -1,4 +1,3 @@
-
 use ohc_builtin_agent_core::types::{Message, Role};
 use serde_json::Value;
 
@@ -14,7 +13,11 @@ pub struct JetBrainsObservationMasker {
 
 impl JetBrainsObservationMasker {
     pub fn new(threshold: usize, size_limit: usize, element_limit: usize) -> Self {
-        Self { threshold, size_limit, element_limit }
+        Self {
+            threshold,
+            size_limit,
+            element_limit,
+        }
     }
 
     fn mask_json_value(val: &mut Value, size_limit: usize, element_limit: usize) -> bool {
@@ -27,8 +30,12 @@ impl JetBrainsObservationMasker {
                     let char_count = s.chars().count();
                     if char_count > preview_chars * 2 {
                         let start_preview: String = s.chars().take(preview_chars).collect();
-                        let end_preview: String = s.chars().skip(char_count - preview_chars).collect();
-                        *s = format!("[Masked string: {} bytes. Preview: {}...{}]", bytes, start_preview, end_preview);
+                        let end_preview: String =
+                            s.chars().skip(char_count - preview_chars).collect();
+                        *s = format!(
+                            "[Masked string: {} bytes. Preview: {}...{}]",
+                            bytes, start_preview, end_preview
+                        );
                     } else {
                         *s = format!("[Masked string: {} bytes]", bytes);
                     }
@@ -49,7 +56,10 @@ impl JetBrainsObservationMasker {
                     }
                 }
                 if truncated {
-                    arr.push(Value::String(format!("[Masked array: {} elements truncated]", original_len - element_limit)));
+                    arr.push(Value::String(format!(
+                        "[Masked array: {} elements truncated]",
+                        original_len - element_limit
+                    )));
                 }
             }
             Value::Object(obj) => {
@@ -57,7 +67,8 @@ impl JetBrainsObservationMasker {
                 let mut truncated = false;
                 let mut removed_count = 0;
                 if original_len > element_limit {
-                    let keys_to_remove: Vec<String> = obj.keys().skip(element_limit).cloned().collect();
+                    let keys_to_remove: Vec<String> =
+                        obj.keys().skip(element_limit).cloned().collect();
                     removed_count = keys_to_remove.len();
                     for k in keys_to_remove {
                         obj.remove(&k);
@@ -73,7 +84,7 @@ impl JetBrainsObservationMasker {
                 if truncated {
                     obj.insert(
                         "_masked_keys".to_string(),
-                        Value::String(format!("[Masked object: {} keys truncated]", removed_count))
+                        Value::String(format!("[Masked object: {} keys truncated]", removed_count)),
                     );
                 }
             }
@@ -93,9 +104,15 @@ impl JetBrainsObservationMasker {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
                                 // Try structural JSON masking first
-                                if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content) {
-                                    if Self::mask_json_value(&mut json_val, self.size_limit, self.element_limit) {
-                                        tr.content = serde_json::to_string(&json_val).unwrap_or_else(|_| tr.content.clone());
+                                if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
+                                {
+                                    if Self::mask_json_value(
+                                        &mut json_val,
+                                        self.size_limit,
+                                        self.element_limit,
+                                    ) {
+                                        tr.content = serde_json::to_string(&json_val)
+                                            .unwrap_or_else(|_| tr.content.clone());
                                         continue; // Successfully masked as JSON
                                     }
                                 }
@@ -104,8 +121,13 @@ impl JetBrainsObservationMasker {
                                 let preview_chars = 100;
                                 let char_count = tr.content.chars().count();
                                 if char_count > preview_chars * 2 {
-                                    let start_preview: String = tr.content.chars().take(preview_chars).collect();
-                                    let end_preview: String = tr.content.chars().skip(char_count - preview_chars).collect();
+                                    let start_preview: String =
+                                        tr.content.chars().take(preview_chars).collect();
+                                    let end_preview: String = tr
+                                        .content
+                                        .chars()
+                                        .skip(char_count - preview_chars)
+                                        .collect();
                                     tr.content = format!(
                                         "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
                                         bytes, start_preview, end_preview, tr.tool_call_id
@@ -143,13 +165,11 @@ mod tests {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "call_1".to_string(),
-                        content: "A".repeat(500),
-                        error: String::new(),
-                    },
-                ],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "A".repeat(500),
+                    error: String::new(),
+                }],
                 response_id: None,
                 previous_response_id: None,
             },
@@ -165,13 +185,11 @@ mod tests {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "call_2".to_string(),
-                        content: "B".repeat(500),
-                        error: String::new(),
-                    },
-                ],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_2".to_string(),
+                    content: "B".repeat(500),
+                    error: String::new(),
+                }],
                 response_id: None,
                 previous_response_id: None,
             },
@@ -182,11 +200,19 @@ mod tests {
         apply_observation_masking(&mut messages, 1, 100);
 
         // First message should be masked
-        assert!(messages[0].tool_results[0].content.contains("[Observation Masked"));
+        assert!(
+            messages[0].tool_results[0]
+                .content
+                .contains("[Observation Masked")
+        );
         assert!(messages[0].tool_results[0].content.contains("call_1"));
 
         // Last message should NOT be masked
-        assert!(!messages[2].tool_results[0].content.contains("[Observation Masked"));
+        assert!(
+            !messages[2].tool_results[0]
+                .content
+                .contains("[Observation Masked")
+        );
         assert_eq!(messages[2].tool_results[0].content, "B".repeat(500));
     }
     #[test]
@@ -196,13 +222,11 @@ mod tests {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "call_3".to_string(),
-                        content: format!("{{\"small\": \"abc\", \"large\": \"{}\"}}", "A".repeat(500)),
-                        error: String::new(),
-                    },
-                ],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_3".to_string(),
+                    content: format!("{{\"small\": \"abc\", \"large\": \"{}\"}}", "A".repeat(500)),
+                    error: String::new(),
+                }],
                 response_id: None,
                 previous_response_id: None,
             },
@@ -253,13 +277,11 @@ mod additional_tests {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "call_4".to_string(),
-                        content: json_str,
-                        error: String::new(),
-                    },
-                ],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_4".to_string(),
+                    content: json_str,
+                    error: String::new(),
+                }],
                 response_id: None,
                 previous_response_id: None,
             },
@@ -303,13 +325,11 @@ mod additional_tests {
                 role: Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![
-                    ToolResult {
-                        tool_call_id: "call_5".to_string(),
-                        content: json_str,
-                        error: String::new(),
-                    },
-                ],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_5".to_string(),
+                    content: json_str,
+                    error: String::new(),
+                }],
                 response_id: None,
                 previous_response_id: None,
             },

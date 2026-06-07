@@ -218,7 +218,28 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
                             msg.content, parse_error_msg
                         );
+                        if !msg.tool_calls.is_empty() {
+                        let tool_results = msg
+                            .tool_calls
+                            .iter()
+                            .map(|tc| crate::types::ToolResult {
+                                tool_call_id: tc.id.clone(),
+                                content: String::new(),
+                                error: error_context.clone(),
+                            })
+                            .collect();
+
+                        current_req.messages.push(Message {
+                            role: crate::types::Role::Tool,
+                            content: String::new(),
+                            tool_calls: vec![],
+                            tool_results,
+                            response_id: None,
+                            previous_response_id: msg.response_id.clone(),
+                        });
+                    } else {
                         current_req.messages.push(Message::user(error_context));
+                    }
                     }
                     attempt += 1;
                 }
@@ -264,7 +285,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_serde_error_classification() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_tool_call_resp(
                     "structured_output",
                     serde_json::json!({"data": {"result": 123}}),
@@ -274,24 +295,35 @@ mod tests {
                     serde_json::json!({"data": {"result": "recovered"}}),
                 ),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
+
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
-            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+            parse_structured_output(&(client.clone() as Arc<dyn LlmClientForParser>), req, 2).await;
 
         // It should recover on the second try
         assert!(result.is_ok());
         assert_eq!(result.unwrap().result, "recovered");
 
         // Need to check the requests to ensure the prompt contained the "Semantic validation failed"
+        let reqs = client.requests.lock().await;
+        assert_eq!(reqs.len(), 2, "Should have made 2 requests");
+        let retry_req = &reqs[1];
+        let last_msg = retry_req.messages.last().unwrap();
+        assert_eq!(last_msg.role, crate::types::Role::Tool);
+        assert_eq!(last_msg.tool_results.len(), 1);
+        assert!(last_msg.tool_results[0].error.contains("Semantic validation failed:"));
+
         // Let's modify the test to just check if it fails with the right message when max_retries = 0
         let client_fail = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_tool_call_resp(
+                responses: Mutex::new(vec![create_tool_call_resp(
                 "structured_output",
                 serde_json::json!({"data": {"result": 123}}),
             )]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req2 = create_test_req();
         let result_fail: Result<TestOutput, _> =
@@ -317,14 +349,16 @@ mod tests {
 
     struct MockLlmClient {
         responses: Mutex<Vec<ChatResponse>>,
+        requests: Mutex<Vec<ChatRequest>>,
     }
 
     #[async_trait::async_trait]
     impl LlmClientForParser for MockLlmClient {
         async fn chat(
             &self,
-            _req: ChatRequest,
+            req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
             let mut resps = self.responses.lock().await;
             if !resps.is_empty() {
                 Ok(resps.remove(0))
@@ -383,10 +417,11 @@ mod tests {
     async fn test_parse_structured_output_markdown_wrapper_fallback() {
         // Fallback mechanic now seamlessly extracts the JSON without an extra LLM roundtrip
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_text_resp(
+                responses: Mutex::new(vec![create_text_resp(
                 "```json\n{\n  \"result\": \"success_markdown\"\n}\n```",
             )]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: TestOutput =
@@ -399,14 +434,15 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_retry_success() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_text_resp("invalid plain text json"),
                 create_tool_call_resp(
                     "structured_output",
                     serde_json::json!({"data": {"result": "success after retry"}}),
                 ),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
@@ -418,11 +454,12 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_failure() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_text_resp("invalid plain text"),
                 create_text_resp("still invalid plain text"),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
@@ -438,11 +475,12 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_tool_calls_success() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_tool_call_resp(
+                responses: Mutex::new(vec![create_tool_call_resp(
                 "structured_output",
                 serde_json::json!({"data": {"result": "success_tool_call"}}),
             )]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: TestOutput =
@@ -455,7 +493,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_tool_calls_retry_success() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_tool_call_resp(
                     "structured_output",
                     serde_json::json!({"data": {"wrong_field": "test"}}),
@@ -465,7 +503,8 @@ mod tests {
                     serde_json::json!({"data": {"result": "success_tool_call_retry"}}),
                 ),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
@@ -477,7 +516,7 @@ mod tests {
     #[tokio::test]
     async fn test_parse_structured_output_tool_calls_failure() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_tool_call_resp(
                     "structured_output",
                     serde_json::json!({"data": {"wrong_field": "test"}}),
@@ -487,7 +526,8 @@ mod tests {
                     serde_json::json!({"data": {"wrong_field_again": "test"}}),
                 ),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
@@ -508,14 +548,15 @@ mod tests {
     #[tokio::test]
     async fn test_retry_parser_malformed_json_recovery() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_text_resp("this is completely { malformed JSON ["),
                 create_tool_call_resp(
                     "structured_output",
                     serde_json::json!({"data": {"result": "recovered"}}),
                 ),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
@@ -527,7 +568,7 @@ mod tests {
     #[tokio::test]
     async fn test_retry_parser_schema_mismatch_correction() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_tool_call_resp(
                     "structured_output",
                     serde_json::json!({"data": {"wrong_schema": true}}),
@@ -537,7 +578,8 @@ mod tests {
                     serde_json::json!({"data": {"result": "corrected_schema"}}),
                 ),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
@@ -549,13 +591,14 @@ mod tests {
     #[tokio::test]
     async fn test_retry_parser_exhaustion_returns_recoverable_error() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
+                responses: Mutex::new(vec![
                 create_text_resp("bad 1"),
                 create_text_resp("bad 2"),
                 create_text_resp("bad 3"),
                 create_text_resp("bad 4"),
             ]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         let req = create_test_req();
         let result: Result<TestOutput, _> =
@@ -585,14 +628,16 @@ mod retry_tests {
 
     struct MockLlmClient {
         responses: Mutex<Vec<ChatResponse>>,
+        requests: Mutex<Vec<ChatRequest>>,
     }
 
     #[async_trait::async_trait]
     impl LlmClientForParser for MockLlmClient {
         async fn chat(
             &self,
-            _req: ChatRequest,
+            req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
             let mut resps = self.responses.lock().await;
             if !resps.is_empty() {
                 Ok(resps.remove(0))
@@ -641,11 +686,12 @@ mod retry_tests {
     #[tokio::test]
     async fn test_retry_parser_llm_transient_error_retry() {
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_tool_call_resp(
+                responses: Mutex::new(vec![create_tool_call_resp(
                 "structured_output",
                 serde_json::json!({"data": {"result": "success"}}),
             )]),
-        });
+                requests: Mutex::new(vec![]),
+            });
 
         struct FailingLlmClient {
             client: Arc<MockLlmClient>,

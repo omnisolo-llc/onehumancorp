@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
+use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
-use serde::{Serialize, Deserialize};
 
 struct CircuitBreaker {
     failures: Mutex<usize>,
@@ -80,12 +80,12 @@ pub struct Client {
 
 impl Client {
     pub fn new_from_env() -> Self {
-        let base_url = std::env::var("PLANE_URL")
-            .unwrap_or_else(|_| "http://plane-api:8000".to_string());
+        let base_url =
+            std::env::var("PLANE_URL").unwrap_or_else(|_| "http://plane-api:8000".to_string());
         let api_key = std::env::var("PLANE_API_KEY").unwrap_or_default();
         let workspace = std::env::var("PLANE_WORKSPACE").unwrap_or_default();
         let project = std::env::var("PLANE_PROJECT").unwrap_or_default();
-        
+
         Client {
             base_url,
             api_key,
@@ -105,12 +105,17 @@ impl Client {
             return Err("plane API circuit breaker is open".to_string());
         }
 
-        let path = format!("/api/v1/workspaces/{}/projects/{}/issues/?state=open", self.workspace, self.project);
+        let path = format!(
+            "/api/v1/workspaces/{}/projects/{}/issues/?state=open",
+            self.workspace, self.project
+        );
         let url = format!("{}{}", self.base_url, path);
 
-        let mut req = self.http_client.get(&url)
+        let mut req = self
+            .http_client
+            .get(&url)
             .header("Accept", "application/json");
-            
+
         if !self.api_key.is_empty() {
             req = req.header("x-api-key", &self.api_key);
         }
@@ -129,7 +134,10 @@ impl Client {
         if !resp.status().is_success() {
             let status = resp.status();
             let err_body = resp.text().await.unwrap_or_default();
-            return Err(format!("plane API GET {} returned {}: {}", url, status, err_body));
+            return Err(format!(
+                "plane API GET {} returned {}: {}",
+                url, status, err_body
+            ));
         }
 
         let result: IssueListResponse = resp.json().await.map_err(|e| e.to_string())?;
@@ -141,18 +149,23 @@ impl Client {
             return Err("plane API circuit breaker is open".to_string());
         }
 
-        let path = format!("/api/v1/workspaces/{}/projects/{}/issues/{}/", self.workspace, self.project, issue_id);
+        let path = format!(
+            "/api/v1/workspaces/{}/projects/{}/issues/{}/",
+            self.workspace, self.project, issue_id
+        );
         let url = format!("{}{}", self.base_url, path);
 
         let body = serde_json::json!({
             "state": state_id,
         });
 
-        let mut req = self.http_client.patch(&url)
+        let mut req = self
+            .http_client
+            .patch(&url)
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
             .json(&body);
-            
+
         if !self.api_key.is_empty() {
             req = req.header("x-api-key", &self.api_key);
         }
@@ -171,7 +184,10 @@ impl Client {
         if !resp.status().is_success() {
             let status = resp.status();
             let err_body = resp.text().await.unwrap_or_default();
-            return Err(format!("plane API PATCH {} returned {}: {}", url, status, err_body));
+            return Err(format!(
+                "plane API PATCH {} returned {}: {}",
+                url, status, err_body
+            ));
         }
 
         Ok(())

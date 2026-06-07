@@ -1,14 +1,11 @@
-use axum::{
-    routing::post,
-    Json, Router,
-};
+use axum::{Json, Router, routing::post};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use crate::visual_workflow::{WorkflowGraph, WorkflowExecutor};
 use crate::agent::{Agent, AgentRunConfig};
 use crate::llm::LlmClient;
+use crate::visual_workflow::{WorkflowExecutor, WorkflowGraph};
 
 /// HTTP Server AppState
 pub struct VisualWorkflowState {
@@ -68,18 +65,21 @@ pub fn create_router(state: Arc<VisualWorkflowState>) -> Router {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use crate::visual_workflow::{Edge, Node, NodeType};
     use axum::{
         body::Body,
         http::{Request, StatusCode},
     };
     use tower::ServiceExt;
-    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
-    use crate::visual_workflow::{Node, NodeType, Edge};
 
     struct MockVisualClientLlm;
     #[async_trait::async_trait]
     impl LlmClient for MockVisualClientLlm {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let last_user = req.messages.last().unwrap().content.clone();
             Ok(ChatResponse {
                 message: Message::assistant(format!("Mocked: {}", last_user)),
@@ -105,23 +105,39 @@ mod tests {
 
         let graph = WorkflowGraph {
             nodes: vec![
-                Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
-                Node { id: "llm1".to_string(), node_type: NodeType::Llm { prompt_template: "Input was: {{in}}".to_string() } },
-                Node { id: "out".to_string(), node_type: NodeType::Output },
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+                Node {
+                    id: "llm1".to_string(),
+                    node_type: NodeType::Llm {
+                        prompt_template: "Input was: {{in}}".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
             ],
             edges: vec![
-                Edge { source: "in".to_string(), target: "llm1".to_string() },
-                Edge { source: "llm1".to_string(), target: "out".to_string() },
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+                Edge {
+                    source: "llm1".to_string(),
+                    target: "out".to_string(),
+                },
             ],
         };
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "test_data".to_string());
 
-        let req_body = serde_json::to_string(&WorkflowRunRequest {
-            graph,
-            inputs,
-        }).unwrap();
+        let req_body = serde_json::to_string(&WorkflowRunRequest { graph, inputs }).unwrap();
 
         let response = app
             .oneshot(
@@ -137,7 +153,9 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let resp: WorkflowRunResponse = serde_json::from_slice(&body_bytes).unwrap();
 
         assert!(resp.success);

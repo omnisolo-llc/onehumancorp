@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use futures::future::join_all;
+use std::sync::Arc;
 
 /// SOTA Harness Patterns (2025-2026): 4. Scalable multi-agent -> single-user CLI to 1000+ agent cloud deployments
 
@@ -38,7 +38,10 @@ impl CloudOrchestrator {
 
     /// Distributes tasks across the fleet of agents.
     /// Simulates scaling from a single-user CLI context to 1000+ cloud agents.
-    pub async fn distribute_and_execute(&self, tasks: Vec<TaskChunk>) -> Result<Vec<TaskResult>, String> {
+    pub async fn distribute_and_execute(
+        &self,
+        tasks: Vec<TaskChunk>,
+    ) -> Result<Vec<TaskResult>, String> {
         if tasks.is_empty() {
             return Ok(Vec::new());
         }
@@ -67,9 +70,7 @@ impl CloudOrchestrator {
 
                 for (i, task) in tasks.into_iter().enumerate() {
                     let node = self.nodes[i % num_nodes].clone();
-                    let fut = async move {
-                        node.execute(task).await
-                    };
+                    let fut = async move { node.execute(task).await };
                     futures.push(fut);
                 }
 
@@ -118,8 +119,14 @@ mod tests {
         let orchestrator = CloudOrchestrator::new(DeploymentMode::LocalCli, vec![node.clone()]);
 
         let tasks = vec![
-            TaskChunk { id: "1".to_string(), payload: "Data A".to_string() },
-            TaskChunk { id: "2".to_string(), payload: "Data B".to_string() },
+            TaskChunk {
+                id: "1".to_string(),
+                payload: "Data A".to_string(),
+            },
+            TaskChunk {
+                id: "2".to_string(),
+                payload: "Data B".to_string(),
+            },
         ];
 
         let results = orchestrator.distribute_and_execute(tasks).await.unwrap();

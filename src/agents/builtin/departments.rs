@@ -43,7 +43,21 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
                 - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get", "booking_get_services", "booking_upsert_service", "booking_list_appointments", "booking_create_appointment"],
+            allowed_tools: vec![
+                "read",
+                "write",
+                "glob",
+                "head",
+                "tail",
+                "task_create",
+                "task_update",
+                "task_list",
+                "task_get",
+                "booking_get_services",
+                "booking_upsert_service",
+                "booking_list_appointments",
+                "booking_create_appointment",
+            ],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {
@@ -55,7 +69,13 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
                 - Creates QR codes, link-in-bio pages, and shareable storefront links",
-            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
+            allowed_tools: vec![
+                "write",
+                "websearch",
+                "webfetch",
+                "qr_generate",
+                "generative_visibility",
+            ],
             confidence_threshold: 0.70,
         },
         Department::Sales => DepartmentConfig {
@@ -67,7 +87,14 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Suggests upsell and cross-sell opportunities\n\
                 - Manages referral program and tracks referrals\n\
                 - Autonomously generates Conversational Checkout Links for DMs",
-            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage", "conversational_checkout"],
+            allowed_tools: vec![
+                "read",
+                "head",
+                "tail",
+                "write",
+                "sendmessage",
+                "conversational_checkout",
+            ],
             confidence_threshold: 0.80,
         },
         Department::CustomerSuccess => DepartmentConfig {
@@ -78,7 +105,16 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\
                 - Manages customer profiles, tags, and notes",
-            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list", "booking_get_services", "booking_list_appointments", "booking_create_appointment"],
+            allowed_tools: vec![
+                "read",
+                "head",
+                "tail",
+                "sendmessage",
+                "task_list",
+                "booking_get_services",
+                "booking_list_appointments",
+                "booking_create_appointment",
+            ],
             confidence_threshold: 0.90,
         },
         Department::Finance => DepartmentConfig {
@@ -113,7 +149,14 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Compares performance to similar businesses (anonymized)\n\
                 - Recommends pricing adjustments based on market data\n\
                 - Flags unusual patterns that might indicate problems (sudden drop in orders, unusual refund requests)",
-            allowed_tools: vec!["read", "head", "tail", "write", "websearch", "finance_report"],
+            allowed_tools: vec![
+                "read",
+                "head",
+                "tail",
+                "write",
+                "websearch",
+                "finance_report",
+            ],
             confidence_threshold: 0.85,
         },
     }
@@ -125,16 +168,46 @@ mod tests {
 
     #[test]
     fn test_department_from_str() {
-        assert!(matches!(Department::from_str("operations"), Ok(Department::Operations)));
-        assert!(matches!(Department::from_str("Operations"), Ok(Department::Operations)));
-        assert!(matches!(Department::from_str("marketing"), Ok(Department::Marketing)));
-        assert!(matches!(Department::from_str("sales"), Ok(Department::Sales)));
-        assert!(matches!(Department::from_str("customersuccess"), Ok(Department::CustomerSuccess)));
-        assert!(matches!(Department::from_str("customer_success"), Ok(Department::CustomerSuccess)));
-        assert!(matches!(Department::from_str("finance"), Ok(Department::Finance)));
-        assert!(matches!(Department::from_str("legal"), Ok(Department::Legal)));
-        assert!(matches!(Department::from_str("businessadvisory"), Ok(Department::BusinessAdvisory)));
-        assert!(matches!(Department::from_str("business_advisory"), Ok(Department::BusinessAdvisory)));
+        assert!(matches!(
+            Department::from_str("operations"),
+            Ok(Department::Operations)
+        ));
+        assert!(matches!(
+            Department::from_str("Operations"),
+            Ok(Department::Operations)
+        ));
+        assert!(matches!(
+            Department::from_str("marketing"),
+            Ok(Department::Marketing)
+        ));
+        assert!(matches!(
+            Department::from_str("sales"),
+            Ok(Department::Sales)
+        ));
+        assert!(matches!(
+            Department::from_str("customersuccess"),
+            Ok(Department::CustomerSuccess)
+        ));
+        assert!(matches!(
+            Department::from_str("customer_success"),
+            Ok(Department::CustomerSuccess)
+        ));
+        assert!(matches!(
+            Department::from_str("finance"),
+            Ok(Department::Finance)
+        ));
+        assert!(matches!(
+            Department::from_str("legal"),
+            Ok(Department::Legal)
+        ));
+        assert!(matches!(
+            Department::from_str("businessadvisory"),
+            Ok(Department::BusinessAdvisory)
+        ));
+        assert!(matches!(
+            Department::from_str("business_advisory"),
+            Ok(Department::BusinessAdvisory)
+        ));
 
         let err = Department::from_str("invalid_dept");
         assert!(err.is_err());

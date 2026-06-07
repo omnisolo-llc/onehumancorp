@@ -1,6 +1,6 @@
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
-use async_trait::async_trait;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EmbeddingRecord {
@@ -27,15 +27,16 @@ pub struct VectorRepository {
     store: VectorMemoryStore,
 }
 
-
 fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 1.0;
     }
-    let (dot_product, norm_a, norm_b) = a.iter().zip(b.iter()).fold(
-        (0.0f32, 0.0f32, 0.0f32),
-        |(dot, na, nb), (&x, &y)| (dot + x * y, na + x * x, nb + y * y),
-    );
+    let (dot_product, norm_a, norm_b) = a
+        .iter()
+        .zip(b.iter())
+        .fold((0.0f32, 0.0f32, 0.0f32), |(dot, na, nb), (&x, &y)| {
+            (dot + x * y, na + x * x, nb + y * y)
+        });
     if norm_a == 0.0 || norm_b == 0.0 {
         return 1.0;
     }
@@ -45,20 +46,24 @@ fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
 
 impl VectorRepository {
     pub fn new(pool: sqlx::PgPool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Postgres(pool) }
+        VectorRepository {
+            store: VectorMemoryStore::Postgres(pool),
+        }
     }
 
     pub fn new_sqlite(pool: sqlx::SqlitePool) -> Self {
-        VectorRepository { store: VectorMemoryStore::Sqlite(pool) }
+        VectorRepository {
+            store: VectorMemoryStore::Sqlite(pool),
+        }
     }
-
 
     pub fn get_store(&self) -> &VectorMemoryStore {
         &self.store
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
-        let emb_str = serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
+        let emb_str =
+            serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -126,11 +131,22 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn cross_department_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
-        self.semantic_search(tenant_id, query_embedding, limit).await
+    pub async fn cross_department_search(
+        &self,
+        tenant_id: &str,
+        query_embedding: &[f32],
+        limit: i64,
+    ) -> Result<Vec<EmbeddingRecord>, String> {
+        self.semantic_search(tenant_id, query_embedding, limit)
+            .await
     }
 
-    pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+    pub async fn semantic_search(
+        &self,
+        tenant_id: &str,
+        query_embedding: &[f32],
+        limit: i64,
+    ) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
@@ -168,7 +184,8 @@ impl VectorRepository {
                     let owner_override: bool = row.get("owner_override");
                     let metadata: Option<String> = row.get("metadata");
 
-                    let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+                    let embedding: Vec<f32> =
+                        serde_json::from_str(&emb_str_res).unwrap_or_default();
 
                     results.push(EmbeddingRecord {
                         id,
@@ -226,14 +243,19 @@ impl VectorRepository {
                         let content: String = row.get("content");
                         let emb_str_res: String = row.get("embedding");
                         let source_type: String = row.get("source_type");
-                        let created_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?;
-                        let last_referenced_at: DateTime<Utc> = row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?;
+                        let created_at: DateTime<Utc> = row
+                            .try_get::<DateTime<Utc>, _>("created_at")
+                            .map_err(|e| e.to_string())?;
+                        let last_referenced_at: DateTime<Utc> = row
+                            .try_get::<DateTime<Utc>, _>("last_referenced_at")
+                            .map_err(|e| e.to_string())?;
                         let reference_count: i32 = row.get("reference_count");
                         let reliability_score: i32 = row.get("reliability_score");
                         let owner_override: bool = row.get("owner_override");
                         let metadata: Option<String> = row.get("metadata");
 
-                        let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+                        let embedding: Vec<f32> =
+                            serde_json::from_str(&emb_str_res).unwrap_or_default();
 
                         results.push(EmbeddingRecord {
                             id,
@@ -252,8 +274,15 @@ impl VectorRepository {
                     }
 
                     if !ids_to_update.is_empty() {
-                        let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                        let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
+                        let placeholders = ids_to_update
+                            .iter()
+                            .map(|_| "?")
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        let query = format!(
+                            "UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})",
+                            placeholders
+                        );
                         let mut q = sqlx::query(&query);
                         for id in ids_to_update {
                             q = q.bind(id);
@@ -274,8 +303,12 @@ impl VectorRepository {
 
                     let mut all_records = Vec::new();
                     for row in rows {
-                        let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
-                        let embedding: Vec<f32> = serde_json::from_str(&emb_str_res).unwrap_or_default();
+                        let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                .unwrap_or_default()
+                        });
+                        let embedding: Vec<f32> =
+                            serde_json::from_str(&emb_str_res).unwrap_or_default();
 
                         let record = EmbeddingRecord {
                             id: row.get("id"),
@@ -284,8 +317,12 @@ impl VectorRepository {
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
@@ -298,15 +335,25 @@ impl VectorRepository {
                     all_records.sort_by(|a, b| {
                         let dist_a = cosine_distance(&a.embedding, &query_emb);
                         let dist_b = cosine_distance(&b.embedding, &query_emb);
-                        dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                        dist_a
+                            .partial_cmp(&dist_b)
+                            .unwrap_or(std::cmp::Ordering::Equal)
                     });
 
                     results = all_records.into_iter().take(limit as usize).collect();
 
                     if !results.is_empty() {
-                        let ids_to_update: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
-                        let placeholders = ids_to_update.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                        let query = format!("UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})", placeholders);
+                        let ids_to_update: Vec<String> =
+                            results.iter().map(|r| r.id.clone()).collect();
+                        let placeholders = ids_to_update
+                            .iter()
+                            .map(|_| "?")
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        let query = format!(
+                            "UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id IN ({})",
+                            placeholders
+                        );
                         let mut q = sqlx::query(&query);
                         for id in ids_to_update {
                             q = q.bind(id);
@@ -343,7 +390,8 @@ impl VectorRepository {
         Ok(())
     }
 
-    #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
+    #[allow(dead_code)]
+    pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
@@ -363,7 +411,11 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn resolve_conflict(&self, winner: &EmbeddingRecord, loser: &EmbeddingRecord) -> Result<(), String> {
+    pub async fn resolve_conflict(
+        &self,
+        winner: &EmbeddingRecord,
+        loser: &EmbeddingRecord,
+    ) -> Result<(), String> {
         self.delete(&loser.id).await?;
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count + 1;
@@ -396,9 +448,22 @@ impl VectorRepository {
     }
 
     /// Determines the winner of a memory conflict between two embedding records.
-    pub fn determine_conflict_winner<'a>(a: &'a EmbeddingRecord, b: &'a EmbeddingRecord) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
-        let cmp = (a.owner_override, a.reliability_score, a.created_at, std::cmp::Reverse(&a.id))
-            .cmp(&(b.owner_override, b.reliability_score, b.created_at, std::cmp::Reverse(&b.id)));
+    pub fn determine_conflict_winner<'a>(
+        a: &'a EmbeddingRecord,
+        b: &'a EmbeddingRecord,
+    ) -> (&'a EmbeddingRecord, &'a EmbeddingRecord) {
+        let cmp = (
+            a.owner_override,
+            a.reliability_score,
+            a.created_at,
+            std::cmp::Reverse(&a.id),
+        )
+            .cmp(&(
+                b.owner_override,
+                b.reliability_score,
+                b.created_at,
+                std::cmp::Reverse(&b.id),
+            ));
 
         if cmp == std::cmp::Ordering::Greater {
             (a, b)
@@ -406,7 +471,6 @@ impl VectorRepository {
             (b, a)
         }
     }
-
 
     fn parse_conflict_row<R>(row: &R) -> Result<(EmbeddingRecord, EmbeddingRecord), String>
     where
@@ -418,8 +482,12 @@ impl VectorRepository {
         for<'c> bool: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
         for<'c> DateTime<Utc>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
     {
-        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
-        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| {
+            String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default()
+        });
+        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| {
+            String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default()
+        });
 
         let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
         let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
@@ -427,14 +495,25 @@ impl VectorRepository {
         let a = EmbeddingRecord {
             id: row.try_get("a_id").map_err(|e| e.to_string())?,
             tenant_id: row.try_get("a_tenant_id").map_err(|e| e.to_string())?,
-            agent_id: row.try_get::<Option<String>, _>("a_agent_id").unwrap_or_default().unwrap_or_default(),
+            agent_id: row
+                .try_get::<Option<String>, _>("a_agent_id")
+                .unwrap_or_default()
+                .unwrap_or_default(),
             content: row.try_get("a_content").map_err(|e| e.to_string())?,
             embedding: a_embedding,
             source_type: row.try_get("a_source_type").map_err(|e| e.to_string())?,
-            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
-            reference_count: row.try_get("a_reference_count").map_err(|e| e.to_string())?,
-            reliability_score: row.try_get("a_reliability_score").map_err(|e| e.to_string())?,
+            created_at: row
+                .try_get::<DateTime<Utc>, _>("a_created_at")
+                .map_err(|e| e.to_string())?,
+            last_referenced_at: row
+                .try_get::<DateTime<Utc>, _>("a_last_referenced_at")
+                .map_err(|e| e.to_string())?,
+            reference_count: row
+                .try_get("a_reference_count")
+                .map_err(|e| e.to_string())?,
+            reliability_score: row
+                .try_get("a_reliability_score")
+                .map_err(|e| e.to_string())?,
             owner_override: row.try_get("a_owner_override").map_err(|e| e.to_string())?,
             metadata: row.try_get("a_metadata").map_err(|e| e.to_string())?,
         };
@@ -442,14 +521,25 @@ impl VectorRepository {
         let b = EmbeddingRecord {
             id: row.try_get("b_id").map_err(|e| e.to_string())?,
             tenant_id: row.try_get("b_tenant_id").map_err(|e| e.to_string())?,
-            agent_id: row.try_get::<Option<String>, _>("b_agent_id").unwrap_or_default().unwrap_or_default(),
+            agent_id: row
+                .try_get::<Option<String>, _>("b_agent_id")
+                .unwrap_or_default()
+                .unwrap_or_default(),
             content: row.try_get("b_content").map_err(|e| e.to_string())?,
             embedding: b_embedding,
             source_type: row.try_get("b_source_type").map_err(|e| e.to_string())?,
-            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
-            reference_count: row.try_get("b_reference_count").map_err(|e| e.to_string())?,
-            reliability_score: row.try_get("b_reliability_score").map_err(|e| e.to_string())?,
+            created_at: row
+                .try_get::<DateTime<Utc>, _>("b_created_at")
+                .map_err(|e| e.to_string())?,
+            last_referenced_at: row
+                .try_get::<DateTime<Utc>, _>("b_last_referenced_at")
+                .map_err(|e| e.to_string())?,
+            reference_count: row
+                .try_get("b_reference_count")
+                .map_err(|e| e.to_string())?,
+            reliability_score: row
+                .try_get("b_reliability_score")
+                .map_err(|e| e.to_string())?,
             owner_override: row.try_get("b_owner_override").map_err(|e| e.to_string())?,
             metadata: row.try_get("b_metadata").map_err(|e| e.to_string())?,
         };
@@ -457,7 +547,9 @@ impl VectorRepository {
         Ok((a, b))
     }
 
-    pub async fn get_conflicting_pairs(&self) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
+    pub async fn get_conflicting_pairs(
+        &self,
+    ) -> Result<Vec<(EmbeddingRecord, EmbeddingRecord)>, String> {
         let mut conflicts = Vec::new();
 
         match &self.store {
@@ -505,21 +597,35 @@ impl VectorRepository {
                         .map_err(|e| e.to_string())?;
 
                     for row in rows {
-                        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("a_embedding")).unwrap_or_default());
-                        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("b_embedding")).unwrap_or_default());
+                        let a_emb_str: String = row.try_get("a_embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("a_embedding"))
+                                .unwrap_or_default()
+                        });
+                        let b_emb_str: String = row.try_get("b_embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("b_embedding"))
+                                .unwrap_or_default()
+                        });
 
-                        let a_embedding: Vec<f32> = serde_json::from_str(&a_emb_str).unwrap_or_default();
-                        let b_embedding: Vec<f32> = serde_json::from_str(&b_emb_str).unwrap_or_default();
+                        let a_embedding: Vec<f32> =
+                            serde_json::from_str(&a_emb_str).unwrap_or_default();
+                        let b_embedding: Vec<f32> =
+                            serde_json::from_str(&b_emb_str).unwrap_or_default();
 
                         let a = EmbeddingRecord {
                             id: row.get("a_id"),
                             tenant_id: row.get("a_tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("a_agent_id").unwrap_or_default(),
+                            agent_id: row
+                                .get::<Option<String>, _>("a_agent_id")
+                                .unwrap_or_default(),
                             content: row.get("a_content"),
                             embedding: a_embedding,
                             source_type: row.get("a_source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("a_created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("a_last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("a_created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("a_last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("a_reference_count"),
                             reliability_score: row.get("a_reliability_score"),
                             owner_override: row.get("a_owner_override"),
@@ -529,12 +635,18 @@ impl VectorRepository {
                         let b = EmbeddingRecord {
                             id: row.get("b_id"),
                             tenant_id: row.get("b_tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("b_agent_id").unwrap_or_default(),
+                            agent_id: row
+                                .get::<Option<String>, _>("b_agent_id")
+                                .unwrap_or_default(),
                             content: row.get("b_content"),
                             embedding: b_embedding,
                             source_type: row.get("b_source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("b_created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("b_last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("b_created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("b_last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("b_reference_count"),
                             reliability_score: row.get("b_reliability_score"),
                             owner_override: row.get("b_owner_override"),
@@ -557,8 +669,12 @@ impl VectorRepository {
 
                     let mut all_records = Vec::new();
                     for row in rows {
-                        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
-                        let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
+                            String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                .unwrap_or_default()
+                        });
+                        let embedding: Vec<f32> =
+                            serde_json::from_str(&emb_str).unwrap_or_default();
 
                         let record = EmbeddingRecord {
                             id: row.get("id"),
@@ -567,8 +683,12 @@ impl VectorRepository {
                             content: row.get("content"),
                             embedding,
                             source_type: row.get("source_type"),
-                            created_at: row.try_get::<DateTime<Utc>, _>("created_at").map_err(|e| e.to_string())?,
-                            last_referenced_at: row.try_get::<DateTime<Utc>, _>("last_referenced_at").map_err(|e| e.to_string())?,
+                            created_at: row
+                                .try_get::<DateTime<Utc>, _>("created_at")
+                                .map_err(|e| e.to_string())?,
+                            last_referenced_at: row
+                                .try_get::<DateTime<Utc>, _>("last_referenced_at")
+                                .map_err(|e| e.to_string())?,
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
                             owner_override: row.get("owner_override"),
@@ -580,7 +700,10 @@ impl VectorRepository {
                     use std::collections::HashMap;
                     let mut grouped_records: HashMap<String, Vec<EmbeddingRecord>> = HashMap::new();
                     for record in all_records {
-                        grouped_records.entry(record.tenant_id.clone()).or_insert_with(Vec::new).push(record);
+                        grouped_records
+                            .entry(record.tenant_id.clone())
+                            .or_insert_with(Vec::new)
+                            .push(record);
                     }
 
                     let mut match_count = 0;
@@ -590,8 +713,10 @@ impl VectorRepository {
                                 let a = &records[i];
                                 let b = &records[j];
                                 // Ensure a consistent ordering to avoid duplicate pairs in different orders
-                                let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
-                                let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
+                                let (record_a, record_b) =
+                                    if a.id < b.id { (a, b) } else { (b, a) };
+                                let distance =
+                                    cosine_distance(&record_a.embedding, &record_b.embedding);
                                 if distance < 0.05 {
                                     conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
@@ -607,9 +732,7 @@ impl VectorRepository {
         }
         Ok(conflicts)
     }
-
 }
-
 
 #[async_trait]
 pub trait OHCMemory: Send + Sync {
@@ -647,11 +770,15 @@ impl FileBasedMemory {
 impl OHCMemory for FileBasedMemory {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String> {
         let dir = self.secure_join(&[namespace])?;
-        tokio::fs::create_dir_all(&dir).await.map_err(|e| e.to_string())?;
-        
+        tokio::fs::create_dir_all(&dir)
+            .await
+            .map_err(|e| e.to_string())?;
+
         let path = self.secure_join(&[namespace, key])?;
-        tokio::fs::write(path, data).await.map_err(|e| e.to_string())?;
-        
+        tokio::fs::write(path, data)
+            .await
+            .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 
@@ -721,30 +848,46 @@ mod tests {
         assert_eq!(index, "Sample index content");
 
         // Test topic retrieve
-        store.write_topic("system_architecture", "Detailed DB schema").await.unwrap();
+        store
+            .write_topic("system_architecture", "Detailed DB schema")
+            .await
+            .unwrap();
         let topic_content = store.retrieve_topic("system_architecture").await.unwrap();
         assert_eq!(topic_content, "Detailed DB schema");
         assert!(store.retrieve_topic("nonexistent").await.is_err());
 
         // Test transcript search
-        store.append_transcript("session1", "User asked about memory.\n\nAgent replied 3-tier is better.").await.unwrap();
-        store.append_transcript("session2", "User requested weather.\n\nAgent gave forecast.").await.unwrap();
+        store
+            .append_transcript(
+                "session1",
+                "User asked about memory.\n\nAgent replied 3-tier is better.",
+            )
+            .await
+            .unwrap();
+        store
+            .append_transcript(
+                "session2",
+                "User requested weather.\n\nAgent gave forecast.",
+            )
+            .await
+            .unwrap();
 
-        let res = store.search_transcripts("3-tier is better", 10).await.unwrap();
+        let res = store
+            .search_transcripts("3-tier is better", 10)
+            .await
+            .unwrap();
         assert_eq!(res.len(), 1);
         assert!(res[0].contains("Agent replied 3-tier is better."));
 
         let _ = tokio::fs::remove_dir_all(base_dir).await;
     }
-
-    }
-
+}
 
 #[async_trait]
 pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     /// Retrieve relevant past conversations or state based on a query
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
-    
+
     /// Store a new piece of memory (e.g., an architectural decision or summary)
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
 
@@ -754,12 +897,23 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     }
 
     /// Store a raw message into the session search FTS5 table
-    async fn store_session_message(&self, _session_id: &str, _role: &str, _content: &str) -> Result<(), String> {
+    async fn store_session_message(
+        &self,
+        _session_id: &str,
+        _role: &str,
+        _content: &str,
+    ) -> Result<(), String> {
         Ok(()) // Default no-op
     }
 
     /// Searches session messages using FTS5 MATCH, returning ranked snippets
-    async fn search_session_messages(&self, _session_id: &str, _query: &str, _limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
+    async fn search_session_messages(
+        &self,
+        _session_id: &str,
+        _query: &str,
+        _limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
         Ok(vec![]) // Default no-op
     }
 
@@ -772,7 +926,11 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> { None }
+    fn as_anthropic_accessor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
+        None
+    }
 }
 
 pub struct PersistentMemoryStore {
@@ -794,17 +952,30 @@ impl std::fmt::Debug for PersistentMemoryStore {
 #[async_trait]
 impl LongTermMemory for PersistentMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
-        let records = self.repo.semantic_search(&self.tenant_id, &embedding, limit as i64).await?;
+        let embedding = self
+            .llm
+            .generate_embedding(query)
+            .await
+            .map_err(|e| e.to_string())?;
+        let records = self
+            .repo
+            .semantic_search(&self.tenant_id, &embedding, limit as i64)
+            .await?;
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
-        let embedding = self.llm.generate_embedding(content).await.map_err(|e| e.to_string())?;
+        let embedding = self
+            .llm
+            .generate_embedding(content)
+            .await
+            .map_err(|e| e.to_string())?;
         let id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now();
 
-        let source_type = if tags.contains(&"AUTO_CONSOLIDATED".to_string()) || tags.contains(&"AUTO_CONSOLIDATED_LANGGRAPH".to_string()) {
+        let source_type = if tags.contains(&"AUTO_CONSOLIDATED".to_string())
+            || tags.contains(&"AUTO_CONSOLIDATED_LANGGRAPH".to_string())
+        {
             "TASK_SUMMARY"
         } else {
             "MANUAL"
@@ -868,20 +1039,36 @@ impl Anthropic3TierMemoryStore {
     }
 
     pub async fn update_index(&self, content: &str) -> Result<(), String> {
-        tokio::fs::write(&self.index_file, content).await.map_err(|e| e.to_string())
+        tokio::fs::write(&self.index_file, content)
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
-        tokio::fs::write(path, content).await.map_err(|e| e.to_string())
+        tokio::fs::write(path, content)
+            .await
+            .map_err(|e| e.to_string())
     }
 
-    pub async fn append_transcript(&self, session_id: &str, turn_content: &str) -> Result<(), String> {
+    pub async fn append_transcript(
+        &self,
+        session_id: &str,
+        turn_content: &str,
+    ) -> Result<(), String> {
         let path = self.transcripts_dir.join(format!("{}.log", session_id));
         use tokio::io::AsyncWriteExt;
-        let mut file = tokio::fs::OpenOptions::new().create(true).append(true).open(path).await.map_err(|e| e.to_string())?;
-        file.write_all(format!("{}\n\n", turn_content).as_bytes()).await.map_err(|e| e.to_string())?;
+        let mut file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .await
+            .map_err(|e| e.to_string())?;
+        file.write_all(format!("{}\n\n", turn_content).as_bytes())
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 }
@@ -889,10 +1076,13 @@ impl Anthropic3TierMemoryStore {
 #[async_trait]
 impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
         if path.exists() {
-            tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())
+            tokio::fs::read_to_string(&path)
+                .await
+                .map_err(|e| e.to_string())
         } else {
             Err(format!("Topic '{}' not found", safe_name))
         }
@@ -900,9 +1090,13 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
-        let mut dir = tokio::fs::read_dir(&self.transcripts_dir).await.map_err(|e| e.to_string())?;
+        let mut dir = tokio::fs::read_dir(&self.transcripts_dir)
+            .await
+            .map_err(|e| e.to_string())?;
         while let Ok(Some(entry)) = dir.next_entry().await {
-            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
+            let content = tokio::fs::read_to_string(entry.path())
+                .await
+                .map_err(|e| e.to_string())?;
             for par in content.split("\n\n") {
                 if par.to_lowercase().contains(&query.to_lowercase()) {
                     results.push(par.to_string());
@@ -925,9 +1119,13 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             return Ok(results);
         }
 
-        let mut dir = tokio::fs::read_dir(&self.topics_dir).await.map_err(|e| e.to_string())?;
+        let mut dir = tokio::fs::read_dir(&self.topics_dir)
+            .await
+            .map_err(|e| e.to_string())?;
         while let Ok(Some(entry)) = dir.next_entry().await {
-            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
+            let content = tokio::fs::read_to_string(entry.path())
+                .await
+                .map_err(|e| e.to_string())?;
             if content.to_lowercase().contains(&query.to_lowercase()) {
                 results.push(content);
                 if results.len() >= limit {
@@ -948,7 +1146,11 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             content.to_string()
         };
 
-        let tags_str = if tags.is_empty() { String::new() } else { format!(" [{}]", tags.join(", ")) };
+        let tags_str = if tags.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", tags.join(", "))
+        };
         let new_entry = format!("- {}{}\n", truncated_content.replace('\n', " "), tags_str);
 
         existing_index.push_str(&new_entry);
@@ -959,17 +1161,22 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 
     async fn get_lightweight_index(&self) -> Result<String, String> {
         if self.index_file.exists() {
-            tokio::fs::read_to_string(&self.index_file).await.map_err(|e| e.to_string())
+            tokio::fs::read_to_string(&self.index_file)
+                .await
+                .map_err(|e| e.to_string())
         } else {
             Ok(String::new())
         }
     }
 
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
         if path.exists() {
-            tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())
+            tokio::fs::read_to_string(&path)
+                .await
+                .map_err(|e| e.to_string())
         } else {
             Err(format!("Topic '{}' not found", safe_name))
         }
@@ -977,9 +1184,13 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
-        let mut dir = tokio::fs::read_dir(&self.transcripts_dir).await.map_err(|e| e.to_string())?;
+        let mut dir = tokio::fs::read_dir(&self.transcripts_dir)
+            .await
+            .map_err(|e| e.to_string())?;
         while let Ok(Some(entry)) = dir.next_entry().await {
-            let content = tokio::fs::read_to_string(entry.path()).await.map_err(|e| e.to_string())?;
+            let content = tokio::fs::read_to_string(entry.path())
+                .await
+                .map_err(|e| e.to_string())?;
             for par in content.split("\n\n") {
                 if par.to_lowercase().contains(&query.to_lowercase()) {
                     results.push(par.to_string());
@@ -991,7 +1202,9 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         }
         Ok(results)
     }
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
+    fn as_anthropic_accessor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
         Some(std::sync::Arc::new(self.clone()))
     }
 }
@@ -1023,9 +1236,11 @@ impl RedisMemoryStore {
     }
 
     async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        let conn = self.connection.get_or_try_init(|| async {
-            self.client.get_multiplexed_tokio_connection().await
-        }).await.map_err(|e| e.to_string())?;
+        let conn = self
+            .connection
+            .get_or_try_init(|| async { self.client.get_multiplexed_tokio_connection().await })
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(conn.clone())
     }
 }
@@ -1035,8 +1250,8 @@ impl LongTermMemory for RedisMemoryStore {
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut conn = self.get_connection().await?;
         let key = format!("{}:memory", self.namespace);
-        
-        // Simple LRANGE to get recent memories. 
+
+        // Simple LRANGE to get recent memories.
         // Real implementation would embed the query and use FT.SEARCH
         let results: Vec<String> = redis::cmd("LRANGE")
             .arg(&key)
@@ -1045,21 +1260,21 @@ impl LongTermMemory for RedisMemoryStore {
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(results)
     }
 
     async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let key = format!("{}:memory", self.namespace);
-        
+
         let _: () = redis::cmd("LPUSH")
             .arg(&key)
             .arg(content)
             .query_async(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         Ok(())
     }
 }
@@ -1069,8 +1284,8 @@ mod get_conflicts_tests {
     #[tokio::test]
     async fn test_auto_resolve_conflicts_with_override_new() {
         // Migrated override test from standalone conflict.rs {
-        use std::str::FromStr;
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use std::str::FromStr;
 
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
         let pool = match SqlitePoolOptions::new().connect_with(conn_opts).await {
@@ -1092,8 +1307,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1140,7 +1357,7 @@ mod get_conflicts_tests {
         assert_eq!(row_id, "rec1");
     }
     use super::*;
-    use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
 
     #[tokio::test]
@@ -1166,8 +1383,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1243,8 +1462,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1367,8 +1588,6 @@ mod get_conflicts_tests {
         assert_eq!(results.get("rec3_b"), Some(&2));
     }
 
-
-
     #[tokio::test]
     async fn test_prune_stale_sqlite() {
         // Migrated unit test from standalone pruning.rs {
@@ -1393,8 +1612,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1470,7 +1691,9 @@ mod get_conflicts_tests {
         repo.upsert(&record4).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(now - chrono::Duration::days(180))
+            .await
+            .unwrap();
 
         // Verify prune
         let query = "SELECT id FROM consolidated_memory";
@@ -1478,10 +1701,17 @@ mod get_conflicts_tests {
 
         assert_eq!(rows.len(), 3, "Three records should remain");
 
-        let mut remaining_ids: Vec<String> = rows.into_iter().map(|row| row.try_get("id").unwrap()).collect();
+        let mut remaining_ids: Vec<String> = rows
+            .into_iter()
+            .map(|row| row.try_get("id").unwrap())
+            .collect();
         remaining_ids.sort();
 
-        assert_eq!(remaining_ids, vec!["rec2", "rec3", "rec4"], "The correct records should remain");
+        assert_eq!(
+            remaining_ids,
+            vec!["rec2", "rec3", "rec4"],
+            "The correct records should remain"
+        );
     }
 
     #[tokio::test]
@@ -1507,8 +1737,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1584,8 +1816,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1626,7 +1860,9 @@ mod get_conflicts_tests {
         repo.upsert(&record2).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(now - chrono::Duration::days(180))
+            .await
+            .unwrap();
 
         // Verify prune
         let query = "SELECT id FROM consolidated_memory";
@@ -1664,8 +1900,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1751,8 +1989,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1774,14 +2014,20 @@ mod get_conflicts_tests {
 
         repo.upsert(&record1).await.unwrap();
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
-            .fetch_one(&pool).await.unwrap();
+        let count: (i64,) =
+            sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(count.0, 1);
 
         repo.delete("rec1").await.unwrap();
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
-            .fetch_one(&pool).await.unwrap();
+        let count: (i64,) =
+            sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = 'rec1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(count.0, 0);
     }
 
@@ -1807,8 +2053,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1848,7 +2096,10 @@ mod get_conflicts_tests {
 
         // Testing the fallback behavior if vec_distance_cosine doesn't exist
         // or just the generic semantic search logic.
-        let results = repo.semantic_search("org1", &[1.0, 0.0, 0.0], 5).await.unwrap();
+        let results = repo
+            .semantic_search("org1", &[1.0, 0.0, 0.0], 5)
+            .await
+            .unwrap();
 
         // Either the results come back ordered by created_at or vec_distance_cosine.
         // We just make sure it returns something.
@@ -1878,8 +2129,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1942,8 +2195,12 @@ mod get_conflicts_tests {
         let mut found_b = false;
         for r in results {
             assert_eq!(r.tenant_id, "org1");
-            if r.agent_id == "agent_a" { found_a = true; }
-            if r.agent_id == "agent_b" { found_b = true; }
+            if r.agent_id == "agent_a" {
+                found_a = true;
+            }
+            if r.agent_id == "agent_b" {
+                found_b = true;
+            }
         }
         assert!(found_a);
         assert!(found_b);
@@ -1971,8 +2228,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -1994,7 +2253,10 @@ mod get_conflicts_tests {
 
         repo.upsert(&record1).await.unwrap();
 
-        let results = repo.semantic_search("org1", &[0.5, 0.5, 0.5], 5).await.unwrap();
+        let results = repo
+            .semantic_search("org1", &[0.5, 0.5, 0.5], 5)
+            .await
+            .unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].content, "customer unhappy with pricing");
         assert_eq!(results[0].agent_id, "sales_agent");
@@ -2002,14 +2264,17 @@ mod get_conflicts_tests {
 
     #[tokio::test]
     async fn test_persistent_memory_store_retrieve_store() {
-        use std::sync::Arc;
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
         use ohc_builtin_agent_llm::LlmClient;
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+        use std::sync::Arc;
 
         struct MockLlm;
         #[async_trait::async_trait]
         impl LlmClient for MockLlm {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant(""),
                     usage: Usage::default(),
@@ -2017,7 +2282,10 @@ mod get_conflicts_tests {
                     response_id: None,
                 })
             }
-            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![0.1, 0.2, 0.3])
             }
         }
@@ -2042,8 +2310,10 @@ mod get_conflicts_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
         let llm = Arc::new(MockLlm);
@@ -2054,14 +2324,16 @@ mod get_conflicts_tests {
             llm: llm.clone(),
         };
 
-        store.store("test content", vec!["tag1".to_string()]).await.unwrap();
+        store
+            .store("test content", vec!["tag1".to_string()])
+            .await
+            .unwrap();
 
         let retrieved = store.retrieve("query", 10).await.unwrap();
         assert_eq!(retrieved.len(), 1);
         assert_eq!(retrieved[0], "test content");
     }
 }
-
 
 #[cfg(test)]
 mod anthropic_memory_tests {
@@ -2077,8 +2349,20 @@ mod anthropic_memory_tests {
         assert_eq!(index, "");
 
         // Test storing multiple items
-        store.store("User explicitly requested to use glassmorphism across all UI components.", vec!["ui".to_string(), "design".to_string()]).await.unwrap();
-        store.store("The PostgreSQL deployment requires enabling row-level security for multi-tenancy.", vec![]).await.unwrap();
+        store
+            .store(
+                "User explicitly requested to use glassmorphism across all UI components.",
+                vec!["ui".to_string(), "design".to_string()],
+            )
+            .await
+            .unwrap();
+        store
+            .store(
+                "The PostgreSQL deployment requires enabling row-level security for multi-tenancy.",
+                vec![],
+            )
+            .await
+            .unwrap();
 
         let index2 = store.get_lightweight_index().await.unwrap();
         assert!(index2.contains("glassmorphism"));
@@ -2087,7 +2371,13 @@ mod anthropic_memory_tests {
 
         // Add a mock topic file to test retrieve
         store.write_topic("Database Architecture", "The database architecture relies heavily on PostgreSQL with row-level security enabled for multi-tenancy isolation. This is critical for data separation.").await.unwrap();
-        store.write_topic("Frontend Style", "Use flutter and glassmorphism. It should look modern.").await.unwrap();
+        store
+            .write_topic(
+                "Frontend Style",
+                "Use flutter and glassmorphism. It should look modern.",
+            )
+            .await
+            .unwrap();
 
         let results = store.retrieve("postgresql", 5).await.unwrap();
         assert_eq!(results.len(), 1);
@@ -2105,7 +2395,10 @@ mod anthropic_memory_tests {
     async fn test_cross_department_search() {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+        {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -2124,8 +2417,10 @@ mod anthropic_memory_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = super::VectorRepository::new_sqlite(pool.clone());
 
@@ -2162,7 +2457,10 @@ mod anthropic_memory_tests {
         repo.upsert(&cs_record).await.unwrap();
         repo.upsert(&advisory_record).await.unwrap();
 
-        let results = repo.cross_department_search("org1", &[0.5, 0.5, 0.5], 10).await.unwrap();
+        let results = repo
+            .cross_department_search("org1", &[0.5, 0.5, 0.5], 10)
+            .await
+            .unwrap();
 
         // Testing the fallback behavior if vec_distance_cosine doesn't exist
         // or just the generic semantic search logic. We just make sure it returns something.
@@ -2175,7 +2473,10 @@ mod anthropic_memory_tests {
         // Migrated retention test from standalone pruning.rs {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+        {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -2194,8 +2495,10 @@ mod anthropic_memory_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = super::VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -2252,7 +2555,10 @@ mod anthropic_memory_tests {
         // Migrated override test from standalone pruning.rs {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+        {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -2271,8 +2577,10 @@ mod anthropic_memory_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await;
+            );",
+        )
+        .execute(&pool)
+        .await;
 
         let repo = super::VectorRepository::new_sqlite(pool.clone());
         let now = chrono::Utc::now();
@@ -2296,14 +2604,20 @@ mod anthropic_memory_tests {
         repo.upsert(&record1).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(now - chrono::Duration::days(180))
+            .await
+            .unwrap();
 
         // Verify it was NOT deleted
         use sqlx::Row;
         let query = "SELECT id FROM consolidated_memory";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
-        assert_eq!(rows.len(), 1, "The record should remain due to owner_override = true");
+        assert_eq!(
+            rows.len(),
+            1,
+            "The record should remain due to owner_override = true"
+        );
         let id: String = rows[0].try_get("id").unwrap();
         assert_eq!(id, "rec_override", "The correct record should remain");
     }
@@ -2420,7 +2734,10 @@ mod e2e_consolidation_tests {
 
     async fn setup_sqlite_repo() -> VectorRepository {
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
 
         let _ = sqlx::query(
             "CREATE TABLE IF NOT EXISTS consolidated_memory (
@@ -2436,8 +2753,11 @@ mod e2e_consolidation_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         VectorRepository::new_sqlite(pool)
     }
@@ -2486,13 +2806,22 @@ mod e2e_consolidation_tests {
         repo.upsert(&advisory_record).await.unwrap();
 
         // Search from Advisory to find CS record
-        let results = repo.cross_department_search("org_maya", &v1, 5).await.unwrap();
+        let results = repo
+            .cross_department_search("org_maya", &v1, 5)
+            .await
+            .unwrap();
         assert!(!results.is_empty(), "Should find the CS record");
         assert_eq!(results[0].id, "cs_e2e_1");
 
         // Ensure isolation
-        let results_other_org = repo.cross_department_search("org_other", &v1, 5).await.unwrap();
-        assert!(results_other_org.is_empty(), "Should not leak memory between tenants");
+        let results_other_org = repo
+            .cross_department_search("org_other", &v1, 5)
+            .await
+            .unwrap();
+        assert!(
+            results_other_org.is_empty(),
+            "Should not leak memory between tenants"
+        );
     }
 
     #[tokio::test]
@@ -2543,10 +2872,20 @@ mod e2e_consolidation_tests {
         assert_eq!(resolved, 1, "Should have resolved 1 conflict pair");
 
         // Verify winner and loser
-        let results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
+        let results = repo
+            .cross_department_search("org_maya", &v1, 10)
+            .await
+            .unwrap();
         assert_eq!(results.len(), 1, "Only one record should remain");
-        assert_eq!(results[0].id, "conflict_b", "conflict_b should win due to higher reliability score");
-        assert_eq!(results[0].reference_count, 2 + 1 + 1, "reference count should be sum + 1");
+        assert_eq!(
+            results[0].id, "conflict_b",
+            "conflict_b should win due to higher reliability score"
+        );
+        assert_eq!(
+            results[0].reference_count,
+            2 + 1 + 1,
+            "reference count should be sum + 1"
+        );
     }
 
     #[tokio::test]
@@ -2589,17 +2928,26 @@ mod e2e_consolidation_tests {
         repo.upsert(&record_maya).await.unwrap();
         repo.upsert(&record_bob).await.unwrap();
 
-        let maya_results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
+        let maya_results = repo
+            .cross_department_search("org_maya", &v1, 10)
+            .await
+            .unwrap();
         assert_eq!(maya_results.len(), 1);
         assert_eq!(maya_results[0].tenant_id, "org_maya");
         assert_eq!(maya_results[0].id, "maya_1");
 
-        let bob_results = repo.cross_department_search("org_bob", &v1, 10).await.unwrap();
+        let bob_results = repo
+            .cross_department_search("org_bob", &v1, 10)
+            .await
+            .unwrap();
         assert_eq!(bob_results.len(), 1);
         assert_eq!(bob_results[0].tenant_id, "org_bob");
         assert_eq!(bob_results[0].id, "bob_1");
 
-        let unknown_results = repo.cross_department_search("org_unknown", &v1, 10).await.unwrap();
+        let unknown_results = repo
+            .cross_department_search("org_unknown", &v1, 10)
+            .await
+            .unwrap();
         assert_eq!(unknown_results.len(), 0);
     }
 
@@ -2669,18 +3017,31 @@ mod e2e_consolidation_tests {
         repo.upsert(&keep_new).await.unwrap();
 
         // Run pruning with threshold 180 days ago
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(now - chrono::Duration::days(180))
+            .await
+            .unwrap();
 
         // Verify remaining
-        let results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
+        let results = repo
+            .cross_department_search("org_maya", &v1, 10)
+            .await
+            .unwrap();
         let remaining_ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
 
         assert_eq!(remaining_ids.len(), 2, "Should keep two records");
-        assert!(!remaining_ids.contains(&"prune_1".to_string()), "Should have pruned old, un-overridden record");
-        assert!(remaining_ids.contains(&"keep_1".to_string()), "Should have kept the one with owner override");
-        assert!(remaining_ids.contains(&"keep_2".to_string()), "Should have kept the recent record");
+        assert!(
+            !remaining_ids.contains(&"prune_1".to_string()),
+            "Should have pruned old, un-overridden record"
+        );
+        assert!(
+            remaining_ids.contains(&"keep_1".to_string()),
+            "Should have kept the one with owner override"
+        );
+        assert!(
+            remaining_ids.contains(&"keep_2".to_string()),
+            "Should have kept the recent record"
+        );
     }
-
 
     #[tokio::test]
     async fn test_pruning_edge_cases_override() {
@@ -2704,7 +3065,7 @@ mod e2e_consolidation_tests {
             source_type: "TASK_SUMMARY".to_string(),
             created_at: stale_time,
             last_referenced_at: stale_time,
-            reference_count: 1, // less than 5
+            reference_count: 1,    // less than 5
             reliability_score: 99, // very high reliability
             owner_override: false, // NO owner override
             metadata: None,
@@ -2721,7 +3082,7 @@ mod e2e_consolidation_tests {
             last_referenced_at: stale_time,
             reference_count: 1,
             reliability_score: 10, // low reliability
-            owner_override: true, // WITH owner override
+            owner_override: true,  // WITH owner override
             metadata: None,
         };
 
@@ -2729,10 +3090,15 @@ mod e2e_consolidation_tests {
         repo.upsert(&stale_low_rel_but_override).await.unwrap();
 
         // Run pruning with threshold 180 days ago
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(now - chrono::Duration::days(180))
+            .await
+            .unwrap();
 
         // Check which ones remain
-        let results = repo.cross_department_search("org_test", &v1, 10).await.unwrap();
+        let results = repo
+            .cross_department_search("org_test", &v1, 10)
+            .await
+            .unwrap();
         let remaining_ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
 
         // The logic is:
@@ -2743,8 +3109,14 @@ mod e2e_consolidation_tests {
         // stale_low_rel_override should be KEPT because it has owner_override = TRUE, which bypasses both conditions.
 
         assert_eq!(remaining_ids.len(), 1, "Only one record should remain");
-        assert!(!remaining_ids.contains(&"stale_high_rel".to_string()), "stale_high_rel should be pruned despite high reliability because no override");
-        assert!(remaining_ids.contains(&"stale_low_rel_override".to_string()), "stale_low_rel_override should be kept because of owner_override");
+        assert!(
+            !remaining_ids.contains(&"stale_high_rel".to_string()),
+            "stale_high_rel should be pruned despite high reliability because no override"
+        );
+        assert!(
+            remaining_ids.contains(&"stale_low_rel_override".to_string()),
+            "stale_low_rel_override should be kept because of owner_override"
+        );
     }
 
     #[tokio::test]
@@ -2796,8 +3168,15 @@ mod e2e_consolidation_tests {
 
         // The fallback logic selects the one with the smaller (or larger) ID depending on order,
         // but it must be deterministic and result in 1 remaining record.
-        let results = repo.cross_department_search("org_edge", &v1, 10).await.unwrap();
-        assert_eq!(results.len(), 1, "Only one record should remain after resolving identical-stat conflict");
+        let results = repo
+            .cross_department_search("org_edge", &v1, 10)
+            .await
+            .unwrap();
+        assert_eq!(
+            results.len(),
+            1,
+            "Only one record should remain after resolving identical-stat conflict"
+        );
     }
 }
 
@@ -2809,7 +3188,10 @@ mod additional_tests {
     #[tokio::test]
     async fn test_cross_department_search_sqlite() {
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
 
         let _ = sqlx::query(
             "CREATE TABLE IF NOT EXISTS consolidated_memory (
@@ -2825,8 +3207,11 @@ mod additional_tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let repo = VectorRepository::new_sqlite(pool);
 
@@ -2862,7 +3247,10 @@ mod override_tests_resolve {
         // Setup SQLite repository
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
 
         let _ = sqlx::query(
             "CREATE TABLE IF NOT EXISTS consolidated_memory (
@@ -2878,8 +3266,11 @@ mod override_tests_resolve {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         let repo = VectorRepository::new_sqlite(pool);
 
@@ -2929,11 +3320,15 @@ mod override_tests_resolve {
         // since determine_conflict_winner already naturally picks the one with owner_override as winner.
         repo.resolve_conflict(&record_a, &record_b).await.unwrap();
 
-        let results = repo.cross_department_search("org_override", &v1, 10).await.unwrap();
+        let results = repo
+            .cross_department_search("org_override", &v1, 10)
+            .await
+            .unwrap();
         assert_eq!(results.len(), 1, "Only winner_a should remain");
         assert_eq!(results[0].id, "winner_a");
-        assert!(results[0].owner_override, "Winner should have inherited owner_override");
+        assert!(
+            results[0].owner_override,
+            "Winner should have inherited owner_override"
+        );
     }
 }
-
-

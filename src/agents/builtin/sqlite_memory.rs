@@ -1,6 +1,6 @@
 use crate::memory_store::LongTermMemory;
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use async_trait::async_trait;
+use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
 /// Memory: Short-term, Long-term (SQLite/Redis), Long-term (Anthropic 3-Tier)
 /// A SQLite-backed LongTermMemory implementation for the agent harness.
@@ -17,7 +17,10 @@ impl std::fmt::Debug for SqliteMemoryStore {
 }
 
 impl SqliteMemoryStore {
-    pub async fn new(db_url: &str, llm: std::sync::Arc<dyn crate::llm::LlmClient>) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn new(
+        db_url: &str,
+        llm: std::sync::Arc<dyn crate::llm::LlmClient>,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
             .connect(db_url)
@@ -29,7 +32,7 @@ impl SqliteMemoryStore {
                 content,
                 tags,
                 created_at UNINDEXED
-            )"
+            )",
         )
         .execute(&pool)
         .await?;
@@ -41,7 +44,7 @@ impl SqliteMemoryStore {
                 role UNINDEXED,
                 content,
                 timestamp UNINDEXED
-            )"
+            )",
         )
         .execute(&pool)
         .await?;
@@ -50,7 +53,12 @@ impl SqliteMemoryStore {
     }
 
     /// Stores a raw message into the session search FTS5 table
-    pub async fn store_session_message(&self, session_id: &str, role: &str, content: &str) -> Result<(), String> {
+    pub async fn store_session_message(
+        &self,
+        session_id: &str,
+        role: &str,
+        content: &str,
+    ) -> Result<(), String> {
         let timestamp = chrono::Utc::now().timestamp();
         sqlx::query("INSERT INTO session_messages_fts (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)")
             .bind(session_id)
@@ -64,7 +72,13 @@ impl SqliteMemoryStore {
     }
 
     /// Searches session messages using FTS5 MATCH, returning ranked snippets, and optionally summarizing them using the LLM.
-    pub async fn search_session_messages(&self, session_id: &str, query: &str, limit: usize, summarize: bool) -> Result<Vec<String>, String> {
+    pub async fn search_session_messages(
+        &self,
+        session_id: &str,
+        query: &str,
+        limit: usize,
+        summarize: bool,
+    ) -> Result<Vec<String>, String> {
         let search_pattern = format!("\"{}\"", query);
         // Using SQLite FTS5 snippet function to highlight matches
         let rows = sqlx::query_as::<_, (String,)>("SELECT snippet(session_messages_fts, -1, '[', ']', '...', 64) FROM session_messages_fts WHERE session_id = ? AND session_messages_fts MATCH ? ORDER BY rank LIMIT ?")
@@ -102,7 +116,10 @@ impl SqliteMemoryStore {
                 Ok(vec![format!("Session Search Summary:\n{}", summary)])
             }
             Err(e) => {
-                tracing::warn!("Failed to summarize session messages via LLM, returning raw snippets: {}", e);
+                tracing::warn!(
+                    "Failed to summarize session messages via LLM, returning raw snippets: {}",
+                    e
+                );
                 Ok(raw_results)
             }
         }
@@ -125,12 +142,14 @@ impl LongTermMemory for SqliteMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         // FTS5 session search for long term memory retrieval
         let search_pattern = format!("\"{}\"", query);
-        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?")
-            .bind(search_pattern)
-            .bind(limit as i64)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let rows = sqlx::query_as::<_, (String,)>(
+            "SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?",
+        )
+        .bind(search_pattern)
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         let raw_results: Vec<String> = rows.into_iter().map(|r| r.0).collect();
 
@@ -160,21 +179,38 @@ impl LongTermMemory for SqliteMemoryStore {
                 Ok(vec![format!("Cross-Session Recall Summary:\n{}", summary)])
             }
             Err(e) => {
-                tracing::warn!("Failed to summarize FTS5 results via LLM, returning raw: {}", e);
+                tracing::warn!(
+                    "Failed to summarize FTS5 results via LLM, returning raw: {}",
+                    e
+                );
                 Ok(raw_results)
             }
         }
     }
 
-    async fn store_session_message(&self, session_id: &str, role: &str, content: &str) -> Result<(), String> {
+    async fn store_session_message(
+        &self,
+        session_id: &str,
+        role: &str,
+        content: &str,
+    ) -> Result<(), String> {
         self.store_session_message(session_id, role, content).await
     }
 
-    async fn search_session_messages(&self, session_id: &str, query: &str, limit: usize, summarize: bool) -> Result<Vec<String>, String> {
-        self.search_session_messages(session_id, query, limit, summarize).await
+    async fn search_session_messages(
+        &self,
+        session_id: &str,
+        query: &str,
+        limit: usize,
+        summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        self.search_session_messages(session_id, query, limit, summarize)
+            .await
     }
 
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
+    fn as_anthropic_accessor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
         None
     }
 }
@@ -185,13 +221,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_memory_store() {
-        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        use crate::types::{ChatRequest, ChatResponse, Message, Usage};
         use std::sync::Arc;
 
         struct MockLlm;
         #[async_trait::async_trait]
         impl crate::llm::LlmClient for MockLlm {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant("Summarized cross-session recall"),
                     usage: Usage::default(),
@@ -199,15 +238,26 @@ mod tests {
                     response_id: None,
                 })
             }
-            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![])
             }
         }
         let llm = Arc::new(MockLlm);
-        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm)
+            .await
+            .unwrap();
 
-        store.store("The secret code is 42", vec!["secret".to_string()]).await.unwrap();
-        store.store("The weather is sunny", vec!["weather".to_string()]).await.unwrap();
+        store
+            .store("The secret code is 42", vec!["secret".to_string()])
+            .await
+            .unwrap();
+        store
+            .store("The weather is sunny", vec!["weather".to_string()])
+            .await
+            .unwrap();
 
         let results = store.retrieve("secret", 10).await.unwrap();
         assert_eq!(results.len(), 1);
@@ -216,13 +266,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_session_messages_fts() {
-        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        use crate::types::{ChatRequest, ChatResponse, Message, Usage};
         use std::sync::Arc;
 
         struct MockLlm;
         #[async_trait::async_trait]
         impl crate::llm::LlmClient for MockLlm {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant("Summarized session context regarding plans"),
                     usage: Usage::default(),
@@ -230,25 +283,53 @@ mod tests {
                     response_id: None,
                 })
             }
-            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![])
             }
         }
         let llm = Arc::new(MockLlm);
-        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm)
+            .await
+            .unwrap();
 
         let session_id = "session_123";
-        store.store_session_message(session_id, "user", "I need help planning my Q3 roadmap. We will launch 2 new features.").await.unwrap();
-        store.store_session_message(session_id, "assistant", "Sure, what are the features? I can help structure the plan.").await.unwrap();
-        store.store_session_message("other_session", "user", "Unrelated planning info").await.unwrap();
+        store
+            .store_session_message(
+                session_id,
+                "user",
+                "I need help planning my Q3 roadmap. We will launch 2 new features.",
+            )
+            .await
+            .unwrap();
+        store
+            .store_session_message(
+                session_id,
+                "assistant",
+                "Sure, what are the features? I can help structure the plan.",
+            )
+            .await
+            .unwrap();
+        store
+            .store_session_message("other_session", "user", "Unrelated planning info")
+            .await
+            .unwrap();
 
         // Test raw snippets (no summarization)
-        let raw_snippets = store.search_session_messages(session_id, "planning", 5, false).await.unwrap();
+        let raw_snippets = store
+            .search_session_messages(session_id, "planning", 5, false)
+            .await
+            .unwrap();
         assert_eq!(raw_snippets.len(), 1);
         assert!(raw_snippets[0].contains("[planning]")); // Snippet highlights
 
         // Test summarized results
-        let summarized = store.search_session_messages(session_id, "planning", 5, true).await.unwrap();
+        let summarized = store
+            .search_session_messages(session_id, "planning", 5, true)
+            .await
+            .unwrap();
         assert_eq!(summarized.len(), 1);
         assert!(summarized[0].contains("Summarized session context regarding plans"));
     }

@@ -1,9 +1,9 @@
-pub mod openai_hooks;
 pub mod anthropic_hooks;
+pub mod openai_hooks;
 
 use ohc_builtin_agent_core::types::ToolCall;
-use std::sync::Arc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 pub trait InputGuardrail: Send + Sync {
     fn check_input(&self, input: &str) -> Result<(), String>;
@@ -81,7 +81,10 @@ impl InputGuardrail for KeywordGuardrail {
     fn check_input(&self, input: &str) -> Result<(), String> {
         for kw in &self.blocked_keywords {
             if input.contains(kw) {
-                return Err(format!("Input guardrail tripped: contains blocked keyword: {}", kw));
+                return Err(format!(
+                    "Input guardrail tripped: contains blocked keyword: {}",
+                    kw
+                ));
             }
         }
         Ok(())
@@ -92,7 +95,10 @@ impl OutputGuardrail for KeywordGuardrail {
     fn check_output(&self, output: &str) -> Result<(), String> {
         for kw in &self.blocked_keywords {
             if output.contains(kw) {
-                return Err(format!("Output guardrail tripped: contains blocked keyword: {}", kw));
+                return Err(format!(
+                    "Output guardrail tripped: contains blocked keyword: {}",
+                    kw
+                ));
             }
         }
         Ok(())
@@ -103,11 +109,17 @@ impl ToolGuardrail for KeywordGuardrail {
     fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
         for kw in &self.blocked_keywords {
             if tc.name.contains(kw) {
-                return Err(format!("Tool guardrail tripped: name contains blocked keyword: {}", kw));
+                return Err(format!(
+                    "Tool guardrail tripped: name contains blocked keyword: {}",
+                    kw
+                ));
             }
             let args_str = tc.arguments.to_string();
             if args_str.contains(kw) {
-                return Err(format!("Tool guardrail tripped: arguments contain blocked keyword: {}", kw));
+                return Err(format!(
+                    "Tool guardrail tripped: arguments contain blocked keyword: {}",
+                    kw
+                ));
             }
         }
         Ok(())

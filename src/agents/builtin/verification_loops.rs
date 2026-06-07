@@ -1,8 +1,8 @@
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use crate::llm::LlmClient;
-use std::sync::Arc;
-use serde::Deserialize;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use serde::Deserialize;
+use std::sync::Arc;
 
 /// A feedforward verification loop using linters, type-checkers, or unit tests.
 #[async_trait::async_trait]
@@ -36,7 +36,10 @@ pub struct BashComputationalGuide {
 #[async_trait::async_trait]
 impl ComputationalGuide for BashComputationalGuide {
     async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let wd = self
+            .workspace_path
+            .clone()
+            .unwrap_or_else(|| ".".to_string());
         let mut cmd = std::process::Command::new("bash");
         cmd.arg("-c").arg(&self.command).current_dir(wd);
 
@@ -52,7 +55,10 @@ impl ComputationalGuide for BashComputationalGuide {
                 }
                 Ok(())
             }
-            Err(e) => Err(format!("Failed to execute computational guide {}: {}", self.command, e)),
+            Err(e) => Err(format!(
+                "Failed to execute computational guide {}: {}",
+                self.command, e
+            )),
         }
     }
 }
@@ -65,7 +71,10 @@ pub struct BashVisualVerifier {
 #[async_trait::async_trait]
 impl VisualVerifier for BashVisualVerifier {
     async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
-        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let wd = self
+            .workspace_path
+            .clone()
+            .unwrap_or_else(|| ".".to_string());
         let mut cmd = std::process::Command::new("bash");
         cmd.arg("-c").arg(&self.command).current_dir(wd);
 
@@ -81,12 +90,18 @@ impl VisualVerifier for BashVisualVerifier {
                 } else {
                     let stdout = String::from_utf8_lossy(&output.stdout);
                     if stdout.contains("REJECT") {
-                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
+                        return Err(format!(
+                            "Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.",
+                            stdout.trim()
+                        ));
                     }
                 }
                 Ok(())
             }
-            Err(e) => Err(format!("Failed to execute visual verifier {}: {}", self.command, e)),
+            Err(e) => Err(format!(
+                "Failed to execute visual verifier {}: {}",
+                self.command, e
+            )),
         }
     }
 }
@@ -184,7 +199,10 @@ impl InferentialSensor for LlmJudgeSensor {
     /// Inferential/Sensors (feedback): a separate LLM-as-judge subagent evaluates the output.
     /// Industry Standard: Returns structured critique to enable precise self-correction.
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
-        let criteria = self.criteria.as_deref().unwrap_or("correctness, completeness, and adherence to constraints");
+        let criteria = self
+            .criteria
+            .as_deref()
+            .unwrap_or("correctness, completeness, and adherence to constraints");
         let system_prompt = format!(
             "You are an expert Quality Assurance Judge. \
              Your mission is to evaluate if the agent's output successfully completes the task based on the following criteria: {}. \
@@ -192,7 +210,10 @@ impl InferentialSensor for LlmJudgeSensor {
              Provide your evaluation structured as JSON using the 'structured_output' tool.",
             criteria
         );
-        let user_prompt = format!("Task Objective: {}\n\nAgent Output to Evaluate:\n---\n{}\n---", task, output);
+        let user_prompt = format!(
+            "Task Objective: {}\n\nAgent Output to Evaluate:\n---\n{}\n---",
+            task, output
+        );
 
         let req = ChatRequest {
             model: self.model.clone(),
@@ -203,29 +224,57 @@ impl InferentialSensor for LlmJudgeSensor {
             temperature: 0.0,
         };
 
-        struct ParserAdapter { llm: Arc<dyn LlmClient>, }
+        struct ParserAdapter {
+            llm: Arc<dyn LlmClient>,
+        }
         #[async_trait::async_trait]
         impl LlmClientForParser for ParserAdapter {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.llm.chat(req).await
+            }
         }
-        let parser_client = Arc::new(ParserAdapter { llm: self.llm.clone() }) as Arc<dyn LlmClientForParser>;
+        let parser_client = Arc::new(ParserAdapter {
+            llm: self.llm.clone(),
+        }) as Arc<dyn LlmClientForParser>;
 
         match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
             Ok(eval) => {
-                if eval.status.to_uppercase() != "APPROVE" || eval.confidence < self.confidence_threshold {
-                    let mut err_msg = format!("LLM Judge REJECTED the output (Confidence: {:.2} vs Threshold: {:.2}).\nReason: {}", eval.confidence, self.confidence_threshold, eval.reason);
-                    if eval.status.to_uppercase() == "APPROVE" && eval.confidence < self.confidence_threshold {
-                        err_msg = format!("LLM Judge APPROVED the output, but confidence {:.2} was below threshold {:.2}.\nReason: {}", eval.confidence, self.confidence_threshold, eval.reason);
+                if eval.status.to_uppercase() != "APPROVE"
+                    || eval.confidence < self.confidence_threshold
+                {
+                    let mut err_msg = format!(
+                        "LLM Judge REJECTED the output (Confidence: {:.2} vs Threshold: {:.2}).\nReason: {}",
+                        eval.confidence, self.confidence_threshold, eval.reason
+                    );
+                    if eval.status.to_uppercase() == "APPROVE"
+                        && eval.confidence < self.confidence_threshold
+                    {
+                        err_msg = format!(
+                            "LLM Judge APPROVED the output, but confidence {:.2} was below threshold {:.2}.\nReason: {}",
+                            eval.confidence, self.confidence_threshold, eval.reason
+                        );
                     }
                     if !eval.missing_elements.is_empty() {
-                        err_msg.push_str(&format!("\nMissing Elements: {}", eval.missing_elements.join(", ")));
+                        err_msg.push_str(&format!(
+                            "\nMissing Elements: {}",
+                            eval.missing_elements.join(", ")
+                        ));
                     }
                     if !eval.suggested_fixes.is_empty() {
-                        err_msg.push_str(&format!("\nSuggested Fixes:\n- {}", eval.suggested_fixes.join("\n- ")));
+                        err_msg.push_str(&format!(
+                            "\nSuggested Fixes:\n- {}",
+                            eval.suggested_fixes.join("\n- ")
+                        ));
                     }
                     Err(err_msg)
                 } else {
-                    tracing::info!("LLM Judge APPROVED the output (Confidence: {:.2}).", eval.confidence);
+                    tracing::info!(
+                        "LLM Judge APPROVED the output (Confidence: {:.2}).",
+                        eval.confidence
+                    );
                     Ok(())
                 }
             }
@@ -304,7 +353,9 @@ mod tests {
                 response_id: None,
                 previous_response_id: None,
             };
-            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(),
+            Ok(ChatResponse {
+                response_id: Some("test".to_string()),
+                stop_reason: "".to_string(),
                 message: msg,
                 usage: Usage::default(),
             })
@@ -312,7 +363,10 @@ mod tests {
     }
     #[async_trait::async_trait]
     impl LlmClientForParser for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let tool_call = ohc_builtin_agent_core::types::ToolCall {
                 id: "call_1".to_string(),
                 name: "structured_output".to_string(),
@@ -329,7 +383,9 @@ mod tests {
                 response_id: None,
                 previous_response_id: None,
             };
-            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(),
+            Ok(ChatResponse {
+                response_id: Some("test".to_string()),
+                stop_reason: "".to_string(),
                 message: msg,
                 usage: Usage::default(),
             })
@@ -408,12 +464,22 @@ mod tests {
         let pass_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string()
         });
-        let judge = Arc::new(LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.5 });
+        let judge = Arc::new(LlmJudgeSensor {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+            criteria: None,
+            confidence_threshold: 0.5,
+        });
 
         let mut manager = VerificationManager::new();
         manager.add_inferential(judge);
 
-        assert!(manager.run_inferential_sensors("output", "task").await.is_ok());
+        assert!(
+            manager
+                .run_inferential_sensors("output", "task")
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -421,13 +487,23 @@ mod tests {
         let pass_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string()
         });
-        let judge = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.5 };
+        let judge = LlmJudgeSensor {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+            criteria: None,
+            confidence_threshold: 0.5,
+        };
         assert!(judge.verify_inferential("output", "task").await.is_ok());
 
         let fail_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8, "missing_elements": ["element1"], "suggested_fixes": ["fix1"]}"#.to_string()
         });
-        let judge_fail = LlmJudgeSensor { llm: fail_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.5 };
+        let judge_fail = LlmJudgeSensor {
+            llm: fail_llm,
+            model: "test-model".to_string(),
+            criteria: None,
+            confidence_threshold: 0.5,
+        };
         let res = judge_fail.verify_inferential("output", "task").await;
         assert!(res.is_err());
         let err = res.unwrap_err();
@@ -442,11 +518,15 @@ mod tests {
         let pass_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "APPROVE", "reason": "Looks mostly okay", "confidence": 0.4, "missing_elements": [], "suggested_fixes": []}"#.to_string()
         });
-        let judge_fail = LlmJudgeSensor { llm: pass_llm, model: "test-model".to_string(), criteria: None, confidence_threshold: 0.8 };
+        let judge_fail = LlmJudgeSensor {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+            criteria: None,
+            confidence_threshold: 0.8,
+        };
         let res = judge_fail.verify_inferential("output", "task").await;
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(err.contains("APPROVED the output, but confidence 0.40 was below threshold 0.80"));
     }
-
 }
