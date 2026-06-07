@@ -3455,6 +3455,14 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "reply": reply }))
             }
         }))
+        .route("/api/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
+            let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
+            let url = format!("https://www.mercadopago.com/checkout/v1/redirect?pref_id={}_{}", tenant_id, amount_cents);
+            axum::response::Json(serde_json::json!({
+                "checkout_url": url
+            }))
+        }))
         .route("/api/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
