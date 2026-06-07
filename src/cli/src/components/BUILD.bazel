@@ -1,21 +1,26 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 
-js_library(
+ts_project(
     name = "components",
     srcs = [
-        "AgentStatus.test.tsx",
         "AgentStatus.tsx",
-        "ErrorState.test.tsx",
         "ErrorState.tsx",
-        "MarkdownText.test.tsx",
+        "Header.tsx",
         "MarkdownText.tsx",
-        "PromptInput.test.tsx",
+        "MasterMenu.tsx",
         "PromptInput.tsx",
-        "ToolProgress.test.tsx",
         "ToolProgress.tsx",
+        "ApprovalGate.tsx",
+    ],
+    declaration = True,
+    resolve_json_module = True,
+    deps = [
+        "//src/cli:node_modules/ink",
+        "//src/cli:node_modules/ink-spinner",
+        "//src/cli:node_modules/ink-text-input",
+        "//src/cli:node_modules/react",
+        "//src/cli:node_modules/@types/react",
     ],
     visibility = ["//visibility:public"],
-    deps = [
-        "//src/cli/src/hooks",
-    ],
 )

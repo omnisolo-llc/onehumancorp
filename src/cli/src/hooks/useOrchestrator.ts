@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { ToolItem } from '../components/ToolProgress';
+import { ApprovalRequest } from '../components/ApprovalGate';
 
 export interface OrchestratorState {
   status: string;
   tools: ToolItem[];
   error: string | null;
+  pendingApproval: ApprovalRequest | null;
 }
 
 export const useOrchestrator = (): OrchestratorState => {
@@ -14,6 +16,7 @@ export const useOrchestrator = (): OrchestratorState => {
     { name: 'ls -la', status: 'success' },
     { name: 'read_file', status: 'pending' }
   ]);
+  const [pendingApproval] = useState<ApprovalRequest | null>(null);
 
   useEffect(() => {
     // In the future, this will connect to the OHC local orchestrator via IPC or WebSocket.
@@ -24,9 +27,11 @@ export const useOrchestrator = (): OrchestratorState => {
         { name: 'read_file', status: 'success' },
         { name: 'set_plan', status: 'pending' }
       ]);
+
+
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  return { status, tools, error };
+  return { status, tools, error, pendingApproval };
 };

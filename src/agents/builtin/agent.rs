@@ -1,3 +1,4 @@
+use crate::tools::ToolExecutor;
 use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
@@ -455,7 +456,25 @@ impl Agent {
                 let cfg_clone = cfg.clone();
                 read_only_futures.push(async move {
                     // Anthropic Mechanic: 3-Stage Tool Gating
-                    let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
+                    let gating_res = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_clone.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_clone.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_clone.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
                     let res = match gating_res {
                         Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries).await,
                         Err(e) => Err(e),
@@ -517,7 +536,25 @@ impl Agent {
             }
             for tc in &mutating_calls {
                 // Anthropic Mechanic: 3-Stage Tool Gating
-                let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
+                let gating_res = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
                 let res = match gating_res {
                     Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries).await,
                     Err(e) => Err(e),
@@ -731,7 +768,25 @@ impl Agent {
                 }
 
                 // Termination Condition: Guardrail tripwire fires
-                if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
+                if let Err(e) = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    } {
                      return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires: {:?}", e))));
                 }
 
@@ -1030,7 +1085,25 @@ impl Agent {
                     let tc_clone = tc.clone();
 
                     read_only_futures.push(async move {
-                        let gating_err = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_arc_clone);
+                        let gating_err = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_arc_clone);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_arc_clone.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_arc_clone.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_arc_clone.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
                         if let Err(e) = gating_err {
                             return (id, Err(e));
                         }
@@ -1104,7 +1177,25 @@ impl Agent {
                     let id = tc.id.clone();
                     let idx = tool_calls.iter().position(|t| t.id == id).unwrap();
 
-                    let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
+                    let gating_err = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_arc_node.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_arc_node.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg_arc_node.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
                     if let Err(e) = gating_err {
                         match e {
                             crate::types::ToolError::LlmRecoverable(msg) => {
@@ -1519,7 +1610,25 @@ impl Agent {
             let max_retries = cfg.max_retries;
 
             let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
+            if let Err(e) = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc_clone.name, "Pending", e, None);
+                        }
+                        gating_res
+                    } {
                  return Err(Box::new(e));
             }
 
@@ -1600,7 +1709,25 @@ impl Agent {
             });
 
             let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg) {
+            if let Err(e) = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    } {
                  return Err(Box::new(e));
             }
 
@@ -2546,7 +2673,25 @@ impl Agent {
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
-                let gating_res = crate::tools_gating::ToolGater::check_gating(tc, true, &final_cfg);
+                let gating_res = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(tc, true, &final_cfg);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&final_cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&final_cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&final_cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
@@ -2747,7 +2892,25 @@ impl Agent {
                 }
 
                 // Anthropic Mechanic: 3-Stage Tool Gating
-                if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, false, &final_cfg) {
+                if let Err(e) = {
+                        let gating_res = {
+                        let gating_res = {
+                        let gating_res = crate::tools_gating::ToolGater::check_gating(&tc, false, &final_cfg);
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&final_cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&final_cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    };
+                        if let Err(crate::types::ToolError::UserFixable(ref e)) = gating_res {
+                             crate::audit_log::log_approval_action(&final_cfg.agent_id, &tc.name, "Pending", e, None);
+                        }
+                        gating_res
+                    } {
                     match e {
                         ToolError::UserFixable(msg) => {
                             let err = format!("USER_FIXABLE: {}", msg);
@@ -3258,8 +3421,7 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
-    use crate::tools::ToolExecutor;
-    #[tokio::test]
+        #[tokio::test]
     async fn test_agentstate_reducer() {
         let mut state = AgentState {
             messages: vec![crate::types::Message::user("Hello")],
@@ -7762,8 +7924,7 @@ mod tao_tests {
 }
 #[cfg(test)]
 mod guardrail_tests {
-    use crate::tools::ToolExecutor;
-    use super::*;
+        use super::*;
     use crate::guardrails::{GuardrailRegistry, InputGuardrail, OutputGuardrail, ToolGuardrail};
     use crate::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use std::sync::Arc;
@@ -7930,8 +8091,7 @@ mod guardrail_tests {
 
 #[cfg(test)]
 mod sona_pattern_tests {
-    use crate::tools::ToolExecutor;
-    use super::*;
+        use super::*;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 

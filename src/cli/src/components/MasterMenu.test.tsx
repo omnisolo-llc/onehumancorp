@@ -1,79 +1,74 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { MasterMenu } from './MasterMenu';
-import { expect, test, describe, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('MasterMenu', () => {
-  test('renders the menu options correctly', () => {
+  it('renders correctly', () => {
     const { lastFrame } = render(<MasterMenu />);
-    const output = lastFrame();
-    expect(output).toContain('Select an action (Use Up/Down arrows):');
-    expect(output).toContain('1) Run Developer Setup');
-    expect(output).toContain('2) Configure Environment (.env)');
-    expect(output).toContain('0) Exit');
+    expect(lastFrame()).toContain('Select an action');
+    expect(lastFrame()).toContain('Run Developer Setup');
   });
 
-  test('highlights the first option by default', () => {
-    const { lastFrame } = render(<MasterMenu />);
-    const output = lastFrame();
-    expect(output).toContain('▶');
-    // First option should have the arrow
-    const lines = output?.split('\n') || [];
-    const firstOptionLine = lines.find(line => line.includes('Run Developer Setup'));
-    expect(firstOptionLine).toContain('▶');
+  it('can navigate down', async () => {
+    const { stdin, lastFrame } = render(<MasterMenu />);
+    stdin.write('\x1B[B'); // down arrow
+    await new Promise(r => setTimeout(r, 50));
+    expect(lastFrame()).toContain('▶ 2) Configure Environment');
   });
 
-  test('correctly renders the "Configure Environment (.env)" option', () => {
-    const { lastFrame } = render(<MasterMenu />);
-    const output = lastFrame();
-    expect(output).toContain('2) Configure Environment (.env)');
+  it('can navigate up', async () => {
+    const { stdin, lastFrame } = render(<MasterMenu />);
+    stdin.write('\x1B[B'); // down
+    await new Promise(r => setTimeout(r, 50));
+    stdin.write('\x1B[A'); // up
+    await new Promise(r => setTimeout(r, 50));
+    expect(lastFrame()).toContain('▶ 1) Run Developer Setup');
   });
 
-  test('correctly renders the "Run Diagnostics" option', () => {
-    const { lastFrame } = render(<MasterMenu />);
-    const output = lastFrame();
-    expect(output).toContain('3) Run Diagnostics');
+  it('cannot navigate below bottom', async () => {
+    const { stdin, lastFrame } = render(<MasterMenu />);
+    for(let i=0; i<15; i++) {
+        stdin.write('\x1B[B');
+        await new Promise(r => setTimeout(r, 10));
+    }
+    expect(lastFrame()).toContain('▶ 0) Exit');
   });
 
-  test('renders the box layout and options without crashing', () => {
-    const { lastFrame } = render(<MasterMenu />);
-    const output = lastFrame();
-    expect(output).toBeDefined();
-    expect(output?.length).toBeGreaterThan(0);
-    expect(output).toContain('10) Verify Setup');
-    expect(output).toContain('5) Provision AI Agent');
+  it('cannot navigate above top', async () => {
+    const { stdin, lastFrame } = render(<MasterMenu />);
+    stdin.write('\x1B[A');
+    await new Promise(r => setTimeout(r, 50));
+    expect(lastFrame()).toContain('▶ 1) Run Developer Setup');
   });
 
-  test('handles keyboard interaction (up and down arrow)', () => {
-    const { lastFrame, stdin } = render(<MasterMenu />);
-    expect(lastFrame()).toContain('▶ ');
-    expect(lastFrame()).not.toContain('▶     2) Configure Environment (.env)');
-
-    // Write down arrow to stdin
-    stdin.write('\u001B[B');
-
-    // We do not strictly assert string since ink test input has varying spacing,
-    // but we can check if coverage handles the key press.
-  });
-
-  test('handles keyboard interaction (up arrow)', () => {
+  it('can select an option', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const { stdin } = render(<MasterMenu />);
-
-    // Write down arrow to stdin
-    stdin.write('\u001B[B');
-    // Write up arrow to stdin
-    stdin.write('\u001B[A');
+    stdin.write('\r'); // return
+    await new Promise(r => setTimeout(r, 50));
+    expect(consoleSpy).toHaveBeenCalledWith('Executing Run Developer Setup...');
+    consoleSpy.mockRestore();
   });
 
-  test('handles keyboard interaction (return)', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  it('can select Exit', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
     const { stdin } = render(<MasterMenu />);
-
-    // Write return key to stdin (for the first option: Run Developer Setup)
-    stdin.write('\r');
-
-    expect(logSpy).toHaveBeenCalledWith('Executing Run Developer Setup...');
-    logSpy.mockRestore();
+    for(let i=0; i<15; i++) {
+        stdin.write('\x1B[B');
+        await new Promise(r => setTimeout(r, 10));
+    }
+    stdin.write('\r'); // return
+    await new Promise(r => setTimeout(r, 50));
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    exitSpy.mockRestore();
   });
 
+  it('ignores other keys', async () => {
+    const { stdin, lastFrame } = render(<MasterMenu />);
+    const initialFrame = lastFrame();
+    stdin.write('a');
+    await new Promise(r => setTimeout(r, 50));
+    expect(lastFrame()).toBe(initialFrame);
+  });
 });
