@@ -1,5 +1,4 @@
 "use client";
-import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 
 
 
