@@ -430,9 +430,9 @@ impl DB {
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         assigned_agent_id TEXT,
-                        dependencies JSONB DEFAULT '[]',
-                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        dependencies TEXT DEFAULT '[]',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -446,8 +446,8 @@ impl DB {
                         content TEXT NOT NULL,
                         metadata TEXT DEFAULT '{}',
                         embedding BLOB,
-                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
