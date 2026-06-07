@@ -134,7 +134,8 @@ where
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
-        .route("/storefront/og-card", get(handle_og_card))
+                .route("/storefront/og-card", get(handle_og_card))
+        .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -259,7 +260,7 @@ struct GrowthState {
 }
 
 async fn handle_social_post(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<SocialPostRequest>,
 ) -> impl IntoResponse {
     Json(SocialPostResponse {
@@ -269,7 +270,7 @@ async fn handle_social_post(
 }
 
 async fn handle_generate_review(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would call an AI provider here.
@@ -285,7 +286,7 @@ async fn handle_generate_review(
 }
 
 async fn handle_generate_customer_referral(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateCustomerReferralRequest>,
 ) -> impl IntoResponse {
     let store = req.store_name.unwrap_or_else(|| "our store".to_string());
@@ -299,7 +300,7 @@ async fn handle_generate_customer_referral(
 }
 
 async fn handle_generate_cart(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateCartRequest>,
 ) -> impl IntoResponse {
     let name = req.customer_name.unwrap_or_else(|| "there".to_string());
@@ -314,7 +315,7 @@ async fn handle_generate_cart(
 }
 
 async fn handle_send_cart(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<SendCartRequest>,
 ) -> impl IntoResponse {
     Json(SendCartResponse {
@@ -420,7 +421,7 @@ async fn handle_send_campaign(
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
@@ -459,7 +460,7 @@ async fn handle_affiliate_generate_link(
 }
 
 async fn handle_affiliate_track(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<TrackAffiliateRequest>,
 ) -> impl IntoResponse {
     use axum::http::header::SET_COOKIE;
@@ -540,7 +541,6 @@ async fn handle_storefront_embed(
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-        use sqlx::Row;
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
@@ -587,6 +587,109 @@ async fn handle_storefront_embed(
 "##);
     axum::response::Html(html)
 }
+
+
+#[derive(Debug, Deserialize)]
+pub struct FlashSaleEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub code: Option<String>,
+    pub percent: Option<String>,
+    pub end: Option<String>,
+    pub theme: Option<String>,
+}
+
+async fn handle_flash_sale_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let title = query.title.as_deref().unwrap_or("Flash Sale");
+    let code = query.code.as_deref().unwrap_or("CODE");
+    let percent = query.percent.as_deref().unwrap_or("0");
+    let end = query.end.as_deref().unwrap_or("");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let safe_title = escape_html(title);
+    let safe_code = escape_html(code);
+    let safe_percent = escape_html(percent);
+    let safe_end = escape_html(end);
+
+    let html = format!(r##"<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; background: {bg_color}; color: {text_color}; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }}
+        .widget {{ padding: 20px; text-align: center; border-radius: 12px; max-width: 300px; width: 100%; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid rgba(128, 128, 128, 0.2); }}
+        .title {{ font-size: 1.2rem; font-weight: bold; margin: 0 0 10px 0; }}
+        .discount {{ color: #ef4444; font-weight: bold; }}
+        .code-box {{ border: 2px dashed #d1d5db; padding: 10px; margin: 15px 0; border-radius: 8px; font-family: monospace; font-weight: bold; letter-spacing: 2px; }}
+        .countdown {{ display: flex; justify-content: center; gap: 10px; margin: 15px 0; }}
+        .time-box {{ display: flex; flex-direction: column; align-items: center; }}
+        .time-val {{ font-size: 1.5rem; font-weight: bold; font-family: monospace; }}
+        .time-lbl {{ font-size: 0.6rem; text-transform: uppercase; color: #6b7280; }}
+        .footer {{ font-size: 0.75rem; margin-top: 15px; color: #6b7280; }}
+        .footer a {{ color: #6b7280; text-decoration: none; font-weight: 600; }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="title">⚡ {safe_title}</div>
+        <p style="margin: 0; font-size: 0.9rem;">Get <span class="discount">{safe_percent}% OFF</span> your order!</p>
+
+        <div class="countdown">
+            <div class="time-box"><div class="time-val" id="h">00</div><div class="time-lbl">Hours</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="m">00</div><div class="time-lbl">Mins</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="s" style="color: #ef4444;">00</div><div class="time-lbl">Secs</div></div>
+        </div>
+
+        <div class="code-box">{safe_code}</div>
+
+        <div class="footer">
+            <a href="https://ohc.app/join?ref={tenant}" target="_blank">⚡ Powered by OHC</a>
+        </div>
+    </div>
+
+    <script>
+        const targetDate = new Date('{safe_end}').getTime();
+
+        setInterval(function() {{
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0 || isNaN(distance)) {{
+                document.getElementById("h").innerText = "00";
+                document.getElementById("m").innerText = "00";
+                document.getElementById("s").innerText = "00";
+                return;
+            }}
+
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById("h").innerText = hours.toString().padStart(2, '0');
+            document.getElementById("m").innerText = minutes.toString().padStart(2, '0');
+            document.getElementById("s").innerText = seconds.toString().padStart(2, '0');
+        }}, 1000);
+    </script>
+</body>
+</html>
+"##);
+    axum::response::Html(html)
+}
+
 
 async fn handle_og_card(
     Extension(state): Extension<GrowthState>,
@@ -668,7 +771,7 @@ async fn handle_check_milestones(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
-    use sqlx::Row;
+
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
@@ -681,6 +784,7 @@ async fn handle_check_milestones(
             .fetch_all(&state.pool)
             .await
             .unwrap_or_default();
+        use sqlx::Row;
         let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
         cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
         types
@@ -704,6 +808,24 @@ async fn handle_check_milestones(
             title: "🚀 100 Visitors Today!".to_string(),
             description: "Your storefront reached 100 visitors today!".to_string(),
             reached: reached_types.contains(&"100_visitors".to_string()),
+        },
+        Milestone {
+            id: "5_referrals".to_string(),
+            title: "🤝 High Connector!".to_string(),
+            description: "You've successfully referred 5 other businesses to OHC.".to_string(),
+            reached: reached_types.contains(&"5_referrals".to_string()),
+        },
+        Milestone {
+            id: "revenue_1k".to_string(),
+            title: "💰 Four-Figure Club".to_string(),
+            description: "Your business has surpassed $1,000 in total revenue!".to_string(),
+            reached: reached_types.contains(&"revenue_1k".to_string()),
+        },
+        Milestone {
+            id: "100_orders".to_string(),
+            title: "📦 Century of Orders".to_string(),
+            description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
+            reached: reached_types.contains(&"100_orders".to_string()),
         },
     ];
     Json(MilestonesResponse { milestones })
@@ -750,15 +872,20 @@ async fn handle_get_milestone_card(
 
     let safe_business_name = escape_xml(&business_name);
 
-    let (title, sub, icon) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰"),
-        "10th_order" => ("10th Order!", "Business is booming", "📈"),
-        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
-        _ => ("Success Milestone!", "Built with OHC", "✨"),
+    let (title, sub, icon, grad_start, grad_end) = match milestone_id {
+        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
+        "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
+        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
+        "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
+        "revenue_1k" => ("Four-Figure Club", "Revenue > $1,000", "💰", "#84fab0", "#8fd3f4"),
+        "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
+        _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
-        r##"<text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>"##.to_string()
+        format!(r##"<a href="https://ohc.app/join?ref={}" target="_blank">
+    <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+  </a>"##, tenant_id)
     } else {
         "".to_string()
     };
@@ -782,8 +909,8 @@ async fn handle_get_milestone_card(
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
   </defs>
   <rect width="1200" height="630" fill="url(#grad1)" />
@@ -796,7 +923,14 @@ async fn handle_get_milestone_card(
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
-</svg>"##);
+</svg>"##,
+    grad_start = grad_start,
+    grad_end = grad_end,
+    icon = icon,
+    title = title,
+    sub = sub,
+    safe_business_name = safe_business_name,
+    branding = branding);
 
     axum::response::Response::builder()
         .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
@@ -840,7 +974,7 @@ pub struct DiscountShareResponse {
 }
 
 async fn handle_generate_discount_share(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
@@ -899,7 +1033,7 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     let cache_key = "onboarding_metrics";
     let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
@@ -908,9 +1042,10 @@ async fn handle_onboarding_metrics(
     }
 
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&_state.pool).await
+        .fetch_all(&state.pool).await
     {
         Ok(rows) => {
+
             use sqlx::Row;
             let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
             let resp = OnboardingMetricsResponse { metrics };
