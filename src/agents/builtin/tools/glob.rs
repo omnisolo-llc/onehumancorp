@@ -1,26 +1,31 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct GlobArgs {
+    pattern: String,
+    path: Option<String>,
+}
 
 struct GlobExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for GlobExecutor {
-    async fn execute(
+impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: GlobArgs,
     ) -> Result<String, ToolError> {
-        let pattern = args["pattern"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("glob: pattern is required".to_string()))?;
-        let base_dir = args["path"].as_str().unwrap_or(".");
+        let pattern = args.pattern;
+        let base_dir = args.path.unwrap_or_else(|| ".".to_string());
 
-        let safe_base = base_dir.strip_prefix("/").unwrap_or(base_dir);
-        let safe_pattern = pattern.strip_prefix("/").unwrap_or(pattern);
+        let safe_base = base_dir.strip_prefix("/").unwrap_or(&base_dir);
+        let safe_pattern = pattern.strip_prefix("/").unwrap_or(&pattern);
 
         let mut full_pattern = if safe_base == "." || safe_base == "" {
             safe_pattern.to_string()
@@ -80,6 +85,19 @@ pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["pattern"]
         }),
-        execute: Arc::new(GlobExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(GlobExecutor { working_dir })),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_glob_pydantic_validation() {
+        let tool = glob_tool(None);
+        let args = json!({ "path": "." });
+        let result = tool.execute.execute(args).await;
+        assert!(result.unwrap_err().to_string().contains("Validation Error (Pydantic-first tool schema)"));
     }
 }

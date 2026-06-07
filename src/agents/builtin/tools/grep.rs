@@ -1,38 +1,46 @@
 use ohc_builtin_agent_core::types::ToolError;
 use async_recursion::async_recursion;
 use regex::Regex;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct GrepArgs {
+    pattern: String,
+    path: Option<String>,
+    include: Option<String>,
+    #[serde(default)]
+    case_insensitive: bool,
+}
 
 struct GrepExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for GrepExecutor {
-    async fn execute(
+impl PydanticToolExecutor<GrepArgs> for GrepExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: GrepArgs,
     ) -> Result<String, ToolError> {
-        let pattern = args["pattern"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("grep: pattern is required".to_string()))?;
-        let path = args["path"].as_str().unwrap_or(".");
-        let case_insensitive = args["case_insensitive"].as_bool().unwrap_or(false);
-        let include_pattern = args["include"].as_str().map(str::to_string);
+        let pattern = args.pattern;
+        let path = args.path.unwrap_or_else(|| ".".to_string());
+        let case_insensitive = args.case_insensitive;
+        let include_pattern = args.include;
 
         let re = if case_insensitive {
-            Regex::new(&format!("(?i){}", pattern))
+            Regex::new(&format!("(?i){}", &pattern))
         } else {
-            Regex::new(pattern)
+            Regex::new(&pattern)
         }
         .map_err(|e| format!("grep: invalid regex: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let mut results = Vec::new();
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path).to_string_lossy().to_string() } else { path.to_string() };
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path).to_string_lossy().to_string() } else { path.clone() };
         search_directory(&actual_path, &re, include_pattern.as_deref(), &mut results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if results.is_empty() {
@@ -145,7 +153,7 @@ pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["pattern"]
         }),
-        execute: Arc::new(GrepExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(GrepExecutor { working_dir })),
     }
 }
 
@@ -172,19 +180,30 @@ mod tests {
             }
         }
 
-        let executor = GrepExecutor { working_dir: Some(test_dir.clone()) };
+        let adapter = PydanticAdapter::new(GrepExecutor { working_dir: Some(test_dir.clone()) });
 
         let args = json!({
             "pattern": "critical failure",
             "path": ".",
         });
 
-        let result = executor.execute(args).await.unwrap();
+        let result = adapter.execute(args).await.unwrap();
         let _expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
         // The display string might be just the name if we strip it
         assert!(result.contains("critical failure found here!"));
         assert!(result.contains(":4500:"));
 
         let _ = std::fs::remove_dir_all(&test_dir);
+    }
+
+    #[tokio::test]
+    async fn test_grep_pydantic_validation() {
+        let tool = grep_tool(None);
+        let args = json!({
+            "path": ".",
+            "case_insensitive": true
+        });
+        let result = tool.execute.execute(args).await;
+        assert!(result.unwrap_err().to_string().contains("Validation Error (Pydantic-first tool schema)"));
     }
 }
