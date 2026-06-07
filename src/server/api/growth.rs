@@ -126,6 +126,7 @@ where
     Router::new()
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
+        .route("/customers/:tenant_id/:customer_id/customer360", get(handle_get_customer360))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -1564,5 +1565,57 @@ async fn handle_aggregated_team_invites_metrics(
             Ok(Json(resp))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+
+pub async fn handle_get_customer360(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::Path((tenant_id, customer_id)): axum::extract::Path<(String, String)>,
+) -> impl axum::response::IntoResponse {
+    let pool = state.pool;
+
+    // Auth Check to prevent IDOR
+    if auth_info.org_id != tenant_id {
+        return (
+            axum::http::StatusCode::FORBIDDEN,
+            axum::Json(serde_json::json!({ "success": false, "error": "Forbidden" })),
+        ).into_response();
+    }
+
+    // Just fetch it from db directly to avoid all orchestrator/hub dependency problems
+    let row = sqlx::query("SELECT * FROM customer360 WHERE tenant_id = $1 AND customer_id = $2")
+        .bind(&tenant_id)
+        .bind(&customer_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| e.to_string());
+
+    match row {
+        Ok(Some(r)) => {
+            use sqlx::Row;
+            let prefs_str: Option<String> = r.try_get("preferences").unwrap_or(None);
+            let cust = crate::orchestration::departments::types::Customer360 {
+                id: r.try_get("id").unwrap_or_default(),
+                tenant_id: r.try_get("tenant_id").unwrap_or_default(),
+                customer_id: r.try_get("customer_id").unwrap_or_default(),
+                email: r.try_get("email").unwrap_or(None),
+                phone: r.try_get("phone").unwrap_or(None),
+                mood: r.try_get("mood").unwrap_or(None),
+                preferences: prefs_str.and_then(|s: String| serde_json::from_str(&s).ok()),
+                created_at: None,
+                updated_at: None,
+            };
+            axum::Json(serde_json::json!({ "success": true, "data": cust })).into_response()
+        },
+        Ok(None) => (
+            axum::http::StatusCode::NOT_FOUND,
+            axum::Json(serde_json::json!({ "success": false, "error": "Customer not found" })),
+        ).into_response(),
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::Json(serde_json::json!({ "success": false, "error": format!("Failed to fetch customer: {}", e) })),
+        ).into_response(),
     }
 }
