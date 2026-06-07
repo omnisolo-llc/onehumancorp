@@ -24,7 +24,6 @@ rust_library(
         "maintenance.rs",
         "memory.rs",
         "pos_sync_worker.rs",
-        "yield_management_worker.rs",
         "mod.rs",
     ],
     crate_root = "bazel_lib.rs",

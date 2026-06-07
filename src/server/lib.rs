@@ -331,7 +331,6 @@ pub mod services {
     pub mod autodream;
     pub mod booking;
     pub mod pos;
-    pub mod collective;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -3836,11 +3835,9 @@ async fn create_ui_bom_item_handler(
 
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
-    let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
