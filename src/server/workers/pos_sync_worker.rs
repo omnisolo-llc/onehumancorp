@@ -13,7 +13,9 @@ impl PosSyncWorker {
 
     pub async fn handle(&self, job: crate::queue::Job) -> Result<Result<(), String>, String> {
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
-        let transaction_id = payload["transaction_id"].as_str().unwrap();
+        let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str())
+            .or_else(|| payload.get("pos_transaction_id").and_then(|v| v.as_str()))
+            .unwrap_or("");
 
         let mut tx = match self.db.pool.begin().await {
             Ok(tx) => tx,
@@ -48,6 +50,29 @@ impl PosSyncWorker {
             let cache = crate::builder::edge::get_edge_cache();
             cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
             cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+        }
+
+        // Support payload formatted directly for the transaction items array
+        if let Some(items) = payload.get("payload") {
+            if let Some(items_str) = items.as_str() {
+                if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
+                    for item in items_array {
+                        let product_id = item.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+                        if product_id.is_empty() { continue; }
+
+                        let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
+                            .bind(qty)
+                            .bind(product_id)
+                            .execute(&mut *tx)
+                            .await;
+
+                        let cache = crate::builder::edge::get_edge_cache();
+                        let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                        let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+                    }
+                }
+            }
         }
 
         sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")
