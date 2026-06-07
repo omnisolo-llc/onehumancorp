@@ -178,7 +178,7 @@ export default function CheckoutPage() {
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  setCheckoutStatus('Offline terminal payment saved locally for sync.');
+                  setCheckoutStatus('Payment Saved Offline');
                   setShowSuccessModal(true);
                 }
               }}
