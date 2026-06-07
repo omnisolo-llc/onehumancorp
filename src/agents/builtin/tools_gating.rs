@@ -29,7 +29,7 @@ impl ToolGater {
 
         // Stage 3: Explicit user confirmation for high-risk operations
         // Handled via the 5-point HumanInLoopSpectrum
-        let is_high_risk = cfg.high_risk_tools.contains(&tc.name);
+        let is_high_risk = cfg.high_risk_tools.contains(&tc.name) || ["bash", "edit", "write_file", "write"].contains(&tc.name.as_str());
 
         HumanInLoopManager::evaluate_escalation_tier(
             tc,
