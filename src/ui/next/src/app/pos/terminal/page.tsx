@@ -37,6 +37,7 @@ export default function TerminalPage() {
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
+  const [reserving, setReserving] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
   // Network listener
@@ -153,16 +154,16 @@ export default function TerminalPage() {
     setClockedIn(type === 'CLOCK_IN');
   };
 
-  const handleNewOrder = () => {
+  const handleNewOrder = async () => {
     const basePrice = 5000; // $50.00
     const converted = convert(basePrice, 'USD', currency);
     if (converted.isOffline) {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);
     }
-    setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
     if (isOffline) {
+      setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
       // Bypass Stripe Terminal and save offline
       const tx = {
         id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -174,6 +175,41 @@ export default function TerminalPage() {
       };
       OfflineStore.addPosTransaction(tx);
       setOrderStatus(`${t('Payment Saved Offline')} - ${converted.amount / 100} ${currency}`);
+    } else {
+      setReserving(true);
+      setOrderStatus(t('Processing/Reserving...'));
+
+      try {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+        });
+
+        const reserveData = await reserveRes.json();
+
+        if (!reserveData.success) {
+          setOrderStatus(t('Failed to reserve: ') + reserveData.error_message);
+          setReserving(false);
+          return;
+        }
+
+        setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+
+        // Simulate payment completion
+        setTimeout(async () => {
+          await fetch('/api/v1/payments/terminal/commit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+          });
+          setOrderStatus(`${t('Payment Completed')}`);
+        }, 1000);
+      } catch (err) {
+        setOrderStatus(t('Error connecting to server'));
+      } finally {
+        setReserving(false);
+      }
     }
   };
 
@@ -292,7 +328,8 @@ export default function TerminalPage() {
            <div className="grid grid-cols-2 gap-4">
              <button
                 onClick={handleNewOrder}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]"
+                disabled={reserving}
+                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
