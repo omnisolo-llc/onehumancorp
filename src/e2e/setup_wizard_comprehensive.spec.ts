@@ -23,11 +23,21 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
 
+
     await page.getByRole('button', { name: /Instant Build/ }).click();
+
+    // Verify glassmorphism style is present
+    await expect(page.locator('.glassmorphism').first()).toBeVisible({ timeout: 5000 });
+
     await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a modern art shop online');
+
     await page.getByRole('button', { name: /Generate Storefront/ }).click();
 
     await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 10000 });
+
+    // Verify glassmorphism style is present on loading screen
+    await expect(page.locator('.glassmorphism', { hasText: 'Agents are building your store' }).first()).toBeVisible({ timeout: 5000 });
+
     await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible({ timeout: 20000 });
   });
 
