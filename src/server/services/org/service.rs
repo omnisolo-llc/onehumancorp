@@ -131,26 +131,58 @@ impl OrgService for MyOrgService {
 
                 let org_id_for_metrics = org_id_bg.clone();
                 let total_agents = agents.len() as i32;
-                let total_msgs_res = tokio::task::spawn_blocking(move || {
-                    let mut total_msgs = 0;
-                    let mut audited_msgs = 0;
+                let total_msgs_res = async move {
                     let mut agent_set = std::collections::HashSet::new();
                     for a in agents.iter() {
                         agent_set.insert(a.id.clone());
                     }
 
-                    for m in all_meetings.iter() {
-                        if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
-                            for msg in &m.transcript {
-                                total_msgs += 1;
-                                if agent_set.contains(&msg.from_agent) {
-                                    audited_msgs += 1;
+                    let all_meetings = std::sync::Arc::new(all_meetings);
+                    let agent_set = std::sync::Arc::new(agent_set);
+                    let org_id_for_metrics = std::sync::Arc::new(org_id_for_metrics);
+                    let num_chunks = 4;
+                    let chunk_size = std::cmp::max(1, (all_meetings.len() + num_chunks - 1) / num_chunks);
+                    let mut futures = Vec::new();
+
+                    for i in 0..num_chunks {
+                        let start = i * chunk_size;
+                        if start >= all_meetings.len() {
+                            break;
+                        }
+                        let end = std::cmp::min(start + chunk_size, all_meetings.len());
+                        let agent_set = agent_set.clone();
+                        let org_id_for_metrics = org_id_for_metrics.clone();
+                        let all_meetings_clone = all_meetings.clone();
+
+                        futures.push(tokio::task::spawn_blocking(move || {
+                            let mut local_total = 0;
+                            let mut local_audited = 0;
+                            let chunk = &all_meetings_clone[start..end];
+                            for m in chunk.iter() {
+                                if m.id.starts_with(org_id_for_metrics.as_str()) || m.id.contains(org_id_for_metrics.as_str()) {
+                                    for msg in &m.transcript {
+                                        local_total += 1;
+                                        if agent_set.contains(&msg.from_agent) {
+                                            local_audited += 1;
+                                        }
+                                    }
                                 }
                             }
+                            (local_total, local_audited)
+                        }));
+                    }
+
+                    let results = futures::future::join_all(futures).await;
+                    let mut total_msgs = 0;
+                    let mut audited_msgs = 0;
+                    for res in results {
+                        if let Ok((t, a)) = res {
+                            total_msgs += t;
+                            audited_msgs += a;
                         }
                     }
-                    (total_msgs, audited_msgs)
-                }).await;
+                    Ok::<(i32, i32), String>((total_msgs, audited_msgs))
+                }.await;
 
                 let Ok((total_msgs, audited_msgs)) = total_msgs_res else { return; };
 
@@ -214,26 +246,58 @@ impl OrgService for MyOrgService {
 
         let org_id_for_metrics = org_id.clone();
         let total_agents = agents.len() as i32;
-        let (total_msgs, audited_msgs) = tokio::task::spawn_blocking(move || {
-            let mut total_msgs = 0;
-            let mut audited_msgs = 0;
+        let (total_msgs, audited_msgs) = async move {
             let mut agent_set = std::collections::HashSet::new();
             for a in agents.iter() {
                 agent_set.insert(a.id.clone());
             }
 
-            for m in all_meetings.iter() {
-                if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
-                    for msg in &m.transcript {
-                        total_msgs += 1;
-                        if agent_set.contains(&msg.from_agent) {
-                            audited_msgs += 1;
+            let all_meetings = std::sync::Arc::new(all_meetings);
+            let agent_set = std::sync::Arc::new(agent_set);
+            let org_id_for_metrics = std::sync::Arc::new(org_id_for_metrics);
+            let num_chunks = 4;
+            let chunk_size = std::cmp::max(1, (all_meetings.len() + num_chunks - 1) / num_chunks);
+            let mut futures = Vec::new();
+
+            for i in 0..num_chunks {
+                let start = i * chunk_size;
+                if start >= all_meetings.len() {
+                    break;
+                }
+                let end = std::cmp::min(start + chunk_size, all_meetings.len());
+                let agent_set = agent_set.clone();
+                let org_id_for_metrics = org_id_for_metrics.clone();
+                let all_meetings_clone = all_meetings.clone();
+
+                futures.push(tokio::task::spawn_blocking(move || {
+                    let mut local_total = 0;
+                    let mut local_audited = 0;
+                    let chunk = &all_meetings_clone[start..end];
+                    for m in chunk.iter() {
+                        if m.id.starts_with(org_id_for_metrics.as_str()) || m.id.contains(org_id_for_metrics.as_str()) {
+                            for msg in &m.transcript {
+                                local_total += 1;
+                                if agent_set.contains(&msg.from_agent) {
+                                    local_audited += 1;
+                                }
+                            }
                         }
                     }
+                    (local_total, local_audited)
+                }));
+            }
+
+            let results = futures::future::join_all(futures).await;
+            let mut total_msgs = 0;
+            let mut audited_msgs = 0;
+            for res in results {
+                if let Ok((t, a)) = res {
+                    total_msgs += t;
+                    audited_msgs += a;
                 }
             }
-            (total_msgs, audited_msgs)
-        }).await.map_err(|e| Status::internal(e.to_string()))?;
+            Ok::<(i32, i32), Status>((total_msgs, audited_msgs))
+        }.await?;
         
         let audit_fidelity_pct = if total_msgs > 0 {
             (audited_msgs as f64 / total_msgs as f64) * 100.0
