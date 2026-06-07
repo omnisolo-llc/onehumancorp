@@ -422,6 +422,51 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "social_post" && (
+                    <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                          />
+                        </svg>
+                        Social Post Drafted
+                      </div>
+                      <div className="text-xs text-pink-700">
+                        Based on your new product:{" "}
+                        <span className="font-semibold">{req.payload.product_name}</span>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-pink-100 overflow-hidden shadow-sm">
+                        {req.payload.image_url && (
+                          <div className="w-full h-40 bg-gray-100 relative">
+                            <img
+                              src={req.payload.image_url}
+                              alt="Social post media"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">
+                            Draft Copy
+                          </div>
+                          <p className="text-xs text-gray-700 italic">
+                            "{req.payload.draft_copy}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "quote_draft" && (
                     <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
@@ -531,6 +576,8 @@ export default function ApprovalInbox({
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
+                        : req.payload?.feature_type === "social_post"
+                        ? "Schedule Post"
                         : "Approve"}
                     </button>
                   </div>

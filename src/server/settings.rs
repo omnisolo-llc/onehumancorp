@@ -29,6 +29,9 @@ pub struct AppSettings {
     pub delivery_enabled: bool,
     pub delivery_radius: Option<f64>,
     pub delivery_fee: Option<f64>,
+    pub voice_receptionist_enabled: bool,
+    pub voice_receptionist_number: Option<String>,
+    pub voice_receptionist_persona: Option<String>,
 }
 
 impl AppSettings {
@@ -49,6 +52,9 @@ impl AppSettings {
             delivery_enabled: false,
             delivery_radius: Some(5.0),
             delivery_fee: Some(8.50),
+            voice_receptionist_enabled: false,
+            voice_receptionist_number: None,
+            voice_receptionist_persona: Some("Friendly".to_string()),
         }
     }
 }
@@ -131,6 +137,19 @@ impl Store {
         drop(data);
         self.save()
     }
+
+    pub fn set_voice_settings(&self, enabled: bool, number: Option<String>, persona: Option<String>) -> Result<(), String> {
+        let mut data = self.data.write().unwrap();
+        data.voice_receptionist_enabled = enabled;
+        if number.is_some() {
+            data.voice_receptionist_number = number;
+        }
+        if persona.is_some() {
+            data.voice_receptionist_persona = persona;
+        }
+        drop(data);
+        self.save()
+    }
 }
 
 impl Default for Store {
@@ -148,6 +167,9 @@ mod tests {
         let settings = AppSettings::default();
         assert_eq!(settings.listen_addr, "0.0.0.0:18789");
         assert_eq!(settings.db_path, Some("ohc.db".to_string()));
+        assert_eq!(settings.voice_receptionist_enabled, false);
+        assert_eq!(settings.voice_receptionist_number, None);
+        assert_eq!(settings.voice_receptionist_persona, Some("Friendly".to_string()));
     }
 
     #[test]

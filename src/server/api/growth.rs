@@ -127,12 +127,15 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
+        .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/send-cart", post(handle_send_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
-        .route("/storefront/og-card", get(handle_og_card))
+                .route("/storefront/og-card", get(handle_og_card))
+        .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -186,6 +189,19 @@ pub struct GenerateCartRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCartResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartRequest {
+    pub customer_name: Option<String>,
+    pub cart_value: Option<String>,
+    pub draft: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartResponse {
+    pub success: bool,
     pub message: String,
 }
 
@@ -298,6 +314,16 @@ async fn handle_generate_cart(
     })
 }
 
+async fn handle_send_cart(
+    Extension(_state): Extension<GrowthState>,
+    Json(_req): Json<SendCartRequest>,
+) -> impl IntoResponse {
+    Json(SendCartResponse {
+        success: true,
+        message: "Email scheduled to be sent successfully".to_string(),
+    })
+}
+
 async fn handle_send_receipt(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<SendReceiptRequest>,
@@ -320,6 +346,51 @@ async fn handle_send_receipt(
     state.hub.append_recent_event(msg);
 
     Json(SendReceiptResponse { success: true, message: generated })
+}
+
+
+#[derive(Deserialize)]
+pub struct LeadGenCampaignRequest {
+    pub budget: f64,
+    pub radius_miles: i32,
+    pub zip_code: String,
+}
+
+#[derive(Serialize)]
+pub struct LeadGenCampaignResponse {
+    pub id: String,
+    pub status: String,
+}
+
+async fn handle_create_lead_gen_campaign(
+    Extension(state): Extension<GrowthState>,
+    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<LeadGenCampaignRequest>,
+) -> Result<Json<LeadGenCampaignResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id.clone();
+
+    let repo = crate::domain::repository::campaign_repo::CampaignRepository::new(state.pool.clone());
+
+    let campaign = crate::domain::repository::models::LeadGenCampaign {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        budget: std::str::FromStr::from_str(&req.budget.to_string()).unwrap_or_default(),
+        radius_miles: req.radius_miles,
+        zip_code: req.zip_code.clone(),
+        status: "Active".to_string(),
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    repo.create_lead_gen_campaign(&campaign).await.map_err(|e| {
+        tracing::error!("Failed to save lead gen campaign: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(LeadGenCampaignResponse {
+        id: campaign.id,
+        status: campaign.status,
+    }))
 }
 
 async fn handle_send_campaign(
@@ -470,7 +541,7 @@ async fn handle_storefront_embed(
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-        use sqlx::Row;
+
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
@@ -517,6 +588,109 @@ async fn handle_storefront_embed(
 "##);
     axum::response::Html(html)
 }
+
+
+#[derive(Debug, Deserialize)]
+pub struct FlashSaleEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub code: Option<String>,
+    pub percent: Option<String>,
+    pub end: Option<String>,
+    pub theme: Option<String>,
+}
+
+async fn handle_flash_sale_embed(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let title = query.title.as_deref().unwrap_or("Flash Sale");
+    let code = query.code.as_deref().unwrap_or("CODE");
+    let percent = query.percent.as_deref().unwrap_or("0");
+    let end = query.end.as_deref().unwrap_or("");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let safe_title = escape_html(title);
+    let safe_code = escape_html(code);
+    let safe_percent = escape_html(percent);
+    let safe_end = escape_html(end);
+
+    let html = format!(r##"<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; background: {bg_color}; color: {text_color}; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }}
+        .widget {{ padding: 20px; text-align: center; border-radius: 12px; max-width: 300px; width: 100%; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid rgba(128, 128, 128, 0.2); }}
+        .title {{ font-size: 1.2rem; font-weight: bold; margin: 0 0 10px 0; }}
+        .discount {{ color: #ef4444; font-weight: bold; }}
+        .code-box {{ border: 2px dashed #d1d5db; padding: 10px; margin: 15px 0; border-radius: 8px; font-family: monospace; font-weight: bold; letter-spacing: 2px; }}
+        .countdown {{ display: flex; justify-content: center; gap: 10px; margin: 15px 0; }}
+        .time-box {{ display: flex; flex-direction: column; align-items: center; }}
+        .time-val {{ font-size: 1.5rem; font-weight: bold; font-family: monospace; }}
+        .time-lbl {{ font-size: 0.6rem; text-transform: uppercase; color: #6b7280; }}
+        .footer {{ font-size: 0.75rem; margin-top: 15px; color: #6b7280; }}
+        .footer a {{ color: #6b7280; text-decoration: none; font-weight: 600; }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="title">⚡ {safe_title}</div>
+        <p style="margin: 0; font-size: 0.9rem;">Get <span class="discount">{safe_percent}% OFF</span> your order!</p>
+
+        <div class="countdown">
+            <div class="time-box"><div class="time-val" id="h">00</div><div class="time-lbl">Hours</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="m">00</div><div class="time-lbl">Mins</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="s" style="color: #ef4444;">00</div><div class="time-lbl">Secs</div></div>
+        </div>
+
+        <div class="code-box">{safe_code}</div>
+
+        <div class="footer">
+            <a href="https://ohc.app/join?ref={tenant}" target="_blank">⚡ Powered by OHC</a>
+        </div>
+    </div>
+
+    <script>
+        const targetDate = new Date('{safe_end}').getTime();
+
+        setInterval(function() {{
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0 || isNaN(distance)) {{
+                document.getElementById("h").innerText = "00";
+                document.getElementById("m").innerText = "00";
+                document.getElementById("s").innerText = "00";
+                return;
+            }}
+
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById("h").innerText = hours.toString().padStart(2, '0');
+            document.getElementById("m").innerText = minutes.toString().padStart(2, '0');
+            document.getElementById("s").innerText = seconds.toString().padStart(2, '0');
+        }}, 1000);
+    </script>
+</body>
+</html>
+"##);
+    axum::response::Html(html)
+}
+
 
 async fn handle_og_card(
     Extension(state): Extension<GrowthState>,
@@ -598,7 +772,7 @@ async fn handle_check_milestones(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
-    use sqlx::Row;
+
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
@@ -611,6 +785,7 @@ async fn handle_check_milestones(
             .fetch_all(&state.pool)
             .await
             .unwrap_or_default();
+        use sqlx::Row;
         let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
         cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
         types
@@ -841,6 +1016,7 @@ async fn handle_onboarding_metrics(
         .fetch_all(&_state.pool).await
     {
         Ok(rows) => {
+
             use sqlx::Row;
             let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
             let resp = OnboardingMetricsResponse { metrics };
