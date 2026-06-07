@@ -66,12 +66,18 @@ export function HelpChat() {
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText })
+        body: JSON.stringify({ message: messageText }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error("Failed to fetch");
 
@@ -83,11 +89,15 @@ export function HelpChat() {
         sender: 'agent',
         ...reply
       }]);
-    } catch (err) {
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      const isTimeout = err.name === 'AbortError';
       setMessages(prev => [...prev, {
         id: nextMessageId('agent'),
         sender: 'agent',
-        text: "Sorry, I'm having trouble connecting right now."
+        text: isTimeout
+          ? "Sorry, the connection timed out. Please try again later or check your network connection."
+          : "Sorry, I'm having trouble connecting right now."
       }]);
     } finally {
       setIsLoading(false);
