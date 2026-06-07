@@ -156,18 +156,13 @@ describe('CostDashboardPage', () => {
       });
     }) as any;
 
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
     render(<CostDashboardPage />);
 
     await waitFor(() => {
       expect(screen.queryByText('Loading...')).toBeNull();
     });
 
-    expect(consoleSpy).toHaveBeenCalledWith("Failed to fetch cost data:", 500);
-
-    // Data is null, formatting should return $0.00
-    const zeroElements = screen.getAllByText('$0.00');
-    expect(zeroElements.length).toBeGreaterThan(0);
+    // Should display the error UI. Note: The plan data fetch is checked after the cost data fetch, so it will be the last error set.
+    expect(screen.getByText('Failed to fetch cost data.')).toBeDefined();
   });
 });
