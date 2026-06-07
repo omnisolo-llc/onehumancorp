@@ -299,7 +299,7 @@ async fn handle_generate_cart(
 }
 
 async fn handle_send_receipt(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<SendReceiptRequest>,
 ) -> impl IntoResponse {
     let email = req.customer_email.unwrap_or_else(|| "customer@example.com".to_string());
@@ -323,7 +323,7 @@ async fn handle_send_receipt(
 }
 
 async fn handle_send_campaign(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would:
@@ -357,7 +357,7 @@ async fn handle_track_visitor(
 }
 
 async fn handle_affiliate_generate_link(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<GenerateAffiliateLinkRequest>,
 ) -> Result<Json<GenerateAffiliateLinkResponse>, StatusCode> {
@@ -406,7 +406,7 @@ async fn handle_affiliate_track(
 }
 
 async fn handle_affiliate_stats(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<AffiliateStatsResponse>, StatusCode> {
     let mut total_affiliates: i64 = 0;
@@ -442,7 +442,7 @@ pub struct StorefrontEmbedQuery {
 }
 
 async fn handle_storefront_embed(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -519,7 +519,7 @@ async fn handle_storefront_embed(
 }
 
 async fn handle_og_card(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -595,7 +595,7 @@ async fn handle_og_card(
 }
 
 async fn handle_check_milestones(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
     use sqlx::Row;
@@ -647,7 +647,7 @@ pub struct MilestoneCardQuery {
 }
 
 async fn handle_get_milestone_card(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>,
 ) -> impl IntoResponse {
     let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
@@ -736,7 +736,7 @@ async fn handle_get_milestone_card(
 }
 
 async fn handle_get_team_invites(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesResponse>, StatusCode> {
     let cache_key = format!("team_invites:{}:{:?}", query.team_id, query.cursor);
@@ -785,7 +785,7 @@ async fn handle_generate_discount_share(
 }
 
 async fn handle_team_invites_metrics(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let cache_key = format!("metrics:{}", query.team_id);
@@ -856,7 +856,7 @@ async fn handle_onboarding_metrics(
 }
 
 async fn handle_referral_click(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
@@ -880,7 +880,7 @@ async fn handle_referral_click(
 }
 
 async fn handle_referral_convert(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
@@ -904,7 +904,7 @@ async fn handle_referral_convert(
 
 
 async fn handle_referral_generate(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
     let ref_code = uuid::Uuid::new_v4().to_string();
@@ -932,7 +932,7 @@ async fn handle_referral_generate(
 }
 
 async fn handle_team_invite_accept(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<InviteIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -963,7 +963,7 @@ async fn handle_team_invite_accept(
 }
 
 async fn handle_create_team_invite(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -1322,7 +1322,7 @@ mod tests {
 }
 
 async fn handle_aggregated_team_invites_metrics(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let cache_key = "aggregated_metrics";
     let cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));

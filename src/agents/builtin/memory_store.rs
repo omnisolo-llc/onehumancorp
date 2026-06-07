@@ -32,16 +32,10 @@ fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 1.0;
     }
-    let mut dot_product = 0.0;
-    let mut norm_a = 0.0;
-    let mut norm_b = 0.0;
-    for i in 0..a.len() {
-        let x = a[i];
-        let y = b[i];
-        dot_product += x * y;
-        norm_a += x * x;
-        norm_b += y * y;
-    }
+    let (dot_product, norm_a, norm_b) = a.iter().zip(b.iter()).fold(
+        (0.0f32, 0.0f32, 0.0f32),
+        |(dot, na, nb), (&x, &y)| (dot + x * y, na + x * x, nb + y * y),
+    );
     if norm_a == 0.0 || norm_b == 0.0 {
         return 1.0;
     }
