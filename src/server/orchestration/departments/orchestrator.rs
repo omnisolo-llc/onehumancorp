@@ -712,10 +712,8 @@ impl DepartmentOrchestrator {
 
                                 // Invalidate Redis edge cache for the product price
                                 let cache_key = format!("ohc:price:{}:{}", tenant_id, product_id);
-                                eprintln!("Mock redis invalidation for {}", cache_key);
-                                if false {
-
-                                }
+                                let cache = crate::PRICE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+                                cache.invalidate(&cache_key).await;
 
                                 // Trigger Promoter agent to draft a marketing broadcast
                                 let promo_payload = serde_json::json!({
