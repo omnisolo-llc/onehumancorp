@@ -150,7 +150,7 @@ where
 
     Router::new()
         .route("/", get(get_queue))
-        .route("/execute/:id", post(execute_action))
+        .route("/execute/{id}", post(execute_action))
         .route("/rates", post(fetch_rates))
         .route("/label", post(purchase_label))
         .route("/webhook/doordash", post(doordash_webhook))
@@ -403,7 +403,8 @@ pub async fn persist_doordash_tracking_update(
                  provider_delivery_id = COALESCE(provider_delivery_id, $2),
                  status = $3,
                  driver_id = COALESCE($4, driver_id),
-                 delivery_location = ST_SetSRID(ST_MakePoint($6, $5), 4326),
+                 delivery_location_lat = $5,
+                 delivery_location_lng = $6,
                  updated_at = CURRENT_TIMESTAMP
              WHERE organization_id = $1
                AND ((provider = 'doordash' AND provider_delivery_id = $2) OR order_id = $2)",

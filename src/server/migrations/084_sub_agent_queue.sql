@@ -1,4 +1,4 @@
--- Migration 079: Create the legacy sub-agent queue table used by onboarding and hybrid sync paths.
+-- Migration 084: Create the legacy sub-agent queue table used by onboarding and hybrid sync paths.
 
 CREATE TABLE IF NOT EXISTS sub_agent_queue (
     id VARCHAR PRIMARY KEY,

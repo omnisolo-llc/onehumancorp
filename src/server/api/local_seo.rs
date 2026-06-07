@@ -228,7 +228,7 @@ pub fn router() -> Router {
         .route("/connect", post(connect_google_business))
         .route("/status", get(get_connection_status))
         .route("/reviews/pending", get(get_pending_reviews))
-        .route("/reviews/:review_id/approve", post(approve_and_reply))
+        .route("/reviews/{review_id}/approve", post(approve_and_reply))
         .route("/webhook", post(webhook_ingest))
 }
 

@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS postgis;
-
 CREATE TABLE IF NOT EXISTS delivery_tasks (
     id UUID PRIMARY KEY,
     organization_id TEXT NOT NULL,
@@ -8,14 +6,15 @@ CREATE TABLE IF NOT EXISTS delivery_tasks (
     route_plan_id UUID,
     status TEXT NOT NULL DEFAULT 'PENDING',
     estimated_arrival TIMESTAMPTZ,
-    delivery_location GEOMETRY(Point, 4326),
+    delivery_location_lat DOUBLE PRECISION,
+    delivery_location_lng DOUBLE PRECISION,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_delivery_tasks_org ON delivery_tasks(organization_id);
 CREATE INDEX IF NOT EXISTS idx_delivery_tasks_order ON delivery_tasks(order_id);
-CREATE INDEX IF NOT EXISTS idx_delivery_tasks_location ON delivery_tasks USING GIST (delivery_location);
+CREATE INDEX IF NOT EXISTS idx_delivery_tasks_location ON delivery_tasks(organization_id, delivery_location_lat, delivery_location_lng);
 
 ALTER TABLE delivery_tasks ENABLE ROW LEVEL SECURITY;
 
@@ -30,6 +29,12 @@ ADD COLUMN IF NOT EXISTS provider TEXT;
 
 ALTER TABLE delivery_tasks
 ADD COLUMN IF NOT EXISTS provider_delivery_id TEXT;
+
+ALTER TABLE delivery_tasks
+ADD COLUMN IF NOT EXISTS delivery_location_lat DOUBLE PRECISION;
+
+ALTER TABLE delivery_tasks
+ADD COLUMN IF NOT EXISTS delivery_location_lng DOUBLE PRECISION;
 
 CREATE INDEX IF NOT EXISTS idx_delivery_tasks_provider_delivery
 ON delivery_tasks(organization_id, provider, provider_delivery_id);
