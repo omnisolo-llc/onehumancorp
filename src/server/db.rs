@@ -1070,6 +1070,56 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_customer360_tenant_customer ON customer360(tenant_id, customer_id);
+                    CREATE TABLE IF NOT EXISTS smart_pricing_policies (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        product_id TEXT NOT NULL,
+
+                        min_margin_percent REAL NOT NULL,
+
+                        auto_discount_trigger_days_stagnant INTEGER NOT NULL,
+
+                        max_discount_percent REAL NOT NULL,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_smart_pricing_policies_tenant ON smart_pricing_policies(tenant_id);
+
+                    CREATE INDEX IF NOT EXISTS idx_smart_pricing_policies_product ON smart_pricing_policies(product_id);
+
+
+
+                    CREATE TABLE IF NOT EXISTS active_discounts (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        policy_id TEXT,
+
+                        product_id TEXT NOT NULL,
+
+                        discount_amount REAL NOT NULL,
+
+                        expires_at TIMESTAMP NOT NULL,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_active_discounts_tenant ON active_discounts(tenant_id);
+
+                    CREATE INDEX IF NOT EXISTS idx_active_discounts_product ON active_discounts(product_id);
+
+                    CREATE INDEX IF NOT EXISTS idx_active_discounts_policy ON active_discounts(policy_id);
+
                     CREATE TABLE IF NOT EXISTS loyalty_ledger (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

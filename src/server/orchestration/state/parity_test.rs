@@ -1014,4 +1014,109 @@ mod parity_tests {
         }
     }
 
+
+
+    #[tokio::test]
+    async fn test_parity_smart_pricing_policies() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let policy_id = uuid::Uuid::new_v4().to_string();
+        let product_id = uuid::Uuid::new_v4().to_string();
+        let tenant_id = uuid::Uuid::new_v4().to_string();
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO smart_pricing_policies (id, tenant_id, product_id, min_margin_percent, auto_discount_trigger_days_stagnant, max_discount_percent) VALUES (?, ?, ?, 10.5, 30, 25.0)")
+                .bind(&policy_id)
+                .bind(&tenant_id)
+                .bind(&product_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let margin: f64 = sqlx::query_scalar("SELECT min_margin_percent FROM smart_pricing_policies WHERE id = ?")
+                .bind(&policy_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(margin, 10.5);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&policy_id).unwrap();
+            let parsed_tenant_id = uuid::Uuid::parse_str(&tenant_id).unwrap();
+            let parsed_product_id = uuid::Uuid::parse_str(&product_id).unwrap();
+
+            sqlx::query("INSERT INTO smart_pricing_policies (id, tenant_id, product_id, min_margin_percent, auto_discount_trigger_days_stagnant, max_discount_percent) VALUES ($1, $2, $3, 10.5, 30, 25.0)")
+                .bind(parsed_id)
+                .bind(parsed_tenant_id)
+                .bind(parsed_product_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let margin: f64 = sqlx::query_scalar("SELECT min_margin_percent FROM smart_pricing_policies WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(margin, 10.5);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_active_discounts() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let discount_id = uuid::Uuid::new_v4().to_string();
+        let product_id = uuid::Uuid::new_v4().to_string();
+        let tenant_id = uuid::Uuid::new_v4().to_string();
+        let date_str = "2024-01-01 00:00:00+00";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO active_discounts (id, tenant_id, product_id, discount_amount, expires_at) VALUES (?, ?, ?, 5.5, ?)")
+                .bind(&discount_id)
+                .bind(&tenant_id)
+                .bind(&product_id)
+                .bind(date_str)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let amount: f64 = sqlx::query_scalar("SELECT discount_amount FROM active_discounts WHERE id = ?")
+                .bind(&discount_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(amount, 5.5);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&discount_id).unwrap();
+            let parsed_tenant_id = uuid::Uuid::parse_str(&tenant_id).unwrap();
+            let parsed_product_id = uuid::Uuid::parse_str(&product_id).unwrap();
+
+            sqlx::query("INSERT INTO active_discounts (id, tenant_id, product_id, discount_amount, expires_at) VALUES ($1, $2, $3, 5.5, $4)")
+                .bind(parsed_id)
+                .bind(parsed_tenant_id)
+                .bind(parsed_product_id)
+                .bind(chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00+00:00").unwrap())
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let amount: f64 = sqlx::query_scalar("SELECT discount_amount FROM active_discounts WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(amount, 5.5);
+        }
+    }
+
 }
