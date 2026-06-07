@@ -19,7 +19,7 @@ describe('GrowthReferralWidget', () => {
 
   it('renders correctly', () => {
     render(<GrowthReferralWidget />);
-    expect(screen.getByText('Grow Your Team')).toBeInTheDocument();
+    expect(screen.getByText('Invite your network, grow together')).toBeInTheDocument();
     expect(screen.getByText('Get My Invite Link')).toBeInTheDocument();
   });
 

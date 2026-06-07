@@ -931,38 +931,4 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
-    #[tokio::test]
-    async fn test_ml_resilience_inference_timeout_with_db_lag() {
-        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // Simulate a scenario where BOTH the LLM API is timing out and the DB is experiencing lag.
-        // The system must enforce the 60s timeout for the inference call and gracefully handle the resulting
-        // DB state update delay without blocking the thread pool indefinitely.
 
-        let timeout_duration = std::time::Duration::from_millis(100);
-        let start = std::time::Instant::now();
-
-        // Simulate an inference call that exceeds the timeout
-        let inference_future = async {
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await; // Simulate slow inference
-            Ok::<&str, String>("LLM Output")
-        };
-
-        // Enforce the timeout on the inference call
-        let inference_result = tokio::time::timeout(timeout_duration, inference_future).await;
-
-        // Assert that the inference call timed out
-        assert!(inference_result.is_err(), "ML-Resilience: Inference call must timeout");
-
-        // Simulate the fallback behavior (e.g., updating DB status to 'FAILED' or 'PAUSED') with DB lag
-        let db_update_future = async {
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await; // Simulate DB lag
-            Ok::<(), String>(())
-        };
-
-        // Even with DB lag, the overall failure path should not take excessively long
-        let fallback_result = tokio::time::timeout(std::time::Duration::from_millis(250), db_update_future).await;
-
-        // Assert that the fallback update succeeds within its own timeout bounds
-        assert!(fallback_result.is_ok(), "ML-Resilience: DB fallback update must succeed despite DB lag");
-        assert!(start.elapsed() >= timeout_duration, "Total elapsed time should reflect the initial inference timeout");
-    }

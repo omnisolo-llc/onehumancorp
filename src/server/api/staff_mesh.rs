@@ -2,9 +2,7 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
     http::HeaderMap,
-    routing::post,
     Json,
-    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -40,6 +38,7 @@ pub struct StaffMember {
     pub name: String,
     pub phone_number: String,
     pub role: String,
+    pub status: String,
 }
 
 #[derive(Serialize)]
@@ -65,11 +64,6 @@ pub struct SyncTimecardResponse {
     pub success: bool,
 }
 
-#[derive(Serialize)]
-pub struct GetTimecardResponse {
-    pub events: Vec<serde_json::Value>,
-}
-
 fn get_tenant_id(headers: &HeaderMap) -> String {
     headers
         .get("x-spiffe-id")
@@ -93,7 +87,7 @@ pub async fn create_staff_handler(
     match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
             let res = sqlx::query(
-                "INSERT INTO ohc_staff_member (id, tenant_id, name, phone_number, role) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO staff_members (id, tenant_id, name, phone_number, role) VALUES (?, ?, ?, ?, ?)",
             )
             .bind(&staff_id)
             .bind(&tenant_id)
@@ -111,7 +105,7 @@ pub async fn create_staff_handler(
         }
         crate::db::DbStore::Postgres => {
              let res = sqlx::query(
-                "INSERT INTO ohc_staff_member (id, tenant_id, name, phone_number, role) VALUES ($1, $2, $3, $4, $5)",
+                "INSERT INTO staff_members (id, tenant_id, name, phone_number, role) VALUES ($1, $2, $3, $4, $5)",
             )
             .bind(&staff_id)
             .bind(&tenant_id)
@@ -146,7 +140,7 @@ pub async fn set_staff_pin_handler(
     match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
             let res = sqlx::query(
-                "UPDATE ohc_staff_member SET pin_hash = ? WHERE id = ? AND tenant_id = ?",
+                "UPDATE staff_members SET pin_hash = ? WHERE id = ? AND tenant_id = ?",
             )
             .bind(&pin_hash)
             .bind(&id)
@@ -162,7 +156,7 @@ pub async fn set_staff_pin_handler(
         }
         crate::db::DbStore::Postgres => {
             let res = sqlx::query(
-                "UPDATE ohc_staff_member SET pin_hash = $1 WHERE id = $2 AND tenant_id = $3",
+                "UPDATE staff_members SET pin_hash = $1 WHERE id = $2 AND tenant_id = $3",
             )
             .bind(&pin_hash)
             .bind(&id)
@@ -189,27 +183,27 @@ pub async fn get_staff_handler(
 
     let staff: Vec<StaffMember> = match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
-            let rows: Result<Vec<(String, String, String, String)>, _> = sqlx::query_as(
-                "SELECT id, name, phone_number, role FROM ohc_staff_member WHERE tenant_id = ?",
+            let rows: Result<Vec<(String, String, String, String, String)>, _> = sqlx::query_as(
+                "SELECT id, name, phone_number, role, status FROM staff_members WHERE tenant_id = ?",
             )
             .bind(&tenant_id)
             .fetch_all(pool)
             .await;
 
-            rows.unwrap_or_default().into_iter().map(|(id, name, phone_number, role)| {
-                StaffMember { id, name, phone_number, role }
+            rows.unwrap_or_default().into_iter().map(|(id, name, phone_number, role, status)| {
+                StaffMember { id, name, phone_number, role, status }
             }).collect()
         }
         crate::db::DbStore::Postgres => {
-            let rows: Result<Vec<(String, String, String, String)>, _> = sqlx::query_as(
-                "SELECT id, name, phone_number, role FROM ohc_staff_member WHERE tenant_id = $1",
+            let rows: Result<Vec<(String, String, String, String, String)>, _> = sqlx::query_as(
+                "SELECT id, name, phone_number, role, status FROM staff_members WHERE tenant_id = $1",
             )
             .bind(&tenant_id)
             .fetch_all(&db.pool)
             .await;
 
-            rows.unwrap_or_default().into_iter().map(|(id, name, phone_number, role)| {
-                StaffMember { id, name, phone_number, role }
+            rows.unwrap_or_default().into_iter().map(|(id, name, phone_number, role, status)| {
+                StaffMember { id, name, phone_number, role, status }
             }).collect()
         }
     };
@@ -228,7 +222,7 @@ pub async fn sync_timecard_handler(
         match &db.store {
             crate::db::DbStore::Sqlite(pool) => {
                 let _ = sqlx::query(
-                    "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, event_time) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO timecard_events (id, tenant_id, staff_id, event_type, offline_timestamp) VALUES (?, ?, ?, ?, ?)",
                 )
                 .bind(&event.id)
                 .bind(&tenant_id)
@@ -240,7 +234,7 @@ pub async fn sync_timecard_handler(
             }
             crate::db::DbStore::Postgres => {
                 let _ = sqlx::query(
-                    "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, event_time) VALUES ($1, $2, $3, $4, $5::timestamp)",
+                    "INSERT INTO timecard_events (id, tenant_id, staff_id, event_type, offline_timestamp) VALUES ($1, $2, $3, $4, $5::timestamp)",
                 )
                 .bind(&event.id)
                 .bind(&tenant_id)
@@ -254,62 +248,6 @@ pub async fn sync_timecard_handler(
     }
 
     (axum::http::StatusCode::OK, Json(SyncTimecardResponse { success: true })).into_response()
-}
-
-pub async fn get_timecard_handler(
-    headers: HeaderMap,
-    State(db): State<Arc<DB>>,
-) -> impl IntoResponse {
-    let tenant_id = get_tenant_id(&headers);
-
-    let events = match &db.store {
-        crate::db::DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
-                "SELECT id, staff_id, event_type, CAST(event_time AS TEXT) AS offline_timestamp, CAST(created_at AS TEXT) AS created_at FROM ohc_timecard_event WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 100",
-            )
-            .bind(&tenant_id)
-            .fetch_all(pool)
-            .await;
-            rows.map(|rows| rows.into_iter().map(|row| {
-                use sqlx::Row;
-                serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "staff_id": row.get::<String, _>("staff_id"),
-                    "event_type": row.get::<String, _>("event_type"),
-                    "offline_timestamp": row.get::<String, _>("offline_timestamp"),
-                    "created_at": row.get::<String, _>("created_at"),
-                })
-            }).collect::<Vec<_>>()).unwrap_or_default()
-        }
-        crate::db::DbStore::Postgres => {
-            let rows = sqlx::query(
-                "SELECT id, staff_id, event_type, event_time::text AS offline_timestamp, created_at::text AS created_at FROM ohc_timecard_event WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100",
-            )
-            .bind(&tenant_id)
-            .fetch_all(&db.pool)
-            .await;
-            rows.map(|rows| rows.into_iter().map(|row| {
-                use sqlx::Row;
-                serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "staff_id": row.get::<String, _>("staff_id"),
-                    "event_type": row.get::<String, _>("event_type"),
-                    "offline_timestamp": row.get::<String, _>("offline_timestamp"),
-                    "created_at": row.get::<String, _>("created_at"),
-                })
-            }).collect::<Vec<_>>()).unwrap_or_default()
-        }
-    };
-
-    (axum::http::StatusCode::OK, Json(GetTimecardResponse { events })).into_response()
-}
-
-pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
-    Router::new()
-        .route("/", post(create_staff_handler).get(get_staff_handler))
-        .route("/{id}/pin", post(set_staff_pin_handler))
-        .route("/timecard", post(sync_timecard_handler).get(get_timecard_handler))
-        .with_state(db)
 }
 
 #[cfg(test)]
@@ -336,7 +274,7 @@ mod tests {
 
         // Setup schema
         sqlx::query(
-            "CREATE TABLE ohc_staff_member (
+            "CREATE TABLE staff_members (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 name TEXT NOT NULL,
@@ -352,12 +290,12 @@ mod tests {
         ).execute(&sqlite_pool).await.unwrap();
 
         sqlx::query(
-            "CREATE TABLE ohc_timecard_event (
+            "CREATE TABLE timecard_events (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 staff_id TEXT NOT NULL,
                 event_type TEXT NOT NULL,
-                event_time TIMESTAMP NOT NULL,
+                offline_timestamp TIMESTAMP NOT NULL,
                 synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 _sync_status TEXT DEFAULT 'pending',
@@ -369,7 +307,7 @@ mod tests {
 
         let app = axum::Router::new()
             .route("/staff", axum::routing::post(create_staff_handler).get(get_staff_handler))
-            .route("/staff/{id}/pin", axum::routing::post(set_staff_pin_handler))
+            .route("/staff/:id/pin", axum::routing::post(set_staff_pin_handler))
             .route("/timecard", axum::routing::post(sync_timecard_handler))
             .with_state(db_arc);
 

@@ -1,210 +1,14 @@
-use crate::orchestration::departments::orchestrator::{
-    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
-};
-use crate::orchestration::departments::types::{
-    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
-};
+use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 pub struct SalesAgent {
-    orchestrator: Arc<DepartmentOrchestrator>,
-    configs: HashMap<String, DepartmentConfig>,
-    quote_intent_planner: Arc<dyn SalesQuoteIntentPlanner>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct QuoteIntent {
-    pub original_message: String,
-    pub service_name: String,
-}
-
-#[async_trait::async_trait]
-pub trait SalesQuoteIntentPlanner: Send + Sync {
-    async fn plan_quote_intent(
-        &self,
-        tenant_id: &str,
-        payload: &Value,
-    ) -> Result<Option<QuoteIntent>, String>;
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum SalesIntentBackend {
-    Local,
-    Minimax { api_key: String },
-}
-
-impl SalesIntentBackend {
-    pub fn from_env() -> Self {
-        match std::env::var("OHC_SALES_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-            .as_deref()
-        {
-            Ok("minimax") => {
-                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                if api_key.trim().is_empty() {
-                    Self::Local
-                } else {
-                    Self::Minimax { api_key }
-                }
-            }
-            _ => Self::Local,
-        }
-    }
-}
-
-struct RuntimeSalesQuoteIntentPlanner {
-    backend: SalesIntentBackend,
-}
-
-impl RuntimeSalesQuoteIntentPlanner {
-    fn from_env() -> Self {
-        Self {
-            backend: SalesIntentBackend::from_env(),
-        }
-    }
-}
-
-#[async_trait::async_trait]
-impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
-    async fn plan_quote_intent(
-        &self,
-        tenant_id: &str,
-        payload: &Value,
-    ) -> Result<Option<QuoteIntent>, String> {
-        if let Some(intent) = extract_quote_intent(payload) {
-            return Ok(Some(intent));
-        }
-
-        let original_message = payload
-            .get("message")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .trim();
-        if original_message.is_empty() {
-            return Ok(None);
-        }
-
-        let payload_json = serde_json::to_string(payload).map_err(|e| e.to_string())?;
-        let prompt = format!(
-            "You are the OneHumanCorp sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, and original_message. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
-        );
-
-        let raw = match &self.backend {
-            SalesIntentBackend::Minimax { api_key } => {
-                crate::minimax::MinimaxClient::new(api_key.clone())
-                    .reason(&prompt)
-                    .await
-            }
-            SalesIntentBackend::Local => crate::minimax::LocalLLMClient::new()
-                .reason(&prompt)
-                .await,
-        }?;
-
-        parse_quote_intent_plan(&raw, original_message)
-    }
+    orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
 
 impl SalesAgent {
-    pub fn new(orchestrator: Arc<DepartmentOrchestrator>) -> Self {
-        Self::with_quote_intent_planner(
-            orchestrator,
-            Arc::new(RuntimeSalesQuoteIntentPlanner::from_env()),
-        )
-    }
-
-    pub fn with_quote_intent_planner(
-        orchestrator: Arc<DepartmentOrchestrator>,
-        quote_intent_planner: Arc<dyn SalesQuoteIntentPlanner>,
-    ) -> Self {
-        Self {
-            orchestrator,
-            configs: HashMap::new(),
-            quote_intent_planner,
-        }
-    }
-}
-
-pub fn extract_quote_intent(payload: &Value) -> Option<QuoteIntent> {
-    let original_message = payload
-        .get("message")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .trim();
-
-    if let Some(llm_intent) = payload.get("llm_intent") {
-        let intent = llm_intent.get("intent").and_then(|v| v.as_str()).unwrap_or("");
-        let confidence = llm_intent.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        if intent.eq_ignore_ascii_case("quote") && confidence >= 0.7 {
-            let service_name = llm_intent
-                .get("service_name")
-                .and_then(|v| v.as_str())
-                .map(str::trim)
-                .filter(|name| !name.is_empty())?;
-            return Some(QuoteIntent {
-                original_message: original_message.to_string(),
-                service_name: service_name.to_string(),
-            });
-        }
-    }
-
-    None
-}
-
-pub fn parse_quote_intent_plan(
-    raw: &str,
-    fallback_original_message: &str,
-) -> Result<Option<QuoteIntent>, String> {
-    let value: serde_json::Value = match serde_json::from_str(raw) {
-        Ok(value) => value,
-        Err(_) => {
-            let start = raw
-                .find('{')
-                .ok_or_else(|| "sales intent response missing JSON object".to_string())?;
-            let end = raw
-                .rfind('}')
-                .ok_or_else(|| "sales intent response missing JSON object".to_string())?;
-            serde_json::from_str(&raw[start..=end])
-                .map_err(|e| format!("failed to parse sales intent JSON: {e}"))?
-        }
-    };
-
-    let intent = value.get("intent").and_then(|v| v.as_str()).unwrap_or("");
-    let confidence = value.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
-    if !intent.eq_ignore_ascii_case("quote") || confidence < 0.7 {
-        return Ok(None);
-    }
-
-    let service_name = value
-        .get("service_name")
-        .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|name| !name.is_empty())
-        .ok_or_else(|| "sales quote intent missing service_name".to_string())?;
-
-    let original_message = value
-        .get("original_message")
-        .and_then(|v| v.as_str())
-        .map(str::trim)
-        .filter(|message| !message.is_empty())
-        .unwrap_or(fallback_original_message);
-
-    Ok(Some(QuoteIntent {
-        original_message: original_message.to_string(),
-        service_name: service_name.to_string(),
-    }))
-}
-
-pub fn risk_for_service_price(config: Option<&DepartmentConfig>, price: f64) -> ActionRisk {
-    let Some(config) = config else {
-        return ActionRisk::DraftForReview;
-    };
-
-    if config.auto_approve_limits > 0.0 && price <= config.auto_approve_limits {
-        ActionRisk::AutoExecute
-    } else {
-        ActionRisk::DraftForReview
+    pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
+        Self { orchestrator }
     }
 }
 
@@ -215,132 +19,72 @@ impl Department for SalesAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec![
-            "tenant.quote.requested".to_string(),
-            "tenant.message.received".to_string(),
-            "tenant.omnichannel.message.received".to_string(),
-        ]
+        vec!["tenant.quote.requested".to_string(), "tenant.message.received".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
-            let planned_intent = match self
-                .quote_intent_planner
-                .plan_quote_intent(&event.tenant_id, &event.payload)
-                .await
-            {
-                Ok(intent) => intent,
-                Err(err) => {
-                    ::server_telemetry::record_error_signal("SalesAgent LLM planning failed");
-                    tracing::error!("SalesAgent LLM planning failed: {}", err);
-                    None
-                }
-            };
+        let risk = ActionRisk::DraftForReview;
 
-            if let Some(intent) = planned_intent {
-                let service = self
-                    .orchestrator
-                    .get_service_by_name_like(&event.tenant_id, &intent.service_name)
-                    .await?;
-                let (service_name, price) = service.unwrap_or((intent.service_name, 75.0));
-                let risk =
-                    risk_for_service_price(self.get_config(&event.tenant_id).as_ref(), price);
+        if event.event_type == "tenant.message.received" {
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
+            if message.contains("fix") || message.contains("tomorrow") || message.contains("plumbing") {
+                let service = self.orchestrator.get_service_by_name_like(&event.tenant_id, "Plumbing Fix").await?;
+                let (service_name, price) = service.unwrap_or(("Plumbing Fix".to_string(), 75.0));
 
-                let drafted_message = format!(
-                    "Hi! Yes, I have an opening tomorrow at 2 PM. The base callout fee is ${}. Would you like me to book this slot?",
-                    price
-                );
+                let drafted_message = format!("Hi! Yes, I have an opening tomorrow at 2 PM. The base callout fee is ${}. Would you like me to book this slot?", price);
 
-                ::server_telemetry::record_business_event(
-                    &event.tenant_id,
-                    ::server_telemetry::get_deployment_mode(),
-                    "quote_generated_from_message",
-                );
+                ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated_from_message");
 
                 let action_payload = serde_json::json!({
-                    "feature_type": "quote_draft",
-                    "customer_inquiry": intent.original_message,
-                    "suggested_price": price,
-                    "scope": format!("{} including labor and standard materials.", service_name),
-                    "suggested_time": "Tomorrow at 2 PM",
-                    "generated_response": drafted_message,
-                    "service": service_name.clone(),
+                    "feature_type": "sales_quote",
+                    "original_message": message,
+                    "generated_quote": drafted_message,
+                    "service": service_name,
                     "price": price,
                 });
 
-                self.orchestrator
-                    .execute_action(
-                        DepartmentType::Sales,
-                        format!("Draft quote for {}", service_name),
-                        event.tenant_id.clone(),
-                        risk,
-                        action_payload,
-                    )
-                    .await
-                    .map(|_| ())?;
+                self.orchestrator.execute_action(
+                    DepartmentType::Sales,
+                    format!("Draft quote for {}", service_name),
+                    event.tenant_id.clone(),
+                    risk,
+                    action_payload,
+                ).await.map(|_| ())?;
                 return Ok(());
             }
-
-            return Ok(());
         }
 
         // Query memory context
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
-        let _context = self
-            .orchestrator
-            .query_long_term_memory(&event.tenant_id, &query_embedding, 5)
-            .await?;
+        let _context = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
 
-        ::server_telemetry::record_business_event(
-            &event.tenant_id,
-            ::server_telemetry::get_deployment_mode(),
-            "quote_generated",
-        );
+        ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated");
 
-        self.orchestrator
-            .execute_action(
-                DepartmentType::Sales,
-                "Quote generated for review".to_string(),
-                event.tenant_id.clone(),
-                ActionRisk::DraftForReview,
-                event.payload.clone(),
-            )
-            .await
-            .map(|_| ())
+        self.orchestrator.execute_action(
+            DepartmentType::Sales,
+            "Quote generated for review".to_string(),
+            event.tenant_id.clone(),
+            risk,
+            event.payload.clone(),
+        ).await.map(|_| ())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        self.configs.get(_tenant_id).cloned()
+        None
     }
 
     fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
-        self.configs.insert(_tenant_id, _config);
     }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         let embedding = vec![0.5, 0.5, 0.5];
         // Note: We need a tenant_id here, but the trait signature doesn't provide one.
         // We'll pass a dummy one or extract it if available.
-        self.orchestrator
-            .query_long_term_memory("default_tenant", &embedding, 5)
-            .await
+        self.orchestrator.query_long_term_memory("default_tenant", &embedding, 5).await
     }
 
-    async fn request_approval(
-        &self,
-        description: String,
-        tenant_id: String,
-        risk: ActionRisk,
-    ) -> Result<ApprovalRequest, String> {
-        self.orchestrator
-            .execute_action(
-                self.department_type(),
-                description.clone(),
-                tenant_id.clone(),
-                risk,
-                serde_json::json!({}),
-            )
-            .await
+    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
+        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
     }
 }
 
@@ -356,119 +100,5 @@ impl BaseAgent for SalesAgent {
 
     async fn execute(&self, _payload: Value) -> Result<(), String> {
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::orchestration::departments::types::DepartmentConfig;
-
-    struct ScriptedSalesQuoteIntentPlanner {
-        intent: Option<QuoteIntent>,
-    }
-
-    #[async_trait::async_trait]
-    impl SalesQuoteIntentPlanner for ScriptedSalesQuoteIntentPlanner {
-        async fn plan_quote_intent(
-            &self,
-            _tenant_id: &str,
-            _payload: &Value,
-        ) -> Result<Option<QuoteIntent>, String> {
-            Ok(self.intent.clone())
-        }
-    }
-
-    #[test]
-    fn llm_quote_intent_detects_service_without_keyword_fallback() {
-        let payload = serde_json::json!({
-            "message": "Can someone come by around 2 PM?",
-            "llm_intent": {
-                "intent": "quote",
-                "service_name": "Plumbing Fix",
-                "confidence": 0.91
-            }
-        });
-
-        let intent = extract_quote_intent(&payload).expect("LLM intent should request a quote");
-
-        assert_eq!(intent.service_name, "Plumbing Fix");
-        assert_eq!(intent.original_message, "Can someone come by around 2 PM?");
-    }
-
-    #[test]
-    fn keyword_only_message_does_not_create_quote_intent() {
-        let payload = serde_json::json!({
-            "message": "Can you fix it tomorrow?"
-        });
-
-        assert_eq!(extract_quote_intent(&payload), None);
-    }
-
-    #[test]
-    fn parses_quote_intent_plan_from_llm_json() {
-        let intent = parse_quote_intent_plan(
-            r#"{"intent":"quote","service_name":"Emergency Plumbing","confidence":0.91,"original_message":"Water is coming through the ceiling"}"#,
-            "fallback message",
-        )
-        .expect("LLM JSON should parse")
-        .expect("high confidence quote intent should be returned");
-
-        assert_eq!(intent.service_name, "Emergency Plumbing");
-        assert_eq!(intent.original_message, "Water is coming through the ceiling");
-    }
-
-    #[test]
-    fn low_confidence_llm_plan_does_not_create_quote_intent() {
-        let intent = parse_quote_intent_plan(
-            r#"{"intent":"quote","service_name":"Emergency Plumbing","confidence":0.42,"original_message":"Maybe later"}"#,
-            "Maybe later",
-        )
-        .expect("LLM JSON should parse");
-
-        assert_eq!(intent, None);
-    }
-
-    #[tokio::test]
-    async fn deterministic_quote_intent_planner_is_injectable() {
-        let planner: Arc<dyn SalesQuoteIntentPlanner> = Arc::new(ScriptedSalesQuoteIntentPlanner {
-            intent: Some(QuoteIntent {
-                original_message: "The drain backed up after closing".to_string(),
-                service_name: "Drain Cleaning".to_string(),
-            }),
-        });
-
-        let intent = planner
-            .plan_quote_intent(
-                "tenant-sales",
-                &serde_json::json!({"message": "The drain backed up after closing"}),
-            )
-            .await
-            .expect("scripted planner should not fail")
-            .expect("scripted planner should return quote intent");
-
-        assert_eq!(intent.service_name, "Drain Cleaning");
-        assert_eq!(intent.original_message, "The drain backed up after closing");
-    }
-
-    #[test]
-    fn dynamic_service_price_controls_action_risk() {
-        let config = DepartmentConfig {
-            tone_of_voice: "friendly".to_string(),
-            auto_approve_limits: 100.0,
-        };
-
-        assert_eq!(
-            risk_for_service_price(Some(&config), 75.0),
-            ActionRisk::AutoExecute
-        );
-        assert_eq!(
-            risk_for_service_price(Some(&config), 175.0),
-            ActionRisk::DraftForReview
-        );
-        assert_eq!(
-            risk_for_service_price(None, 1.0),
-            ActionRisk::DraftForReview
-        );
     }
 }

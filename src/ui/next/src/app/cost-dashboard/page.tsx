@@ -25,23 +25,6 @@ interface CostDashboardData {
   period_start: string;
   period_end: string;
   trend: DailyCost[];
-  department_tier_usage?: DepartmentTierUsage;
-}
-
-interface DepartmentTierUsage {
-  current_plan: string;
-  period: string;
-  departments: DepartmentTierUsageRow[];
-}
-
-interface DepartmentTierUsageRow {
-  id: string;
-  department_type: string;
-  agent_id: string;
-  actions_used: number;
-  action_limit: number | null;
-  usage_percent: number | null;
-  soft_limit_reached: boolean;
 }
 
 export default function CostDashboardPage() {
@@ -110,7 +93,10 @@ export default function CostDashboardPage() {
             </div>
             <div className="app-panel-body">
                 <p className="text-gray-700 font-medium leading-relaxed">
-                  Cost and tier usage are based on connected backend billing, storage, network, and agent department usage signals.
+                  Here's what happened this week and what you should do next:<br/><br/>
+                  - Your revenue is steady, but your AI marketing campaigns are driving more traffic.<br/>
+                  - <strong>Recommendation:</strong> Consider running a seasonal promotion to capitalize on the recent influx of visitors.<br/>
+                  - We also noticed a few unread messages in your central inbox. Using the AI draft feature might help you save time!
                 </p>
             </div>
         </section>
@@ -218,15 +204,6 @@ export default function CostDashboardPage() {
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <div>
-                        <span className="font-medium text-gray-900">Compute Usage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
-                    </div>
-                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.compute_cost || 0)}</span>
-                </div>
-
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Network & Bandwidth</span>
@@ -243,50 +220,6 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
                 </div>
             </div>
-        </section>
-
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
-                <span className="text-sm text-gray-500 font-medium">
-                  {data?.department_tier_usage?.current_plan || 'Free'} plan · {data?.department_tier_usage?.period || data?.period_end?.slice(0, 7) || ''}
-                </span>
-            </div>
-
-            {data?.department_tier_usage?.departments?.length ? (
-                <div className="space-y-4" id="department-tier-usage-list">
-                    {data.department_tier_usage.departments.map((department) => (
-                        <div key={department.id} className="p-5 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50">
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                                <div>
-                                    <h3 className="font-semibold text-gray-900">{department.department_type}</h3>
-                                    <p className="text-sm text-gray-500 mt-1">{department.agent_id}</p>
-                                </div>
-                                <div className="text-left sm:text-right">
-                                    <p className="font-semibold text-gray-900">
-                                      {department.action_limit === null
-                                        ? `${department.actions_used} actions`
-                                        : `${department.actions_used} / ${department.action_limit} actions`}
-                                    </p>
-                                    {department.soft_limit_reached ? (
-                                      <p className="text-sm text-amber-700 font-medium mt-1">Tier limit reached</p>
-                                    ) : null}
-                                </div>
-                            </div>
-                            {department.usage_percent !== null ? (
-                                <div className="mt-4 h-2 rounded-full bg-gray-200 overflow-hidden" aria-label={`${department.department_type} usage`}>
-                                    <div
-                                      className={department.soft_limit_reached ? "h-full bg-amber-500" : "h-full bg-indigo-500"}
-                                      style={{ width: `${department.usage_percent}%` }}
-                                    />
-                                </div>
-                            ) : null}
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <p className="text-sm text-gray-500" id="department-tier-usage-empty">No department usage recorded for this period.</p>
-            )}
         </section>
 
       </main>

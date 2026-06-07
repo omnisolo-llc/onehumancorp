@@ -1,59 +1,47 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-interface Milestone {
-  id: string;
-  title: string;
-  description: string;
-  reached: boolean;
-}
 
 export default function MilestonesPage() {
   const router = useRouter();
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [tenantId, setTenantId] = useState('DEFAULT');
 
-  useEffect(() => {
-    const tid = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'DEFAULT' : 'DEFAULT';
-    setTenantId(tid);
-
-    const fetchMilestones = async () => {
-      try {
-        const response = await fetch(`/api/v1/growth/milestones/check?tenant=${tid}`);
-        const data = await response.json();
-        if (data && data.milestones) {
-          setMilestones(data.milestones);
-          // Auto-select first unlocked milestone
-          const firstUnlocked = data.milestones.find((m: Milestone) => m.reached);
-          if (firstUnlocked) {
-            setSelectedMilestone(firstUnlocked.id);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to fetch milestones", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMilestones();
-  }, []);
-
-  const getIcon = (id: string) => {
-    switch (id) {
-        case 'first_sale': return '🎉';
-        case '10th_order': return '📈';
-        case '100_visitors': return '🚀';
-        case '5_referrals': return '🤝';
-        case 'revenue_1k': return '💰';
-        default: return '✨';
+  const milestones = [
+    {
+      id: "first-order",
+      title: "First Order! 🎉",
+      description: "You've officially made your first sale on OHC.",
+      date: "Oct 12, 2023",
+      unlocked: true,
+      icon: "🎉"
+    },
+    {
+      id: "10th-order",
+      title: "10th Order Milestone",
+      description: "Double digits! Your business is gaining momentum.",
+      date: "Nov 05, 2023",
+      unlocked: true,
+      icon: "🚀"
+    },
+    {
+      id: "100th-customer",
+      title: "100th Customer",
+      description: "A century of happy customers.",
+      date: "Jan 22, 2024",
+      unlocked: true,
+      icon: "💯"
+    },
+    {
+      id: "1000-revenue",
+      title: "$1,000 Revenue",
+      description: "Four figures in revenue! Keep up the great work.",
+      date: null,
+      unlocked: false,
+      icon: "💰"
     }
-  };
+  ];
 
   const shareTarget = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=milestone` : '/onboarding?ref=milestone';
   const shareText = `I just hit a huge business milestone using OHC! Launch your own store today: ${shareTarget}`;
@@ -77,34 +65,29 @@ export default function MilestonesPage() {
         <section className="w-full md:w-1/2 flex flex-col gap-4">
             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Your Achievements</h2>
             <div className="flex flex-col gap-4">
-                {isLoading ? (
-                    [1,2,3].map(i => (
-                        <div key={i} className="p-4 rounded-2xl animate-pulse bg-gray-200 h-24"></div>
-                    ))
-                ) : (
-                    milestones.map((m) => (
-                        <div
-                            key={m.id}
-                            onClick={() => m.reached && setSelectedMilestone(m.id)}
-                            className={`p-4 rounded-2xl transition-all ${
-                                m.reached
-                                ? 'glassmorphism hover:border-indigo-300 hover:shadow-md cursor-pointer'
-                                : 'glassmorphism opacity-60 cursor-not-allowed'
-                            } ${selectedMilestone === m.id ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${m.reached ? 'bg-indigo-50' : 'bg-gray-200 grayscale'}`}>
-                                    {getIcon(m.id)}
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-bold font-outfit text-gray-900">{m.title}</h3>
-                                    <p className="text-sm text-gray-600">{m.description}</p>
-                                    {!m.reached && <p className="text-xs text-gray-400 mt-1 text-center font-semibold uppercase tracking-widest pt-1 flex gap-2"><span className="text-gray-400">🔒</span>Locked</p>}
-                                </div>
+                {milestones.map((m) => (
+                    <div
+                        key={m.id}
+                        onClick={() => m.unlocked && setSelectedMilestone(m.id)}
+                        className={`p-4 rounded-2xl transition-all ${
+                            m.unlocked
+                            ? 'glassmorphism hover:border-indigo-300 hover:shadow-md cursor-pointer'
+                            : 'glassmorphism opacity-60 cursor-not-allowed'
+                        } ${selectedMilestone === m.id ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${m.unlocked ? 'bg-indigo-50' : 'bg-gray-200 grayscale'}`}>
+                                {m.icon}
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold font-outfit text-gray-900">{m.title}</h3>
+                                <p className="text-sm text-gray-600">{m.description}</p>
+                                {m.unlocked && <p className="text-xs text-gray-400 mt-1">Achieved on {m.date}</p>}
+                                {!m.unlocked && <p className="text-xs text-gray-400 mt-1 text-center font-semibold uppercase tracking-widest pt-1 flex gap-2"><span className="text-gray-400">🔒</span>Locked</p>}
                             </div>
                         </div>
-                    ))
-                )}
+                    </div>
+                ))}
             </div>
         </section>
 
@@ -114,46 +97,29 @@ export default function MilestonesPage() {
                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Share Your Success</h2>
 
                 {selectedMilestone ? (() => {
-                    const activeM = milestones.find(m => m.id === selectedMilestone);
-                    if (!activeM) return null;
-                    const cardUrl = `/api/v1/growth/milestone/card?milestone_id=${activeM.id}&tenant=${tenantId}`;
-
+                    const activeM = milestones.find(m => m.id === selectedMilestone)!;
                     return (
                         <div className="flex flex-col gap-6">
                             {/* Preview Card */}
-                            <div className="w-full aspect-[1200/630] rounded-3xl shadow-xl overflow-hidden relative border border-white/20">
-                                <img
-                                    src={cardUrl}
-                                    alt={activeM.title}
-                                    className="w-full h-full object-cover"
-                                />
+                            <div className="w-full aspect-square md:aspect-[4/3] rounded-3xl shadow-xl overflow-hidden relative flex flex-col items-center justify-center text-center p-8 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl translate-x-1/4 -translate-y-1/4 pointer-events-none"></div>
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl -translate-x-1/4 translate-y-1/4 pointer-events-none"></div>
+
+                                <div className="z-10 flex flex-col items-center gap-4">
+                                    <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center text-5xl backdrop-blur-md border border-white/30 shadow-inner">
+                                        {activeM.icon}
+                                    </div>
+                                    <h3 className="text-4xl font-bold font-outfit mb-2 drop-shadow-md">{activeM.title}</h3>
+                                    <p className="text-lg font-medium opacity-90 drop-shadow-sm max-w-[280px]">{activeM.description}</p>
+                                </div>
+
+                                <div className="absolute bottom-6 flex flex-col items-center gap-1 opacity-90">
+                                    <span className="text-xs uppercase font-bold tracking-widest">Powered by OHC</span>
+                                </div>
                             </div>
 
                             {/* Share Buttons */}
                             <div className="flex flex-col gap-3">
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const response = await fetch(cardUrl);
-                                            const blob = await response.blob();
-                                            const url = window.URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = `milestone-${activeM.id}.svg`;
-                                            document.body.appendChild(a);
-                                            a.click();
-                                            window.URL.revokeObjectURL(url);
-                                            document.body.removeChild(a);
-                                        } catch (err) {
-                                            console.error("Failed to download milestone card", err);
-                                        }
-                                    }}
-                                    className="w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm bg-indigo-600 text-white hover:bg-indigo-700 flex items-center justify-center gap-2"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                    Download Achievement
-                                </button>
-
                                 <button
                                     onClick={() => {
                                         navigator.clipboard.writeText(shareText);

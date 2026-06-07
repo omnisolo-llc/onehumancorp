@@ -58,10 +58,6 @@ impl CloudStateManager {
 
         let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
-        if _tenant_id != tenant_id_db && _tenant_id != "system" {
-            return Err("Unauthorized: task belongs to a different tenant".to_string());
-        }
-
         // DAG validation
         if to_state == "IN_PROGRESS" {
             let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
@@ -155,61 +151,48 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
 
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
-        let acquire_and_fetch = async {
-            let lock_guard = MeshLockGuard::acquire(
-                self.mesh.clone(),
-                lock_key.clone(),
-                "cloud_state_manager".to_string(),
-                30,
-            )
-            .await?;
-
-            let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-            ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
-
-            let rows = sqlx::query(
-                r#"
-                SELECT t.*
-                FROM swarm_tasks t
-                WHERE t.status = 'PENDING'
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM json_array_elements_text(t.dependencies) as dep_id
-                      LEFT JOIN swarm_tasks dep ON dep.id::text = dep_id
-                      WHERE dep.id IS NULL OR dep.status != 'COMPLETED'
-                  )
-                LIMIT $1
-                FOR UPDATE SKIP LOCKED
-                "#
-            )
-            .bind(limit)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-            Ok::<_, String>((lock_guard, tx, rows))
-        };
-
-        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(
-            crate::orchestration::state::state_manager_timeout(),
-            acquire_and_fetch,
-        )
-        .await
-        {
-            Ok(Ok(result)) => result,
+        let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
+                let _lock_guard = match tokio::time::timeout(crate::orchestration::state::state_manager_timeout(), acquire_future).await {
+            Ok(Ok(guard)) => guard,
             Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") || e.contains("database is locked") || e.contains("Timeout") {
-                    tracing::warn!(
-                        "Lock timeout or unavailable in CloudStateManager::pull_available_tasks, fail-safing to empty list."
-                    );
+                if e.contains("is currently locked") || e.contains("Timeout") || e.contains("database is locked") {
+                    tracing::warn!("Lock timeout or unavailable in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                     return Ok(vec![]);
                 }
                 return Err(e);
-            }
+            },
             Err(_) => {
-                tracing::warn!(
-                    "Database timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list."
-                );
+                tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+                return Ok(vec![]);
+            }
+        };
+
+        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
+        let rows_future = sqlx::query(
+            r#"
+            SELECT t.*
+            FROM swarm_tasks t
+            WHERE t.status = 'PENDING'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM json_array_elements_text(t.dependencies) as dep_id
+                  JOIN swarm_tasks dep ON dep.id::text = dep_id
+                  WHERE dep.status != 'COMPLETED'
+              )
+            LIMIT $1
+            FOR UPDATE SKIP LOCKED
+            "#
+        )
+        .bind(limit)
+        .fetch_all(&mut *tx);
+
+        let rows = match tokio::time::timeout(crate::orchestration::state::state_manager_timeout(), rows_future).await {
+            Ok(Ok(rows)) => rows,
+            Ok(Err(e)) => return Err(e.to_string()),
+            Err(_) => {
+                tracing::warn!("Database timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                 return Ok(vec![]);
             }
         };

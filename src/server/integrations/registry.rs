@@ -796,16 +796,11 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
-        let resend_client = {
-            if integration_id == "resend" {
-                let clients = self.resend_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
+        if integration_id == "resend" {
+            let clients = self.resend_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
             }
-        };
-        if let Some(c) = resend_client {
-            return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
         }
 
         let client = {

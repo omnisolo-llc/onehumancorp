@@ -541,6 +541,7 @@ async fn handle_storefront_embed(
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
+
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
@@ -600,7 +601,7 @@ pub struct FlashSaleEmbedQuery {
 }
 
 async fn handle_flash_sale_embed(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -809,24 +810,6 @@ async fn handle_check_milestones(
             description: "Your storefront reached 100 visitors today!".to_string(),
             reached: reached_types.contains(&"100_visitors".to_string()),
         },
-        Milestone {
-            id: "5_referrals".to_string(),
-            title: "🤝 High Connector!".to_string(),
-            description: "You've successfully referred 5 other businesses to OHC.".to_string(),
-            reached: reached_types.contains(&"5_referrals".to_string()),
-        },
-        Milestone {
-            id: "revenue_1k".to_string(),
-            title: "💰 Four-Figure Club".to_string(),
-            description: "Your business has surpassed $1,000 in total revenue!".to_string(),
-            reached: reached_types.contains(&"revenue_1k".to_string()),
-        },
-        Milestone {
-            id: "100_orders".to_string(),
-            title: "📦 Century of Orders".to_string(),
-            description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
-            reached: reached_types.contains(&"100_orders".to_string()),
-        },
     ];
     Json(MilestonesResponse { milestones })
 }
@@ -872,20 +855,15 @@ async fn handle_get_milestone_card(
 
     let safe_business_name = escape_xml(&business_name);
 
-    let (title, sub, icon, grad_start, grad_end) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
-        "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
-        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
-        "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
-        "revenue_1k" => ("Four-Figure Club", "Revenue > $1,000", "💰", "#84fab0", "#8fd3f4"),
-        "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
-        _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
+    let (title, sub, icon) = match milestone_id {
+        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰"),
+        "10th_order" => ("10th Order!", "Business is booming", "📈"),
+        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
+        _ => ("Success Milestone!", "Built with OHC", "✨"),
     };
 
     let branding = if !has_pro {
-        format!(r##"<a href="https://ohc.app/join?ref={}" target="_blank">
-    <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
-  </a>"##, tenant_id)
+        r##"<text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>"##.to_string()
     } else {
         "".to_string()
     };
@@ -909,8 +887,8 @@ async fn handle_get_milestone_card(
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
-      <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
     </linearGradient>
   </defs>
   <rect width="1200" height="630" fill="url(#grad1)" />
@@ -923,14 +901,7 @@ async fn handle_get_milestone_card(
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
-</svg>"##,
-    grad_start = grad_start,
-    grad_end = grad_end,
-    icon = icon,
-    title = title,
-    sub = sub,
-    safe_business_name = safe_business_name,
-    branding = branding);
+</svg>"##);
 
     axum::response::Response::builder()
         .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
@@ -1033,7 +1004,7 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     let cache_key = "onboarding_metrics";
     let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
@@ -1042,7 +1013,7 @@ async fn handle_onboarding_metrics(
     }
 
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&state.pool).await
+        .fetch_all(&_state.pool).await
     {
         Ok(rows) => {
 

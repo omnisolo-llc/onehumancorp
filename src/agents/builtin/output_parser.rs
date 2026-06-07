@@ -47,7 +47,26 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 if let Some(data) = call.arguments.get("data") {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
-                        Err(e) => Err(crate::types::format_pydantic_error(&e, None)),
+                        Err(e) => {
+                            let detail = if e.is_data() {
+                                format!("Semantic validation failed: {}", e)
+                            } else if e.is_syntax() {
+                                format!(
+                                    "JSON syntax error at line {}, column {}: {}",
+                                    e.line(),
+                                    e.column(),
+                                    e
+                                )
+                            } else if e.is_eof() {
+                                format!("Incomplete JSON structure (unexpected EOF): {}", e)
+                            } else {
+                                format!("{}", e)
+                            };
+                            Err(format!(
+                                "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nPlease strictly follow the tool's JSON schema and try again.",
+                                detail
+                            ))
+                        }
                     };
                 } else {
                     return Err(

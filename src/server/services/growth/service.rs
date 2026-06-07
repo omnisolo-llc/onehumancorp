@@ -920,7 +920,7 @@ mod tests {
         let start = std::time::Instant::now();
         let _res = service.get_quota(request).await.unwrap().into_inner();
         let elapsed = start.elapsed();
-        tracing::info!("get_quota Hybrid benchmark completed in {} ms", elapsed.as_millis());
+        println!("get_quota Hybrid benchmark completed in {} ms", elapsed.as_millis());
 
         // Assert that the optimization keeps latency under an acceptable threshold (e.g. 500ms)
         assert!(elapsed.as_millis() < 500, "get_quota fetch took too long: {}ms", elapsed.as_millis());

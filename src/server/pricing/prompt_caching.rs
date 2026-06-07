@@ -49,7 +49,7 @@ impl PromptCache {
                     .unwrap_or_else(|_| "0.0001".to_string())
                     .parse::<f64>()
                     .unwrap_or(0.0001);
-                (r.token_count as f64 * fallback_ratio * 100.0).round() as i64
+                (r.token_count as f64 * fallback_ratio).round() as i64
             } else {
                 (ratio * 100.0).round() as i64
             }

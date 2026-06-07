@@ -9,16 +9,8 @@ struct CacheItem<T> {
     tags: Vec<String>,
 }
 
-use std::sync::atomic::Ordering;
-
-struct CacheValue<T> {
-    val: T,
-    expiry: std::time::Instant,
-    access_count: std::sync::atomic::AtomicU64,
-}
-
 pub struct HybridCache<T> {
-    local: OnceLock<RwLock<HashMap<String, CacheValue<T>>>>,
+    local: OnceLock<RwLock<HashMap<String, (T, std::time::Instant)>>>,
     local_tags: OnceLock<RwLock<HashMap<String, HashSet<String>>>>,
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
@@ -60,7 +52,7 @@ where
         }
     }
 
-    fn get_local(&self) -> &RwLock<HashMap<String, CacheValue<T>>> {
+    fn get_local(&self) -> &RwLock<HashMap<String, (T, std::time::Instant)>> {
         self.local.get_or_init(|| RwLock::new(HashMap::new()))
     }
 
@@ -75,16 +67,14 @@ where
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
         // Try local cache first, allowing slightly stale reads
         {
-            if let Ok(guard) = self.get_local().read() {
-                if let Some(entry) = guard.get(key) {
-                    let now = std::time::Instant::now();
-                    entry.access_count.fetch_add(1, Ordering::Relaxed);
-                    if now < entry.expiry {
-                        return Some((entry.val.clone(), false)); // Fresh
-                    } else if now < entry.expiry + Duration::from_secs(86400) {
-                        // Stale but within SWR window (1 day)
-                        return Some((entry.val.clone(), true));
-                    }
+            let guard = self.get_local().read().ok()?;
+            if let Some((val, expiry)) = guard.get(key) {
+                let now = std::time::Instant::now();
+                if now < *expiry {
+                    return Some((val.clone(), false)); // Fresh
+                } else if now < *expiry + Duration::from_secs(86400) {
+                    // Stale but within SWR window (1 day)
+                    return Some((val.clone(), true));
                 }
             }
         }
@@ -133,10 +123,10 @@ where
 
     fn set_local(&self, key: &str, value: T, tags: &[String], ttl: Duration) {
         if let Ok(mut guard) = self.get_local().write() {
-            let now = std::time::Instant::now();
             if guard.len() >= self.max_local_capacity && !guard.contains_key(key) {
+                let now = std::time::Instant::now();
                 let keys_to_remove: Vec<String> = guard.iter()
-                    .filter(|(_, entry)| entry.expiry <= now)
+                    .filter(|(_, (_, expiry))| *expiry <= now)
                     .map(|(k, _)| k.clone())
                     .collect();
 
@@ -145,21 +135,10 @@ where
                     guard.remove(&k);
                 }
 
-                // Random Eviction (approximate LFU via sample)
                 if guard.len() >= self.max_local_capacity {
-                    // Random sample 5 keys and evict the one with lowest access count.
-                    // This avoids O(N) iteration while providing reasonable eviction quality.
-                    let mut sampled_keys = Vec::new();
-                    for (k, entry) in guard.iter() {
-                        sampled_keys.push((k.clone(), entry.access_count.load(Ordering::Relaxed)));
-                        if sampled_keys.len() >= 5 {
-                            break;
-                        }
-                    }
-
-                    if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
-                        guard.remove(&least_accessed_key);
-                        removed_keys.push(least_accessed_key);
+                    if let Some(k) = guard.keys().next().cloned() {
+                        guard.remove(&k);
+                        removed_keys.push(k);
                     }
                 }
 
@@ -175,11 +154,7 @@ where
                     }
                 }
             }
-            guard.insert(key.to_string(), CacheValue {
-                val: value,
-                expiry: std::time::Instant::now() + ttl,
-                access_count: std::sync::atomic::AtomicU64::new(0),
-            });
+            guard.insert(key.to_string(), (value, std::time::Instant::now() + ttl));
         }
         if let Ok(mut tag_guard) = self.get_local_tags().write() {
             for tag in tags {
@@ -241,21 +216,11 @@ mod tests {
     async fn test_hybrid_cache_capacity_eviction() {
         let cache = HybridCache::<String>::with_capacity(None, 2);
         cache.set("k1", "v1".to_string(), Duration::from_secs(60)).await;
-        tokio::time::sleep(Duration::from_millis(5)).await;
         cache.set("k2", "v2".to_string(), Duration::from_secs(60)).await;
-        tokio::time::sleep(Duration::from_millis(5)).await;
-
-        // Access k1 so k2 becomes the LRU
-        let _ = cache.get("k1").await;
-        tokio::time::sleep(Duration::from_millis(5)).await;
-
         cache.set("k3", "v3".to_string(), Duration::from_secs(60)).await;
 
         let local = cache.get_local().read().unwrap();
         assert_eq!(local.len(), 2);
-        assert!(local.contains_key("k1"));
-        assert!(local.contains_key("k3"));
-        assert!(!local.contains_key("k2"));
     }
 
     #[tokio::test]

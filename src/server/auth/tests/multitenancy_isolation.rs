@@ -1,6 +1,5 @@
+use super::*;
 use crate::postgres_store::UserRepository;
-use crate::postgres_store::PgUserRepository;
-use crate::User;
 use std::time::Duration;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Mutex;
@@ -25,13 +24,13 @@ async fn test_multitenant_idor_system_bypass_prevention_regression() {
         .connect_lazy(&database_url)
         .unwrap();
 
-    let repo = PgUserRepository::new(pool.clone());
+    let repo = crate::postgres_store::PgUserRepository::new(pool.clone());
 
     // In Cloud multi-tenant mode, querying with org_id "system" must be rejected.
     let old_val = std::env::var("OHC_MULTITENANT").ok();
     unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
 
-    let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
+    let res = repo.get_by_email("dummy_id", "system").await;
 
     if let Some(val) = old_val {
         unsafe { std::env::set_var("OHC_MULTITENANT", val); }
@@ -60,12 +59,12 @@ async fn test_standalone_mode_allows_system_org_id() {
         .connect_lazy(&database_url)
         .unwrap();
 
-    let repo = PgUserRepository::new(pool.clone());
+    let repo = crate::postgres_store::PgUserRepository::new(pool.clone());
 
     let old_val = std::env::var("OHC_MULTITENANT").ok();
     unsafe { std::env::set_var("OHC_MULTITENANT", "false"); }
 
-    let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
+    let res = repo.get_by_email("dummy_id", "system").await;
 
     if let Some(val) = old_val {
         unsafe { std::env::set_var("OHC_MULTITENANT", val); }
