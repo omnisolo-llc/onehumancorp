@@ -577,7 +577,7 @@ export default function OnboardingWizard() {
                               return;
                             }
                             setValidationError('');
-                            setChatStep(4); syncStateToBackend({ chatStep: 4 });
+                            handleIntake();
                           }
                         }}
                         placeholder="e.g. Portland, OR"

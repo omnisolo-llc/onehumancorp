@@ -137,7 +137,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       <div
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
-        className="fixed z-[1000] bg-white/90 backdrop-blur-[30px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] font-inter animate-pop-in"
+        className="fixed z-[1000] bg-white/90 backdrop-blur-[40px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
