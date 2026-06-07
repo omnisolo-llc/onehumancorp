@@ -23,20 +23,32 @@ impl RealMetaClient {
 #[async_trait]
 impl MetaClientWrapper for RealMetaClient {
     async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
-        let url = match platform {
-            "whatsapp" => "https://graph.facebook.com/v19.0/me/messages".to_string(),
-            _ => "https://graph.facebook.com/v19.0/me/messages".to_string(), // Simplified URL mapping
+        let (url, payload) = match platform {
+            "whatsapp" => {
+                let phone_id = std::env::var("WHATSAPP_PHONE_NUMBER_ID").unwrap_or_else(|_| "123456789".to_string());
+                let url = format!("https://graph.facebook.com/v19.0/{}/messages", phone_id);
+                let payload = serde_json::json!({
+                    "messaging_product": "whatsapp",
+                    "to": to,
+                    "type": "text",
+                    "text": { "body": body }
+                });
+                (url, payload)
+            },
+            _ => {
+                let url = "https://graph.facebook.com/v19.0/me/messages".to_string(); // Simplified URL mapping
+                let payload = serde_json::json!({
+                    "recipient": {
+                        "id": to
+                    },
+                    "message": {
+                        "text": body
+                    },
+                    "messaging_type": "RESPONSE"
+                });
+                (url, payload)
+            }
         };
-
-        let payload = serde_json::json!({
-            "recipient": {
-                "id": to
-            },
-            "message": {
-                "text": body
-            },
-            "messaging_type": "RESPONSE"
-        });
 
         let res = self.http_client.post(&url)
             .bearer_auth(&self.access_token)

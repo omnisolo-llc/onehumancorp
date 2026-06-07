@@ -88,6 +88,8 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("whatsapp");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
             // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
@@ -122,6 +124,8 @@ impl Department for CustomerSuccessAgent {
                 "generated_response": generated_response,
                 "context_used": context_summary,
                 "inbox_message_id": inbox_id,
+                "source": source,
+                "sender_id": sender_id,
             });
 
             self.orchestrator.execute_action(

@@ -11,6 +11,7 @@ export default function Integrations() {
   const [integrations, setIntegrations] = useState([
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Single API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
+    { id: "whatsapp", name: "WhatsApp Business API", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Business Inbox and AI Auto-Replies." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
@@ -32,6 +33,10 @@ export default function Integrations() {
     sms: true,
   });
 
+  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+  const [whatsappPhoneId, setWhatsappPhoneId] = useState("");
+  const [whatsappAccountId, setWhatsappAccountId] = useState("");
+
   const handleConnect = (id: string) => {
     const integration = integrations.find((item) => item.id === id);
     if (integration?.status === 'connected') {
@@ -51,6 +56,11 @@ export default function Integrations() {
       setStatusMessage("Choose Twilio channels to finish connecting.");
       return;
     }
+    if (id === 'whatsapp') {
+      setShowWhatsappModal(true);
+      setStatusMessage("Configure your WhatsApp Business API settings.");
+      return;
+    }
     setIntegrations(prev => prev.map(integration =>
       integration.id === id ? { ...integration, status: "connected" } : integration
     ));
@@ -66,8 +76,71 @@ export default function Integrations() {
     router.push('/inbox');
   };
 
+  const saveWhatsappIntegration = () => {
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === 'whatsapp' ? { ...integration, status: "connected" } : integration
+    ));
+    setShowWhatsappModal(false);
+    setStatusMessage("WhatsApp Business API connected.");
+    router.push('/inbox');
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+
+      {/* WhatsApp Business API Connect Modal */}
+      {showWhatsappModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-2xl text-green-600 border border-green-100">
+                💬
+              </div>
+              <button
+                onClick={() => setShowWhatsappModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect WhatsApp Business</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Enter your Meta WhatsApp Business API credentials to enable central inbox messages and AI auto-replies.
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Phone Number ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 100000123456"
+                  value={whatsappPhoneId}
+                  onChange={(e) => setWhatsappPhoneId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">WhatsApp Business Account ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 200000654321"
+                  value={whatsappAccountId}
+                  onChange={(e) => setWhatsappAccountId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={saveWhatsappIntegration}
+              className="w-full bg-[#34C759] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#2EB350] transition-colors"
+            >
+              Save & Connect
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Twilio Conversations Connect Modal */}
       {showTwilioModal && (
