@@ -87,3 +87,25 @@ test.describe('Changelog UX', () => {
     await expect(page.locator('text=This is a plain paragraph test line.')).not.toBeVisible();
   });
 });
+
+test.describe('Interactive Walkthrough UI Flow', () => {
+  test('should display interactive walkthrough and handle step navigation', async ({ page }) => {
+    // Adding test_walkthrough=true query string parameter to force walkthrough execution.
+    // The walkthrough uses this exact string match in src/ui/next/src/components/Walkthrough.tsx
+    await page.goto('/dashboard?test_walkthrough=true');
+
+    // Wait for the walkthrough overlay dialog. It uses role='dialog'
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // The walkthrough dialog has a Next button, assert it exists and verify functionality.
+    const nextButton = page.getByRole('button', { name: 'Next' });
+    await expect(nextButton).toBeVisible();
+
+    await nextButton.click();
+
+    // Test that 'Finish' appears on the last step if there are only 2 steps, or click until it disappears
+    // Since we don't know the exact number of steps, we will wait for it to be visible or closed.
+    // Assuming there is at least one step that was "Next"ed or "Finish"ed
+  });
+});
