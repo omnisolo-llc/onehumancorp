@@ -9,18 +9,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // In a real application, this would store the invite in the database
-    // and provision a temporary tenant context.
+    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
 
-    return NextResponse.json({
-      status: 'success',
-      team_id,
-      invite_link: `https://ohc.app/invite/${encodeURIComponent(team_id)}`,
-      invitee_id: invitee_id || `pending-invitee-${Math.random().toString(36).substring(2, 10)}`
-    }, { status: 200 });
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+    });
 
+    const authHeader = req.headers.get('authorization');
+    if (authHeader) {
+      headers.set('authorization', authHeader);
+    }
+    const cookie = req.headers.get('cookie');
+    if (cookie) {
+      headers.set('cookie', cookie);
+    }
+
+    const backendRes = await fetch(`${backendUrl}/api/v1/growth/team-invites`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ team_id, inviter_id, invitee_id }),
+    });
+
+    if (backendRes.ok) {
+      const data = await backendRes.json();
+      return NextResponse.json(data);
+    } else {
+      return NextResponse.json(
+        { error: 'Failed to generate team invite' },
+        { status: backendRes.status }
+      );
+    }
   } catch (error) {
-    console.error('Error generating team invite:', error);
+    if (process.env.NODE_ENV !== "test") console.error("Error generating team invite:", error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
