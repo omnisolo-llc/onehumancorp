@@ -273,14 +273,21 @@ describe('OnboardingWizard', () => {
     const locInput = await screen.findByPlaceholderText(/Portland, OR/i, {}, { timeout: 3000 });
     await user.type(locInput, 'NY');
 
+    const nextButton3 = screen.getByRole('button', { name: /Next/i });
+    await user.click(nextButton3);
+
+    // Chat Step 4
+    const audienceInput = await screen.findByPlaceholderText(/Health-conscious professionals/i, {}, { timeout: 3000 });
+    await user.type(audienceInput, 'Everyone');
+
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
     await user.click(button);
 
-    // Verify error appears and step goes back to 1
+    // Verify error appears and step goes back to 4 (or 3, depending on the error handler, but chatStep 3 is the error handler fallback)
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+      expect(screen.getByText("Who is your target audience?")).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
@@ -543,11 +550,18 @@ describe('OnboardingWizard', () => {
         chatStep: 4,
         businessName: 'Valid Name',
         whatYouSell: 'Products',
-        location: 'City'
+        location: 'City',
+        targetAudience: ''
       });
     });
 
     await renderOnboardingWizard();
+
+    const input = screen.getByPlaceholderText('e.g. Health-conscious professionals');
+    await user.type(input, 'Students');
+
+    const storeTargetAudience = useOnboardingStore.getState().targetAudience;
+    expect(storeTargetAudience).toBe('Students');
 
     // Note: handleIntake uses fetch which is either mocked or fails, but we just want to test
     // that the UI hook for targetAudience works.
