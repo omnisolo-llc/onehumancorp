@@ -59,6 +59,10 @@ impl StandaloneStateManager {
             .try_get("tenant_id")
             .unwrap_or_else(|_| "system".to_string());
 
+        if _tenant_id != tenant_id && _tenant_id != "system" {
+            return Err("Unauthorized: task belongs to a different tenant".to_string());
+        }
+
         // DAG validation
         if to_state == "IN_PROGRESS" {
             let deps_str: String = row
@@ -211,8 +215,8 @@ impl StateManager for StandaloneStateManager {
                     AND NOT EXISTS (
                         SELECT 1
                         FROM json_each(t.dependencies) as dep_id
-                        JOIN swarm_tasks dep ON dep.id = dep_id.value
-                        WHERE dep.status != 'COMPLETED'
+                        LEFT JOIN swarm_tasks dep ON dep.id = dep_id.value
+                        WHERE dep.id IS NULL OR dep.status != 'COMPLETED'
                     )
                     LIMIT ?
                 )
