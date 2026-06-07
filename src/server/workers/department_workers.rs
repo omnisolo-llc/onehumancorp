@@ -1221,30 +1221,64 @@ impl AdvisorWorker {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400 * 7)); // Weekly CRON
             loop {
                 interval.tick().await;
-                let mut transaction = match db.pool.begin().await {
-                    Ok(tx) => tx,
-                    Err(_) => continue,
-                };
-                // Grab pending reports with SKIP LOCKED
-                let reports: Vec<(String, String)> = match &db.store {
+
+                let tenants: Vec<String> = match &db.store {
                     crate::db::DbStore::Postgres => {
-                        sqlx::query_as("SELECT id, tenant_id FROM advisory_reports WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED")
-                            .fetch_all(&mut *transaction)
+                        sqlx::query_scalar("SELECT id FROM tenants WHERE deleted_at IS NULL")
+                            .fetch_all(&db.pool)
                             .await
                             .unwrap_or_default()
                     },
                     crate::db::DbStore::Sqlite(_) => {
-                        sqlx::query_as("SELECT id, tenant_id FROM advisory_reports WHERE status = 'PENDING'")
-                            .fetch_all(&mut *transaction)
+                        sqlx::query_scalar("SELECT id FROM tenants")
+                            .fetch_all(&db.pool)
                             .await
                             .unwrap_or_default()
                     }
                 };
 
-                for (report_id, tenant_id) in reports {
-                    let prompt = format!("You are The Advisor. The user had 8 orders this week. Tuesday was the busiest day. Most people bought Lemon Pound Cake. 3 people asked about vegan options in DMs. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.");
-                    let mut drafted_msg = r#"{"summary": "Great job this week! You made $450 from 8 orders.", "actionable_suggestion": "We noticed 3 people asked about vegan options in DMs. Want me to draft a new 'Vegan Options' menu section for your website?"}"#.to_string();
-                    let mut final_status = "COMPLETED";
+                for tenant_id in tenants {
+                    // Prevent duplicate reports within 7 days
+                    let already_run: i64 = match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            sqlx::query_scalar("SELECT count(*) FROM agent_approvals WHERE tenant_id = $1 AND department = 'business_advisory' AND created_at >= NOW() - INTERVAL '7 days'")
+                                .bind(&tenant_id)
+                                .fetch_one(&db.pool)
+                                .await
+                                .unwrap_or(0)
+                        },
+                        crate::db::DbStore::Sqlite(_) => {
+                            sqlx::query_scalar("SELECT count(*) FROM agent_approvals WHERE tenant_id = $1 AND department = 'business_advisory' AND datetime(created_at) >= datetime('now', '-7 days')")
+                                .bind(&tenant_id)
+                                .fetch_one(&db.pool)
+                                .await
+                                .unwrap_or(0)
+                        }
+                    };
+
+                    if already_run > 0 {
+                        continue;
+                    }
+                    // Fetch recent active orders count and total revenue
+                    let (order_count, total_revenue): (i64, f64) = match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            sqlx::query_as("SELECT count(*), coalesce(sum(total_amount), 0.0) FROM orders WHERE tenant_id = $1 AND status != 'delivered' AND created_at >= NOW() - INTERVAL '7 days'")
+                                .bind(&tenant_id)
+                                .fetch_one(&db.pool)
+                                .await
+                                .unwrap_or((0, 0.0))
+                        },
+                        crate::db::DbStore::Sqlite(_) => {
+                            sqlx::query_as("SELECT count(*), coalesce(sum(total_amount), 0.0) FROM orders WHERE tenant_id = $1 AND status != 'delivered' AND datetime(created_at) >= datetime('now', '-7 days')")
+                                .bind(&tenant_id)
+                                .fetch_one(&db.pool)
+                                .await
+                                .unwrap_or((0, 0.0))
+                        }
+                    };
+
+                    let prompt = format!("You are The Advisor. The user had {} active orders this week, bringing in ${:.2}. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with exactly two string keys: 'summary' (a 3-bullet plain text summary, use '- ' for bullets) and 'actionable_suggestion' (1 actionable suggestion).", order_count, total_revenue);
+                    let mut drafted_msg = format!(r#"{{"summary": "- Great job this week!\n- You had {} active orders.\n- You generated ${:.2} in revenue.", "actionable_suggestion": "Want me to draft a new promo email for next week?"}}"#, order_count, total_revenue);
 
                     let mut attempts = 0;
                     while attempts < MAX_RETRIES {
@@ -1268,19 +1302,6 @@ impl AdvisorWorker {
                             },
                             _ => {
                                 attempts += 1;
-                                if attempts == MAX_RETRIES {
-                                    final_status = "PAUSED";
-                                    let _ = sqlx::query(
-                                        r#"
-                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, 'AI Agent Paused: The Advisor', 'The AI agent responsible for business health reports is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check business performance.')
-                                        "#
-                                    )
-                                    .bind(Uuid::new_v4().to_string())
-                                    .bind(&tenant_id)
-                                    .execute(&db.pool)
-                                    .await;
-                                }
                                 tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
                             }
                         }
@@ -1288,29 +1309,45 @@ impl AdvisorWorker {
 
                     let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
                         "summary": drafted_msg,
-                        "actionable_suggestion": "Consider adding a new vegan option."
+                        "actionable_suggestion": "Review your store's performance."
                     }));
+
+                    let task_id = uuid::Uuid::new_v4().to_string();
+                    let _title = "Weekly Business Health Report".to_string();
+                    let description = "The Advisor has generated your weekly business health report. Review to see insights and approve the suggested action.".to_string();
+                    let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
 
                     match &db.store {
                         crate::db::DbStore::Postgres => {
-                            let _ = sqlx::query("UPDATE advisory_reports SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
-                                .bind(final_status)
-                                .bind(parsed)
-                                .bind(&report_id)
-                                .execute(&mut *transaction)
-                                .await;
+                            let _ = sqlx::query(
+                                r#"
+                                INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload)
+                                VALUES ($1, $2, 'business_advisory', $3, 'DRAFT', 'LOW', $4::jsonb)
+                                "#
+                            )
+                            .bind(&task_id)
+                            .bind(&tenant_id)
+                            .bind(&description)
+                            .bind(&proposed_content)
+                            .execute(&db.pool)
+                            .await;
                         },
                         crate::db::DbStore::Sqlite(_) => {
-                             let _ = sqlx::query("UPDATE advisory_reports SET status = ?, payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                                .bind(final_status)
-                                .bind(parsed.to_string())
-                                .bind(&report_id)
-                                .execute(&mut *transaction)
-                                .await;
+                            let _ = sqlx::query(
+                                r#"
+                                INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload)
+                                VALUES (?, ?, 'business_advisory', ?, 'DRAFT', 'LOW', ?)
+                                "#
+                            )
+                            .bind(&task_id)
+                            .bind(&tenant_id)
+                            .bind(&description)
+                            .bind(&proposed_content)
+                            .execute(&db.pool)
+                            .await;
                         }
                     }
                 }
-                let _ = transaction.commit().await;
             }
         });
     }

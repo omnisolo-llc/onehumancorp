@@ -181,3 +181,15 @@ ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Insert Advisor Weekly Report to bypass 7-day cron wait
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload)
+VALUES (
+    'adv-report-e2e',
+    'e2e-tenant',
+    'business_advisory',
+    'Weekly Business Health Report',
+    'DRAFT',
+    'LOW',
+    '{"summary": "- Great job this week!\n- You had 8 active orders.\n- You generated $450.00 in revenue.", "actionable_suggestion": "Want me to draft a new promo email for next week?"}'::jsonb
+) ON CONFLICT DO NOTHING;

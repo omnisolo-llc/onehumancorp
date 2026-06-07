@@ -197,7 +197,19 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {approval.payload?.context && (
+                                    {approval.department === 'business_advisory' && approval.payload?.summary ? (
+                    <div className="mt-2 flex flex-col gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
+                      <div className="text-[#1D1D1F] dark:text-[#F5F5F7] text-sm whitespace-pre-wrap leading-relaxed">
+                        {approval.payload.summary}
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Suggested Action</div>
+                        <div className="text-[#1D1D1F] dark:text-[#F5F5F7] text-sm font-medium">
+                          {approval.payload.actionable_suggestion}
+                        </div>
+                      </div>
+                    </div>
+                  ) : approval.payload?.context && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {approval.payload.context.smart_pricing === true ? (
                         <>
