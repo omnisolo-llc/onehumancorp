@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
+import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function StripeTerminalClient({ amount, productId, tenantId }: { amount: number, productId: string, tenantId: string }) {
   const [terminal, setTerminal] = useState<any>(null);
@@ -63,6 +64,27 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     if (!terminal || !connectedReader) return;
 
     setReserving(true);
+
+    if (!navigator.onLine) {
+       setStatus('Processing offline payment...');
+       // Mock the terminal process for offline
+       setTimeout(() => {
+          const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          SyncManager.getInstance().enqueue({
+             type: 'tap_to_pay',
+             id: transactionId,
+             product_id: productId,
+             amount: amount,
+             quantity: 1,
+             idempotency_key: `idemp_${transactionId}`,
+             currency: 'usd'
+          });
+          setStatus('Payment saved offline. Will sync when network is restored.');
+          setReserving(false);
+       }, 1500);
+       return;
+    }
+
     setStatus('Reserving inventory...');
 
     let lockId = '';
@@ -134,20 +156,20 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   };
 
   return (
-    <div className="p-4 border rounded shadow bg-white/80 backdrop-blur-xl">
-      <h2 className="text-xl font-bold mb-4">Stripe Terminal</h2>
-      <p className="mb-4 text-gray-700">Status: {status}</p>
+    <div className="p-6 border border-white/40 rounded-2xl shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative">
+      <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
+      <p className="text-sm text-gray-600 mb-6 font-medium">Status: {status}</p>
 
       {!connectedReader && (
         <div className="mb-4">
-          <button onClick={discoverReaders} className="bg-blue-600 text-white px-4 py-2 rounded">
+          <button onClick={discoverReaders} className="w-full bg-[#0066FF] text-white px-4 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20 active:scale-[0.98]">
             Discover Readers
           </button>
-          <ul className="mt-2">
+          <ul className="mt-4 space-y-2">
             {discoveredReaders.map(reader => (
-              <li key={reader.id} className="flex justify-between items-center my-2 p-2 border rounded">
-                <span>{reader.label || reader.id}</span>
-                <button onClick={() => connectReader(reader)} className="bg-green-600 text-white px-3 py-1 rounded">
+              <li key={reader.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
+                <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
+                <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                   Connect
                 </button>
               </li>
@@ -158,7 +180,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       {connectedReader && (
         <div>
-          <button onClick={processPayment} disabled={reserving} className={`bg-indigo-600 text-white px-4 py-2 rounded w-full ${reserving ? 'opacity-50' : ''}`}>
+          <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all ${reserving ? 'opacity-50' : 'hover:bg-blue-700 active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
           </button>
         </div>
