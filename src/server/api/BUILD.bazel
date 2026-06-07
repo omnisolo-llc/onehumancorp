@@ -25,6 +25,8 @@ exports_files(
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
+
+
         "local_seo.rs",
     ],
     visibility = ["//visibility:public"],
@@ -57,6 +59,8 @@ rust_library(
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
+
+
         "local_seo.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
@@ -68,6 +72,8 @@ rust_library(
         "//src/server/api/agents:translation.rs",
         "//src/server/api/agents:webhook.rs",
         "//src/server/api/onboarding:mod.rs",
+        "//src/server/api/booking:mod.rs",
+        "//src/server/api/booking:request.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
