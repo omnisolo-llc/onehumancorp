@@ -4,6 +4,7 @@ exports_files(
     [
         "mod.rs",
         "models.rs",
+        "campaign_repo.rs",
         "task_repo.rs",
     ],
     visibility = ["//visibility:public"],
@@ -15,6 +16,7 @@ rust_library(
         "bazel_lib.rs",
         "mod.rs",
         "models.rs",
+        "campaign_repo.rs",
         "task_repo.rs",
     ],
     crate_root = "bazel_lib.rs",
