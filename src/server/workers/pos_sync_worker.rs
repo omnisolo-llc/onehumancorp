@@ -44,6 +44,10 @@ impl PosSyncWorker {
                 .execute(&mut *tx)
                 .await
                 .unwrap();
+
+            let cache = crate::builder::edge::get_edge_cache();
+            cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+            cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
         }
 
         sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")

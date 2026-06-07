@@ -210,6 +210,10 @@ pub mod pos_sync_worker {
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    let cache = crate::builder::edge::get_edge_cache();
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
                 }
             }
 
