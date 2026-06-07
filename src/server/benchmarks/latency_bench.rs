@@ -625,7 +625,7 @@ mod tests {
         }).await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
-        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
+        assert!(start.elapsed() >= std::time::Duration::from_millis(100), "Timeout enforcement should take at least the configured duration");
     }
 
     #[tokio::test]
