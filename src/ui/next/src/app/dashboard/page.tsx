@@ -239,7 +239,7 @@ export default function Dashboard() {
       statusItems={statusItems}
       actions={[
         { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
-        { label: "New Product", href: "/products/new", primary: true },
+        { label: "New Offering", href: "/offerings/new", primary: true },
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
@@ -248,6 +248,17 @@ export default function Dashboard() {
       </div>
 
       <NeighborhoodPulseCard tenant={tenantId()} />
+
+      {/* Floating Action Button (FAB) for Mobile-First New Offering */}
+      <div className="fixed bottom-24 right-6 md:hidden z-50">
+        <Link
+          href="/offerings/new"
+          className="flex items-center justify-center w-14 h-14 bg-[#0066FF] text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+          style={{ backdropFilter: 'blur(30px) saturate(210%)' }}
+        >
+          <span className="text-3xl leading-none" style={{ marginTop: '-2px' }}>+</span>
+        </Link>
+      </div>
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}

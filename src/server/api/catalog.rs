@@ -26,6 +26,19 @@ pub struct CreateProductRequest {
     pub subscription_discount: Option<i32>,
 }
 
+#[derive(Deserialize)]
+pub struct DraftOfferingRequest {
+    pub intent: String,
+}
+
+#[derive(Serialize)]
+pub struct DraftOfferingResponse {
+    pub title: String,
+    pub description: String,
+    pub price: i32,
+    pub r#type: String, // 'physical', 'service', 'digital'
+}
+
 #[derive(Serialize)]
 pub struct CreateProductResponse {
     pub success: bool,
@@ -222,8 +235,46 @@ async fn handle_create_product(
         .into_response()
 }
 
+async fn handle_draft_offering(
+    Extension(hub): Extension<Arc<Hub>>,
+    Json(payload): Json<DraftOfferingRequest>,
+) -> impl IntoResponse {
+    // In a real implementation, this would call out to Minimax/Gemini with the intent.
+    // For now, we mock the AI agent's response based on the intent string.
+    let intent_lower = payload.intent.to_lowercase();
+
+    let item_type = if intent_lower.contains("lesson") || intent_lower.contains("consultation") || intent_lower.contains("hour") || intent_lower.contains("service") || intent_lower.contains("booking") {
+        "service"
+    } else if intent_lower.contains("download") || intent_lower.contains("pdf") || intent_lower.contains("video") {
+        "digital"
+    } else {
+        "physical"
+    };
+
+    let title = if payload.intent.len() > 40 {
+        format!("{}...", &payload.intent[0..37])
+    } else {
+        payload.intent.clone()
+    };
+
+    let description = format!("A fantastic {} offering generated from your request: \"{}\". We've set this up so you can start selling immediately.", item_type, payload.intent);
+    let price = 50;
+
+    (
+        StatusCode::OK,
+        Json(DraftOfferingResponse {
+            title,
+            description,
+            price,
+            r#type: item_type.to_string(),
+        }),
+    )
+        .into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/draft-offering", post(handle_draft_offering))
         .layer(Extension(hub))
 }
