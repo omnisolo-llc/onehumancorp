@@ -118,15 +118,17 @@ impl OrgService for MyOrgService {
         }
 
         let hub_for_summary = self.hub.clone();
+        let hub_for_agents = self.hub.clone();
         let org_id_clone = org_id.clone();
         let org_id_for_agents = org_id.clone();
         let org_id_for_summary = org_id.clone();
-        let (agents, all_meetings, summary_res, quota_res) = tokio::join!(
-            async { self.hub.get_agents_by_org(&org_id_for_agents) },
+        let (agents_res, all_meetings, summary_res, quota_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
             self.hub.get_meetings(),
             tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
             self.hub.tracker().check_agent_quota(&org_id_clone)
         );
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
         let quota_result = quota_res;
 
