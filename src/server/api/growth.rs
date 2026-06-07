@@ -600,7 +600,7 @@ pub struct FlashSaleEmbedQuery {
 }
 
 async fn handle_flash_sale_embed(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
