@@ -15,6 +15,7 @@ import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -306,6 +307,7 @@ export default function Dashboard() {
         <GrowthReferralWidget />
       </div>
 
+      <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
 
       <div className="mb-6">
