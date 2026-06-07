@@ -338,6 +338,7 @@ pub mod services {
     pub mod subscription;
     pub mod pos;
     pub mod collective;
+
 }
 
 use tonic::{transport::Server, Request, Response, Status};
