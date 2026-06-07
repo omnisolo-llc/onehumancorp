@@ -11,7 +11,7 @@ use ohc_builtin_agent_llm::LlmClient;
 use crate::tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
-pub(crate) fn agent_task_timeout() -> std::time::Duration {
+pub fn agent_task_timeout() -> std::time::Duration {
     let secs = std::env::var("OHC_AGENT_TASK_TIMEOUT_SECS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
