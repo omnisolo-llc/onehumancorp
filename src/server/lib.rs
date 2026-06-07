@@ -2398,7 +2398,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
-    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
+    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(
+        dept_orchestrator.clone(),
+        std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())
+    )));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
     let sales_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::sales_agent::SalesAgent::new(dept_orchestrator.clone())));
     let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
@@ -2650,7 +2653,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         "SELECT id, tenant_id, source, content,
                 COALESCE(original_content, content) AS original_content,
                 COALESCE(translated_from_language, '') AS translated_from_language,
-                draft_reply, status, created_at
+                draft_reply, status, sender_id, created_at
          FROM inbox_messages
          ORDER BY created_at DESC"
     )
@@ -2672,6 +2675,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "draft_reply": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
+                    "sender_id": row.try_get::<String, _>("sender_id").unwrap_or_default(),
                     "created_at": created_at_str,
                 })
             }).collect();
@@ -2917,6 +2921,7 @@ async fn list_ui_inbox_handler(
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
+                        COALESCE(sender_id, '') AS sender_id,
                         COALESCE(created_at::text, '') AS created_at
                  FROM inbox_messages
                  WHERE tenant_id = $1
@@ -2934,6 +2939,7 @@ async fn list_ui_inbox_handler(
                         "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
+                        "sender_id": row.get::<String, _>("sender_id"),
                         "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),
                     Err(e) => Err(e),
@@ -2948,6 +2954,7 @@ async fn list_ui_inbox_handler(
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
+                        COALESCE(sender_id, '') AS sender_id,
                         COALESCE(CAST(created_at AS TEXT), '') AS created_at
                  FROM inbox_messages
                  WHERE tenant_id = ?
@@ -2965,6 +2972,7 @@ async fn list_ui_inbox_handler(
                         "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
+                        "sender_id": row.get::<String, _>("sender_id"),
                         "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),
                     Err(e) => Err(e),

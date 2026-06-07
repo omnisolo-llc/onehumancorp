@@ -126,23 +126,25 @@ pub async fn meta_webhook_post_handler(
                             let insert_result = match &state.db.store {
                                 crate::db::DbStore::Postgres => {
                                     sqlx::query(
-                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
+                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status, sender_id) VALUES ($1, $2, $3, $4, '', 'pending', $5)"
                                     )
                                     .bind(&inbox_id)
                                     .bind(&tenant_id)
                                     .bind(&source)
                                     .bind(&text)
+                                    .bind(&sender_id)
                                     .execute(pool)
                                     .await.map(|_| ())
                                 },
                                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                                     sqlx::query(
-                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
+                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status, sender_id) VALUES (?, ?, ?, ?, '', 'pending', ?)"
                                     )
                                     .bind(&inbox_id)
                                     .bind(&tenant_id)
                                     .bind(&source)
                                     .bind(&text)
+                                    .bind(&sender_id)
                                     .execute(sqlite_pool)
                                     .await.map(|_| ())
                                 }
@@ -194,23 +196,25 @@ pub async fn meta_webhook_post_handler(
                                       let insert_result = match &state.db.store {
                                           crate::db::DbStore::Postgres => {
                                               sqlx::query(
-                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
+                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status, sender_id) VALUES ($1, $2, $3, $4, '', 'pending', $5)"
                                               )
                                               .bind(&inbox_id)
                                               .bind(&tenant_id)
                                               .bind(&source)
                                               .bind(&text)
+                                              .bind(&sender_id)
                                               .execute(pool)
                                     .await.map(|_| ())
                                           },
                                           crate::db::DbStore::Sqlite(sqlite_pool) => {
                                               sqlx::query(
-                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
+                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status, sender_id) VALUES (?, ?, ?, ?, '', 'pending', ?)"
                                               )
                                               .bind(&inbox_id)
                                               .bind(&tenant_id)
                                               .bind(&source)
                                               .bind(&text)
+                                              .bind(&sender_id)
                                               .execute(sqlite_pool)
                                     .await.map(|_| ())
                                           }

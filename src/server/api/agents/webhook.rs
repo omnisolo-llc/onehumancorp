@@ -129,13 +129,14 @@ async fn handle_webhook(
     // Save to inbox_messages
     let id = Uuid::new_v4().to_string();
     let status = "pending";
+    let sender_id = "unknown"; // default to unknown for raw webhooks
     let pool = get_pool();
     if let Ok(mut tx) = pool.begin().await {
         if crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await.is_ok() {
             let _ = sqlx::query(
                 "INSERT INTO inbox_messages
-                    (id, tenant_id, source, content, original_content, translated_from_language, draft_reply, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                    (id, tenant_id, source, content, original_content, translated_from_language, draft_reply, status, sender_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
             )
             .bind(&id)
             .bind(&payload.tenant_id)
@@ -145,6 +146,7 @@ async fn handle_webhook(
             .bind(translation.source_language.as_deref())
             .bind(&draft_reply)
             .bind(&status)
+            .bind(&sender_id)
             .execute(&mut *tx)
             .await;
             let _ = tx.commit().await;
@@ -163,6 +165,7 @@ async fn handle_webhook(
             "translated_from_language": translation.source_language.clone(),
             "draft_reply": draft_reply.clone(),
             "inbox_message_id": id.clone(),
+            "sender_id": sender_id,
         }),
     ).await;
 
@@ -177,6 +180,7 @@ async fn handle_webhook(
             "translated_from_language": translation.source_language,
             "draft_reply": draft_reply,
             "inbox_message_id": id,
+            "sender_id": sender_id,
         }),
     }).await;
 

@@ -25,7 +25,10 @@ mod tests {
         let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
 
         let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
-        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(orchestrator.clone())));
+        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(
+            orchestrator.clone(),
+            Arc::new(crate::integrations::registry::IntegrationsRegistry::new())
+        )));
         let sales_agent = Arc::new(RwLock::new(SalesAgent::new(orchestrator.clone())));
 
         orchestrator.register_department(ops_agent).await;
@@ -94,7 +97,10 @@ mod tests {
         let mesh = Arc::new(CentrifugeNode::new(transport));
 
         let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
-        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(orchestrator.clone())));
+        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(
+            orchestrator.clone(),
+            Arc::new(crate::integrations::registry::IntegrationsRegistry::new())
+        )));
         orchestrator.register_department(cs_agent.clone()).await;
 
         let tenant_id = "test-tenant-456".to_string();

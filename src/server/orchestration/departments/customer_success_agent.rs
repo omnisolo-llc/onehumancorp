@@ -6,13 +6,18 @@ use std::collections::HashMap;
 pub struct CustomerSuccessAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
     configs: HashMap<String, DepartmentConfig>,
+    registry: std::sync::Arc<crate::integrations::registry::IntegrationsRegistry>,
 }
 
 impl CustomerSuccessAgent {
-    pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
+    pub fn new(
+        orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+        registry: std::sync::Arc<crate::integrations::registry::IntegrationsRegistry>,
+    ) -> Self {
         Self {
             orchestrator,
             configs: HashMap::new(),
+            registry,
         }
     }
 }
@@ -60,6 +65,13 @@ impl Department for CustomerSuccessAgent {
                 let orchestrator_clone = self.orchestrator.clone();
                 let id_clone = inbox_id.to_string();
                 let tenant_id_clone = event.tenant_id.clone();
+
+                let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("unknown");
+                let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("unknown");
+
+                // Dispatch the outbound message via registry
+                let _ = self.registry.send_chat_message(source, sender_id, "customer_success_agent", message, &id_clone);
+
                 tokio::spawn(async move {
                     let _ = orchestrator_clone.update_inbox_message_status(&id_clone, &tenant_id_clone, "sent").await;
                 });

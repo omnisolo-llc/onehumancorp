@@ -62,6 +62,8 @@ export default function InboxPage() {
   );
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
+  const urgentCount = messages.filter((message) => badgeTone(message.status) === "warn").length;
+  const quoteReadyCount = messages.filter((message) => message.draft_reply && badgeTone(message.status) === "warn").length;
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
@@ -107,11 +109,11 @@ export default function InboxPage() {
 
   return (
     <AppShell
-      title="Inbox"
-      subtitle="Database-backed customer conversations and generated drafts."
+      title="Triage Feed"
+      subtitle="Unified Omnichannel Inbox & Agent Triage."
       statusItems={[
-        { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
-        { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
+        { label: "Urgent Inquiries", value: String(urgentCount), tone: urgentCount > 0 ? "warn" : "good" },
+        { label: "Quote Ready to Send", value: String(quoteReadyCount), tone: quoteReadyCount > 0 ? "good" : "neutral" },
       ]}
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
@@ -120,8 +122,8 @@ export default function InboxPage() {
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
-              <div className="app-panel-title">Message Queue</div>
-              <div className="app-list-subtitle">Loaded from `/api/ui/inbox/messages`.</div>
+              <div className="app-panel-title">Triage Feed</div>
+              <div className="app-list-subtitle">Prioritized incoming messages from all channels.</div>
             </div>
           </div>
           <div id="messages-list" className="app-list">
@@ -137,11 +139,17 @@ export default function InboxPage() {
                   setShowOriginal(false);
                 }}
                 className="app-list-item w-full text-left"
-                style={{ background: selected?.id === message.id ? "#f8fafc" : "transparent" }}
+                style={{
+                  background: selected?.id === message.id ? "rgba(255, 255, 255, 0.65)" : "transparent",
+                  backdropFilter: selected?.id === message.id ? "blur(30px) saturate(210%)" : "none",
+                  border: selected?.id === message.id ? "1px solid rgba(255, 255, 255, 0.4)" : "none",
+                  borderRadius: "8px",
+                  marginBottom: "4px"
+                }}
               >
                 <div className="min-w-0">
-                  <div className="app-list-title">{message.source || "Unknown source"}</div>
-                  <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
+                  <div className="app-list-title">{message.source || "Unknown channel"}</div>
+                  <div className="app-list-subtitle truncate text-gray-500">{message.content || "Empty message"}</div>
                 </div>
                 <span className={`app-badge ${badgeTone(message.status)}`}>{message.status || "Open"}</span>
               </button>
@@ -151,19 +159,15 @@ export default function InboxPage() {
 
         <section className="app-panel">
           <div className="app-panel-header">
-            <div className="app-panel-title">Conversation Detail</div>
+            <div className="app-panel-title">Thread View</div>
           </div>
           {!selected ? (
             <div className="app-empty">Select a database-backed message to inspect it.</div>
           ) : (
-            <div className="app-panel-body">
-              <div className="mb-4">
-                <div className="app-metric-label">Source</div>
-                <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
-              </div>
-              <div className="mb-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="app-metric-label">Customer Message</div>
+            <div className="app-panel-body flex flex-col gap-6">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="app-metric-label">Customer Inquiry ({selected.source})</div>
                   {selected.original_content && selected.original_content !== selected.content && (
                     <button
                       type="button"
@@ -174,32 +178,43 @@ export default function InboxPage() {
                     </button>
                   )}
                 </div>
-                <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 text-[15px] leading-relaxed text-gray-900 shadow-sm">
                   {(showOriginal ? selected.original_content : selected.content) || "Empty message"}
                 </div>
-              </div>
-              <div className="mb-4">
-                <div className="app-metric-label">Draft Reply</div>
-                <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
-                  {selected.draft_reply || "No draft reply stored for this message."}
+                <div className="mt-2 text-xs text-gray-400 font-medium tracking-wide uppercase">
+                  {selected.created_at || "Unknown date"}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="app-card">
+
+              {selected.draft_reply && (
+                <div>
+                  <div className="app-metric-label mb-2 text-[#0066FF]">Agent Draft</div>
+                  <div className="rounded-2xl border border-[#0066FF]/20 bg-[#0066FF]/[0.02] p-4 text-[15px] leading-relaxed text-gray-900 shadow-sm relative">
+                    <textarea
+                      className="w-full bg-transparent resize-none outline-none border-none p-0 m-0 focus:ring-0"
+                      rows={5}
+                      defaultValue={selected.draft_reply}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 mt-auto">
+                <div className="app-card" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)", borderRadius: "16px" }}>
                   <div className="app-metric-label">Status</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{selected.status || "Open"}</span></div>
                 </div>
-                <div className="app-card">
-                  <div className="app-metric-label">Created</div>
-                  <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
-                </div>
               </div>
+
               {badgeTone(selected.status) === "warn" && (
-                <div className="mt-6">
+                <div className="mt-2">
                   <button
-                    className="app-btn-primary w-full"
+                    className="app-btn-primary w-full flex items-center justify-center gap-2 text-[17px] font-semibold tracking-wide"
+                    style={{ minHeight: "56px", borderRadius: "14px" }}
                     onClick={() => handleApproveAndSend(selected.id)}
-                  >✨ Approve &amp; Send Draft</button>
+                  >
+                    ✨ Approve &amp; Send Draft
+                  </button>
                 </div>
               )}
             </div>

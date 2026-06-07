@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS inbox_messages (
     content TEXT,
     draft_reply TEXT,
     status TEXT,
+    sender_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
