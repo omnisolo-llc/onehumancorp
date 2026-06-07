@@ -37,7 +37,7 @@ const tasksPayload = {
       status: 'blocked',
       currentStep: 'Waiting for folder permission',
       mode: 'Craft',
-      model: 'MiniMax-M3',
+      model: 'MiniMax M2.5',
       provider: 'Auto',
       permissionProfile: 'Guarded',
       riskSummary: ['Needs permission for Downloads'],
@@ -55,9 +55,10 @@ const tasksPayload = {
     resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
     remotePlatforms: ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot'],
     outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
-    workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
+    workModes: ['Ask', 'Agent', 'Cloud Agent', 'Craft', 'Plan', 'Coding'],
+    computerUseModes: ['Normal', 'Auto', 'Full Access'],
     permissionProfiles: ['Guarded', 'Full Access'],
-    modelProviders: ['Auto', 'OpenAI', 'Anthropic', 'MiniMax', 'DeepSeek', 'Kimi', 'Local Ollama', 'Custom OpenAI Compatible'],
+    modelProviders: ['Auto', 'WorkBuddy', 'MiniMax M2.5', 'GLM-4.6', 'Kimi K2', 'DeepSeek V3.2', 'Claude Sonnet', 'GPT-5-Codex', 'Local Ollama', 'Custom OpenAI Compatible'],
     sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
     workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
     commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
@@ -139,6 +140,21 @@ beforeEach(() => {
     if (urlString.includes('/api/assistant/support')) {
       return new Response(JSON.stringify({ ticket: { id: 'ticket-1', status: 'received' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
+    if (urlString.includes('/api/assistant/explore') && init?.method === 'POST') {
+      return new Response(JSON.stringify({
+        remix: { id: 'remix-1', name: 'Investor Update Agent Remix', visibility: 'private' },
+        task: { id: 'task-remix', mode: 'Agent' },
+      }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/explore') && init?.method === 'PATCH') {
+      return new Response(JSON.stringify({ remix: { id: 'remix-1', visibility: 'shared', target: 'Share Link' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/cloud') && init?.method === 'POST') {
+      return new Response(JSON.stringify({ session: { id: 'cloud-1', status: 'running', mode: 'Cloud Agent' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/cloud') && init?.method === 'PATCH') {
+      return new Response(JSON.stringify({ session: { id: 'cloud-1', status: 'paused', mode: 'Cloud Agent' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     if (urlString.includes('/api/assistant/tasks')) {
       return new Response(JSON.stringify(tasksPayload), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
@@ -163,6 +179,8 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   expect(screen.getByRole('button', { name: 'Skills' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Connectors' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Data Management' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Explore' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Cloud Runtime' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Permissions' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Models & Runtime' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'System & Safety' })).toBeDefined();
@@ -280,6 +298,19 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   expect(screen.getByText('Rename Files')).toBeDefined();
   expect(screen.getByText('Merge PDFs')).toBeDefined();
 
+  fireEvent.click(screen.getByRole('button', { name: 'Explore' }));
+  expect(screen.getByText('Community Templates')).toBeDefined();
+  expect(screen.getByText('Investor Update Agent')).toBeDefined();
+  expect(screen.getByText('Remix as Jarvis Agent')).toBeDefined();
+  expect(screen.getByText('Share Exploration')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cloud Runtime' }));
+  const cloudPanel = screen.getByLabelText('Cloud runtime panel');
+  expect(within(cloudPanel).getByText('Cloud Agent')).toBeDefined();
+  expect(within(cloudPanel).getByText('Background Session')).toBeDefined();
+  expect(within(cloudPanel).getByText('Uploaded Files')).toBeDefined();
+  expect(within(cloudPanel).getByText('Pause/Resume')).toBeDefined();
+
   fireEvent.click(screen.getByRole('button', { name: 'Permissions' }));
   expect(screen.getByText('Permission Mode')).toBeDefined();
   expect(screen.getAllByText('Guarded').length).toBeGreaterThan(0);
@@ -292,6 +323,7 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   expect(screen.getByText('Custom Model UI')).toBeDefined();
   expect(screen.getByText('Runtime Detection')).toBeDefined();
   expect(screen.getAllByText('Local Ollama').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('GPT-5-Codex').length).toBeGreaterThan(0);
 
   fireEvent.click(screen.getByRole('button', { name: 'System & Safety' }));
   expect(screen.getByText('Plugin Marketplace')).toBeDefined();
@@ -310,6 +342,10 @@ test('supports WorkBuddy-style mode and artifact options including Coding and Co
 
   expect(screen.getByDisplayValue('Coding')).toBeDefined();
   expect(screen.getByDisplayValue('Code App')).toBeDefined();
+  fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'Cloud Agent' } });
+  fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'DeepSeek V3.2' } });
+  expect(screen.getByDisplayValue('Cloud Agent')).toBeDefined();
+  expect(screen.getByDisplayValue('DeepSeek V3.2')).toBeDefined();
   expect(screen.getByText('Open Preview')).toBeDefined();
   expect(screen.getByText('Run Locally')).toBeDefined();
 });
@@ -348,6 +384,14 @@ test('backs parity controls with assistant API actions', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Models & Runtime' }));
   fireEvent.click(screen.getByRole('button', { name: 'Save Custom Model' }));
 
+  fireEvent.click(screen.getByRole('button', { name: 'Explore' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remix Template' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Share Exploration' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cloud Runtime' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Start Cloud Session' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pause Cloud Session' }));
+
   fireEvent.click(screen.getByRole('button', { name: 'System & Safety' }));
   fireEvent.click(screen.getByRole('button', { name: 'Install Office Suite' }));
   fireEvent.click(screen.getByRole('button', { name: 'Connect Slack Claw' }));
@@ -363,6 +407,10 @@ test('backs parity controls with assistant API actions', async () => {
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/mcp', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/workspaces', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/models', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/explore', expect.objectContaining({ method: 'POST' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/explore', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/cloud', expect.objectContaining({ method: 'POST' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/cloud', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/plugins', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/claw', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/approvals', expect.objectContaining({ method: 'POST' }));

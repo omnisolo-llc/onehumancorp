@@ -243,6 +243,44 @@ export type AssistantSettings = {
   contentFilter: 'friendly_notice' | 'hide_filtered_answer';
 };
 
+export type ExploreTemplate = {
+  id: string;
+  name: string;
+  source: 'community' | 'official';
+  description: string;
+  remixable: boolean;
+  useCases: string[];
+  skills: string[];
+  connectors: string[];
+  outputFormat: string;
+  prompt: string;
+};
+
+export type ExploreRemix = {
+  id: string;
+  sourceTemplateId: string;
+  name: string;
+  workspace: string;
+  visibility: 'private' | 'shared';
+  target?: string;
+  attribution: string;
+  taskId: string;
+  createdAt: string;
+};
+
+export type CloudSession = {
+  id: string;
+  taskId: string;
+  workspace: string;
+  mode: 'Cloud Agent';
+  model: string;
+  status: 'running' | 'paused' | 'completed' | 'canceled';
+  background: boolean;
+  files: string[];
+  startedAt: string;
+  updatedAt: string;
+};
+
 export const assistantCapabilities = {
   resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
   remotePlatforms: [
@@ -257,9 +295,10 @@ export const assistantCapabilities = {
     'WeChat ClawBot',
   ],
   outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
-  workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
+  workModes: ['Ask', 'Agent', 'Cloud Agent', 'Craft', 'Plan', 'Coding'],
+  computerUseModes: ['Normal', 'Auto', 'Full Access'],
   permissionProfiles: ['Guarded', 'Full Access'],
-  modelProviders: ['Auto', 'OpenAI', 'Anthropic', 'MiniMax', 'DeepSeek', 'Kimi', 'Local Ollama', 'Custom OpenAI Compatible'],
+  modelProviders: ['Auto', 'WorkBuddy', 'MiniMax M2.5', 'GLM-4.6', 'Kimi K2', 'DeepSeek V3.2', 'Claude Sonnet', 'GPT-5-Codex', 'Local Ollama', 'Custom OpenAI Compatible'],
   sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
   workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
   commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
@@ -330,6 +369,9 @@ let settings: AssistantSettings = {
   contentFilter: 'friendly_notice',
 };
 let supportTickets: { id: string; kind: string; message: string; status: 'received'; logBundle?: string; createdAt: string }[] = [];
+let exploreTemplates: ExploreTemplate[] = [];
+let exploreRemixes: ExploreRemix[] = [];
+let cloudSessions: CloudSession[] = [];
 
 function now() {
   return new Date().toISOString();
@@ -1431,6 +1473,150 @@ export function createSupportTicket(payload: {
   return ticket;
 }
 
+export function listExploreTemplates() {
+  return {
+    templates: exploreTemplates,
+    remixes: exploreRemixes,
+    exploreActions: ['Try Task', 'Remix Agent', 'Share Exploration'],
+  };
+}
+
+export function remixExploreTemplate(payload: {
+  templateId?: string;
+  workspace?: string;
+  ownerGoal?: string;
+}) {
+  const template = exploreTemplates.find((item) => item.id === payload.templateId);
+  if (!template) throw new Error('explore template not found');
+  if (!template.remixable) throw new Error('template is not remixable');
+  const workspace = payload.workspace || 'Personal OS';
+  const task = createAssistantTask({
+    prompt: payload.ownerGoal || template.prompt,
+    workspace,
+    mode: 'Agent',
+    model: 'WorkBuddy',
+    provider: 'Auto',
+    outputFormat: template.outputFormat,
+    skills: template.skills,
+    connectors: template.connectors,
+    permissionProfile: 'Guarded',
+  });
+  const remix: ExploreRemix = {
+    id: id('remix'),
+    sourceTemplateId: template.id,
+    name: `${template.name} Remix`,
+    workspace,
+    visibility: 'private',
+    attribution: `Remixed from ${template.name}`,
+    taskId: task.id,
+    createdAt: now(),
+  };
+  exploreRemixes.unshift(remix);
+  return { remix, task, templates: exploreTemplates, remixes: exploreRemixes };
+}
+
+export function mutateExplore(payload: {
+  action?: 'share' | 'unshare';
+  remixId?: string;
+  target?: string;
+}) {
+  const remix = exploreRemixes.find((item) => item.id === payload.remixId);
+  if (!remix) throw new Error('explore remix not found');
+  if (payload.action === 'share') {
+    remix.visibility = 'shared';
+    remix.target = payload.target || 'Share Link';
+  } else if (payload.action === 'unshare') {
+    remix.visibility = 'private';
+    remix.target = undefined;
+  } else {
+    throw new Error('unsupported explore action');
+  }
+  return { remix, remixes: exploreRemixes, templates: exploreTemplates };
+}
+
+export function listCloudSessions() {
+  return {
+    sessions: cloudSessions,
+    runtime: {
+      isolation: 'cloud',
+      asyncTasks: true,
+      uploadedFiles: Array.from(new Set(cloudSessions.flatMap((session) => session.files))),
+      modes: ['Cloud Agent'],
+    },
+  };
+}
+
+export function createCloudSession(payload: {
+  prompt?: string;
+  workspace?: string;
+  model?: string;
+  files?: string[];
+  screenshot?: string;
+}) {
+  if (!payload.prompt?.trim()) throw new Error('prompt is required');
+  const files = [...(payload.files || [])];
+  if (payload.screenshot?.trim()) files.push(payload.screenshot.trim());
+  const task = createAssistantTask({
+    prompt: payload.prompt,
+    workspace: payload.workspace || 'Personal OS',
+    mode: 'Cloud Agent',
+    model: payload.model || 'WorkBuddy',
+    provider: 'Auto',
+    outputFormat: 'Document',
+    attachments: files,
+    skills: ['Web Research', 'Document Writer'],
+    connectors: ['Cloud Runtime'],
+    permissionProfile: 'Guarded',
+  });
+  const createdAt = now();
+  const session: CloudSession = {
+    id: id('cloud'),
+    taskId: task.id,
+    workspace: task.workspace,
+    mode: 'Cloud Agent',
+    model: task.model,
+    status: 'running',
+    background: true,
+    files,
+    startedAt: createdAt,
+    updatedAt: createdAt,
+  };
+  cloudSessions.unshift(session);
+  return { session, task, sessions: cloudSessions, runtime: listCloudSessions().runtime };
+}
+
+export function mutateCloudSession(payload: {
+  action?: 'pause' | 'resume' | 'cancel' | 'complete';
+  id?: string;
+}) {
+  const session = cloudSessions.find((item) => item.id === payload.id);
+  if (!session) throw new Error('cloud session not found');
+  if (payload.action === 'pause') {
+    session.status = 'paused';
+  } else if (payload.action === 'resume') {
+    session.status = 'running';
+  } else if (payload.action === 'cancel') {
+    session.status = 'canceled';
+  } else if (payload.action === 'complete') {
+    session.status = 'completed';
+  } else {
+    throw new Error('unsupported cloud action');
+  }
+  session.updatedAt = now();
+  const task = tasks.find((item) => item.id === session.taskId);
+  if (task && (session.status === 'paused' || session.status === 'canceled')) {
+    task.status = session.status === 'paused' ? 'blocked' : 'failed';
+    task.currentStep = session.status === 'paused' ? 'Cloud session paused' : 'Cloud session canceled';
+    task.updatedAt = session.updatedAt;
+  }
+  if (task && session.status === 'running') {
+    task.status = 'running';
+    task.currentStep = 'Cloud runtime resumed in background';
+    task.updatedAt = session.updatedAt;
+  }
+  return { session, sessions: cloudSessions, task, runtime: listCloudSessions().runtime };
+}
+
 export function resetAssistantStore() {
   tasks = [
     {
@@ -1500,7 +1686,7 @@ export function resetAssistantStore() {
       workspace: 'Files',
       status: 'blocked',
       mode: 'Craft',
-      model: 'MiniMax-M3',
+      model: 'MiniMax M2.5',
       provider: 'Auto',
       workDirectory: '/Users/me/Downloads',
       outputFormat: 'Table',
@@ -1583,13 +1769,73 @@ export function resetAssistantStore() {
       skipChatCompletions: false,
     },
     {
-      id: 'model-openai',
-      provider: 'OpenAI',
-      modelId: 'gpt-4.1',
-      endpoint: 'https://api.openai.com/v1',
+      id: 'model-workbuddy',
+      provider: 'WorkBuddy',
+      modelId: 'workbuddy-hunyuan',
+      endpoint: 'jarvis://workbuddy',
       enabled: true,
       headers: {},
       parameters: { temperature: 0.3 },
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-minimax-m25',
+      provider: 'MiniMax M2.5',
+      modelId: 'minimax-m2.5',
+      endpoint: 'https://api.minimax.example/v1',
+      enabled: true,
+      headers: {},
+      parameters: { reasoningEffort: 'medium' },
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-glm46',
+      provider: 'GLM-4.6',
+      modelId: 'glm-4.6',
+      endpoint: 'https://api.bigmodel.example/v1',
+      enabled: true,
+      headers: {},
+      parameters: {},
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-kimi-k2',
+      provider: 'Kimi K2',
+      modelId: 'kimi-k2',
+      endpoint: 'https://api.moonshot.example/v1',
+      enabled: true,
+      headers: {},
+      parameters: {},
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-deepseek-v32',
+      provider: 'DeepSeek V3.2',
+      modelId: 'deepseek-v3.2',
+      endpoint: 'https://api.deepseek.example/v1',
+      enabled: true,
+      headers: {},
+      parameters: {},
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-claude-sonnet',
+      provider: 'Claude Sonnet',
+      modelId: 'claude-sonnet',
+      endpoint: 'https://api.anthropic.example/v1',
+      enabled: true,
+      headers: {},
+      parameters: {},
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-gpt-5-codex',
+      provider: 'GPT-5-Codex',
+      modelId: 'gpt-5-codex',
+      endpoint: 'https://api.openai.example/v1',
+      enabled: true,
+      headers: {},
+      parameters: {},
       skipChatCompletions: false,
     },
     {
@@ -1732,6 +1978,59 @@ export function resetAssistantStore() {
     contentFilter: 'friendly_notice',
   };
   supportTickets = [];
+  exploreTemplates = [
+    {
+      id: 'explore-investor-update',
+      name: 'Investor Update Agent',
+      source: 'community',
+      description: 'Turns metrics, notes, and tasks into a weekly investor update.',
+      remixable: true,
+      useCases: ['research_brief', 'document_generation', 'share_review'],
+      skills: ['Web Research', 'Document Writer', 'Chart Builder'],
+      connectors: ['Google Drive', 'Slack'],
+      outputFormat: 'Document',
+      prompt: 'Create an investor update with progress, metrics, risks, and asks.',
+    },
+    {
+      id: 'explore-file-cleanup',
+      name: 'Local File Cleanup Agent',
+      source: 'official',
+      description: 'Plans local file cleanup, conversion, renaming, and PDF merge tasks.',
+      remixable: true,
+      useCases: ['batch_rename', 'batch_convert', 'merge_pdfs'],
+      skills: ['File Organizer', 'Document Writer'],
+      connectors: [],
+      outputFormat: 'ZIP',
+      prompt: 'Organize local files safely and preview changes before applying them.',
+    },
+    {
+      id: 'explore-research-deck',
+      name: 'Research Deck Agent',
+      source: 'community',
+      description: 'Builds a cited research deck with charts and source notes.',
+      remixable: true,
+      useCases: ['web_research', 'slides', 'charts'],
+      skills: ['Web Research', 'Chart Builder', 'Document Writer'],
+      connectors: ['Tencent Docs'],
+      outputFormat: 'Presentation',
+      prompt: 'Research a market and create an executive deck with charts.',
+    },
+  ];
+  exploreRemixes = [];
+  cloudSessions = [
+    {
+      id: 'cloud-weekly-brief',
+      taskId: 'task-weekly-brief',
+      workspace: 'Personal OS',
+      mode: 'Cloud Agent',
+      model: 'WorkBuddy',
+      status: 'running',
+      background: true,
+      files: ['workspace-notes.md'],
+      startedAt: '2026-06-07T00:05:00.000Z',
+      updatedAt: '2026-06-07T00:05:00.000Z',
+    },
+  ];
 }
 
 resetAssistantStore();
