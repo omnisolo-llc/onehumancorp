@@ -8,6 +8,7 @@ interface OnboardingState {
   businessName: string;
   whatYouSell: string;
   location: string;
+  targetAudience: string;
   businessType: string;
   categories: string[];
   websiteTemplate: string;
@@ -28,6 +29,7 @@ interface OnboardingState {
   setBusinessName: (name: string) => void;
   setWhatYouSell: (what: string) => void;
   setLocation: (location: string) => void;
+  setTargetAudience: (target: string) => void;
   setBusinessType: (type: string) => void;
   setCategories: (categories: string[]) => void;
   setWebsiteTemplate: (template: string) => void;
@@ -48,11 +50,12 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
-      chatStep: 0,
+      chatStep: 1,
       businessDescription: '',
       businessName: '',
       whatYouSell: '',
       location: '',
+      targetAudience: '',
       businessType: 'Online Store',
       categories: [],
       websiteTemplate: 'Modern',
@@ -73,6 +76,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setBusinessName: (businessName) => set({ businessName }),
       setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
       setLocation: (location) => set({ location }),
+      setTargetAudience: (targetAudience) => set({ targetAudience }),
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),

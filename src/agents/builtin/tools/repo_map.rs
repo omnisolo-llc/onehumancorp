@@ -29,35 +29,35 @@ impl RepoMapExecutor {
         match ext {
             "rs" => {
                 for line in content.lines() {
-                    if let Some(_) = RS_REGEX.captures(line) {
+                    if RS_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "py" => {
                 for line in content.lines() {
-                    if let Some(_) = PY_REGEX.captures(line) {
+                    if PY_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "ts" | "js" | "tsx" | "jsx" => {
                 for line in content.lines() {
-                    if let Some(_) = TS_REGEX.captures(line) {
+                    if TS_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "go" => {
                 for line in content.lines() {
-                    if let Some(_) = GO_REGEX.captures(line) {
+                    if GO_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "c" | "cpp" | "h" | "hpp" => {
                 for line in content.lines() {
-                    if let Some(_) = CPP_REGEX.captures(line) {
+                    if CPP_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
@@ -92,8 +92,8 @@ impl RepoMapExecutor {
                 map.push_str(&format!("{}📄 {}\n", prefix, name));
 
                 // Read file to extract signatures
-                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str())
+                    && let Ok(content) = std::fs::read_to_string(&path) {
                         let sigs = Self::extract_signatures(&content, ext);
                         for sig in sigs.iter().take(10) { // Limit to top 10 signatures per file to keep it compact
                             map.push_str(&format!("{}  │ {}\n", prefix, sig));
@@ -101,7 +101,6 @@ impl RepoMapExecutor {
                         if sigs.len() > 10 {
                             map.push_str(&format!("{}  │ ... ({} more)\n", prefix, sigs.len() - 10));
                         }
-                    }
                 }
             }
         }
@@ -115,10 +114,9 @@ impl ToolExecutor for RepoMapExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let mut target_path = self.workspace_path.clone();
 
-        if let Some(path_val) = args.get("path") {
-            if let Some(path_str) = path_val.as_str() {
+        if let Some(path_val) = args.get("path")
+            && let Some(path_str) = path_val.as_str() {
                 target_path = self.workspace_path.join(path_str);
-            }
         }
 
         // Fix path traversal: canonicalize both paths and verify target is within workspace

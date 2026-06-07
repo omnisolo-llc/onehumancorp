@@ -1,3 +1,4 @@
+/// Master Catalog B.12. The "Ralph Loop"
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -420,5 +421,28 @@ mod tests {
         assert_eq!(progress.features.len(), 2);
         assert_eq!(progress.features[0].name, "Markdown Feature 1");
         assert_eq!(progress.features[1].name, "Markdown Feature 2");
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_git_status_failure_continues() {
+        let dir = tempfile::tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+
+        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let mut ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
+        // Use a non-existent directory to simulate git commands failing without panicking
+        ralph.repo_path = dir.path().join("non_existent_repo");
+
+        let result = ralph.run("Build a web server").await;
+        // Even if git commands fail, the loop should continue and return Ok(())
+        assert!(result.is_ok());
+
+        assert!(progress_file.exists());
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+        assert!(saved_progress.is_complete);
     }
 }

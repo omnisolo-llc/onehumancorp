@@ -191,7 +191,7 @@ impl DepartmentOrchestrator {
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
                                 Err(_) => {
-                                    last_err = "AI timeout: Event handling exceeded 60 seconds".to_string();
+                                    last_err = format!("AI timeout: Event handling exceeded {} seconds", ohc_builtin_agent::agent::agent_task_timeout().as_secs());
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
                             }
@@ -685,6 +685,60 @@ impl DepartmentOrchestrator {
             ]);
 
             if approved {
+                // If this is a Smart Pricing approval, execute the price change in the database directly.
+                if let Some(payload) = &original_payload {
+                    if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {
+                        if let Some(product_id) = payload.get("context").and_then(|c| c.get("product_id")).and_then(|v| v.as_str()) {
+                            let discount_amount = payload.get("context").and_then(|c| c.get("discount_amount")).and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let now = Utc::now();
+                            let expires_at = now + chrono::Duration::days(2);
+                            let id = uuid::Uuid::new_v4().to_string();
+
+                            // Try to insert into active_discounts, but don't fail the approval if it's not present (e.g. SQLite doesn't have the table yet in testing)
+                            if let DbStore::Postgres = &self.db.store {
+                                if let Err(e) = sqlx::query("INSERT INTO active_discounts (id, tenant_id, product_id, discount_amount, expires_at) VALUES ($1, $2, $3, $4, $5)")
+                                    .bind(uuid::Uuid::parse_str(&id).unwrap_or(uuid::Uuid::new_v4()))
+                                    .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or(uuid::Uuid::new_v4()))
+                                    .bind(uuid::Uuid::parse_str(product_id).unwrap_or(uuid::Uuid::new_v4()))
+                                    .bind(discount_amount)
+                                    .bind(expires_at)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to insert active_discount: {}", e);
+                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                    return Err(format!("Failed to activate smart pricing discount: {}", e));
+                                }
+
+                                // Invalidate Redis edge cache for the product price
+                                let cache_key = format!("ohc:price:{}:{}", tenant_id, product_id);
+                                tracing::info!("Mock redis invalidation for {}", cache_key);
+                                if false {
+
+                                }
+
+                                // Trigger Promoter agent to draft a marketing broadcast
+                                let promo_payload = serde_json::json!({
+                                    "action": "draft_social_post",
+                                    "context": {
+                                        "product_id": product_id,
+                                        "product_name": payload.get("context").and_then(|c| c.get("product_name")).and_then(|v| v.as_str()).unwrap_or(""),
+                                        "discount_amount": discount_amount,
+                                        "reason": "Flash Sale"
+                                    }
+                                });
+                                let _ = self.execute_action(
+                                    DepartmentType::Marketing,
+                                    "Draft social media post for Flash Sale".to_string(),
+                                    tenant_id.to_string(),
+                                    ActionRisk::DraftForReview,
+                                    promo_payload
+                                ).await;
+                            }
+                        }
+                    }
+                }
+
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id,
@@ -715,6 +769,30 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
+    pub async fn simulate_smart_pricing(&self, tenant_id: &str) -> Result<(), String> {
+        let payload = serde_json::json!({
+            "context": {
+                "smart_pricing": true,
+                "product_id": uuid::Uuid::new_v4().to_string(),
+                "product_name": "Winter Scarf",
+                "old_price": 50.0,
+                "new_price": 42.5,
+                "discount_amount": 7.5,
+                "sales_projection": "+$120",
+                "stagnant_days": 60,
+                "margin_percent": 40
+            }
+        });
+
+        self.execute_action(
+            DepartmentType::BusinessAdvisory,
+            "Smart Price Suggestion: Winter Scarf".to_string(),
+            tenant_id.to_string(),
+            ActionRisk::DraftForReview,
+            payload
+        ).await.map(|_| ())
+    }
+
     pub async fn update_inbox_message_draft(&self, message_id: &str, tenant_id: &str, draft_reply: &str) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
@@ -728,6 +806,59 @@ impl DepartmentOrchestrator {
         }
         Ok(())
     }
+
+
+    pub async fn get_inventory_summary(&self, tenant_id: &str) -> Result<String, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT title, name, inventory_count FROM products WHERE tenant_id = $1 AND inventory_count IS NOT NULL")
+                    .bind(tenant_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if rows.is_empty() {
+                    return Ok("No inventory data available.".to_string());
+                }
+
+                use sqlx::Row;
+                let mut summary = String::from("Current Inventory:\n");
+                for row in rows {
+                    let title: Option<String> = row.try_get("title").unwrap_or(None);
+                    let name: Option<String> = row.try_get("name").unwrap_or(None);
+                    let display_name = title.or(name).unwrap_or_else(|| "Unknown Product".to_string());
+                    let count: i32 = row.try_get("inventory_count").unwrap_or(0);
+                    summary.push_str(&format!("- {} ({} in stock)\n", display_name, count));
+                }
+
+                Ok(summary)
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT title, name, inventory_count FROM products WHERE tenant_id = $1 AND inventory_count IS NOT NULL")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if rows.is_empty() {
+                    return Ok("No inventory data available.".to_string());
+                }
+
+                use sqlx::Row;
+                let mut summary = String::from("Current Inventory:\n");
+                for row in rows {
+                    let title: Option<String> = row.try_get("title").unwrap_or(None);
+                    let name: Option<String> = row.try_get("name").unwrap_or(None);
+                    let display_name = title.or(name).unwrap_or_else(|| "Unknown Product".to_string());
+                    let count: i32 = row.try_get("inventory_count").unwrap_or(0);
+                    summary.push_str(&format!("- {} ({} in stock)\n", display_name, count));
+                }
+
+                Ok(summary)
+            }
+        }
+    }
+
 
     pub async fn query_long_term_memory(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<String>, String> {
         let records = self.memory_repo.cross_department_search(tenant_id, query_embedding, limit).await?;

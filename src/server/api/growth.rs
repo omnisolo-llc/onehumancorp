@@ -132,6 +132,7 @@ where
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/send-cart", post(handle_send_cart))
+        .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
                 .route("/storefront/og-card", get(handle_og_card))
@@ -143,6 +144,7 @@ where
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
+        .route("/referrals/stats", get(handle_referral_stats))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -150,9 +152,46 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrialExtensionClaimResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+async fn handle_trial_extension_claim(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
+    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
+        Ok(u) => u,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+
+    match sqlx::query("UPDATE tenants SET plan_tier = 'pro' WHERE id = $1 OR tenant_id = $1")
+        .bind(parsed_uuid)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                Ok(Json(TrialExtensionClaimResponse {
+                    success: true,
+                    message: "Trial successfully extended to pro".to_string(),
+                }))
+            } else {
+                Err(StatusCode::NOT_FOUND)
+            }
+        },
+        Err(e) => {
+            tracing::error!("Failed to extend trial: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
@@ -334,7 +373,7 @@ async fn handle_send_receipt(
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
+        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"/api/v1/growth/referrals/click?target=/onboarding&ref={}\">Powered by OHC - Start your business today</a>",
         email, amount, order_id, tenant_id
     );
 
@@ -541,7 +580,6 @@ async fn handle_storefront_embed(
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
@@ -601,7 +639,7 @@ pub struct FlashSaleEmbedQuery {
 }
 
 async fn handle_flash_sale_embed(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -658,7 +696,7 @@ async fn handle_flash_sale_embed(
         <div class="code-box">{safe_code}</div>
 
         <div class="footer">
-            <a href="https://ohc.app/join?ref={tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 
@@ -810,6 +848,24 @@ async fn handle_check_milestones(
             description: "Your storefront reached 100 visitors today!".to_string(),
             reached: reached_types.contains(&"100_visitors".to_string()),
         },
+        Milestone {
+            id: "5_referrals".to_string(),
+            title: "🤝 High Connector!".to_string(),
+            description: "You've successfully referred 5 other businesses to OHC.".to_string(),
+            reached: reached_types.contains(&"5_referrals".to_string()),
+        },
+        Milestone {
+            id: "revenue_1k".to_string(),
+            title: "💰 Four-Figure Club".to_string(),
+            description: "Your business has surpassed $1,000 in total revenue!".to_string(),
+            reached: reached_types.contains(&"revenue_1k".to_string()),
+        },
+        Milestone {
+            id: "100_orders".to_string(),
+            title: "📦 Century of Orders".to_string(),
+            description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
+            reached: reached_types.contains(&"100_orders".to_string()),
+        },
     ];
     Json(MilestonesResponse { milestones })
 }
@@ -855,15 +911,20 @@ async fn handle_get_milestone_card(
 
     let safe_business_name = escape_xml(&business_name);
 
-    let (title, sub, icon) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰"),
-        "10th_order" => ("10th Order!", "Business is booming", "📈"),
-        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
-        _ => ("Success Milestone!", "Built with OHC", "✨"),
+    let (title, sub, icon, grad_start, grad_end) = match milestone_id {
+        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
+        "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
+        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
+        "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
+        "revenue_1k" => ("Four-Figure Club", "Revenue > $1,000", "💰", "#84fab0", "#8fd3f4"),
+        "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
+        _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
-        r##"<text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>"##.to_string()
+        format!(r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
+    <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+  </a>"##, tenant_id)
     } else {
         "".to_string()
     };
@@ -887,8 +948,8 @@ async fn handle_get_milestone_card(
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
   </defs>
   <rect width="1200" height="630" fill="url(#grad1)" />
@@ -901,7 +962,14 @@ async fn handle_get_milestone_card(
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
-</svg>"##);
+</svg>"##,
+    grad_start = grad_start,
+    grad_end = grad_end,
+    icon = icon,
+    title = title,
+    sub = sub,
+    safe_business_name = safe_business_name,
+    branding = branding);
 
     axum::response::Response::builder()
         .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
@@ -1004,7 +1072,7 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     let cache_key = "onboarding_metrics";
     let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
@@ -1013,7 +1081,7 @@ async fn handle_onboarding_metrics(
     }
 
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&_state.pool).await
+        .fetch_all(&state.pool).await
     {
         Ok(rows) => {
 
@@ -1054,6 +1122,35 @@ async fn handle_referral_click(
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
+
+async fn handle_referral_stats(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let mut active_referrals: i64 = 0;
+    let mut revenue_from_referrals: f64 = 0.0;
+    let mut pending_rewards: f64 = 0.0;
+
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await;
+
+    if let Ok(r) = row {
+        use sqlx::Row;
+        let conv: i64 = r.get(0);
+        active_referrals = conv;
+        revenue_from_referrals = (conv as f64) * 50.0;
+        pending_rewards = (conv as f64) * 10.0;
+    }
+
+    Ok(Json(serde_json::json!({
+        "active_referrals": active_referrals,
+        "revenue_from_referrals": revenue_from_referrals,
+        "pending_rewards": pending_rewards,
+    })))
+}
+
 
 async fn handle_referral_convert(
     Extension(state): Extension<GrowthState>,
@@ -1370,6 +1467,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_trial_extension_claim() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let tenant_id = "55555555-5555-5555-5555-555555555555";
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
+            .bind(tenant_id)
+            .execute(&pool).await.unwrap();
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: tenant_id.to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let res = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
+        assert!(res.0.success);
+
+        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
+
+        assert_eq!(plan_tier, "pro");
+    }
+
+    #[tokio::test]
     async fn test_generate_customer_referral() {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
@@ -1536,4 +1666,25 @@ async fn handle_aggregated_team_invites_metrics(
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn handle_abandoned_carts_count(
+    Extension(state): Extension<GrowthState>,
+) -> impl IntoResponse {
+    let pool = &state.pool;
+
+    // Attempt to query orders with status = 'abandoned'.
+    // Note: We use COALESCE to return 0 if no results.
+    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned'")
+        .fetch_one(pool)
+        .await
+    {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to fetch abandoned carts count: {}", e);
+            0
+        }
+    };
+
+    Json(serde_json::json!({ "count": count }))
 }

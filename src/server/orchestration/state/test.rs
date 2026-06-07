@@ -172,7 +172,7 @@ async fn test_single_agent_flow() {
     let result = state_manager
         .transition_state(
             &task_id,
-            "test_org",
+            "default_tenant",
             "PENDING",
             "IN_PROGRESS",
             Some("agent_1"),
@@ -228,7 +228,7 @@ async fn test_dag_workflow() {
     state_manager
         .transition_state(
             &parent_id,
-            "test_org",
+            "default_tenant",
             "IN_PROGRESS",
             "COMPLETED",
             Some("agent_1"),
@@ -243,6 +243,99 @@ async fn test_dag_workflow() {
 }
 
 use super::cloud::CloudStateManager;
+
+#[tokio::test]
+async fn test_missing_dependency_blocking() {
+    let pool = SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE swarm_tasks (
+            id TEXT PRIMARY KEY,
+            mission_id TEXT,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL,
+            dependencies TEXT,
+            tenant_id TEXT NOT NULL DEFAULT 'test_org',
+            payload TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            entity_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            agent_id TEXT,
+            reason TEXT,
+            occurred_at TEXT NOT NULL
+        )",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let db = Arc::new(DB {
+        pool: crate::db::get_pool(),
+        store: DbStore::Sqlite(pool.clone()),
+    });
+
+    let mock_mesh: Arc<dyn TeammateMesh> = Arc::new(MockMesh::new());
+
+    let state_manager = StandaloneStateManager::new(db, mock_mesh);
+
+    // Insert task 1 that depends on non-existent task "missing-id"
+    sqlx::query(
+        "INSERT INTO swarm_tasks (id, title, status, dependencies) VALUES (?, 'Task 1', 'PENDING', '[\"missing-id\"]')"
+    )
+    .bind("task-1")
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // Verify it is NOT pulled because dependency is missing
+    let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    assert_eq!(tasks.len(), 0, "Task 1 should be blocked by missing dependency");
+
+    // Insert the missing dependency, but as PENDING
+    sqlx::query(
+        "INSERT INTO swarm_tasks (id, title, status, dependencies) VALUES (?, 'Missing Task', 'PENDING', '[]')"
+    )
+    .bind("missing-id")
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // Verify task 1 is still blocked because dependency is not COMPLETED
+    let mut tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    // Only the missing-id task should be pulled now
+    assert_eq!(tasks.len(), 1, "Only dependency task should be pulled");
+    assert_eq!(tasks[0].id, "missing-id");
+
+    // Mark dependency as COMPLETED
+    sqlx::query(
+        "UPDATE swarm_tasks SET status = 'COMPLETED' WHERE id = ?"
+    )
+    .bind("missing-id")
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // Now Task 1 should be available
+    tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    assert_eq!(tasks.len(), 1, "Task 1 should be pulled now that dependency is completed");
+    assert_eq!(tasks[0].id, "task-1");
+}
 
 // Mock testing CloudStateManager for test coverage requirements without hitting SQLite syntax panics
 #[tokio::test]
