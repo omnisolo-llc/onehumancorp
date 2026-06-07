@@ -411,11 +411,14 @@ mod parity_tests {
         let dt = chrono::Utc::now();
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            use chrono::Timelike;
+            let dt_sqlite = dt.with_nanosecond(0).unwrap();
+
             sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at, tenant_id) VALUES (?, ?, ?, \'PENDING\', ?, 'default_tenant')")
                 .bind(&task_id)
                 .bind(mission_id)
                 .bind(title)
-                .bind(dt)
+                .bind(dt_sqlite)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string()) }).await.unwrap();
@@ -429,7 +432,7 @@ mod parity_tests {
 
             // SQLite strips milliseconds to certain precisions based on formatting,
             // but the timezone itself (UTC) must match.
-            assert_eq!(created_at.timestamp(), dt.timestamp());
+            assert_eq!(created_at.timestamp(), dt_sqlite.timestamp());
         }
 
         if let Some(ref db) = pg_db {
