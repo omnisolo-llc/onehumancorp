@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Skip this test in CI until it can be wired fully with the docker-compose backend setup and mock card reader.
-// @skip
-test.describe.skip('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
+test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
   test('should process an offline payment and sync it when online', async ({ page, context }) => {
     // Navigate to terminal
     await page.goto('/pos/terminal');

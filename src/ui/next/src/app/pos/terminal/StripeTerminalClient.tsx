@@ -70,6 +70,19 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
        // Mock the terminal process for offline
        setTimeout(() => {
           const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          const tx = {
+             id: transactionId,
+             client_id: 'terminal_1',
+             amount_cents: amount,
+             currency: 'usd',
+             payload: JSON.stringify([{ product_id: productId, quantity: 1 }]),
+             timestamp: new Date().toISOString()
+          };
+          // Also sync with OfflineStore directly to match page.tsx expectations
+          const existingTxs = JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+          existingTxs.push(tx);
+          localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(existingTxs));
+
           SyncManager.getInstance().enqueue({
              type: 'tap_to_pay',
              id: transactionId,
