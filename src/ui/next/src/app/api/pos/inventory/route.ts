@@ -14,7 +14,7 @@ function headersFor(req: Request, withJson = false): Record<string, string> {
 }
 
 export async function GET(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   const { search } = new URL(req.url);
   try {
     const res = await fetch(`${backendUrl}/api/pos/inventory${search}`, {
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   try {
     const res = await fetch(`${backendUrl}/api/pos/inventory`, {
       method: 'DELETE',
@@ -41,7 +41,7 @@ export async function DELETE(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   try {
     const body = await req.json();
     const res = await fetch(`${backendUrl}/api/pos/inventory`, {

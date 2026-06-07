@@ -24,7 +24,7 @@ describe('/api/videos GET', () => {
     expect(response.status).toBe(200);
     const data = await response.json();
 
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8080/api/videos');
+    expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:18789/api/videos');
     expect(data).toEqual(mockVideos);
   });
 

@@ -4,7 +4,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q') || '';
 
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
   try {
     const res = await fetch(`${backendUrl}/api/help/search?q=${encodeURIComponent(q)}`);

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
     // Construct the backend URL
     const url = new URL(`${backendUrl}/api/v1/growth/milestone/card`);

@@ -18,7 +18,7 @@ function forwardedHeaders(req: Request, withJson = false): Record<string, string
 }
 
 export async function GET(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   const { search } = new URL(req.url);
 
   try {
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
   try {
     const body = await req.json();
