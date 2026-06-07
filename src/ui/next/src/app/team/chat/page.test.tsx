@@ -4,6 +4,12 @@ import TeamChatPage from './page';
 
 const mockFetch = vi.fn();
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   global.fetch = mockFetch;
@@ -29,29 +35,35 @@ test('shows a latency state while an AI action is being drafted', async () => {
 
   render(<TeamChatPage />);
 
-  fireEvent.change(screen.getByTestId('team-chat-input'), {
-    target: { value: 'Quote the sink repair' },
+  await act(async () => {
+    fireEvent.change(screen.getByTestId('team-chat-input'), {
+      target: { value: 'Quote the sink repair' },
+    });
+    fireEvent.click(screen.getByTestId('team-chat-send'));
   });
-  fireEvent.click(screen.getByTestId('team-chat-send'));
 
   expect(await screen.findByText('Working on your request...')).toBeInTheDocument();
   expect(screen.getByText('The team is still drafting the action.')).toBeInTheDocument();
 
-  resolveFetch(
-    new Response(
-      JSON.stringify({
-        agent: 'The Salesperson',
-        description: 'Draft quote for Plumbing Fix',
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    ),
-  );
+  await act(async () => {
+    resolveFetch(
+      new Response(
+        JSON.stringify({
+          agent: 'The Salesperson',
+          description: 'Draft quote for Plumbing Fix',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+  });
 
   await waitFor(() => {
     expect(screen.queryByText('Working on your request...')).not.toBeInTheDocument();
   });
   expect(screen.getByText('Draft quote for Plumbing Fix')).toBeInTheDocument();
 });
+
+import { act } from 'react';
 
 test('renders an actionable error card when AI action execution fails', async () => {
   mockFetch.mockResolvedValue(
@@ -63,10 +75,12 @@ test('renders an actionable error card when AI action execution fails', async ()
 
   render(<TeamChatPage />);
 
-  fireEvent.change(screen.getByTestId('team-chat-input'), {
-    target: { value: 'Run the agent action' },
+  await act(async () => {
+    fireEvent.change(screen.getByTestId('team-chat-input'), {
+      target: { value: 'Run the agent action' },
+    });
+    fireEvent.click(screen.getByTestId('team-chat-send'));
   });
-  fireEvent.click(screen.getByTestId('team-chat-send'));
 
   expect(await screen.findByText('Action needs attention')).toBeInTheDocument();
   expect(screen.getByText('AI Budget exhausted')).toBeInTheDocument();
