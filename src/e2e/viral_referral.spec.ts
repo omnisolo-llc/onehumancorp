@@ -12,7 +12,7 @@ test.describe('Viral Referral Loop', () => {
 
     // Check How It Works steps
     await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
-    await expect(page.getByText('Share Link')).toBeVisible();
+    await expect(page.getByText('Share Link', { exact: true })).toBeVisible();
     await expect(page.getByText('They Sign Up')).toBeVisible();
     await expect(page.getByText('You Get $50')).toBeVisible();
 

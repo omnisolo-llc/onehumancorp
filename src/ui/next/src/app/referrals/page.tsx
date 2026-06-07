@@ -161,6 +161,53 @@ export default function ReferralsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Cloud-Bridge Referral</h3>
+                <p className="text-sm text-gray-600 mb-4">Invite a collaborator to view a specific agentic output. This provisions a temporary multi-tenant context in Cloud Mode, allowing them to view the asset while you maintain local data sovereignty.</p>
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Collaborator Share Link</label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-center">
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                          <span className="text-gray-400 text-sm font-medium">Generating your unique link...</span>
+                        </div>
+                      ) : (
+                        <span id="collaborator-link" className="text-gray-800 font-mono text-sm break-all">{
+                          (() => {
+                            try {
+                              const url = new URL(referralLink);
+                              url.searchParams.set('output', 'audit');
+                              url.searchParams.set('provision', 'cloud-bridge');
+                              return url.toString();
+                            } catch {
+                              return `${referralLink}${referralLink.includes('?') ? '&' : '?'}output=audit&provision=cloud-bridge`;
+                            }
+                          })()
+                        }</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        try {
+                          const url = new URL(referralLink);
+                          url.searchParams.set('output', 'audit');
+                          url.searchParams.set('provision', 'cloud-bridge');
+                          navigator.clipboard.writeText(url.toString());
+                        } catch {
+                          navigator.clipboard.writeText(`${referralLink}${referralLink.includes('?') ? '&' : '?'}output=audit&provision=cloud-bridge`);
+                        }
+                        setDataAction('Collaborator share link copied.');
+                      }}
+                      className="px-6 py-3 rounded-xl text-sm font-bold transition-all sm:w-auto w-full bg-indigo-600 text-white hover:bg-indigo-700"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Embed on Your Website</h3>
                 <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OHC storefront widget directly to your existing website.</p>
                 <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">

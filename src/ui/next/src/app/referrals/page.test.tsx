@@ -24,10 +24,10 @@ describe('ReferralsPage', () => {
     (global.fetch as any).mockImplementation(() => new Promise(() => {}));
 
     render(<ReferralsPage />);
-    expect(screen.getByText('Generating your unique link...')).toBeDefined();
+    expect(screen.getAllByText('Generating your unique link...')[0]).toBeDefined();
 
     // Copy button should be disabled
-    const copyButton = screen.getByText('Copy Link');
+    const copyButton = screen.getAllByText('Copy Link')[0];
     expect(copyButton.hasAttribute('disabled')).toBe(true);
   });
 
@@ -62,7 +62,7 @@ describe('ReferralsPage', () => {
     expect(referralSpan?.textContent).toBe('https://ohc.app/ref/test1234');
 
     // Copy button should be enabled
-    const copyButton = screen.getByText('Copy Link');
+    const copyButton = screen.getAllByText('Copy Link')[0];
     expect(copyButton.hasAttribute('disabled')).toBe(false);
   });
 

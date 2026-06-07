@@ -28,7 +28,7 @@ test.describe('Growth Loop: Team Invites Metrics Component', () => {
   test('TC4: Should be able to open referral modal from dashboard', async ({ page }) => {
     // We are already on the dashboard
     await page.goto('/referrals');
-    await expect(page.getByRole('button', { name: /Copy Link|Copied/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Copy Link|Copied/i }).first()).toBeVisible();
   });
 
   test('TC5: Should show correct default metrics value for Team Invites Sent', async ({ page }) => {
