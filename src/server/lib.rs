@@ -3771,7 +3771,29 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
-        .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
+        .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()).layer(
+            axum::middleware::from_fn({
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |req: axum::extract::Request, next: axum::middleware::Next| {
+                    let store_clone = store.clone();
+                    async move {
+                        use axum::response::IntoResponse;
+                        let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                        let token = match auth_header {
+                            Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                            _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                        };
+                        let claims = match store_clone.validate_token(token).await {
+                            Ok(c) => c,
+                            Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                        };
+                        let mut req = req;
+                        req.extensions_mut().insert(claims);
+                        next.run(req).await
+                    }
+                }
+            })
+        ))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
