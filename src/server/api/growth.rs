@@ -130,6 +130,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/checkout/abandon", post(handle_trigger_cart_abandoned))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -281,6 +282,56 @@ async fn handle_generate_customer_referral(
     Json(GenerateCustomerReferralResponse {
         message: generated,
     })
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TriggerCartAbandonedRequest {
+    pub tenant_id: String,
+    pub customer_name: Option<String>,
+    pub cart_value: Option<f64>,
+    pub product_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TriggerCartAbandonedResponse {
+    pub message: String,
+    pub task_id: String,
+}
+
+async fn handle_trigger_cart_abandoned(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<TriggerCartAbandonedRequest>,
+) -> impl IntoResponse {
+    use uuid::Uuid;
+    let task_id = Uuid::new_v4().to_string();
+    let tenant_id = req.tenant_id.clone();
+
+    let payload = serde_json::json!({
+        "customer_name": req.customer_name.unwrap_or_else(|| "Customer".to_string()),
+        "cart_value": req.cart_value.unwrap_or(0.0),
+        "product_name": req.product_name.unwrap_or_else(|| "items".to_string()),
+    });
+
+    let res = sqlx::query(
+        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'sales_acquisition', 'CartAbandoned', $3, 'PENDING')"
+    )
+    .bind(&task_id)
+    .bind(&tenant_id)
+    .bind(payload.to_string())
+    .execute(&state.pool)
+    .await;
+
+    match res {
+        Ok(_) => Json(TriggerCartAbandonedResponse {
+            message: "CartAbandoned event published to department_tasks".to_string(),
+            task_id,
+        }).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to insert CartAbandoned task: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to publish event").into_response()
+        }
+    }
 }
 
 async fn handle_generate_cart(

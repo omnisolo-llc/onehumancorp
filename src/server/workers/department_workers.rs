@@ -683,6 +683,201 @@ impl OperationsWorker {
     }
 }
 
+
+pub struct SalesWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: Duration,
+}
+
+impl SalesWorker {
+    pub fn new(db: Arc<DB>) -> Self {
+        Self {
+            db,
+            poll_interval: Duration::from_secs(5),
+        }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let interval_duration = self.poll_interval;
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(interval_duration);
+            loop {
+                interval.tick().await;
+                loop {
+                    match Self::poll(&db).await {
+                        Ok(true) => continue,
+                        Ok(false) => break,
+                        Err(e) => {
+                            ::server_telemetry::record_error_signal("SalesWorker error");
+                            tracing::error!("SalesWorker error: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
+        let poll_op = async {
+            let task = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                    let row = sqlx::query(
+                        r#"
+                        UPDATE department_tasks
+                        SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = (
+                            SELECT id FROM department_tasks
+                            WHERE status = 'PENDING' AND department = 'sales_acquisition'
+                            AND event_type = 'CartAbandoned'
+                            AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+                            ORDER BY created_at ASC
+                            LIMIT 1
+                            FOR UPDATE SKIP LOCKED
+                        )
+                        RETURNING id, tenant_id, payload, event_type
+                        "#
+                    )
+                    .bind(Utc::now() + chrono::Duration::minutes(5))
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    res
+                },
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+                    let row = sqlx::query(
+                        r#"
+                        SELECT id, tenant_id, payload, event_type FROM department_tasks
+                        WHERE status = 'PENDING' AND department = 'sales_acquisition'
+                        AND event_type = 'CartAbandoned'
+                        AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+                        ORDER BY created_at ASC
+                        LIMIT 1
+                        "#
+                    )
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    let res = if let Some(r) = row {
+                        let id: String = r.get("id");
+                        let tenant_id: String = r.get("tenant_id");
+                        let payload_str: String = r.get("payload");
+                        let event_type: String = r.get("event_type");
+                        let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
+
+                        sqlx::query(
+                            "UPDATE department_tasks SET status = 'IN_PROGRESS', locked_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                        )
+                        .bind((Utc::now() + chrono::Duration::minutes(5)).to_rfc3339())
+                        .bind(&id)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                        Some((id, tenant_id, payload, event_type))
+                    } else {
+                        None
+                    };
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    res
+                }
+            };
+            Ok::<_, String>(task)
+        };
+
+        let task = match timeout(Duration::from_secs(10), poll_op).await {
+            Ok(res) => res?,
+            Err(_) => return Err("Database timeout during SalesWorker::poll".to_string()),
+        };
+
+        let mut processed = false;
+        if let Some((id, tenant_id, payload, event_type)) = task {
+            processed = true;
+            if event_type == "CartAbandoned" {
+                // Determine potential revenue
+                let cart_value = payload.get("cart_value").and_then(|v| v.as_f64()).unwrap_or(45.0);
+                let customer_name = payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("A customer");
+                let product_name = payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("items");
+
+                let drafted_msg = format!("Hi {},
+
+We noticed you left some items in your cart totaling ${:.2}. Did you have any questions or need help checking out?
+
+As a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10
+
+Click here to securely finish your checkout: https://ohc.store/checkout/recover
+
+Warmly,
+The Team
+
+⚡ Powered by OHC", customer_name, cart_value);
+
+                let approval_payload = json!({
+                    "feature_type": "abandoned_cart",
+                    "context": {
+                        "abandoned_carts_count": 1,
+                        "potential_revenue": cart_value,
+                        "customer_name": customer_name,
+                        "product_name": product_name
+                    }
+                });
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
+                        sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content, payload)
+                            VALUES ($1, $2, $3, 'Abandoned Cart Detected', $4, 'PENDING', 'P2', 'LOW', 'PENDING', $5, $6)
+                            "#
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&tenant_id)
+                        .bind(format!("{} left a ${:.2} {} in their cart.", customer_name, cart_value, product_name))
+                        .bind(&drafted_msg)
+                        .bind(approval_payload.to_string())
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                        sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                            .bind(&id)
+                            .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
+                        sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content, payload)
+                            VALUES (?, ?, ?, 'Abandoned Cart Detected', ?, 'PENDING', 'P2', 'LOW', 'PENDING', ?, ?)
+                            "#
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&tenant_id)
+                        .bind(format!("{} left a ${:.2} {} in their cart.", customer_name, cart_value, product_name))
+                        .bind(&drafted_msg)
+                        .bind(approval_payload.to_string())
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                        sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(&id)
+                            .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                        tx.commit().await.map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+        }
+        Ok(processed)
+    }
+}
+
+
 pub struct CustomerSuccessWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
@@ -1408,5 +1603,46 @@ mod tests {
                 .fetch_one(pool).await.unwrap();
             assert_eq!(status, "PAUSED");
         } // end of test_customer_success_worker_draft_reply
+
+    #[tokio::test]
+    async fn test_sales_worker_cart_recovery() {
+        let db = setup_test_db().await;
+        if let DbStore::Sqlite(pool) = &db.store {
+            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(pool).await;
+            sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant1', 'Maya Bakery', 'Bakery')")
+                .execute(pool).await.unwrap();
+
+            let task_payload = json!({
+                "customer_name": "Sarah",
+                "cart_value": 45.0,
+                "product_name": "Vegan Chocolate Cake"
+            });
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task_cart', 'tenant1', 'sales_acquisition', 'CartAbandoned', ?, 'PENDING')")
+                .bind(task_payload.to_string())
+                .execute(pool).await.unwrap();
+        }
+
+        let processed = SalesWorker::poll(&db).await.unwrap();
+        assert!(processed);
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            let row = sqlx::query("SELECT title, description, approval_status, payload FROM shared_tasks WHERE organization_id = 'tenant1' AND title = 'Abandoned Cart Detected'")
+                .fetch_one(pool).await.unwrap();
+            let title: String = row.get("title");
+            let desc: String = row.get("description");
+            let approval_status: String = row.get("approval_status");
+            let payload_str: String = row.get("payload");
+
+            assert_eq!(title, "Abandoned Cart Detected");
+            assert!(desc.contains("Sarah left a $45.00 Vegan Chocolate Cake"));
+            assert_eq!(approval_status, "PENDING");
+            assert!(payload_str.contains("abandoned_cart"));
+
+            let status: String = sqlx::query_scalar("SELECT status FROM department_tasks WHERE id = 'task_cart'")
+                .fetch_one(pool).await.unwrap();
+            assert_eq!(status, "COMPLETED");
+        }
+    }
+
     } // end of mod tests
 }
