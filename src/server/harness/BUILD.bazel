@@ -10,7 +10,7 @@ rust_library(
         "telemetry/store.rs",
         "sandbox/mod.rs",
         "sandbox/manager.rs",
-        "sandbox/ast.rs",
+        "bash_security.rs",
         "sandbox/permissions.rs",
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",

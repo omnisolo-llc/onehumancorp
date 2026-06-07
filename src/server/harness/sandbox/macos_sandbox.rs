@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use serde_json::json;
 use sqlx::PgPool;
 
-use super::ast::ASTParser;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
+use crate::bash_security::ParsedCommand;
 use crate::telemetry::ViolationStore;
 
 pub struct MacOsSandbox {
@@ -44,7 +44,10 @@ impl MacOsSandbox {
         }
 
         for domain in &self.policy.blocked_domains {
-            profile.push_str(&format!("(deny network-outbound (remote ip \"{}\"))\n", domain));
+            profile.push_str(&format!(
+                "(deny network-outbound (remote ip \"{}\"))\n",
+                domain
+            ));
         }
 
         profile
@@ -54,28 +57,34 @@ impl MacOsSandbox {
 #[async_trait]
 impl SandboxAdapter for MacOsSandbox {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
-        let mut ast_parser = ASTParser::new();
-        if let Err(reason) = ast_parser.parse_for_security(cmd) {
+        let parsed_cmd = ParsedCommand::new(cmd.to_string());
+        if let Err(reason) = parsed_cmd.parse() {
             let details = json!({ "command": cmd, "reason": reason });
-            let _ = self.violation_store.record_violation(
-                "system",
-                "unknown_agent",
-                "unknown_session",
-                "ast_security_violation",
-                details
-            ).await;
+            let _ = self
+                .violation_store
+                .record_violation(
+                    "system",
+                    "unknown_agent",
+                    "unknown_session",
+                    "ast_security_violation",
+                    details,
+                )
+                .await;
             return Err(reason);
         }
 
         if !self.evaluator.evaluate(cmd) {
             let details = json!({ "command": cmd });
-            let _ = self.violation_store.record_violation(
-                "system",
-                "unknown_agent",
-                "unknown_session",
-                "command_execution",
-                details
-            ).await;
+            let _ = self
+                .violation_store
+                .record_violation(
+                    "system",
+                    "unknown_agent",
+                    "unknown_session",
+                    "command_execution",
+                    details,
+                )
+                .await;
             return Err("Command execution denied by sandbox policy".to_string());
         }
 
@@ -83,12 +92,15 @@ impl SandboxAdapter for MacOsSandbox {
         let escaped_profile = profile.replace("'", "'\\''");
         let escaped_cmd = cmd.replace("'", "'\\''");
 
-        Ok(format!("sandbox-exec -p '{}' bash -c '{}'", escaped_profile, escaped_cmd))
+        Ok(format!(
+            "sandbox-exec -p '{}' bash -c '{}'",
+            escaped_profile, escaped_cmd
+        ))
     }
 
     async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
-        let policy: SandboxPolicy = serde_json::from_str(policy_json)
-            .map_err(|e| format!("Invalid policy JSON: {}", e))?;
+        let policy: SandboxPolicy =
+            serde_json::from_str(policy_json).map_err(|e| format!("Invalid policy JSON: {}", e))?;
 
         self.evaluator.update_policy(policy.clone());
         self.policy = policy;
@@ -148,7 +160,10 @@ mod tests {
         let result = sandbox.wrap_command("echo test > >(cat)").await;
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Dangerous pattern detected: >() process substitution");
+        assert_eq!(
+            result.unwrap_err(),
+            "Dangerous pattern detected: >() process substitution"
+        );
     }
 
     #[tokio::test]
@@ -157,6 +172,9 @@ mod tests {
         let result = sandbox.wrap_command("rm -rf /").await;
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Command execution denied by sandbox policy");
+        assert_eq!(
+            result.unwrap_err(),
+            "Command execution denied by sandbox policy"
+        );
     }
 }

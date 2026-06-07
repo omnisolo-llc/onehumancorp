@@ -1,9 +1,9 @@
+use opentelemetry::KeyValue;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
-use sqlx::PgPool;
 use serde_json::Value;
+use sqlx::PgPool;
 use uuid::Uuid;
-use opentelemetry::KeyValue;
 
 pub struct ViolationStore {
     pool: Option<PgPool>,
@@ -45,10 +45,8 @@ impl ViolationStore {
         details: Value,
     ) -> Result<(), sqlx::Error> {
         // Emit OpenTelemetry metric
-        self.violation_counter.add(
-            1,
-            &[KeyValue::new("type", violation_type.to_string())],
-        );
+        self.violation_counter
+            .add(1, &[KeyValue::new("type", violation_type.to_string())]);
 
         // Save to DB if pool is available
         if let Some(pool) = &self.pool {
@@ -104,13 +102,15 @@ mod tests {
     #[tokio::test]
     async fn test_record_violation_no_pool() {
         let store = ViolationStore::new(None);
-        let result = store.record_violation(
-            "tenant-123",
-            "agent-123",
-            "session-456",
-            "file_access",
-            json!({"path": "/etc/shadow"}),
-        ).await;
+        let result = store
+            .record_violation(
+                "tenant-123",
+                "agent-123",
+                "session-456",
+                "file_access",
+                json!({"path": "/etc/shadow"}),
+            )
+            .await;
 
         assert!(result.is_ok());
     }
@@ -118,9 +118,15 @@ mod tests {
     #[tokio::test]
     async fn test_record_violation_with_pool() {
         // To accurately test DB logic locally, try connecting to Postgres.
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        let pool = match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            sqlx::PgPool::connect(&db_url),
+        )
+        .await
+        {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
@@ -138,19 +144,23 @@ mod tests {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             ALTER TABLE agent_violations ENABLE ROW LEVEL SECURITY;
-            "#
-        ).execute(&pool).await;
+            "#,
+        )
+        .execute(&pool)
+        .await;
 
         let store = ViolationStore::new(Some(pool.clone()));
 
         let details = json!({"path": "/etc/passwd"});
-        let result = store.record_violation(
-            "test-tenant",
-            "test-agent",
-            "test-session",
-            "network_access",
-            details.clone(),
-        ).await;
+        let result = store
+            .record_violation(
+                "test-tenant",
+                "test-agent",
+                "test-session",
+                "network_access",
+                details.clone(),
+            )
+            .await;
 
         assert!(result.is_ok());
 
@@ -172,7 +182,8 @@ mod tests {
         assert_eq!(fetched_violation_type, "network_access");
 
         // Clean up
-        let _ = sqlx::query("DELETE FROM agent_violations WHERE session_id = 'test-session'").execute(&pool).await;
+        let _ = sqlx::query("DELETE FROM agent_violations WHERE session_id = 'test-session'")
+            .execute(&pool)
+            .await;
     }
-
 }
