@@ -105,7 +105,7 @@ export default function CostDashboardPage() {
                 </div>
                 <div className="p-6 rounded-2xl shadow-sm bg-green-50/80 backdrop-blur-lg border border-green-200/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                     <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
-                    <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
+                    <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0) + (data?.storage_savings || 0))}</p>
                     <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
                 </div>
             </div>
