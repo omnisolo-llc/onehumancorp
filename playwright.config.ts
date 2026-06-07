@@ -8,7 +8,7 @@ const retries = process.env.PLAYWRIGHT_RETRIES
     : 0;
 
 const reporter = process.env.PLAYWRIGHT_LIST_REPORTER
-  ? [['list'], ['html']] as const
+  ? [['list'], ['html']] as any
   : 'html';
 
 const timeout = process.env.PLAYWRIGHT_TEST_TIMEOUT
