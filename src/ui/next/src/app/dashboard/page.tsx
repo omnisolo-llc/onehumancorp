@@ -11,6 +11,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import { OneTapReferral } from "../components/OneTapReferral";
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
@@ -305,6 +306,9 @@ export default function Dashboard() {
 
       <div className="mb-6">
         <GrowthReferralWidget />
+        <div className="mt-4">
+          <OneTapReferral tenantId={tenantId()} source="dashboard" />
+        </div>
       </div>
 
       <SuccessMilestoneAlert />

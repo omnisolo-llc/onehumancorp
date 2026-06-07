@@ -1,30 +1,52 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OneTapReferral } from './OneTapReferral';
 
-test('renders OneTapReferral and handles copy', async () => {
-    // Mock navigator.clipboard
-    const mockWriteText = vi.fn();
-    Object.assign(navigator, {
-        clipboard: {
-            writeText: mockWriteText,
-        },
+describe('OneTapReferral Component', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        Object.assign(navigator, {
+            clipboard: {
+                writeText: vi.fn(),
+            },
+        });
     });
 
-    render(<OneTapReferral tenantId="test-tenant" source="dashboard" />);
+    it('renders the component properly', () => {
+        render(<OneTapReferral tenantId="test-store" source="test" />);
+        expect(screen.getByText('Refer & Earn $50')).toBeDefined();
+        expect(screen.getByText('Invite a friend to OHC and you both get rewarded!')).toBeDefined();
+        expect(screen.getByText('Copy Link')).toBeDefined();
+        expect(screen.getByText('WhatsApp')).toBeDefined();
+    });
 
-    // Check if component renders text correctly
-    expect(screen.getByText('Refer & Earn $50')).toBeInTheDocument();
+    it('generates the correct referral link format', () => {
+        render(<OneTapReferral tenantId="my-store-123" source="sidebar" />);
 
-    const copyButton = screen.getByRole('button', { name: /copy link/i });
-    expect(copyButton).toBeInTheDocument();
+        const copyButton = screen.getByText('Copy Link');
+        fireEvent.click(copyButton);
 
-    // Click the copy button
-    fireEvent.click(copyButton);
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+            expect.stringContaining('/r/my-store-123?offer=get_50')
+        );
+    });
 
-    // Check if writeText was called with correct URL
-    expect(mockWriteText).toHaveBeenCalledWith('/onboarding?ref=test-tenant&source=dashboard');
+    it('shows Copied! state briefly', async () => {
+        vi.useFakeTimers();
+        render(<OneTapReferral tenantId="test-store" source="test" />);
 
-    // Check if button text changes to Copied!
-    expect(await screen.findByText('Copied!')).toBeInTheDocument();
+        const copyButton = screen.getByText('Copy Link');
+
+        fireEvent.click(copyButton);
+
+        expect(screen.getByText('Copied!')).toBeDefined();
+
+        act(() => {
+           vi.advanceTimersByTime(2500);
+        });
+
+        expect(screen.getByText('Copy Link')).toBeDefined();
+
+        vi.useRealTimers();
+    });
 });

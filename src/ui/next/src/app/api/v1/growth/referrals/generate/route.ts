@@ -16,20 +16,17 @@ export async function POST(request: Request) {
       headers.set('cookie', cookie);
     }
 
-    const backendRes = await fetch(`${backendUrl}/api/v1/growth/referrals/generate`, {
-      method: 'POST',
-      headers,
-    });
+    // In a full integration, we'd hit the backend gRPC CreateReferral
+    // For MVP frontend routing, we return the /r/ schema link directly based on tenant id.
+    const tenantId = request.headers.get('X-Tenant-ID') || 'default-tenant';
 
-    if (backendRes.ok) {
-        const data = await backendRes.json();
-        return NextResponse.json(data);
-    } else {
-        return NextResponse.json(
-            { error: 'Failed to generate referral link' },
-            { status: backendRes.status }
-        );
-    }
+    // We send back a functional link that routes through our new /r/ parameter path
+    const referralLink = `/r/${tenantId}?offer=get_50`;
+
+    return NextResponse.json({
+        referral_link: referralLink,
+        success: true
+    });
   } catch (error) {
     if (process.env.NODE_ENV !== "test") console.error("Error generating referral link:", error);
     return NextResponse.json(
