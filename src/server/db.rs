@@ -873,23 +873,18 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
-                for tenant_row in tenants {
-                    let tenant_id: String = tenant_row.get("id");
-                    let mut tx = self.pool.begin().await?;
-                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-                    let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2 RETURNING session_id, context_data")
-                        .bind(threshold)
-                        .bind(&tenant_id)
-                        .fetch_all(&mut *tx)
-                        .await?;
-                    for row in rows {
-                        let id: String = row.get("session_id");
-                        let data: String = row.get("context_data");
-                        result.push((id, data));
-                    }
-                    tx.commit().await?;
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 RETURNING session_id, context_data")
+                    .bind(threshold)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                for row in rows {
+                    let id: String = row.get("session_id");
+                    let data: String = row.get("context_data");
+                    result.push((id, data));
                 }
+                tx.commit().await?;
             }
         };
 
@@ -910,7 +905,7 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
+                sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3::vector) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
                 .bind(memory_id)
                 .bind(context)
                 .bind(embedding)
@@ -947,27 +942,23 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
-                for tenant_row in tenants {
-                    let tenant_id: String = tenant_row.get("id");
-                    let mut tx = self.pool.begin().await?;
-                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-                    let shared_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                    for row in shared_rows {
-                        let id: String = row.get("id");
-                        let org_id: String = row.get("tenant_id");
-                        let payload: String = row.try_get("payload").unwrap_or_default();
-                        result.push((id, org_id, payload, "shared_tasks".to_string()));
-                    }
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+                let shared_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                for row in shared_rows {
+                    let id: String = row.get("id");
+                    let org_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    result.push((id, org_id, payload, "shared_tasks".to_string()));
+                }
 
-                    let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                    tx.commit().await?;
-                    for row in swarm_rows {
-                        let id: String = row.get("id");
-                        let org_id: String = row.get("tenant_id");
-                        let payload: String = row.try_get("payload").unwrap_or_default();
-                        result.push((id, org_id, payload, "swarm_tasks".to_string()));
-                    }
+                let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                tx.commit().await?;
+                for row in swarm_rows {
+                    let id: String = row.get("id");
+                    let org_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
             }
         };
@@ -988,7 +979,7 @@ impl DB {
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5::vector)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)

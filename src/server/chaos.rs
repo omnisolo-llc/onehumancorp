@@ -64,6 +64,49 @@ mod tests {
         // Timezone serialization parity test. SQLite stores as text UTC, Postgres as TIMESTAMPTZ.
         // This ensures the type mapper translates properly across modes.
         assert!(row.2.timestamp() > 0);
+
+        // Transaction Isolation Parity Test
+        // Test nested transaction and rollback behaviors in SQLite (simulated via SAVEPOINT in sqlx)
+        let mut tx = sqlite_pool.begin().await.unwrap();
+        sqlx::query("INSERT INTO test_parity (id, mission_log) VALUES (?, ?)")
+            .bind("2")
+            .bind("tx_log")
+            .execute(&mut *tx).await.unwrap();
+
+        // Nested transaction (savepoint)
+        let mut nested_tx = sqlx::Connection::begin(&mut *tx).await.unwrap();
+        sqlx::query("INSERT INTO test_parity (id, mission_log) VALUES (?, ?)")
+            .bind("3")
+            .bind("nested_tx_log")
+            .execute(&mut *nested_tx).await.unwrap();
+
+        // Rollback the nested transaction
+        nested_tx.rollback().await.unwrap();
+
+        // Commit the outer transaction
+        tx.commit().await.unwrap();
+
+        // Verify isolation results
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM test_parity WHERE id IN ('2', '3')")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+        assert_eq!(count.0, 1, "Only outer transaction data should persist after nested rollback");
+
+        // Timezone comparison edge case parity
+        // In SQLite CURRENT_TIMESTAMP is 'YYYY-MM-DD HH:MM:SS'. We need to make sure DateTime<Utc> bindings compare properly
+        let past_time = chrono::Utc::now() - chrono::Duration::hours(24);
+        let future_time = chrono::Utc::now() + chrono::Duration::hours(24);
+
+        let past_count: (i64,) = sqlx::query_as("SELECT count(*) FROM test_parity WHERE updated_at > ?")
+            .bind(past_time)
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert!(past_count.0 >= 2, "DateTime comparison should match past times");
+
+        let future_count: (i64,) = sqlx::query_as("SELECT count(*) FROM test_parity WHERE updated_at > ?")
+            .bind(future_time)
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(future_count.0, 0, "DateTime comparison should not match future times");
     }
 
 
