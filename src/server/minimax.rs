@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use ::server_pricing::prompt_caching::PromptCache;
+use ::server_pricing::deduplication::{RequestDeduplicator, DeduplicationResult};
 use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
 use tokio_stream::Stream;
 use std::pin::Pin;
@@ -61,6 +62,7 @@ pub struct MinimaxClient {
     api_key: String,
     url: String,
     cache: PromptCache,
+    deduplicator: std::sync::Arc<RequestDeduplicator>,
 }
 
 #[derive(Debug, Serialize)]
@@ -97,11 +99,23 @@ impl MinimaxClient {
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
-            cache: PromptCache::new(Duration::from_secs(300)), // 5 minute TTL
+            cache: PromptCache::new(Duration::from_secs(300)),
+            deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), // 5 minute TTL
         }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        let prompt_clone = prompt.to_string();
+        let deduplicator = self.deduplicator.clone();
+
+        let result = deduplicator.deduplicate(&prompt_clone, || async {
+            self.internal_reason(&prompt_clone).await.map(|resp| DeduplicationResult { response: resp })
+        }).await?;
+
+        Ok(result.response)
+    }
+
+    async fn internal_reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
         if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
@@ -394,6 +408,7 @@ pub struct LocalLLMClient {
     embed_endpoint: String,
     model: String,
     cache: PromptCache,
+    deduplicator: std::sync::Arc<RequestDeduplicator>,
 }
 
 impl LocalLLMClient {
@@ -405,10 +420,21 @@ impl LocalLLMClient {
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
             
-        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)) }
+        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)), deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))) }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        let prompt_clone = prompt.to_string();
+        let deduplicator = self.deduplicator.clone();
+
+        let result = deduplicator.deduplicate(&prompt_clone, || async {
+            self.internal_reason(&prompt_clone).await.map(|resp| DeduplicationResult { response: resp })
+        }).await?;
+
+        Ok(result.response)
+    }
+
+    async fn internal_reason(&self, prompt: &str) -> Result<String, String> {
         if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);

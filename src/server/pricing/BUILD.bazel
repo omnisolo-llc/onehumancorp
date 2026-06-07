@@ -11,6 +11,7 @@ rust_library(
         "mod.rs",
         "payment_routing.rs",
         "prompt_caching.rs",
+        "deduplication.rs",
         "rate_limit.rs",
         "cost_aggregator.rs",
     ],
