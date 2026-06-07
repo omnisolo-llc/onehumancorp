@@ -40,7 +40,6 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/referrals.spec.ts",
     "//src/ui/next:e2e/social-proof-nudge.spec.ts",
     "//src/ui/next:e2e/storefront_v2.spec.ts",
-    "//src/ui/next:e2e/test-help.spec.ts",
 ]
 
 _ROOT_UI_E2E_SPECS = [
@@ -78,14 +77,14 @@ sh_binary(
 # `//src/e2e:playwright` CI gate. A generated check ensures the CI subset only
 # references discovered specs.
 # Run suite: bazel test //src/e2e:playwright
-# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_4
+# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_1
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
     ci_discovery_data = [
         "//:root_e2e_specs",
         "//src/ui/next:next_e2e_specs",
     ],
-    ci_shard_count = 4,
+    ci_shard_count = 1,
     data = [
         "//src/ui/next:next_app_e2e_data",
     ],

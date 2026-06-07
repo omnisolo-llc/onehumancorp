@@ -177,7 +177,7 @@ export async function GET(request: Request) {
             <!-- Viral Growth Loop Footer -->
             <div class="footer">
                <span>⚡ Powered by</span>
-               <a href="https://ohc.store/join?ref=${tenant}" target="_blank" rel="noopener noreferrer">OHC</a>
+               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}">OHC</a>
             </div>
         </div>
       </div>

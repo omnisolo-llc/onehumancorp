@@ -146,11 +146,17 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
             <div key={i} className="mac-glass-container shadow-sm p-4 rounded-[16px] flex flex-col">
+              {item.image && (
+                <div className="w-full h-32 bg-gray-200 mb-3 rounded-[8px] bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
+              )}
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.name}</h3>
                 <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
               </div>
               <p className="text-sm text-gray-600 dark:text-[#A1A1A6] leading-relaxed">{item.description}</p>
+              <button className="mt-4 w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-semibold py-2 rounded-[8px] min-h-[44px] flex items-center justify-center hover:bg-opacity-80 transition-colors">
+                {item.buttonText || "Order Now"}
+              </button>
             </div>
           ))}
         </div>
@@ -180,7 +186,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
         <div className="flex gap-3 justify-center">
           <a
-            href={`https://wa.me/?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || 'https://ohc.store'}`)}`}
+            href={`https://wa.me/?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || '/onboarding'}`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
@@ -189,7 +195,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             WhatsApp
           </a>
           <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || 'https://ohc.store'}`)}`}
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || '/onboarding'}`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
@@ -198,7 +204,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             Share
           </a>
           <a
-            href={`https://ohc.store/join?ref=${props.tenantId || 'storefront'}-referral`}
+            href={`/onboarding?ref=${props.tenantId || 'storefront'}-referral`}
             className="flex-1 bg-white dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             Get Code
@@ -231,7 +237,14 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     return (
       <div className="powered-by-footer py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
-          href={`https://ohc.store/join?ref=${tenantId}`}
+          href={`/onboarding?ref=${tenantId}&source=footer_widget`}
+          onClick={(e) => {
+            fetch('/api/v1/growth/referrals/click', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ referrer_id: tenantId, source: 'footer_widget' })
+            }).catch(err => console.error('Failed to track referral click:', err));
+          }}
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
           <span className="font-inter">⚡ Powered by</span>

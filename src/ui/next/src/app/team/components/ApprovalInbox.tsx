@@ -62,7 +62,7 @@ export default function ApprovalInbox({
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -422,6 +422,51 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "social_post" && (
+                    <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                          />
+                        </svg>
+                        Social Post Drafted
+                      </div>
+                      <div className="text-xs text-pink-700">
+                        Based on your new product:{" "}
+                        <span className="font-semibold">{req.payload.product_name}</span>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-pink-100 overflow-hidden shadow-sm">
+                        {req.payload.image_url && (
+                          <div className="w-full h-40 bg-gray-100 relative">
+                            <img
+                              src={req.payload.image_url}
+                              alt="Social post media"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">
+                            Draft Copy
+                          </div>
+                          <p className="text-xs text-gray-700 italic">
+                            "{req.payload.draft_copy}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "quote_draft" && (
                     <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
@@ -513,24 +558,28 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && payload.original_message) {
+                        if (payload && (payload.original_message || payload.feature_type === "quote_draft")) {
                           setSelectedReview(req);
                         } else {
                           onReject(req.id);
                         }
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
-                      {payload && payload.original_message
+                      {payload && (payload.original_message || payload.feature_type === "quote_draft")
                         ? "Review"
                         : "Reject / Edit"}
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
+                        : req.payload?.feature_type === "social_post"
+                        ? "Schedule Post"
+                        : req.payload?.feature_type === "quote_draft"
+                        ? "Approve & Send"
                         : "Approve"}
                     </button>
                   </div>
@@ -559,7 +608,7 @@ export default function ApprovalInbox({
                 </p>
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
                   {extractPayload(selectedReview.description).payload
-                    ?.original_message || "N/A"}
+                    ?.original_message || extractPayload(selectedReview.description).payload?.customer_inquiry || "N/A"}
                 </div>
               </div>
 
@@ -579,7 +628,7 @@ export default function ApprovalInbox({
                     onReject(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
                 >
                   Discard
                 </button>
@@ -587,7 +636,7 @@ export default function ApprovalInbox({
                   onClick={() => {
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
                 >
                   Edit
                 </button>
@@ -596,7 +645,7 @@ export default function ApprovalInbox({
                     onApprove(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px] min-w-[44px]"
                 >
                   Send Now
                 </button>

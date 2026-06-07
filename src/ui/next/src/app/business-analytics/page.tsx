@@ -7,6 +7,7 @@ export default function BusinessAnalytics() {
   const router = useRouter();
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
+  const [trialStatus, setTrialStatus] = useState('');
 
   useEffect(() => {
     const isPro = localStorage.getItem('pro_plan') === 'true';
@@ -21,14 +22,14 @@ export default function BusinessAnalytics() {
     localStorage.setItem('trial_active', 'true');
     setHasPro(true);
     setShowSoftPaywall(false);
-    alert('🎉 7-day Pro Trial activated! You now have access to advanced analytics.');
+    setTrialStatus('7-day Pro Trial activated. You now have access to advanced analytics.');
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       <title>Business Analytics | OHC</title>
 
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Analytics 📊</h1>
          <div className="flex items-center gap-3">
              <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
@@ -38,6 +39,7 @@ export default function BusinessAnalytics() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-8">
+        {trialStatus && <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800" role="status">{trialStatus}</p>}
         {/* Core Metrics Section */}
         <section>
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Core Performance (Last 30 Days)</h2>
