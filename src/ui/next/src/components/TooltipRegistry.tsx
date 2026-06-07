@@ -44,7 +44,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-gray-900/80 text-white text-sm font-inter p-3 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-white/40 animate-fade-in-up"
+          className="fixed z-[100] bg-gray-900/80 text-white text-sm font-inter p-3 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[40px] saturate-200 border border-white/40 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
             left: tooltipRect.left + tooltipRect.width / 2,
@@ -101,9 +101,10 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
 
   const handleTouchEnd = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    setTimeout(() => {
+    const hideTimer = setTimeout(() => {
         setActiveTooltip(null);
     }, 2000); // Hide after 2 seconds on mobile
+    timerRef.current = hideTimer;
   };
 
   useEffect(() => {

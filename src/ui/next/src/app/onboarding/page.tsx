@@ -603,7 +603,7 @@ export default function OnboardingWizard() {
                               return;
                             }
                             setValidationError('');
-                            setChatStep(4); syncStateToBackend({ chatStep: 4 });
+                            handleIntake();
                           }
                         }}
                         placeholder="e.g. Portland, OR"
@@ -673,11 +673,7 @@ export default function OnboardingWizard() {
                     value={businessName}
                     onChange={(e) => {
                       setBusinessName(e.target.value);
-                      if (e.target.value.trim().length < 3) {
-                        setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
-                      }
+                      setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
                     }}
                     className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
@@ -692,11 +688,7 @@ export default function OnboardingWizard() {
                     value={businessType}
                     onChange={(e) => {
                       setBusinessType(e.target.value);
-                      if (e.target.value.trim().length === 0) {
-                        setValidationErrors(prev => ({ ...prev, businessType: 'Business Type is required to configure your agents.' }));
-                      } else {
-                        setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
-                      }
+                      setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
                     }}
                     className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
@@ -733,9 +725,7 @@ export default function OnboardingWizard() {
                         value={firstProductPrice}
                         onChange={(e) => {
                            setFirstProductPrice(e.target.value);
-                           if (e.target.value.trim().length === 0) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'A price is needed to set up your Stripe catalog.' }));
-                           } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
+                           if (e.target.value.trim().length > 0 && !/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
                               setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
                            } else {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
@@ -752,19 +742,30 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => {
+                    let hasError = false;
+                    const newErrors: Record<string, string> = { ...validationErrors };
                     if (businessName.trim().length < 3) {
-                      setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                      newErrors.businessName = 'Must be at least 3 characters.';
+                      hasError = true;
+                    }
+                    if (businessType.trim().length === 0) {
+                      newErrors.businessType = 'Business Type is required to configure your agents.';
+                      hasError = true;
+                    }
+                    if (firstProductPrice.trim().length === 0) {
+                      newErrors.firstProductPrice = 'A price is needed to set up your Stripe catalog.';
+                      hasError = true;
+                    }
+
+                    if (hasError || Object.keys(newErrors).length > 0) {
+                      setValidationErrors(newErrors);
                       setValidationError('Please fix the errors before continuing.');
                       return;
                     }
-                    if (Object.keys(validationErrors).length > 0) {
-                      setValidationError('Please fix the errors before continuing.');
-                      return;
-                    }
+
                     setValidationError('');
                     setStep(3); syncStateToBackend({ step: 3 });
                   }}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <IconLabel icon="next">Continue</IconLabel>
