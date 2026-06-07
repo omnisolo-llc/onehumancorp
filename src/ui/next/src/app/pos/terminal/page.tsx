@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
+import StripeTerminalClient from './StripeTerminalClient';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -38,6 +39,21 @@ export default function TerminalPage() {
   const [offlineConversion, setOfflineConversion] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
   const [reserving, setReserving] = useState(false);
+
+  useEffect(() => {
+    if (navigator.onLine) {
+      fetch('/api/staff')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            OfflineStore.setStaff(data);
+          } else if (data && data.staff) {
+            OfflineStore.setStaff(data.staff);
+          }
+        })
+        .catch(console.error);
+    }
+  }, []);
   const [isOffline, setIsOffline] = useState(false);
 
   // Network listener
@@ -196,15 +212,12 @@ export default function TerminalPage() {
 
         setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
-        // Simulate payment completion
-        setTimeout(async () => {
-          await fetch('/api/v1/payments/terminal/commit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
-          });
-          setOrderStatus(`${t('Payment Completed')}`);
-        }, 1000);
+        await fetch('/api/v1/payments/terminal/commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+        });
+        setOrderStatus(`${t('Payment Completed')}`);
       } catch (err) {
         setOrderStatus(t('Error connecting to server'));
       } finally {
@@ -353,6 +366,8 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
+
+           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
