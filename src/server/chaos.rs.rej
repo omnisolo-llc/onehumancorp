@@ -1,0 +1,34 @@
+--- src/server/chaos.rs	2024-05-18 10:00:00.000000000 +0000
++++ src/server/chaos.rs	2024-05-18 10:05:00.000000000 +0000
+@@ -107,6 +107,31 @@
+         let sqlite_tasks = sqlite_db.get_completed_tasks(now - chrono::Duration::days(1)).await?;
+         assert_eq!(pg_tasks.len(), sqlite_tasks.len(), "Task count mismatch");
+
++        // Null handling and timezone bounds
++        let future_time = now + chrono::Duration::days(1);
++        let pg_future_tasks = pg_db.get_completed_tasks(future_time).await?;
++        let sqlite_future_tasks = sqlite_db.get_completed_tasks(future_time).await?;
++        assert_eq!(pg_future_tasks.len(), 0, "PG should return 0 tasks for future time");
++        assert_eq!(sqlite_future_tasks.len(), 0, "SQLite should return 0 tasks for future time");
++
++        // Transaction isolation and rollback test
++        let mut pg_tx = pg_db.pool.begin().await?;
++        crate::server_common::auth_utils::set_system_context(&mut *pg_tx).await?;
++        let mut sqlite_tx = sqlite_db.pool.begin().await?;
++
++        sqlx::query!("INSERT INTO tasks (id, status, updated_at) VALUES ('rollback-pg', 'completed', $1)", now)
++            .execute(&mut *pg_tx).await?;
++        sqlx::query!("INSERT INTO tasks (id, status, updated_at) VALUES ('rollback-sq', 'completed', $1)", now)
++            .execute(&mut *sqlite_tx).await?;
++
++        pg_tx.rollback().await?;
++        sqlite_tx.rollback().await?;
++
++        let pg_rollback_tasks = pg_db.get_completed_tasks(now - chrono::Duration::days(1)).await?;
++        let sqlite_rollback_tasks = sqlite_db.get_completed_tasks(now - chrono::Duration::days(1)).await?;
++        assert!(!pg_rollback_tasks.contains(&"rollback-pg".to_string()), "PG did not rollback properly");
++        assert!(!sqlite_rollback_tasks.contains(&"rollback-sq".to_string()), "SQLite did not rollback properly");
++
+         Ok(())
+     }
+ }

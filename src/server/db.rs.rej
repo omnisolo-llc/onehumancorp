@@ -1,0 +1,54 @@
+--- src/server/db.rs	2024-05-18 10:00:00.000000000 +0000
++++ src/server/db.rs	2024-05-18 10:05:00.000000000 +0000
+@@ -213,24 +213,11 @@
+     }
+
+     pub async fn delete_stale_sessions(&self, cutoff: DateTime<Utc>) -> Result<u64> {
+-        let tenants = sqlx::query!("SELECT id FROM user_tenant")
+-            .fetch_all(&self.pool)
+-            .await?;
+-
+         let mut total_deleted = 0;
+         let mut tx = self.pool.begin().await?;
+-
+-        for tenant in tenants {
+-            crate::server_common::auth_utils::set_system_context(&mut *tx).await?;
+-            let result = sqlx::query!(
+-                "DELETE FROM session WHERE expires_at < $1",
+-                cutoff
+-            )
+-            .execute(&mut *tx)
+-            .await?;
+-            total_deleted += result.rows_affected();
+-        }
+-
++        crate::server_common::auth_utils::set_system_context(&mut *tx).await?;
++        let result = sqlx::query!("DELETE FROM session WHERE expires_at < $1", cutoff).execute(&mut *tx).await?;
++        total_deleted = result.rows_affected();
+         tx.commit().await?;
+         Ok(total_deleted)
+     }
+@@ -326,20 +313,9 @@
+     }
+
+     pub async fn get_completed_tasks(&self, since: DateTime<Utc>) -> Result<Vec<String>> {
+-        let tenants = sqlx::query!("SELECT id FROM user_tenant")
+-            .fetch_all(&self.pool)
+-            .await?;
+-
+         let mut tx = self.pool.begin().await?;
+-        let mut all_tasks = Vec::new();
+-
+-        for tenant in tenants {
+-            crate::server_common::auth_utils::set_system_context(&mut *tx).await?;
+-            let records = sqlx::query!("SELECT id FROM tasks WHERE status = 'completed' AND updated_at > $1", since)
+-                .fetch_all(&mut *tx)
+-                .await?;
+-            all_tasks.extend(records.into_iter().map(|r| r.id));
+-        }
+-
++        crate::server_common::auth_utils::set_system_context(&mut *tx).await?;
++        let records = sqlx::query!("SELECT id FROM tasks WHERE status = 'completed' AND updated_at > $1", since).fetch_all(&mut *tx).await?;
++        let all_tasks = records.into_iter().map(|r| r.id).collect();
+         tx.commit().await?;
+         Ok(all_tasks)
