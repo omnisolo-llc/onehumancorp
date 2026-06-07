@@ -978,15 +978,15 @@ describe('assistant API contract', () => {
     expect(body.session.status).toBe('canceled');
   });
 
-  test('tracks 100 additional WorkBuddy gaps as implemented Jarvis parity capabilities', async () => {
+  test('tracks 150 additional WorkBuddy gaps as implemented Jarvis parity capabilities', async () => {
     const body = await (await getParity()).json();
 
     expect(body.summary).toMatchObject({
-      total: 100,
-      implemented: 100,
+      total: 150,
+      implemented: 150,
       remaining: 0,
     });
-    expect(body.gaps).toHaveLength(100);
+    expect(body.gaps).toHaveLength(150);
     expect(body.gaps.every((gap: any) => gap.status === 'implemented')).toBe(true);
     expect(body.gaps.map((gap: any) => gap.name)).toEqual(expect.arrayContaining([
       'Runtime sandbox filesystem',
@@ -1012,6 +1012,19 @@ describe('assistant API contract', () => {
       'Permission risk boundary',
       'Clipboard screenshot paste',
       'Hook event family',
+      '/doctor environment check',
+      '/btw non-interrupting question',
+      '/model text-to-image switch',
+      'User settings.json',
+      'Project shared settings',
+      'Disable bypass permissions',
+      'TaskOutput retrieval',
+      'Notebook editing',
+      'Project subagent directory',
+      'Camera attachment',
+      'WeChat file attachment',
+      'Shared link expiry',
+      'Account phone rebinding',
     ]));
     expect(body.categories).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Cloud Agent lifecycle', implemented: 24 }),
@@ -1027,6 +1040,12 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Permission safety', implemented: 6 }),
       expect.objectContaining({ name: 'Create task context', implemented: 4 }),
       expect.objectContaining({ name: 'Hook lifecycle', implemented: 4 }),
+      expect.objectContaining({ name: 'Slash command coverage', implemented: 16 }),
+      expect.objectContaining({ name: 'CLI settings governance', implemented: 10 }),
+      expect.objectContaining({ name: 'Built-in tool inventory', implemented: 8 }),
+      expect.objectContaining({ name: 'Subagent governance', implemented: 6 }),
+      expect.objectContaining({ name: 'Mobile attachment sources', implemented: 6 }),
+      expect.objectContaining({ name: 'Account and sharing settings', implemented: 4 }),
     ]));
   });
 });

@@ -63,7 +63,7 @@ const tasksPayload = {
     workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
     commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
     mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
-    paritySummary: { total: 100, implemented: 100, remaining: 0 },
+    paritySummary: { total: 150, implemented: 150, remaining: 0 },
     parityCategories: [
       'Cloud Agent lifecycle: 24/24',
       'Home execution controls: 4/4',
@@ -78,8 +78,14 @@ const tasksPayload = {
       'Permission safety: 6/6',
       'Create task context: 4/4',
       'Hook lifecycle: 4/4',
+      'Slash command coverage: 16/16',
+      'CLI settings governance: 10/10',
+      'Built-in tool inventory: 8/8',
+      'Subagent governance: 6/6',
+      'Mobile attachment sources: 6/6',
+      'Account and sharing settings: 4/4',
     ],
-    parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates', 'Task search box', 'User-level MCP config', 'Mini app voice input', 'Permission risk boundary', 'Clipboard screenshot paste', 'Hook event family'],
+    parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates', 'Task search box', 'User-level MCP config', 'Mini app voice input', 'Permission risk boundary', 'Clipboard screenshot paste', 'Hook event family', '/doctor environment check', 'User settings.json', 'TaskOutput retrieval', 'Project subagent directory', 'Camera attachment', 'Shared link expiry'],
   },
 };
 
@@ -331,12 +337,14 @@ test('opens feature panels for remote control, automations, memory, skills, conn
 
   fireEvent.click(screen.getByRole('button', { name: 'Parity Audit' }));
   const parityPanel = screen.getByLabelText('Parity audit panel');
-  expect(within(parityPanel).getByText('100 / 100 implemented')).toBeDefined();
+  expect(within(parityPanel).getByText('150 / 150 implemented')).toBeDefined();
   expect(within(parityPanel).getByText('Cloud Agent lifecycle: 24/24')).toBeDefined();
   expect(within(parityPanel).getByText('MCP configuration: 10/10')).toBeDefined();
+  expect(within(parityPanel).getByText('Slash command coverage: 16/16')).toBeDefined();
   expect(within(parityPanel).getByText('Hook plugins')).toBeDefined();
   expect(within(parityPanel).getByText('Mini app voice input')).toBeDefined();
-  expect(within(parityPanel).getByText('Hook event family')).toBeDefined();
+  expect(within(parityPanel).getByText('/doctor environment check')).toBeDefined();
+  expect(within(parityPanel).getByText('Project subagent directory')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Permissions' }));
   expect(screen.getByText('Permission Mode')).toBeDefined();
