@@ -59,7 +59,7 @@ impl ShippoClient {
         Ok(PurchaseLabelResponse {
             success: true,
             label_url: "https://api.goshippo.com/v1/mock_label.pdf".to_string(),
-            tracking_number: format!("1Z999999999999999{}", rand::random::<u16>() % 1000),
+            tracking_number: format!("1Z999999999999999{}", 555 % 1000),
             carrier,
         })
     }

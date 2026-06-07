@@ -2571,6 +2571,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
+
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .route("/api/v1/webhooks/razorpay", axum::routing::post(api::billing_webhook::razorpay_webhook_handler))
         .route("/api/v1/webhooks/calcom", axum::routing::post(api::billing_webhook::calcom_webhook_handler))
@@ -3821,6 +3822,7 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
+
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;

@@ -272,3 +272,74 @@ message SyncOfflineTransactionsResponse {
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
 }
+
+// --- Proposal Engine ---
+
+service ProposalEngineService {
+  rpc SubmitInquiry(SubmitInquiryRequest) returns (SubmitInquiryResponse);
+  rpc GetProposal(GetProposalRequest) returns (GetProposalResponse);
+  rpc AcceptProposal(AcceptProposalRequest) returns (AcceptProposalResponse);
+  rpc RejectProposal(RejectProposalRequest) returns (RejectProposalResponse);
+}
+
+message SubmitInquiryRequest {
+  string tenant_id = 1;
+  string customer_id = 2; // Optional, if logged in
+  string customer_name = 3;
+  string customer_email = 4;
+  string customer_phone = 5;
+  string description = 6;
+  repeated string image_urls = 7;
+}
+
+message SubmitInquiryResponse {
+  string inquiry_id = 1;
+  string status = 2;
+}
+
+message GetProposalRequest {
+  string tenant_id = 1;
+  string proposal_id = 2;
+}
+
+message GetProposalResponse {
+  Proposal proposal = 1;
+}
+
+message Proposal {
+  string id = 1;
+  string inquiry_id = 2;
+  string status = 3;
+  int64 total_amount_cents = 4;
+  int32 deposit_percentage = 5;
+  int64 deposit_amount_cents = 6;
+  string payment_link_url = 7;
+  repeated ProposalLineItem line_items = 8;
+}
+
+message ProposalLineItem {
+  string id = 1;
+  string description = 2;
+  int32 quantity = 3;
+  int64 unit_price_cents = 4;
+  int64 total_price_cents = 5;
+}
+
+message AcceptProposalRequest {
+  string tenant_id = 1;
+  string proposal_id = 2;
+}
+
+message AcceptProposalResponse {
+  string status = 1;
+}
+
+message RejectProposalRequest {
+  string tenant_id = 1;
+  string proposal_id = 2;
+  string reason = 3;
+}
+
+message RejectProposalResponse {
+  string status = 1;
+}
