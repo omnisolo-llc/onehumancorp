@@ -1,4 +1,6 @@
+import { FloatingActionButton } from "./FAB";
 "use client";
+
 
 
 
@@ -247,6 +249,7 @@ export default function Dashboard() {
       </div>
 
       <NeighborhoodPulseCard tenant={tenantId()} />
+      <FloatingActionButton />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -695,6 +698,16 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
+
+      <Link
+        href="/products/new?mode=text"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-[#0066FF] text-white rounded-full shadow-lg flex items-center justify-center text-3xl font-bold hover:bg-blue-600 transition-colors z-50 md:bottom-10 md:right-10"
+        aria-label="Add Offering"
+        title="Add Offering"
+      >
+        +
+      </Link>
+
     </AppShell>
   );
 }
