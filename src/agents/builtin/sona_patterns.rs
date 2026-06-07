@@ -3,7 +3,7 @@
 /// Ruflo Unique Harness Innovations: SONA neural patterns (Self-learning trajectory patterns)
 /// Implements a simple pattern matching system to record and retrieve successful trajectories.
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TrajectoryPattern {
     pub id: String,
     pub initial_context: String,
