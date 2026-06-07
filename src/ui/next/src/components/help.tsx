@@ -5,14 +5,17 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import DOMPurify from 'dompurify';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
-import { InteractiveWalkthrough } from './Walkthrough';
+import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 // --- Walkthrough System ---
+<<<<<<< HEAD
+=======
 type Step = {
   title?: string;
   targetId: string;
   content: string;
 };
+>>>>>>> 7c808b64 (🚀 Nova: [Business Health gamification growth loop])
 
 type HelpArticle = { title: string; desc: string; link?: string };
 type HelpVideo = { id: number; title: string; duration: string };

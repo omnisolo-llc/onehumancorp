@@ -6,14 +6,14 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.addInitScript(() => {
       window.localStorage.clear();
     });
+  });
 
 
   test('Maya the Baker can complete the onboarding flow', async ({ page }) => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText('Welcome')).toBeVisible();
-    await page.getByText('Start Onboarding').click();
+    await expect(page.getByText("What's the name of your business?")).toBeVisible();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Maya Bakery');
     await page.getByRole('button', { name: 'Next' }).click();
@@ -42,7 +42,6 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Carlos Fixes It');
     await page.getByRole('button', { name: 'Next' }).click();
@@ -71,7 +70,6 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Leo Guitar Lessons');
     await page.getByRole('button', { name: 'Next' }).click();
@@ -101,7 +99,6 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Fatima Halal Food');
     await page.getByRole('button', { name: 'Next' }).click();
@@ -131,7 +128,6 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');
-    await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('My Restored Business');
     await page.getByRole('button', { name: 'Save Draft' }).click();
@@ -151,7 +147,6 @@ test.describe('OnboardingWizard CUJ', () => {
   test('Validation errors prevent launching without complete admin info', async ({ page }) => {
 
     await page.goto('/onboarding');
-    await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');
     await page.getByRole('button', { name: 'Next' }).click();
