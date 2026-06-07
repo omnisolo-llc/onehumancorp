@@ -1,5 +1,3 @@
-#[path = "store.rs"]
-pub mod store;
 use crate::db::DB;
 use std::sync::Arc;
 use tracing::{info, debug};
@@ -81,9 +79,6 @@ impl AutoDreamWorker {
                 if let Err(e) = Self::consolidate_agent_task_memories(&db, &counter, &cache_ref).await {
                     debug!("AutoDream: agent-task memories consolidation failed: {}", e);
                 }
-                if let Err(e) = Self::process_mesh_messages(&db).await {
-                    debug!("AutoDream: Mesh messages processing failed: {}", e);
-                }
                 sleep(Duration::from_secs(120)).await;
             }
         });
@@ -134,30 +129,6 @@ impl AutoDreamWorker {
              db.inject_truth("system", &format!("session-summary-{}", id), &summary, &embedding).await?;
 
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
-
-             if db.is_sqlite() {
-                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                     .bind(&format!("session-summary-{}", id))
-                     .bind("system")
-                     .bind("system_agent")
-                     .bind(&id)
-                     .bind(&summary)
-                     .bind(&embedding)
-                     .bind("SESSION_SUMMARY")
-                     .execute(&db.pool)
-                     .await?;
-             } else {
-                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                     .bind(&format!("session-summary-{}", id))
-                     .bind("system")
-                     .bind("system_agent")
-                     .bind(&id)
-                     .bind(&summary)
-                     .bind(&embedding)
-                     .bind("SESSION_SUMMARY")
-                     .execute(&db.pool)
-                     .await?;
-             }
         }
         
         Ok(())
@@ -340,30 +311,6 @@ impl AutoDreamWorker {
                     let mem_id = uuid::Uuid::new_v4().to_string();
                     
                     db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
-                    
-                    if db.is_sqlite() {
-                        sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                            .bind(&mem_id)
-                            .bind("system")
-                            .bind("system_agent")
-                            .bind(&session_id)
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .bind("SESSION_DATA")
-                            .execute(&db.pool)
-                            .await?;
-                    } else {
-                        sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                            .bind(&mem_id)
-                            .bind("system")
-                            .bind("system_agent")
-                            .bind(&session_id)
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .bind("SESSION_DATA")
-                            .execute(&db.pool)
-                            .await?;
-                    }
 
                     sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
                         .bind(&session_id)
@@ -414,30 +361,6 @@ impl AutoDreamWorker {
                         let mem_id = uuid::Uuid::new_v4().to_string();
                         
                         db.insert_autodream_memory(&mem_id, "system", "fs-agent", "fs-task", &content, &emb_str, "FS_MEMORY").await?;
-
-                        if db.is_sqlite() {
-                            sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                                .bind(&mem_id)
-                                .bind("system")
-                                .bind("fs-agent")
-                                .bind("fs-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("FS_MEMORY")
-                                .execute(&db.pool)
-                                .await?;
-                        } else {
-                            sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                                .bind(&mem_id)
-                                .bind("system")
-                                .bind("fs-agent")
-                                .bind("fs-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("FS_MEMORY")
-                                .execute(&db.pool)
-                                .await?;
-                        }
 
                         tokio::fs::remove_file(path).await?;
                     }
@@ -523,10 +446,6 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        debug!("AutoDreamWorker: stub for process_mesh_messages");
-        Ok(())
-    }
 }
 
 #[cfg(test)]
