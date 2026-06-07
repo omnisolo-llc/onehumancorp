@@ -296,6 +296,41 @@ impl SyncService for MySyncService {
         }))
     }
 
+    async fn sync_offline_pos(
+        &self,
+        request: Request<::server_ohc::app::SyncOfflineTransactionsRequest>,
+    ) -> Result<Response<::server_ohc::app::SyncOfflineTransactionsResponse>, Status> {
+        let req = request.into_inner();
+        let handler = crate::services::sync::offline_pos::OfflinePosHandler::new(self.pool.clone());
+
+        let mut transactions = Vec::new();
+        for tx in req.transactions {
+            let payload: serde_json::Value = serde_json::from_str(&tx.payload).unwrap_or(serde_json::json!({}));
+            transactions.push(crate::services::sync::offline_pos::OfflinePosTransaction {
+                id: tx.id,
+                amount_cents: tx.amount_cents,
+                currency: tx.currency,
+                payload,
+                timestamp: chrono::Utc::now(),
+            });
+        }
+
+        let batch_req = crate::services::sync::offline_pos::BatchOfflinePosRequest {
+            tenant_id: req.tenant_id,
+            client_id: req.client_id,
+            transactions,
+        };
+
+        match handler.process_batch(batch_req).await {
+            Ok(res) => Ok(Response::new(::server_ohc::app::SyncOfflineTransactionsResponse {
+                success: res.success,
+                synced_count: res.synced_count,
+                failed_transaction_ids: res.failed_ids,
+            })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
     async fn sync_escalation(
         &self,
         request: Request<SyncEscalationRequest>,

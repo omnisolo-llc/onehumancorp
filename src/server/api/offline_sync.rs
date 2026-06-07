@@ -4,10 +4,10 @@ use std::sync::Arc;
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct OfflineMutation {
-    pub transaction_id: String,
+    pub id: String,
     pub product_id: String,
     pub quantity_deducted: i32,
-    pub amount: Option<i64>, // amount in cents
+    pub amount_cents: Option<i64>,
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
@@ -15,7 +15,8 @@ pub struct OfflineMutation {
 
 #[derive(Deserialize, Debug)]
 pub struct OfflineSyncRequest {
-    pub mutations: Vec<OfflineMutation>,
+    pub mutations: Option<Vec<OfflineMutation>>,
+    pub transactions: Option<Vec<OfflineMutation>>,
 }
 
 #[derive(Serialize)]
@@ -28,7 +29,8 @@ pub async fn offline_sync_handler(
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
-    tracing::info!("Received {} offline mutations for edge sync.", payload.mutations.len());
+    let mutations = payload.transactions.or(payload.mutations).unwrap_or_default();
+    tracing::info!("Received {} offline mutations for edge sync.", mutations.len());
 
     let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
@@ -43,7 +45,7 @@ pub async fn offline_sync_handler(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    for mutation in &payload.mutations {
+    for mutation in &mutations {
         cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
         let query = "
@@ -65,10 +67,10 @@ pub async fn offline_sync_handler(
                 // Also queue an offline_pos_sync job to record the transaction
                 let job_id = uuid::Uuid::new_v4().to_string();
                 let job_payload = serde_json::json!({
-                    "transaction_id": mutation.transaction_id,
+                    "transaction_id": mutation.id,
                     "product_id": mutation.product_id,
                     "quantity_deducted": mutation.quantity_deducted,
-                    "amount": mutation.amount,
+                    "amount_cents": mutation.amount_cents,
                     "payment_method": mutation.payment_method,
                     "payment_intent_id": mutation.payment_intent_id,
                     "currency": mutation.currency,
@@ -96,7 +98,7 @@ pub async fn offline_sync_handler(
                     msg_id: uuid::Uuid::new_v4().to_string(),
                     payload: serde_json::json!({
                         "product_id": mutation.product_id,
-                        "transaction_id": mutation.transaction_id,
+                        "transaction_id": mutation.id,
                         "quantity_deducted": mutation.quantity_deducted,
                         "tenant_id": tenant_id
                     }).to_string().into_bytes(),
@@ -161,10 +163,10 @@ mod tests {
         let req = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
-                    transaction_id: "tx1".to_string(),
+                    id: "tx1".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 3,
-                    amount: Some(1000),
+                    amount_cents: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
                     currency: Some("USD".to_string()),
@@ -187,10 +189,10 @@ mod tests {
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
-                    transaction_id: "tx2".to_string(),
+                    id: "tx2".to_string(),
                     product_id: "prod-offline-1".to_string(),
                     quantity_deducted: 10,
-                    amount: Some(1000),
+                    amount_cents: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
                     currency: Some("USD".to_string()),

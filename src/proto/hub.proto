@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ohc.orchestration;
 
+import "src/proto/app.proto";
+
 
 option go_package = "github.com/onehumancorp/mono/src/proto;pb";
 
@@ -639,6 +641,7 @@ service SyncService {
   rpc PowerSyncPull(PowerSyncPullRequest) returns (PowerSyncPullResponse);
   rpc SyncMCPDeltas(SyncMCPDeltasRequest) returns (SyncMCPDeltasResponse);
   rpc SyncEscalation(SyncEscalationRequest) returns (SyncEscalationResponse);
+  rpc SyncOfflinePos(ohc.api.v1.SyncOfflineTransactionsRequest) returns (ohc.api.v1.SyncOfflineTransactionsResponse);
 }
 
 message InviteRequest {

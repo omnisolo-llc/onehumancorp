@@ -21,6 +21,9 @@ exports_files([
 proto_library(
     name = "hub_proto",
     srcs = ["hub.proto"],
+    deps = [
+        ":app_proto",
+    ],
     visibility = ["//visibility:public"],
 )
 

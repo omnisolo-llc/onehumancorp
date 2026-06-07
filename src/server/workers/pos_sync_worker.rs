@@ -1,5 +1,6 @@
 
 use std::sync::Arc;
+use uuid::Uuid;
 use crate::db::DB;
 
 pub struct PosSyncWorker {
@@ -57,7 +58,43 @@ impl PosSyncWorker {
 
         Ok(Ok(()))
     }
+
+    pub async fn handle_failure(&self, tenant_id: &str, transaction_id: &str, error: &str) -> Result<(), String> {
+        tracing::error!("Sync failure for transaction {}: {}", transaction_id, error);
+
+        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+        // 1. Mark transaction as FAILED
+        sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED' WHERE id = $1")
+            .bind(transaction_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // 2. Create an Operations mission for the AI agent to handle the failure
+        let mission_id = Uuid::new_v4().to_string();
+        let description = format!(
+            "An offline Tap-to-Pay transaction (ID: {}) failed to sync. Reason: {}. Please alert the business owner and draft a follow-up message to the customer if necessary.",
+            transaction_id, error
+        );
+
+        sqlx::query(
+            "INSERT INTO agent_missions (id, organization_id, title, description, status, priority, department)
+             VALUES ($1, $2, 'Failed Offline Payment Resolution', $3, 'PENDING', 'HIGH', 'operations')"
+        )
+        .bind(&mission_id)
+        .bind(tenant_id)
+        .bind(&description)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
 }
+
 
 
 #[cfg(test)]

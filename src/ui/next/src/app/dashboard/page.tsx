@@ -85,6 +85,7 @@ export default function Dashboard() {
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
   const [actionMessage, setActionMessage] = useState("");
+  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "failed">("idle");
 
   useEffect(() => {
     try {
@@ -175,16 +176,30 @@ export default function Dashboard() {
     updateOfflineStatus();
     loadDashboard();
     handleSync();
+
+    const handleSyncStatusEvent = (e: any) => {
+      setSyncStatus(e.detail.status);
+      setOfflineQueueCount(e.detail.length);
+      if (e.detail.status === 'synced') {
+        setActionMessage('All offline payments synced successfully!');
+        setTimeout(() => setActionMessage(''), 5000);
+      } else if (e.detail.status === 'failed') {
+        setError('Some offline payments failed to sync. Tap to resolve.');
+      }
+    };
+
     window.addEventListener("online", updateOfflineStatus);
     window.addEventListener("online", handleSync);
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
+    window.addEventListener("ohc_sync_status", handleSyncStatusEvent);
 
     return () => {
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
       window.removeEventListener("storage", updateOfflineStatus);
+      window.removeEventListener("ohc_sync_status", handleSyncStatusEvent);
     };
   }, []);
 
@@ -258,8 +273,11 @@ export default function Dashboard() {
         <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
           Migrate Existing Store
         </button>
-        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
-          {offlineQueueCount} Payments Pending Sync
+        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block cursor-pointer" : "hidden"} onClick={() => {
+           const { SyncManager } = require('../../lib/sync/SyncManager');
+           SyncManager.getInstance().sync();
+        }}>
+          {syncStatus === 'syncing' ? 'Syncing...' : `${offlineQueueCount} Payments Pending Sync`}
         </div>
         <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
           Offline - changes saved locally

@@ -44,10 +44,11 @@ export class SyncManager {
     }
   }
 
-  private notifyListeners() {
+  private notifyListeners(status?: 'syncing' | 'synced' | 'failed') {
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ohc_sync_status', { detail: { status, length: this.getQueueLength() } }));
       window.dispatchEvent(new Event('ohc_queue_updated'));
-      window.dispatchEvent(new Event('storage')); // trigger fallback storage listeners
+      window.dispatchEvent(new Event('storage'));
     }
   }
 
@@ -58,35 +59,9 @@ export class SyncManager {
     if (queue.length === 0) return;
 
     this.syncInProgress = true;
+    this.notifyListeners('syncing');
 
     try {
-      // Map mutations to the format expected by the backend
-      const mutations = queue.map(m => {
-        if (m.type === 'inventory_toggle') {
-           return {
-              transaction_id: m.id,
-              product_id: m.id.replace('e2e-product-', ''),
-              quantity_deducted: 1, // Assume 1 for E2E logic
-              amount: null,
-              payment_method: null,
-              payment_intent_id: null,
-              currency: null
-           };
-        } else if (m.type === 'tap_to_pay') {
-          return {
-             transaction_id: m.id,
-             product_id: 'offline_payment',
-             quantity_deducted: 0,
-             amount: Math.round(m.amount * 100),
-             payment_method: 'terminal',
-             payment_intent_id: m.idempotency_key,
-             currency: 'USD'
-          };
-        }
-        return m;
-      });
-
-      // Get Spiffe ID safely
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
@@ -96,25 +71,40 @@ export class SyncManager {
           'Content-Type': 'application/json',
           'x-spiffe-id': spiffeId
         },
-        body: JSON.stringify({ mutations })
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          client_id: 'browser-client',
+          transactions: queue.map(m => ({
+            id: m.id,
+            product_id: m.product_id || 'unknown',
+            quantity_deducted: m.quantity_deducted || 0,
+            amount_cents: m.amount ? Math.round(m.amount * 100) : 0,
+            payment_method: m.type === 'tap_to_pay' ? 'terminal' : null,
+            payment_intent_id: m.idempotency_key,
+            currency: m.currency || 'USD',
+            timestamp: m.timestamp || new Date().toISOString()
+          }))
+        })
       });
 
       if (response.ok) {
         localStorage.setItem(this.queueKey, '[]');
-        this.notifyListeners();
-        this.retryDelayMs = 1000; // Reset delay on success
+        this.notifyListeners('synced');
+        this.retryDelayMs = 1000;
       } else {
-        throw new Error(`Sync failed with status ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Sync failed with status ${response.status}`);
       }
     } catch (e) {
       console.error('Failed to sync offline queue:', e);
+      this.notifyListeners('failed');
       if (retryCount < this.maxRetries) {
         const delay = this.retryDelayMs * Math.pow(2, retryCount);
         setTimeout(() => {
           this.syncInProgress = false;
           this.sync(retryCount + 1);
         }, delay);
-        return; // Don't unset syncInProgress yet
+        return;
       }
     } finally {
       this.syncInProgress = false;
