@@ -62,7 +62,7 @@ describe('AnalyticsPage', () => {
     fireEvent.click(shareButton);
 
     expect(window.open).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent('ohc://join?ref=my-store')),
+        expect.stringContaining(encodeURIComponent('http://localhost:3000/onboarding?ref=my-store')),
         '_blank'
     );
     expect(window.localStorage.setItem).toHaveBeenCalledWith('has_pro', 'true');

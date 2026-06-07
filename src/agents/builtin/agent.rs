@@ -846,11 +846,16 @@ impl Agent {
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
-                let msgs_val = state.get("messages").unwrap().as_array().unwrap();
+                let msgs_val = match state.get("messages").and_then(|m| m.as_array()) {
+                    Some(arr) => arr,
+                    None => {
+                        return Err("Missing or invalid 'messages' array in state".into());
+                    }
+                };
                 let mut msgs = vec![];
                 for m in msgs_val {
-                    let role_str = m["role"].as_str().unwrap();
-                    let content = m["content"].as_str().unwrap().to_string();
+                    let role_str = m.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+                    let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     let role = match role_str {
                         "user" => crate::types::Role::User,
                         "assistant" => crate::types::Role::Assistant,
@@ -862,9 +867,9 @@ impl Agent {
                     if let Some(tcs) = m.get("tool_calls").and_then(|v| v.as_array()) {
                         for tc in tcs {
                             tool_calls.push(crate::types::ToolCall {
-                                id: tc["id"].as_str().unwrap().to_string(),
-                                name: tc["name"].as_str().unwrap().to_string(),
-                                arguments: tc["arguments"].clone(),
+                                id: tc.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                name: tc.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                arguments: tc.get("arguments").cloned().unwrap_or(serde_json::json!({})),
                             });
                         }
                     }
@@ -872,9 +877,9 @@ impl Agent {
                     if let Some(trs) = m.get("tool_results").and_then(|v| v.as_array()) {
                         for tr in trs {
                             tool_results.push(crate::types::ToolResult {
-                                tool_call_id: tr["tool_call_id"].as_str().unwrap().to_string(),
-                                content: tr["content"].as_str().unwrap_or("").to_string(),
-                                error: tr["error"].as_str().unwrap_or("").to_string(),
+                                tool_call_id: tr.get("tool_call_id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                content: tr.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                error: tr.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string(),
                             });
                         }
                     }
@@ -1412,43 +1417,26 @@ impl Agent {
 
         let plan: Vec<serde_json::Value> = match serde_json::from_str(plan_json_text) {
             Ok(p) => p,
-            Err(e) => {
-                // Fallback mechanic: Legacy RetryWithErrorOutputParser
-                // Feed the original prompt, the failed completion, and the parsing error back to the model.
-                let mut attempt = 0;
-                let mut current_req = plan_req; // Dummy validation comment: Output Parsing Fallback test coverage
+            Err(_e) => {
+                // We fallback to standard output parser if initial parse fails.
                 tracing::debug!("Output Parsing: Fallback logic triggered.");
-                let mut last_error = e.to_string();
-                let mut final_plan = None;
 
-                current_req.messages.push(Message::assistant(plan_resp.message.content.clone()));
-                let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
-                current_req.messages.push(Message::user(error_msg));
+                struct AgentLlmClientWrapper {
+                    llm: std::sync::Arc<dyn crate::llm::LlmClient>,
+                }
 
-                while attempt < 3 {
-                    attempt += 1;
-                    let resp = self.llm.chat(current_req.clone()).await?;
-                    let completion = resp.message.content.clone();
-
-                    let json_text = completion.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                    match serde_json::from_str(json_text) {
-                        Ok(p) => {
-                            final_plan = Some(p);
-                            break;
-                        }
-                        Err(e) => {
-                            last_error = e.to_string();
-                            current_req.messages.push(Message::assistant(completion));
-                            let error_msg = format!("Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON array without markdown formatting.", e);
-                            current_req.messages.push(Message::user(error_msg));
-                        }
+                #[async_trait::async_trait]
+                impl crate::output_parser::LlmClientForParser for AgentLlmClientWrapper {
+                    async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                        self.llm.chat(req).await
                     }
                 }
 
-                if let Some(p) = final_plan {
-                    p
-                } else {
-                    return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", last_error).into());
+                let wrapper = std::sync::Arc::new(AgentLlmClientWrapper { llm: self.llm.clone() });
+
+                match crate::output_parser::parse_structured_output::<Vec<serde_json::Value>>(&(wrapper as std::sync::Arc<dyn crate::output_parser::LlmClientForParser>), plan_req, 3).await {
+                    Ok(p) => p,
+                    Err(e) => return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", e).into()),
                 }
             }
         };
@@ -3147,7 +3135,14 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
+            let args_str = match serde_json::to_string(&args) {
+                Ok(s) => if s.chars().count() > 100 { format!("{}...", s.chars().take(100).collect::<String>()) } else { s },
+                Err(_) => "<unprintable>".to_string(),
+            };
+            return Err(ToolError::LlmRecoverable(format!(
+                "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.",
+                e, args_str
+            )));
         }
 
         let mut modified_tc = tc.clone();
@@ -3256,6 +3251,165 @@ mod tests {
             }
         });
         assert!(has_recoverable_event);
+    }
+
+
+    #[tokio::test]
+    async fn test_end_to_end_pydantic_self_correction_loop() {
+        use crate::tools::ToolExecutor;
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role, ToolResult};
+        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use serde::Deserialize;
+
+        #[derive(Deserialize)]
+        struct ComplexArgs {
+            required_field: String,
+            amount: u32,
+        }
+
+        struct RealPydanticExecutor;
+
+        #[async_trait::async_trait]
+        impl PydanticToolExecutor<ComplexArgs> for RealPydanticExecutor {
+            async fn execute_typed(&self, args: ComplexArgs) -> Result<String, ToolError> {
+                Ok(format!("Processed {} for {}", args.amount, args.required_field))
+            }
+        }
+
+        struct MockLlmClientPydanticRecovery {
+            call_count: tokio::sync::Mutex<i32>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClientPydanticRecovery {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut c = self.call_count.lock().await;
+                *c += 1;
+
+                if *c == 1 {
+                    // Turn 1: LLM returns invalid arguments (missing `amount`)
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: String::new(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_pydantic_1".to_string(),
+                                name: "typed_tool".to_string(),
+                                arguments: serde_json::json!({
+                                    "required_field": "test_item"
+                                }),
+                            }],
+                            tool_results: vec![],
+                            response_id: None,
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: None,
+                    })
+                } else if *c == 2 {
+                    // Turn 2: LLM should see the Validation Error in the tool_results.
+                    let last_msg = req.messages.last().unwrap();
+
+                    assert_eq!(last_msg.role, Role::Tool);
+
+                    let has_pydantic_error = last_msg.tool_results.iter().any(|r| {
+
+                        r.error.contains("Validation Error (Pydantic-first tool schema)") &&
+                        r.error.contains("missing required parameter: 'amount'")
+                    });
+
+                    if has_pydantic_error {
+                        // The LLM self-corrects and provides the missing field
+                        Ok(ChatResponse {
+                            message: Message {
+                                role: Role::Assistant,
+                                content: String::new(),
+                                tool_calls: vec![ToolCall {
+                                    id: "call_pydantic_2".to_string(),
+                                    name: "typed_tool".to_string(),
+                                    arguments: serde_json::json!({
+                                        "required_field": "test_item",
+                                        "amount": 42
+                                    }),
+                                }],
+                                tool_results: vec![],
+                                response_id: None,
+                                previous_response_id: None,
+                            },
+                            usage: Usage::default(),
+                            stop_reason: "tool_calls".to_string(),
+                            response_id: None,
+                        })
+                    } else {
+                        Ok(ChatResponse {
+                            message: Message::assistant("I didn't see the Pydantic error"),
+                            usage: Usage::default(),
+                            stop_reason: "stop".to_string(),
+                            response_id: None,
+                        })
+                    }
+                } else {
+                    // Turn 3: LLM sees the success message and responds to the user
+                    Ok(ChatResponse {
+                        message: Message::assistant("I successfully processed the item!"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: None,
+                    })
+                }
+            }
+        }
+
+        let pydantic_adapter = PydanticAdapter::new(RealPydanticExecutor);
+
+        let tools = vec![
+            crate::tools::Tool {
+                name: "typed_tool".to_string(),
+                description: "A strongly typed tool".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "required_field": { "type": "string" },
+                        "amount": { "type": "integer" }
+                    },
+                    "required": ["required_field", "amount"]
+                }),
+                execute: std::sync::Arc::new(pydantic_adapter),
+            },
+        ];
+
+        let client = std::sync::Arc::new(MockLlmClientPydanticRecovery { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Process 42 test_items", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "I successfully processed the item!");
+
+        // Verify the event sequence captured the error and the recovery
+        let has_recoverable_event = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                result.contains("Validation Error (Pydantic-first tool schema)") && result.contains("missing required parameter: 'amount'")
+            } else {
+                false
+            }
+        });
+        assert!(has_recoverable_event, "The Pydantic error was not emitted in the event stream");
+
+        let has_success_event = events.iter().any(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                result == "Processed 42 for test_item"
+            } else {
+                false
+            }
+        });
+        assert!(has_success_event, "The successful tool execution was not emitted after self-correction");
     }
 
     #[derive(serde::Deserialize, PartialEq, Debug)]
@@ -6473,9 +6627,20 @@ mod tests {
                     response_id: Some("id1".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("[{\"tool\": \"test_tool\", \"args\": {}}]"),
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": [{"tool": "test_tool", "args": {}}]}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("id2".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "tool_calls".to_string(),
                     response_id: Some("id2".to_string()),
                 },
                 ChatResponse {

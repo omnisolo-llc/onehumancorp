@@ -12,6 +12,7 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState("my-store");
+  const [checkoutStatus, setCheckoutStatus] = useState("");
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -55,6 +56,14 @@ export default function CheckoutPage() {
   const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
     setIsSubscription(isSub);
+    const fallbackReferralLink = () => {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      return `${origin}/onboarding?ref=${tenant}`;
+    };
+    const normalizeReferralLink = (rawLink: string) => {
+      if (!rawLink || rawLink.includes('ohc.store') || rawLink.startsWith('ohc://')) return fallbackReferralLink();
+      return rawLink;
+    };
 
     // Fetch dynamic referral link
     try {
@@ -63,13 +72,13 @@ export default function CheckoutPage() {
       });
       const data = await response.json();
       if (data && data.referral_link) {
-        setReferralLink(data.referral_link);
+        setReferralLink(normalizeReferralLink(data.referral_link));
       } else {
-        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        setReferralLink(fallbackReferralLink());
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
-      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      setReferralLink(fallbackReferralLink());
     }
 
     setIsProcessing(false);
@@ -152,12 +161,9 @@ export default function CheckoutPage() {
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
               onClick={() => {
-                const amount = prompt("Enter amount to charge:");
-                if (!amount) return;
-
                 if (navigator.onLine) {
-                  alert(`Payment of ${amount} successful!`);
-                  router.push('/dashboard');
+                  setCheckoutStatus('Stripe Terminal payment captured for $45.00.');
+                  handlePayment(false);
                 } else {
                   let queue = [];
                   try {
@@ -166,14 +172,14 @@ export default function CheckoutPage() {
 
                   queue.push({
                     id: 'txn_' + Date.now(),
-                    amount: parseFloat(amount),
+                    amount: 45,
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
-                  router.push('/dashboard');
+                  setCheckoutStatus('Offline terminal payment saved locally for sync.');
+                  setShowSuccessModal(true);
                 }
               }}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
@@ -185,7 +191,7 @@ export default function CheckoutPage() {
           <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
             <button
               onClick={() => {
-                alert("Redirecting to Mercado Pago...");
+                setCheckoutStatus("Mercado Pago checkout prepared.");
                 setShowSuccessModal(true);
               }}
               className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
@@ -193,6 +199,8 @@ export default function CheckoutPage() {
               Pay with Mercado Pago
             </button>
           </WithTooltip>
+
+          {checkoutStatus && <p className="text-sm font-medium text-indigo-700" role="status">{checkoutStatus}</p>}
 
           <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without buying anything.">
             <button

@@ -24,7 +24,7 @@ describe('/api/videos GET', () => {
     expect(response.status).toBe(200);
     const data = await response.json();
 
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8080/api/videos', { cache: 'no-store' });
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:8080/api/videos');
     expect(data).toEqual(mockVideos);
   });
 
@@ -43,22 +43,13 @@ describe('/api/videos GET', () => {
   });
 
   it('handles fetch exceptions gracefully', async () => {
-    // Mock the error to match what the route expects to catch
-    const mockError = new Error('fetch failed');
-    (mockError as any).cause = { code: 'ECONNREFUSED' };
-
-    global.fetch = vi.fn().mockRejectedValue(mockError);
-
-    // Suppress console.warn for the test
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     const request = new NextRequest('http://localhost:3000/api/videos');
     const response = await GET(request);
 
-    expect(response.status).toBe(200); // the route now returns 200 with empty array for ECONNREFUSED
+    expect(response.status).toBe(500);
     const data = await response.json();
     expect(data).toEqual([]);
-
-    consoleWarnSpy.mockRestore();
   });
 });

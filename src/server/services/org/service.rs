@@ -106,10 +106,12 @@ impl OrgService for MyOrgService {
 
         let hub_for_summary = self.hub.clone();
         let org_id_clone = org_id.clone();
-        let (agents, meetings, summary_res, quota_res) = tokio::join!(
-            self.hub.get_agents(),
+        let org_id_for_agents = org_id.clone();
+        let org_id_for_summary = org_id.clone();
+        let (agents, all_meetings, summary_res, quota_res) = tokio::join!(
+            async { self.hub.get_agents_by_org(&org_id_for_agents) },
             self.hub.get_meetings(),
-            tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary("system")),
+            tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
             self.hub.tracker().check_agent_quota(&org_id_clone)
         );
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -121,11 +123,13 @@ impl OrgService for MyOrgService {
             agent_set.insert(a.id.clone());
         }
         
-        for m in meetings.iter() {
-            for msg in &m.transcript {
-                total_msgs += 1;
-                if agent_set.contains(&msg.from_agent) {
-                    audited_msgs += 1;
+        for m in all_meetings.iter() {
+            if m.id.starts_with(&org_id) || m.id.contains(&org_id) {
+                for msg in &m.transcript {
+                    total_msgs += 1;
+                    if agent_set.contains(&msg.from_agent) {
+                        audited_msgs += 1;
+                    }
                 }
             }
         }
@@ -179,7 +183,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_analytics_caching() {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = crate::db::get_pool();
         let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
         let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
 
@@ -201,5 +205,70 @@ mod tests {
 
         // The second call should be faster, but we just verify it works properly via caching
         assert!(_res1.total_agents == _res2.total_agents);
+    }
+
+    #[tokio::test]
+    async fn test_get_domains() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let pg_pool = crate::db::get_pool();
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
+
+        let service = MyOrgService::new(hub);
+
+        let request = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let res = service.get_domains(request).await.unwrap().into_inner();
+        assert!(!res.domains.is_empty());
+        assert_eq!(res.domains[0].id, "software_company");
+
+        // Cache coverage call
+        let request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let _res2 = service.get_domains(request2).await.unwrap().into_inner();
+    }
+
+    #[tokio::test]
+    async fn test_get_and_update_settings() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let pg_pool = crate::db::get_pool();
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
+
+        let service = MyOrgService::new(hub);
+
+        let request = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let _res = service.get_settings(request).await.unwrap().into_inner();
+        let mut extras = HashMap::new();
+        extras.insert("key1".to_string(), "val1".to_string());
+
+        let update_req = Request::new(UpdateSettingsRequest {
+            minimax_api_key: "new_key".to_string(),
+            extras: extras.clone(),
+        });
+        let updated_res = service.update_settings(update_req).await.unwrap().into_inner();
+        assert_eq!(updated_res.minimax_api_key, "new_key");
+        assert_eq!(updated_res.extras.get("key1").unwrap(), "val1");
+
+        let request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let res2 = service.get_settings(request2).await.unwrap().into_inner();
+        assert_eq!(res2.minimax_api_key, "new_key");
+        assert_eq!(res2.extras.get("key1").unwrap(), "val1");
+    }
+
+    #[tokio::test]
+    async fn test_get_marketplace_items() {
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let pg_pool = crate::db::get_pool();
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
+        let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
+
+        let service = MyOrgService::new(hub);
+
+        let request = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let res = service.get_marketplace_items(request).await.unwrap().into_inner();
+        assert!(!res.items.is_empty());
+        assert_eq!(res.items[0].id, "git-mcp");
+
+        let request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let _res2 = service.get_marketplace_items(request2).await.unwrap().into_inner();
     }
 }

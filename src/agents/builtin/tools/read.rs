@@ -1,23 +1,36 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+// Pydantic-first tool schema validation: ReadArgs
+#[derive(Deserialize)]
+struct ReadArgs {
+    path: String,
+    start_line: Option<u64>,
+    end_line: Option<u64>,
+}
 
 struct ReadExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for ReadExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("read: path is required".to_string()))?;
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+impl PydanticToolExecutor<ReadArgs> for ReadExecutor {
+    async fn execute_typed(&self, args: ReadArgs) -> Result<String, ToolError> {
+        let path = args.path.clone();
+
+        // Basic path sanitization: disallow relative path traversal
+        if path.contains("..") {
+            return Err(ToolError::LlmRecoverable("read: path traversal via '..' is not allowed".to_string()));
+        }
+
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
+
         // Just-in-Time (JIT) Retrieval Mechanic:
         // "Never load full files." We enforce a strict token/line limit and stream the file to prevent loading it entirely into memory.
         let file = fs::File::open(&actual_path)
@@ -30,8 +43,8 @@ impl ToolExecutor for ReadExecutor {
         let mut result_lines = Vec::new();
         let mut line_count = 0;
 
-        let req_start = args["start_line"].as_u64().map(|n| n.saturating_sub(1) as usize);
-        let req_end = args["end_line"].as_u64().map(|n| n as usize);
+        let req_start = args.start_line.map(|n| n.saturating_sub(1) as usize);
+        let req_end = args.end_line.map(|n| n as usize);
 
         if let (Some(s), Some(e)) = (req_start, req_end) {
             if s >= e {
@@ -103,7 +116,7 @@ pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(ReadExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(ReadExecutor { working_dir })),
     }
 }
 
@@ -123,7 +136,7 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = ReadExecutor { working_dir: None };
+        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
 
         let args = json!({
             "path": test_file.to_string_lossy().to_string(),
@@ -131,7 +144,7 @@ mod tests {
             "end_line": 4903
         });
 
-        let result = executor.execute(args).await.unwrap();
+        let result = crate::tools::ToolExecutor::execute(&executor, args).await.unwrap();
         let expected = "Line 4900\nLine 4901\nLine 4902\nLine 4903";
         assert_eq!(result, expected);
 
@@ -149,11 +162,11 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = ReadExecutor { working_dir: None };
+        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
 
         // 1. Try reading the whole file - should fail
         let args = json!({ "path": test_file.to_string_lossy().to_string() });
-        let result = executor.execute(args).await;
+        let result = crate::tools::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("JIT Retrieval Error: File is too large"));
@@ -167,7 +180,7 @@ mod tests {
             "start_line": 1,
             "end_line": 1200
         });
-        let result2 = executor.execute(args2).await;
+        let result2 = crate::tools::ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result2 {
             assert!(msg.contains("Cannot read more than 1000 lines at once"));
@@ -181,7 +194,7 @@ mod tests {
             "start_line": 500,
             "end_line": 600
         });
-        let result3 = executor.execute(args3).await;
+        let result3 = crate::tools::ToolExecutor::execute(&executor, args3).await;
         assert!(result3.is_ok());
 
         let _ = std::fs::remove_file(&test_file);
