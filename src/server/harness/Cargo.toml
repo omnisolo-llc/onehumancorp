@@ -22,6 +22,7 @@ tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
 regex = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
+redis = { version = "0.27", features = ["tokio-comp"] }
 
 [lib]
 path = "mod.rs"

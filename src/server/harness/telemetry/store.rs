@@ -1,13 +1,14 @@
+use opentelemetry::KeyValue;
 use opentelemetry::global;
 use opentelemetry::metrics::Counter;
-use sqlx::PgPool;
 use serde_json::Value;
+use sqlx::PgPool;
 use uuid::Uuid;
-use opentelemetry::KeyValue;
 
 pub struct ViolationStore {
     pool: Option<PgPool>,
     violation_counter: Counter<u64>,
+    pub security_divergence_counter: Counter<u64>,
     pub token_usage_counter: Counter<u64>,
     pub llm_cost_counter: Counter<u64>,
     pub storage_bytes_counter: Counter<u64>,
@@ -19,6 +20,9 @@ impl ViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.harness.telemetry");
         let violation_counter = meter.u64_counter("ohc_harness_violations_total").build();
+        let security_divergence_counter = meter
+            .u64_counter("ohc_harness_security_divergence_total")
+            .build();
         let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
         let llm_cost_counter = meter.u64_counter("ohc_mission_cost_cents").build();
         let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
@@ -28,12 +32,17 @@ impl ViolationStore {
         Self {
             pool,
             violation_counter,
+            security_divergence_counter,
             token_usage_counter,
             llm_cost_counter,
             storage_bytes_counter,
             rate_limit_checks_total,
             rate_limit_exceeded_total,
         }
+    }
+
+    pub fn record_divergence(&self) {
+        self.security_divergence_counter.add(1, &[]);
     }
 
     pub async fn record_violation(
@@ -45,10 +54,8 @@ impl ViolationStore {
         details: Value,
     ) -> Result<(), sqlx::Error> {
         // Emit OpenTelemetry metric
-        self.violation_counter.add(
-            1,
-            &[KeyValue::new("type", violation_type.to_string())],
-        );
+        self.violation_counter
+            .add(1, &[KeyValue::new("type", violation_type.to_string())]);
 
         // Save to DB if pool is available
         if let Some(pool) = &self.pool {
@@ -104,13 +111,15 @@ mod tests {
     #[tokio::test]
     async fn test_record_violation_no_pool() {
         let store = ViolationStore::new(None);
-        let result = store.record_violation(
-            "tenant-123",
-            "agent-123",
-            "session-456",
-            "file_access",
-            json!({"path": "/etc/shadow"}),
-        ).await;
+        let result = store
+            .record_violation(
+                "tenant-123",
+                "agent-123",
+                "session-456",
+                "file_access",
+                json!({"path": "/etc/shadow"}),
+            )
+            .await;
 
         assert!(result.is_ok());
     }
@@ -118,9 +127,15 @@ mod tests {
     #[tokio::test]
     async fn test_record_violation_with_pool() {
         // To accurately test DB logic locally, try connecting to Postgres.
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        let pool = match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            sqlx::PgPool::connect(&db_url),
+        )
+        .await
+        {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
@@ -138,19 +153,23 @@ mod tests {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             ALTER TABLE agent_violations ENABLE ROW LEVEL SECURITY;
-            "#
-        ).execute(&pool).await;
+            "#,
+        )
+        .execute(&pool)
+        .await;
 
         let store = ViolationStore::new(Some(pool.clone()));
 
         let details = json!({"path": "/etc/passwd"});
-        let result = store.record_violation(
-            "test-tenant",
-            "test-agent",
-            "test-session",
-            "network_access",
-            details.clone(),
-        ).await;
+        let result = store
+            .record_violation(
+                "test-tenant",
+                "test-agent",
+                "test-session",
+                "network_access",
+                details.clone(),
+            )
+            .await;
 
         assert!(result.is_ok());
 
@@ -172,7 +191,8 @@ mod tests {
         assert_eq!(fetched_violation_type, "network_access");
 
         // Clean up
-        let _ = sqlx::query("DELETE FROM agent_violations WHERE session_id = 'test-session'").execute(&pool).await;
+        let _ = sqlx::query("DELETE FROM agent_violations WHERE session_id = 'test-session'")
+            .execute(&pool)
+            .await;
     }
-
 }

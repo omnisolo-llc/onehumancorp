@@ -1,13 +1,13 @@
+use ::server_telemetry::record_mcp_tool_call;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::process::Stdio;
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
-use tokio::sync::mpsc;
-use ::server_telemetry::record_mcp_tool_call;
-use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::sync::mpsc;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ServerConfig {
@@ -86,12 +86,14 @@ impl McpClientManager {
     pub async fn spawn(&mut self) -> Result<(), String> {
         let mut cmd = Command::new(&self.config.command);
         cmd.args(&self.config.args)
-           .envs(&self.config.env)
-           .stdin(Stdio::piped())
-           .stdout(Stdio::piped())
-           .stderr(Stdio::piped());
+            .envs(&self.config.env)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
 
-        let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn child process: {}", e))?;
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| format!("Failed to spawn child process: {}", e))?;
 
         let stdout = child.stdout.take().ok_or("Failed to open stdout")?;
         let stdin = child.stdin.take().ok_or("Failed to open stdin")?;
@@ -169,7 +171,8 @@ impl McpClientManager {
                     Ok(result)
                 } else if let Some(error) = response.error {
                     record_mcp_tool_call(name, "error");
-                    Err(serde_json::to_string(&error).unwrap_or_else(|_| "Unknown error".to_string()))
+                    Err(serde_json::to_string(&error)
+                        .unwrap_or_else(|_| "Unknown error".to_string()))
                 } else {
                     record_mcp_tool_call(name, "error_invalid_response");
                     Err("Invalid response".to_string())

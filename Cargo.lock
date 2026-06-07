@@ -8389,6 +8389,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "redis",
  "regex",
  "serde",
  "serde_json",

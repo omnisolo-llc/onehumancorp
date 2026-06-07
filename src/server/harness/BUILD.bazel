@@ -10,7 +10,7 @@ rust_library(
         "telemetry/store.rs",
         "sandbox/mod.rs",
         "sandbox/manager.rs",
-        "sandbox/ast.rs",
+        "sandbox/bash_security.rs",
         "sandbox/permissions.rs",
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
@@ -34,6 +34,7 @@ rust_library(
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
         "@crates//:tracing",
+        "@crates//:redis",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",

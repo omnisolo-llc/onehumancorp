@@ -42,10 +42,16 @@ impl BashWrapper {
         // simple representation of instrumentation
         if !self.read_only_paths.is_empty() {
             // For assistant-class isolation, we simulate read-only enforcement
-            preamble.push_str(&format!("export READ_ONLY_PATHS='{}'; ", self.read_only_paths.join(":")));
+            preamble.push_str(&format!(
+                "export READ_ONLY_PATHS='{}'; ",
+                self.read_only_paths.join(":")
+            ));
         }
         if !self.blocked_domains.is_empty() {
-            preamble.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.blocked_domains.join(",")));
+            preamble.push_str(&format!(
+                "export BLOCKED_DOMAINS='{}'; ",
+                self.blocked_domains.join(",")
+            ));
         }
 
         format!("bash -c \"{}{}\"", preamble, cmd.replace("\"", "\\\""))
@@ -59,7 +65,10 @@ mod tests {
     #[test]
     fn test_wrapper_default() {
         let wrapper = BashWrapper::new();
-        assert_eq!(wrapper.wrap("echo hello"), "bash -c \"set -e; umask 077; echo hello\"");
+        assert_eq!(
+            wrapper.wrap("echo hello"),
+            "bash -c \"set -e; umask 077; echo hello\""
+        );
     }
 
     #[test]

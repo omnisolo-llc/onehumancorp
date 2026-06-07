@@ -1,5 +1,5 @@
-use regex::Regex;
 use super::manager::SandboxPolicy;
+use regex::Regex;
 
 pub struct PermissionEvaluator {
     disabled_commands: Vec<String>,
@@ -8,10 +8,7 @@ pub struct PermissionEvaluator {
 
 impl PermissionEvaluator {
     pub fn new() -> Self {
-        let disabled_commands = vec![
-            "rm -rf /".to_string(),
-            "mkfs".to_string(),
-        ];
+        let disabled_commands = vec!["rm -rf /".to_string(), "mkfs".to_string()];
 
         let disabled_patterns = vec![
             Regex::new(r"(?i)\bsudo\b").unwrap(),
@@ -84,7 +81,10 @@ mod tests {
             disabled_commands: vec!["curl".to_string()],
             disabled_patterns: vec![r"(?i)\bwget\b".to_string()],
             read_only_paths: vec![],
-            blocked_domains: vec![], seccomp_fd: None, socat_socket_path: None, socat_proxy_port: None,
+            blocked_domains: vec![],
+            seccomp_fd: None,
+            socat_socket_path: None,
+            socat_proxy_port: None,
         };
         evaluator.update_policy(policy);
 
