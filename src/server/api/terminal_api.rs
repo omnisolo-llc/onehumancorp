@@ -80,11 +80,18 @@ pub async fn reserve_inventory_handler(
         }
     }
 
-    (axum::http::StatusCode::OK, Json(serde_json::json!({
-        "success": true,
-        "lock_id": lock_id,
-        "error_message": ""
-    }))).into_response()
+    if let Some(client) = &hub.redis_client {
+        let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds as u64 } else { 300 };
+        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+            let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+            let lock_val = uuid::Uuid::new_v4().to_string();
+            let acquired: bool = redis::cmd("SET").arg(&lock_key).arg(&lock_val).arg("NX").arg("EX").arg(ttl).query_async(&mut conn).await.unwrap_or(false);
+            if acquired {
+                return (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "lock_id": lock_val }))).into_response();
+            }
+        }
+    }
+    return (axum::http::StatusCode::CONFLICT, axum::Json(serde_json::json!({ "success": false, "error_message": "Item just sold out or is currently being checked out." }))).into_response();
 }
 
 pub async fn commit_inventory_handler(
@@ -97,6 +104,15 @@ pub async fn commit_inventory_handler(
         Some(info) => info.org_id.clone(),
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
     };
+
+    if !req_data.lock_id.is_empty() {
+        if let Some(client) = &hub.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+            }
+        }
+    }
 
     let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
 

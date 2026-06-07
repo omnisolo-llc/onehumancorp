@@ -204,7 +204,7 @@ export default function TerminalPage() {
         const reserveData = await reserveRes.json();
 
         if (!reserveData.success) {
-          setOrderStatus(t('Failed to reserve: ') + reserveData.error_message);
+          setOrderStatus(t('Item just sold out'));
           setReserving(false);
           return;
         }

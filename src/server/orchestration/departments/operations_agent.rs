@@ -23,6 +23,7 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "tenant.operations.LowStockAlert".to_string(),
         ]
     }
 
@@ -56,6 +57,7 @@ impl Department for OperationsAgent {
                     batch_id, subscriber_count
                 )
             }
+            "tenant.operations.LowStockAlert" => "Draft restock order".to_string(),
             _ => "Create order and booking".to_string(),
         };
 

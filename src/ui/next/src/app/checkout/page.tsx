@@ -107,6 +107,25 @@ export default function CheckoutPage() {
 
   const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
+    setCheckoutStatus('Acquiring reservation lock...');
+
+    try {
+      const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: 'prod_123', quantity: 1, ttl_seconds: 300 })
+      });
+      const reserveData = await reserveRes.json();
+      if (!reserveRes.ok || !reserveData.success) {
+        setCheckoutStatus('Item just sold out');
+        setIsProcessing(false);
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      setCheckoutStatus('Failed to acquire reservation lock.');
+    }
+
     setIsSubscription(isSub);
     const fallbackReferralLink = () => {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
