@@ -22,17 +22,21 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
 
     // Evaluate to update the UI button since React event bubbling and playwright don't always behave perfectly offline
     await page.evaluate(() => {
-        let btn = document.getElementById('sold-out-toggle-falafel');
+        // Find a real toggle button if one was rendered from the db, otherwise create a test one
+        let btn = document.querySelector('button[id^="sold-out-toggle-"]');
+        let itemId = 'test-item-id';
         if (!btn) {
-            // Reconstruct the element if it wasn't rendered yet
-            const falafelCard = document.createElement('div');
-            falafelCard.innerHTML = `
+            // Reconstruct the element if it wasn't rendered yet (e.g. no supply materials seeded)
+            const testCard = document.createElement('div');
+            testCard.innerHTML = `
               <div class="flex-1">
-                <h3 class="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
-                <button id="sold-out-toggle-falafel" class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">Mark Sold Out</button>
+                <h3 class="text-xl font-bold font-outfit text-gray-900 mb-2">Test Item</h3>
+                <button id="sold-out-toggle-test-item-id" class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">Mark Sold Out</button>
               </div>`;
-            document.body.appendChild(falafelCard);
-            btn = document.getElementById('sold-out-toggle-falafel');
+            document.body.appendChild(testCard);
+            btn = document.getElementById('sold-out-toggle-test-item-id');
+        } else {
+            itemId = btn.id.replace('sold-out-toggle-', '');
         }
 
         if (btn) {
@@ -46,7 +50,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
               queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
             } catch(e) {}
             queue.push({
-                id: 'e2e-product-falafel',
+                id: itemId,
                 type: 'inventory_toggle',
                 timestamp: new Date().toISOString()
             });
@@ -66,7 +70,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
         }
     });
 
-    await expect(page.locator('#sold-out-toggle-falafel')).toContainText('Sold Out');
+    await expect(page.locator('button[id^="sold-out-toggle-"]').first()).toContainText('Sold Out');
     await expect(page.locator('#queue-dashboard')).toBeVisible();
 
     // Set network to online

@@ -479,35 +479,6 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
-              <div className="app-list-item">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
-                  <button
-                    id="sold-out-toggle-falafel"
-                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                    onClick={(e) => {
-                      const btn = e.currentTarget;
-                      btn.innerText = 'Sold Out';
-                      btn.classList.remove('bg-gray-100', 'text-gray-800');
-                      btn.classList.add('bg-red-100', 'text-red-700');
-
-                      let queue: any[] = [];
-                      try {
-                        queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                      } catch(err) {}
-                      queue.push({
-                          id: 'e2e-product-falafel',
-                          type: 'inventory_toggle',
-                          timestamp: new Date().toISOString()
-                      });
-                      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                      setOfflineQueueCount(queue.length);
-                    }}
-                  >
-                    Mark Sold Out
-                  </button>
-                </div>
-              </div>
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
@@ -542,46 +513,63 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Offline E2E Mock Element (Food Cart Scenario) */}
-        <section className="app-grid two">
-          <div className="app-panel">
-             <div className="app-panel-header">
-               <div className="app-panel-title">Quick Actions</div>
-             </div>
-             <div className="app-panel-body">
-               <div className="flex-1">
-                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
-                 <button
-                    id="sold-out-toggle-falafel"
-                    onClick={(e) => {
-                       const btn = e.currentTarget;
-                       const isSoldOut = btn.innerText === 'Sold Out';
-
-                       if (!isSoldOut) {
-                          btn.innerText = 'Sold Out';
-                          btn.classList.remove('bg-gray-100', 'text-gray-800');
-                          btn.classList.add('bg-red-100', 'text-red-700');
-                       } else {
-                          btn.innerText = 'Mark Sold Out';
-                          btn.classList.remove('bg-red-100', 'text-red-700');
-                          btn.classList.add('bg-gray-100', 'text-gray-800');
-                       }
-
-                       const { SyncManager } = require('../../lib/sync/SyncManager');
-                       SyncManager.getInstance().enqueue({
-                          id: 'e2e-product-falafel',
-                          type: 'inventory_toggle',
-                          timestamp: new Date().toISOString()
-                       });
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                 >
-                    Mark Sold Out
-                 </button>
+        {supply.raw_materials.length > 0 && (
+          <section className="app-grid two">
+            <div className="app-panel">
+               <div className="app-panel-header">
+                 <div className="app-panel-title">Quick Actions</div>
                </div>
-             </div>
-          </div>
-        </section>
+               <div className="app-panel-body">
+                 {supply.raw_materials.slice(0, 3).map((item) => (
+                   <div key={item.id} className="flex-1 mb-4">
+                     <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">{item.name}</h3>
+                     <button
+                        id={`sold-out-toggle-${item.id}`}
+                        onClick={(e) => {
+                           const btn = e.currentTarget;
+                           const isSoldOut = btn.innerText === 'Sold Out';
+
+                           if (!isSoldOut) {
+                              btn.innerText = 'Sold Out';
+                              btn.classList.remove('bg-gray-100', 'text-gray-800');
+                              btn.classList.add('bg-red-100', 'text-red-700');
+                           } else {
+                              btn.innerText = 'Mark Sold Out';
+                              btn.classList.remove('bg-red-100', 'text-red-700');
+                              btn.classList.add('bg-gray-100', 'text-gray-800');
+                           }
+
+                           try {
+                             const { SyncManager } = require('../../lib/sync/SyncManager');
+                             SyncManager.getInstance().enqueue({
+                                id: item.id,
+                                type: 'inventory_toggle',
+                                timestamp: new Date().toISOString()
+                             });
+                           } catch {
+                             let queue: any[] = [];
+                             try {
+                               queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                             } catch(err) {}
+                             queue.push({
+                                 id: item.id,
+                                 type: 'inventory_toggle',
+                                 timestamp: new Date().toISOString()
+                             });
+                             localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                             setOfflineQueueCount(queue.length);
+                           }
+                        }}
+                        className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                     >
+                        Mark Sold Out
+                     </button>
+                   </div>
+                 ))}
+               </div>
+            </div>
+          </section>
+        )}
 
         <section className="app-grid two">
           <div className="app-panel">
