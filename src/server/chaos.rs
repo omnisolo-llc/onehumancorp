@@ -529,12 +529,12 @@ mod tests {
         }
 
         let mut handles = vec![];
-        for i in 0..100 {
+        for i in 0..500 {
             let svc_clone = service.clone();
             handles.push(tokio::spawn(async move {
                 let agent_id = format!("agent_{}", i);
                 let res = svc_clone.claim_task(&agent_id).await;
-                res.is_err() || res.unwrap_or(None).is_none() // Check if the system degrades gracefully and returns Err or Ok(None) due to fail-safes
+                res.is_err() // Check if the system degrades gracefully and returns Err
             }));
         }
 

@@ -296,7 +296,7 @@ mod tests {
                 // If OHC_STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
                 let should_start_telemetry = config.telemetry_enabled;
 
-                assert!(!(should_start_telemetry));
+                assert_eq!(should_start_telemetry, false);
             },
         );
     }
@@ -316,7 +316,7 @@ mod tests {
                 // If OHC_STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
                 let should_start_telemetry = config.telemetry_enabled;
 
-                assert!(should_start_telemetry);
+                assert_eq!(should_start_telemetry, true);
             },
         );
     }

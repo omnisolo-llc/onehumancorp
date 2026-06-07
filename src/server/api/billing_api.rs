@@ -162,19 +162,10 @@ pub async fn cost_dashboard_handler(
         hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
     });
 
-    let trend_future = tokio::task::spawn({
-        let pool = crate::db::get_pool();
-        let t_id = tenant_id.clone();
-        async move {
-            crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &t_id).await
-        }
-    });
-
-    let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
+    let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
-    let trend = trend_res.unwrap_or_default();
 
     let cache_hit_rate = if total_tokens + cached_tokens > 0 {
         (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -193,6 +184,9 @@ pub async fn cost_dashboard_handler(
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
+
+    let pool = crate::db::get_pool();
+    let trend = crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &tenant_id).await;
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,

@@ -2,10 +2,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 use crate::minimax::MinimaxClient;
-use std::sync::OnceLock;
-use ::server_utils::cache::HybridCache;
-
-pub static ONBOARDING_STATE_AGENT_CACHE: OnceLock<HybridCache<serde_json::Value>> = OnceLock::new();
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntakeData {
@@ -65,14 +61,10 @@ impl OnboardingAgent {
         let response = minimax.reason(&prompt).await?;
 
         // Clean up markdown code blocks if present
-        let mut clean_json = response.as_str();
-        if let Some(start) = clean_json.find('{') {
-            if let Some(end) = clean_json.rfind('}') {
-                if start <= end {
-                    clean_json = &clean_json[start..=end];
-                }
-            }
-        }
+        let clean_json = response.trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
 
         let data: IntakeData = serde_json::from_str(clean_json)
             .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;
@@ -124,20 +116,10 @@ impl OnboardingAgent {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
-        let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
-        cache.invalidate(&cache_key).await;
-
         Ok(())
     }
 
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
-        let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
-        let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
-        if let Some(cached_state) = cache.get(&cache_key).await {
-            return Ok(cached_state);
-        }
-
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
@@ -151,19 +133,16 @@ impl OnboardingAgent {
         .await
         .map_err(|e| e.to_string())?;
 
-        let state = if let Some(record) = row {
+        if let Some(record) = row {
             let mut state: serde_json::Value = record.get("state_json");
             let current_step: i32 = record.get("current_step");
             if let Some(obj) = state.as_object_mut() {
                 obj.insert("step".to_string(), serde_json::json!(current_step));
             }
-            state
+            Ok(state)
         } else {
-            serde_json::json!({ "step": 0 })
-        };
-
-        cache.set(&cache_key, state.clone(), std::time::Duration::from_secs(60)).await;
-        Ok(state)
+            Ok(serde_json::json!({ "step": 0 }))
+        }
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
@@ -2684,52 +2663,5 @@ mod tests {
 
         let state_json_food: serde_json::Value = row_food.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
         assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
-    }
-
-    #[tokio::test]
-    async fn test_get_onboarding_state_caching() {
-        let db = match setup_test_db().await {
-            Some(db) => db,
-            None => return,
-        };
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-        let agent = OnboardingAgent::new(db.clone(), hub);
-
-        let tenant_id = "test_cache_tenant";
-        let user_id = "test_cache_user";
-
-        // Pre-fill state in DB
-        let state = serde_json::json!({"test_key": "test_value"});
-        agent.save_onboarding_state(tenant_id, user_id, 2, &state).await.unwrap();
-
-        // Fetch once - should query DB and cache
-        let start1 = std::time::Instant::now();
-        let res1 = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
-        let _elapsed1 = start1.elapsed();
-
-        assert_eq!(res1.get("step").and_then(|v| v.as_i64()), Some(2));
-        assert_eq!(res1.get("test_key").and_then(|v| v.as_str()), Some("test_value"));
-
-        // Update directly in DB (bypass cache logic to prove cache is working)
-        let _ = sqlx::query("UPDATE onboarding_state SET current_step = 3 WHERE tenant_id = $1 AND user_id = $2")
-            .bind(tenant_id)
-            .bind(user_id)
-            .execute(&db.pool)
-            .await
-            .unwrap();
-
-        // Fetch second time - should use cache and get step 2, not 3
-        let start2 = std::time::Instant::now();
-        let res2 = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
-        let _elapsed2 = start2.elapsed();
-        assert_eq!(res2.get("step").and_then(|v| v.as_i64()), Some(2), "Should return cached step 2");
-
-        // Now save using the agent which invalidates the cache
-        agent.save_onboarding_state(tenant_id, user_id, 4, &state).await.unwrap();
-
-        // Fetch third time - cache invalidated, should hit DB and return step 4
-        let res3 = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
-        assert_eq!(res3.get("step").and_then(|v| v.as_i64()), Some(4), "Should return updated step 4 after invalidation");
     }
 }

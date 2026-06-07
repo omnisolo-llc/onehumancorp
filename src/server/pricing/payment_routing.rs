@@ -33,11 +33,11 @@ mod tests {
 
     #[test]
     fn test_should_batch_payout() {
-        assert!(should_batch_payout(100));
-        assert!(should_batch_payout(9999));
-        assert!(!(should_batch_payout(10000)));
-        assert!(!(should_batch_payout(50000)));
-        assert!(should_batch_payout(0));
-        assert!(should_batch_payout(-100));
+        assert_eq!(should_batch_payout(100), true);
+        assert_eq!(should_batch_payout(9999), true);
+        assert_eq!(should_batch_payout(10000), false);
+        assert_eq!(should_batch_payout(50000), false);
+        assert_eq!(should_batch_payout(0), true);
+        assert_eq!(should_batch_payout(-100), true);
     }
 }

@@ -8,14 +8,13 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 export default function StorefrontBuilderPage() {
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
-  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live" | "chat">("idle");
+  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
-  const [chatMessage, setChatMessage] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
@@ -97,7 +96,7 @@ export default function StorefrontBuilderPage() {
     localStorage.setItem("ohc_builder_bio", newBio);
   };
 
-  const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live" | "chat") => {
+  const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
     setStatus(newStatus);
     localStorage.setItem("ohc_builder_status", newStatus);
   };
@@ -144,33 +143,6 @@ export default function StorefrontBuilderPage() {
       setSelectedBlockIndex(toIndex);
     } else if (selectedBlockIndex === toIndex) {
       setSelectedBlockIndex(fromIndex);
-    }
-  };
-
-  const handleAgentChat = async () => {
-    if (!chatMessage.trim()) return;
-    setStatus("generating");
-    try {
-      const response = await fetch("/api/v1/builder/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: `${bio}. Update request: ${chatMessage}. Note: Maintain a 375px optimized card-based mobile UI.` })
-      });
-      const data = await response.json();
-      const newBlocks = data.pages[0].blocks.map((b: any) => ({
-        type: b.block_type === "HeroBlock" ? "Hero" :
-              b.block_type === "ProductGridBlock" ? "Catalog" :
-              b.block_type === "ServiceBookingBlock" ? "Booking" :
-              b.block_type === "TestimonialBlock" ? "Testimonials" : b.block_type,
-        props: b.content
-      }));
-      setBlocks(newBlocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
-      setChatMessage("");
-      updateStatus("draft");
-    } catch (error) {
-      console.error("Failed to update storefront via agent", error);
-      updateStatus("draft");
     }
   };
 
@@ -316,62 +288,6 @@ export default function StorefrontBuilderPage() {
       </div>
     );
   }
-  if (status === "chat") {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glassmorphism">
-          <div className="px-6 py-6 flex flex-col justify-start h-full">
-              <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7]">Marketing Agent</h2>
-                  <button
-                      onClick={() => updateStatus("draft")}
-                      className="text-gray-500 hover:text-gray-700"
-                  >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-              </div>
-              <div className="flex-1 bg-white/50 dark:bg-black/50 rounded-xl p-4 mb-4 min-h-[200px] overflow-y-auto">
-                  <div className="flex gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">AI</div>
-                      <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm text-sm">
-                          Hi! I'm your Marketing Agent. What would you like to change about your storefront?
-                          <br/><br/>
-                          You can say things like:
-                          <br/>
-                          • "Add a vegan cake option for $45 with a 50% deposit"
-                          <br/>
-                          • "Make the hero section more vibrant"
-                      </div>
-                  </div>
-              </div>
-              <div className="mt-auto relative">
-                  <textarea
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[12px] p-4 pr-12 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                      placeholder="e.g. Add a new product..."
-                      rows={3}
-                      value={chatMessage}
-                      onChange={(e) => setChatMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleAgentChat();
-                          }
-                      }}
-                  />
-                  <button
-                      onClick={handleAgentChat}
-                      disabled={!chatMessage.trim()}
-                      className={`absolute bottom-4 right-4 p-2 rounded-full ${chatMessage.trim() ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}
-                  >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" /></svg>
-                  </button>
-              </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
@@ -421,7 +337,7 @@ export default function StorefrontBuilderPage() {
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
-          <div className="flex gap-2 mb-3"><button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[8px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Ask Agent to Edit</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+          <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
               className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[8px]"
