@@ -132,6 +132,7 @@ where
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/send-cart", post(handle_send_cart))
+        .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
                 .route("/storefront/og-card", get(handle_og_card))
@@ -1665,4 +1666,25 @@ async fn handle_aggregated_team_invites_metrics(
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+async fn handle_abandoned_carts_count(
+    Extension(state): Extension<GrowthState>,
+) -> impl IntoResponse {
+    let pool = &state.pool;
+
+    // Attempt to query orders with status = 'abandoned'.
+    // Note: We use COALESCE to return 0 if no results.
+    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned'")
+        .fetch_one(pool)
+        .await
+    {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to fetch abandoned carts count: {}", e);
+            0
+        }
+    };
+
+    Json(serde_json::json!({ "count": count }))
 }
