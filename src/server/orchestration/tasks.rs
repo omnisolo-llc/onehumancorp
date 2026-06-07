@@ -186,18 +186,25 @@ impl TaskDecompositionService {
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT st.id FROM shared_tasks_decomposition st
-                    WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM json_array_elements_text(st.dependencies) AS dep_id
-                        JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id
-                        WHERE parent.status != 'COMPLETED'
+                    UPDATE shared_tasks_decomposition
+                    SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = $2
+                    WHERE id = (
+                        SELECT st.id FROM shared_tasks_decomposition st
+                        WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM json_array_elements_text(st.dependencies) AS dep_id
+                            JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id
+                            WHERE parent.status != 'COMPLETED'
+                        )
+                        LIMIT 1
+                        FOR UPDATE SKIP LOCKED
                     )
-                    LIMIT 1
-                    FOR UPDATE SKIP LOCKED
+                    RETURNING id
                     "#,
                 )
+                .bind(agent_id)
+                .bind(now)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -211,21 +218,6 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
-
-                // Transition state
-                sqlx::query(
-                    r#"
-                    UPDATE shared_tasks_decomposition
-                    SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = $2
-                    WHERE id = $3
-                    "#,
-                )
-                .bind(agent_id)
-                .bind(now)
-                .bind(&id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
 
                 // Record transition
                 let trans_id = uuid::Uuid::new_v4().to_string();

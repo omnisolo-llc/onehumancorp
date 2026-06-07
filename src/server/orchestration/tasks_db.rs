@@ -23,40 +23,25 @@ impl TaskDbService {
 
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT * FROM shared_tasks
-                    WHERE status = 'PENDING'
-                    FOR UPDATE SKIP LOCKED
-                    LIMIT 1
+                    UPDATE shared_tasks
+                    SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = (
+                        SELECT id FROM shared_tasks
+                        WHERE status = 'PENDING'
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 1
+                    )
+                    RETURNING *
                     "#
                 )
+                .bind(agent_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 if let Some(row) = row_opt {
-                    let id: String = row.get("id");
-
-                    sqlx::query(
-                        r#"
-                        UPDATE shared_tasks
-                        SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = $2
-                        "#
-                    )
-                    .bind(agent_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
-                    let updated_row = sqlx::query("SELECT * FROM shared_tasks WHERE id = $1")
-                        .bind(&id)
-                        .fetch_one(&mut *tx)
-                        .await
-                        .map_err(|e| e.to_string())?;
-
                     tx.commit().await.map_err(|e| e.to_string())?;
-                    Ok(Some(Self::pg_row_to_task(updated_row)))
+                    Ok(Some(Self::pg_row_to_task(row)))
                 } else {
                     tx.rollback().await.map_err(|e| e.to_string())?;
                     Ok(None)

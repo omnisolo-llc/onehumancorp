@@ -223,26 +223,33 @@ impl TaskRepository {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-                let row_opt = sqlx::query(
+                let updated_row_opt = sqlx::query(
                     r#"
-                    SELECT t.id FROM tasks t
-                    WHERE t.status = 'PENDING' AND t.organization_id = $1
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM task_dependencies td
-                        JOIN tasks parent ON parent.id = td.depends_on_task_id
-                        WHERE td.task_id = t.id AND parent.status != 'DONE'
+                    UPDATE tasks
+                    SET status = 'CLAIMED', assigned_agent_role = $1, updated_at = $2
+                    WHERE id = (
+                        SELECT t.id FROM tasks t
+                        WHERE t.status = 'PENDING' AND t.organization_id = $3
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM task_dependencies td
+                            JOIN tasks parent ON parent.id = td.depends_on_task_id
+                            WHERE td.task_id = t.id AND parent.status != 'DONE'
+                        )
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 1
                     )
-                    FOR UPDATE SKIP LOCKED
-                    LIMIT 1
+                    RETURNING id
                     "#,
                 )
+                .bind(assigned_agent_role)
+                .bind(now)
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let row = match row_opt {
+                let updated_id_row = match updated_row_opt {
                     Some(r) => r,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
@@ -250,21 +257,7 @@ impl TaskRepository {
                     }
                 };
 
-                let id: String = sqlx::Row::get(&row, "id");
-
-                sqlx::query(
-                    r#"
-                    UPDATE tasks
-                    SET status = 'CLAIMED', assigned_agent_role = $1, updated_at = $2
-                    WHERE id = $3
-                    "#,
-                )
-                .bind(assigned_agent_role)
-                .bind(now)
-                .bind(&id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+                let id: String = sqlx::Row::get(&updated_id_row, "id");
 
                 let task = sqlx::query_as::<_, Task>(
                     r#"
