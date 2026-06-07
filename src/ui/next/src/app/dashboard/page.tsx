@@ -622,6 +622,15 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 
+            <Link href="/loyalty-program" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
+                <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Loyalty</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Customer Loyalty</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Set up a 'Give X, Get Y' referral program and generate campaigns.</p>
+            </Link>
+
             <Link href="/share-cards" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
