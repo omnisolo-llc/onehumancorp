@@ -19,7 +19,20 @@ vi.mock('swagger-ui-react', () => {
 });
 
 describe('ApiDocsPage', () => {
-  it('renders the advanced warning and swagger ui mock', () => {
+  it('renders the advanced warning and swagger ui mock', async () => {
+    global.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          openapi: "3.0.0",
+          paths: {
+            '/api/help': {},
+            '/api/tooltips': {}
+          }
+        })
+      })
+    );
+
     render(
       <TooltipProvider>
         <ApiDocsPage />
@@ -28,6 +41,9 @@ describe('ApiDocsPage', () => {
 
     expect(screen.getByText('Advanced:')).toBeInTheDocument();
     expect(screen.getByText('This section is for developers directly integrating with our APIs. Not required for normal use.')).toBeInTheDocument();
+
+    await screen.findByTestId('swagger-ui-mock');
+
     expect(screen.getByTestId('swagger-ui-mock')).toBeInTheDocument();
     expect(screen.getByText('HasHelpPath')).toBeInTheDocument();
     expect(screen.getByText('HasTooltipsPath')).toBeInTheDocument();

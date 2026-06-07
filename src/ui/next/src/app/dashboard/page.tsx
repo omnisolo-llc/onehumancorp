@@ -1,4 +1,3 @@
-import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -9,6 +8,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
 type DashboardMetrics = {
