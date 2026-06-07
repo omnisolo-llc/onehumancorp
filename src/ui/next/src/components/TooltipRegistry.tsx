@@ -122,6 +122,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
+      id={id}
       className="inline-block relative cursor-help"
     >
       {children}

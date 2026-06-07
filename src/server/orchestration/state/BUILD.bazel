@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -111,5 +111,13 @@ rust_library(
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
         "@crates//:walkdir",
+    ],
+)
+
+rust_test(
+    name = "server_orchestration_state_test",
+    crate = ":server_orchestration_state",
+    deps = [
+        "@crates//:tokio",
     ],
 )

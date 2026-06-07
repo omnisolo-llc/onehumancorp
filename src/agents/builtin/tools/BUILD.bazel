@@ -41,6 +41,7 @@ rust_library(
         "sleep.rs",
         "subagent.rs",
         "tail.rs",
+        "find.rs",
         "task.rs",
         "todowrite.rs",
         "toolsearch.rs",

@@ -830,3 +830,156 @@ mod tests {
         assert!(transcript[2].content.contains("Agent2: I will handle this now."));
     }
 }
+
+impl HandoffManager {
+    /// AutoGen Mechanical Pattern: dynamic handoff across agents.
+    pub async fn run_handoff_dynamic(&self, initial_agent: &str, initial_task: &str) -> Result<Vec<Message>, String> {
+        let mut current_agent_name = initial_agent.to_string();
+        let mut current_task = initial_task.to_string();
+        let mut transcript = Vec::new();
+        let mut handoff_count = 0;
+
+        transcript.push(Message::user(initial_task));
+
+        while handoff_count < self.max_rounds {
+            let agent_cfg = self.agents.iter().find(|a| a.name == current_agent_name)
+                .ok_or_else(|| format!("Target agent '{}' not found", current_agent_name))?;
+
+            let mut run_cfg = agent_cfg.run_config.clone();
+            run_cfg.server_system_message = format!(
+                "You are participating in a handoff workflow as {}. {}
+If you need another agent's expertise, you MUST call the `handoff` tool with the target agent's name.
+Available agents: {}",
+                current_agent_name,
+                agent_cfg.description,
+                self.agents.iter().map(|a| a.name.clone()).collect::<Vec<_>>().join(", ")
+            );
+
+            let mut on_event = |_| {};
+            let result = agent_cfg.agent.run(&run_cfg, &current_task, &mut on_event).await;
+
+            match result {
+                Ok(output) => {
+                    if output.contains("Handoff requested to ") {
+                        let target = output.split("Handoff requested to ").nth(1).unwrap_or("").trim();
+                        transcript.push(Message::assistant(format!("[{} handed off to {}]", current_agent_name, target)));
+                        current_agent_name = target.to_string();
+                        current_task = format!("Previous context:\n{}\n\nPlease continue the task.",
+                            transcript.iter().map(|m| m.content.clone()).collect::<Vec<_>>().join("\n"));
+                        handoff_count += 1;
+                    } else {
+                        transcript.push(Message::assistant(format!("[{}]: {}", current_agent_name, output)));
+                        return Ok(transcript);
+                    }
+                }
+                Err(e) => {
+                    return Err(format!("Agent {} failed: {}", current_agent_name, e));
+                }
+            }
+        }
+
+        Err("Max handoffs reached without task completion".to_string())
+    }
+}
+
+#[cfg(test)]
+mod dynamic_handoff_tests {
+    use super::*;
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Usage, ToolCall, ToolError};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    struct AutoGenMockHandoffLlmClient {
+        responses: Mutex<Vec<Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for AutoGenMockHandoffLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                resps.remove(0)
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("Default success"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_autogen_handoff_pattern_dynamic() {
+        use crate::tools::{Tool, ToolExecutor};
+
+        struct MockHandoffExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MockHandoffExecutor {
+            async fn execute(&self, args: serde_json::Value) -> Result<String, ToolError> {
+                let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("unknown");
+                Err(ToolError::HandoffRequested(target.to_string()))
+            }
+        }
+
+        let handoff_tool = Tool {
+            name: "handoff".to_string(),
+            description: "Handoff to another agent".to_string(),
+            parameters: serde_json::json!({"type": "object", "properties": {"target": {"type": "string"}}}),
+            is_read_only: true,
+            execute: Arc::new(MockHandoffExecutor),
+        };
+
+        let agent_a_llm = Arc::new(AutoGenMockHandoffLlmClient {
+            responses: Mutex::new(vec![
+                Ok(ChatResponse {
+                    message: Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "handoff".to_string(),
+                            arguments: serde_json::json!({"target": "agent_b"}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("id1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            ]),
+        });
+
+        let agent_b_llm = Arc::new(AutoGenMockHandoffLlmClient {
+            responses: Mutex::new(vec![
+                Ok(ChatResponse {
+                    message: Message::assistant("Agent B finished the task"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                })
+            ]),
+        });
+
+        let agent_a = Arc::new(Agent::new(agent_a_llm, vec![handoff_tool.clone()]));
+        let agent_b = Arc::new(Agent::new(agent_b_llm, vec![handoff_tool.clone()]));
+
+        let chat_agent1 = ChatAgent { name: "agent_a".to_string(), description: "A".to_string(), agent: agent_a, run_config: AgentRunConfig::default() };
+        let chat_agent2 = ChatAgent { name: "agent_b".to_string(), description: "B".to_string(), agent: agent_b, run_config: AgentRunConfig::default() };
+
+        let manager = HandoffManager::new(vec![chat_agent1, chat_agent2], 5);
+
+        let result = manager.run_handoff_dynamic("agent_a", "Start task").await;
+        assert!(result.is_ok(), "run_handoff_dynamic failed: {:?}", result);
+
+        let transcript = result.unwrap();
+        assert!(transcript.len() >= 3);
+        assert!(transcript[0].content.contains("Start task"));
+        assert!(transcript[1].content.contains("[agent_a handed off to agent_b]"));
+        assert!(transcript[2].content.contains("[agent_b]: Agent B finished the task"));
+    }
+}
