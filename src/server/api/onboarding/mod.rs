@@ -14,11 +14,30 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
+        .route("/status", get(get_onboarding_status))
         .layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)
+}
+
+#[derive(serde::Serialize)]
+pub struct OnboardingStatusResponse {
+    pub has_onboarded: bool,
+}
+
+async fn get_onboarding_status(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<OnboardingStatusResponse>, axum::http::StatusCode> {
+    let tenant_id = auth_info.org_id.clone();
+    let user_id = auth_info.agent_id.clone();
+
+    match agent.get_has_onboarded(&tenant_id, &user_id).await {
+        Ok(has_onboarded) => Ok(Json(OnboardingStatusResponse { has_onboarded })),
+        Err(_) => Ok(Json(OnboardingStatusResponse { has_onboarded: false })),
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -106,6 +125,10 @@ async fn launch_onboarding(
     let state = serde_json::json!({
         "status": "launched"
     });
+
+    // Set has_onboarded to true
+    let _ = agent.set_has_onboarded(&tenant_id, &user_id, true).await;
+
     match agent.save_onboarding_state(&tenant_id, &user_id, current_step, &state).await {
         Ok(_) => Ok(Json(state)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)

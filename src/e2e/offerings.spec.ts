@@ -3,10 +3,17 @@ import { test, expect } from './fixtures';
 test.describe('Offering Creation CUJ', () => {
   test('User can create an offering via conversational prompt', async ({ page }) => {
     await page.goto('/login');
+    await page.route('**/api/onboarding/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ has_onboarded: true }),
+      });
+    });
+
     await page.evaluate(() => {
         localStorage.setItem('tenant_id', 'e2e-tenant');
         localStorage.setItem('user_name', 'E2E User');
-        localStorage.setItem('has_onboarded', 'true');
     });
 
     await page.goto('/dashboard');

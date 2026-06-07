@@ -135,6 +135,34 @@ impl OnboardingAgent {
         Ok(())
     }
 
+    pub async fn get_has_onboarded(&self, tenant_id: &str, user_id: &str) -> Result<bool, String> {
+        let row = sqlx::query("SELECT has_onboarded FROM users WHERE tenant_id = $1 AND (id = $2 OR username = $2) LIMIT 1")
+            .bind(tenant_id)
+            .bind(user_id)
+            .fetch_optional(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(r) = row {
+            use sqlx::Row;
+            Ok(r.try_get("has_onboarded").unwrap_or(false))
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub async fn set_has_onboarded(&self, tenant_id: &str, user_id: &str, has_onboarded: bool) -> Result<(), String> {
+        sqlx::query("UPDATE users SET has_onboarded = $1 WHERE tenant_id = $2 AND (id = $3 OR username = $3)")
+            .bind(has_onboarded)
+            .bind(tenant_id)
+            .bind(user_id)
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));

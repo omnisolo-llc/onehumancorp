@@ -6,9 +6,17 @@ test.describe('Milestones Page UI', () => {
     // Navigate to root to start the flow
     await page.goto('/dashboard');
 
+    // Mock the onboarding status endpoint
+    await page.route('**/api/onboarding/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ has_onboarded: true }),
+      });
+    });
+
     // Provide the expected logged in storage data to emulate the frontend state
     await page.evaluate(() => {
-      window.localStorage.setItem('has_onboarded', 'true');
       window.localStorage.setItem('tenant', 'test-tenant');
     });
 

@@ -346,7 +346,6 @@ export default function OnboardingWizard() {
 
       clearTimeout(safetyTimeout);
       setStartResult(result);
-      localStorage.setItem('has_onboarded', 'true');
       if (result.organization_id) {
         localStorage.setItem('tenant_id', result.organization_id);
         localStorage.setItem('tenant', result.organization_id);
