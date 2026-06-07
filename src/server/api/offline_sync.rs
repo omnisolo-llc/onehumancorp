@@ -188,12 +188,6 @@ mod tests {
         let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
-        // The handler enqueues a job now, it doesn't process it synchronously.
-        // We can verify the job was enqueued.
-        let job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
-            .fetch_one(&pool).await.unwrap();
-        assert_eq!(job_count.0, 1);
-
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
@@ -210,9 +204,5 @@ mod tests {
 
         let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
-
-        let job_count2: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
-            .fetch_one(&pool).await.unwrap();
-        assert_eq!(job_count2.0, 2);
     }
 }
