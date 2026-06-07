@@ -11,6 +11,9 @@ impl ToolGater {
         // OpenAI Guardrail: Check Tool Guardrail registry
         if let Some(guardrails) = &cfg.guardrails {
             if let Err(e) = guardrails.check_tool(tc) {
+                if e.contains("Stage 3 (Confirmation)") || e.contains("requires explicit user confirmation") {
+                    return Err(ToolError::UserFixable(format!("Tool Guardrail tripped: {}", e)));
+                }
                 return Err(ToolError::Fatal(format!("Tool Guardrail tripped: {}", e)));
             }
         }
