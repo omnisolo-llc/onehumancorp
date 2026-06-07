@@ -37,6 +37,27 @@ describe('assistant API contract', () => {
       path: '/workspace/reports/weekly-brief.md',
       approvalStatus: 'pending',
     });
+    expect(body.capabilities.resultTabs).toEqual(['Artifacts', 'All Files', 'Changes', 'Preview']);
+    expect(body.capabilities.remotePlatforms).toEqual([
+      'Slack',
+      'Telegram',
+      'Discord',
+      'WeChat Work',
+      'Feishu',
+      'DingTalk',
+      'QQ',
+      'YuanbaoPai',
+      'WeChat ClawBot',
+    ]);
+    expect(body.capabilities.outputFormats).toEqual([
+      'Document',
+      'Spreadsheet',
+      'Presentation',
+      'PDF',
+      'Chart',
+      'Code App',
+      'ZIP',
+    ]);
   });
 
   test('creates a guarded assistant task with complete composer payload', async () => {
@@ -79,6 +100,33 @@ describe('assistant API contract', () => {
     expect(body.task.riskSummary).toContain('External sends require approval');
   });
 
+  test('creates local app tasks with code preview and app preview artifacts', async () => {
+    const response = await postTask(jsonRequest('http://localhost/api/assistant/tasks', {
+      prompt: 'Build a Pomodoro timer app with start pause and reset buttons',
+      workspace: 'Utilities',
+      mode: 'Coding',
+      outputFormat: 'Code App',
+      workDirectory: '/workspace/apps/pomodoro',
+      permissionProfile: 'Guarded',
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.task.mode).toBe('Coding');
+    expect(body.task.artifacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'code', filename: 'app/index.html' }),
+        expect.objectContaining({ type: 'document', filename: 'app-preview.html' }),
+      ]),
+    );
+    expect(body.task.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Open Preview', kind: 'preview' }),
+        expect.objectContaining({ label: 'Run Locally', kind: 'execute', approvalRequired: true }),
+      ]),
+    );
+  });
+
   test('normalizes remote control messages into assistant tasks', async () => {
     const response = await postRemote(jsonRequest('http://localhost/api/assistant/remote', {
       platform: 'Slack',
@@ -98,6 +146,22 @@ describe('assistant API contract', () => {
     });
     expect(body.task.title).toBe('Convert all PNGs in Downloads to WebP and send me the result');
     expect(body.reply).toContain('started');
+  });
+
+  test('accepts every Claw-style remote platform as task intake', async () => {
+    for (const platform of ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot']) {
+      const response = await postRemote(jsonRequest('http://localhost/api/assistant/remote', {
+        platform,
+        userId: `${platform}-user`,
+        threadId: `${platform}-thread`,
+        message: `Research today's notes from ${platform}`,
+      }));
+      const body = await response.json();
+
+      expect(response.status).toBe(202);
+      expect(body.remote.platform).toBe(platform);
+      expect(body.task.workspace).toBe('Remote Control');
+    }
   });
 
   test('creates scheduled automations using the same assistant task contract', async () => {

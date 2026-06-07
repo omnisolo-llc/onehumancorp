@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createAssistantTask, listAssistantTasks } from '../store';
+import { createAssistantTask, getAssistantCapabilities, listAssistantTasks } from '../store';
 
 export async function GET() {
-  return NextResponse.json({ tasks: listAssistantTasks() });
+  return NextResponse.json({ tasks: listAssistantTasks(), capabilities: getAssistantCapabilities() });
 }
 
 export async function POST(request: Request) {

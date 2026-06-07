@@ -26,6 +26,13 @@ type AssistantMessage = {
   content: string;
 };
 
+type AssistantAction = {
+  id: string;
+  label: string;
+  kind: string;
+  approvalRequired: boolean;
+};
+
 type AssistantTask = {
   id: string;
   title: string;
@@ -40,12 +47,28 @@ type AssistantTask = {
   artifacts: AssistantArtifact[];
   changes: AssistantChange[];
   messages: AssistantMessage[];
+  actions?: AssistantAction[];
 };
 
-type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors';
+type AssistantCapabilities = {
+  resultTabs: string[];
+  remotePlatforms: string[];
+  outputFormats: string[];
+  workModes: string[];
+  permissionProfiles: string[];
+};
+
+type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
+const defaultCapabilities: AssistantCapabilities = {
+  resultTabs,
+  remotePlatforms: ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot'],
+  outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
+  workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
+  permissionProfiles: ['Guarded', 'Full Access'],
+};
 
 const fallbackTasks: AssistantTask[] = [
   {
@@ -67,6 +90,11 @@ const fallbackTasks: AssistantTask[] = [
         role: 'assistant',
         content: 'Jarvis is ready.',
       },
+    ],
+    actions: [
+      { id: 'fallback-action-stop', label: 'Stop', kind: 'control', approvalRequired: false },
+      { id: 'fallback-action-preview', label: 'Open Preview', kind: 'preview', approvalRequired: false },
+      { id: 'fallback-action-run', label: 'Run Locally', kind: 'execute', approvalRequired: true },
     ],
   },
 ];
@@ -103,6 +131,7 @@ function PanelButton({
 
 export default function AssistantPage() {
   const [tasks, setTasks] = useState<AssistantTask[]>([]);
+  const [capabilities, setCapabilities] = useState<AssistantCapabilities>(defaultCapabilities);
   const [activeTaskId, setActiveTaskId] = useState('');
   const [resultTab, setResultTab] = useState<ResultTab>('Artifacts');
   const [panel, setPanel] = useState<Panel>('remote');
@@ -128,6 +157,7 @@ export default function AssistantPage() {
         const data = await response.json();
         const loadedTasks: AssistantTask[] = data.tasks?.length ? data.tasks : fallbackTasks;
         if (!mounted) return;
+        setCapabilities(data.capabilities || defaultCapabilities);
         setTasks(loadedTasks);
         setActiveTaskId(loadedTasks[0]?.id || '');
       } catch (loadError: any) {
@@ -214,6 +244,7 @@ export default function AssistantPage() {
               ['memory', 'Memory'],
               ['skills', 'Skills'],
               ['connectors', 'Connectors'],
+              ['data', 'Data Management'],
             ] as [Panel, string][]).map(([id, label]) => (
               <PanelButton key={id} active={panel === id} onClick={() => setPanel(id)}>
                 {label}
@@ -226,7 +257,10 @@ export default function AssistantPage() {
       <main className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)_360px] lg:px-8">
         <aside className="rounded-lg border border-zinc-200 bg-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">Workspaces</h2>
+            <div>
+              <h2 className="text-lg font-bold">Task List</h2>
+              <p className="mt-1 text-xs font-semibold uppercase text-zinc-500">Workspaces</p>
+            </div>
             <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-600">{tasks.length} tasks</span>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -261,6 +295,7 @@ export default function AssistantPage() {
           <section className="rounded-lg border border-zinc-200 bg-white p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
+                <div className="mb-1 text-xs font-bold uppercase text-zinc-500">Conversation</div>
                 <h2 className="text-xl font-bold">{activeTask.title}</h2>
                 <p className="mt-1 text-sm text-zinc-600">{activeTask.currentStep}</p>
               </div>
@@ -282,6 +317,19 @@ export default function AssistantPage() {
                   <div className="text-xs font-bold uppercase text-zinc-500">{message.role}</div>
                   <p className="mt-1 text-sm leading-6 text-zinc-800">{message.content}</p>
                 </div>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(activeTask.actions || []).map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  className={`rounded-md border px-3 py-2 text-xs font-bold ${
+                    action.approvalRequired ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-zinc-200 bg-zinc-50 text-zinc-700'
+                  }`}
+                >
+                  {action.label}
+                </button>
               ))}
             </div>
           </section>
@@ -325,20 +373,19 @@ export default function AssistantPage() {
                     onChange={(event) => setOutputFormat(event.target.value)}
                     className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
                   >
-                    <option>Document</option>
-                    <option>Spreadsheet</option>
-                    <option>Presentation</option>
-                    <option>PDF</option>
+                    {capabilities.outputFormats.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
                   </select>
                 </label>
               </div>
               <div className="grid gap-3 md:grid-cols-4">
                 <label className="text-sm font-bold text-zinc-700">
                   Mode
-                  <select value={mode} onChange={(event) => setMode(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm">
-                    <option>Ask</option>
-                    <option>Craft</option>
-                    <option>Plan</option>
+                  <select aria-label="Mode" value={mode} onChange={(event) => setMode(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm">
+                    {capabilities.workModes.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
                   </select>
                 </label>
                 <label className="text-sm font-bold text-zinc-700">
@@ -370,6 +417,16 @@ export default function AssistantPage() {
                   {['@ files', 'Screenshot', 'Guarded', 'Parallel tasks'].map((item) => (
                     <span key={item} className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-bold text-zinc-700">{item}</span>
                   ))}
+                  {outputFormat === 'Code App' && (
+                    <>
+                      <button type="button" className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-bold text-zinc-700">
+                        Open Preview
+                      </button>
+                      <button type="button" className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-900">
+                        Run Locally
+                      </button>
+                    </>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -383,11 +440,11 @@ export default function AssistantPage() {
             </div>
           </section>
 
-          <FeaturePanel panel={panel} />
+          <FeaturePanel panel={panel} capabilities={capabilities} />
         </section>
 
         <aside className="rounded-lg border border-zinc-200 bg-white p-4">
-          <h2 className="text-lg font-bold">Results</h2>
+          <h2 className="text-lg font-bold">Results Panel</h2>
           <div className="mt-3 grid grid-cols-4 gap-2">
             {resultTabs.map((tab) => (
               <button
@@ -471,13 +528,13 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
   );
 }
 
-function FeaturePanel({ panel }: { panel: Panel }) {
+function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: AssistantCapabilities }) {
   if (panel === 'remote') {
     return (
       <section className="rounded-lg border border-zinc-200 bg-white p-4">
         <h2 className="text-lg font-bold">Remote Control</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {['Slack', 'Telegram', 'Discord'].map((platform) => (
+          {capabilities.remotePlatforms.map((platform) => (
             <div key={platform} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
               <div className="font-bold">{platform}</div>
               <div className="mt-1 text-sm text-zinc-600">Connected task intake</div>
@@ -537,14 +594,34 @@ function FeaturePanel({ panel }: { panel: Panel }) {
     );
   }
 
+  if (panel === 'connectors') {
+    return (
+      <section aria-label="Connector panel" className="rounded-lg border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-bold">Connectors</h2>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {['Google Drive', 'Slack', 'MCP Endpoint'].map((connector) => (
+            <div key={connector} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <div className="font-bold">{connector}</div>
+              <div className="mt-1 text-sm text-zinc-600">Available</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section aria-label="Connector panel" className="rounded-lg border border-zinc-200 bg-white p-4">
-      <h2 className="text-lg font-bold">Connectors</h2>
+      <h2 className="text-lg font-bold">Data Management</h2>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
-        {['Google Drive', 'Slack', 'MCP Endpoint'].map((connector) => (
-          <div key={connector} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-            <div className="font-bold">{connector}</div>
-            <div className="mt-1 text-sm text-zinc-600">Available</div>
+        {[
+          ['Shared Files', 'Review files currently available to tasks.'],
+          ['Archived Tasks', 'Restore or permanently clean completed work.'],
+          ['Unshare Queue', 'Revoke task and remote-channel file access.'],
+        ].map(([title, detail]) => (
+          <div key={title} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+            <div className="font-bold">{title}</div>
+            <div className="mt-1 text-sm text-zinc-600">{detail}</div>
           </div>
         ))}
       </div>
