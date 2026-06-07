@@ -1,4 +1,4 @@
-use crate::domain::repository::models::{Campaign, CampaignAsset, ChannelExecution, PromotionCode, LeadGenCampaign};
+use crate::domain::repository::models::{Campaign, CampaignAsset, LeadGenCampaign};
 use sqlx::{PgPool, Error};
 
 pub struct CampaignRepository {
