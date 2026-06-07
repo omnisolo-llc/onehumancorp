@@ -134,7 +134,8 @@ where
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
-        .route("/storefront/og-card", get(handle_og_card))
+                .route("/storefront/og-card", get(handle_og_card))
+        .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -514,10 +515,40 @@ pub struct StorefrontEmbedQuery {
 async fn handle_storefront_embed(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
+    headers: axum::http::HeaderMap,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
-    let name = query.product_name.as_deref().unwrap_or("Premium Product");
+    let mut name = query.product_name.as_deref().unwrap_or("Premium Product").to_string();
     let price = query.price.as_deref().unwrap_or("$49.99");
+
+    // Autonomous Multi-Language Edge Translation
+    // Check Accept-Language header to serve localized content directly from cache
+    if let Some(accept_lang) = headers.get(axum::http::header::ACCEPT_LANGUAGE) {
+        if let Ok(lang_str) = accept_lang.to_str() {
+            // Very naive parsing for demo purposes (e.g. "ar-EG,ar;q=0.9" -> "ar")
+            let preferred_lang = lang_str.split(',').next().unwrap_or("en").split('-').next().unwrap_or("en");
+
+            if preferred_lang != "en" {
+                // Query localization registry (simulating an edge lookup)
+                let translated_row: Option<String> = sqlx::query_scalar!(
+                    "SELECT translated_text FROM localization_registry WHERE tenant_id = $1 AND language_code = $2 LIMIT 1",
+                    tenant,
+                    preferred_lang
+                )
+                .fetch_optional(&state.pool)
+                .await
+                .unwrap_or(None);
+
+                if let Some(localized_json) = translated_row {
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&localized_json) {
+                        if let Some(translated_title) = parsed.get("title").and_then(|t| t.as_str()) {
+                            name = translated_title.to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
     let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
     let text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
     let border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
@@ -533,14 +564,13 @@ async fn handle_storefront_embed(
          .replace("'", "&#x27;")
     };
 
-    let safe_name = escape_html(name);
+    let safe_name = escape_html(&name);
     let safe_price = escape_html(price);
     // Note: URL encode tenant for the href
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
@@ -587,6 +617,109 @@ async fn handle_storefront_embed(
 "##);
     axum::response::Html(html)
 }
+
+
+#[derive(Debug, Deserialize)]
+pub struct FlashSaleEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub code: Option<String>,
+    pub percent: Option<String>,
+    pub end: Option<String>,
+    pub theme: Option<String>,
+}
+
+async fn handle_flash_sale_embed(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let title = query.title.as_deref().unwrap_or("Flash Sale");
+    let code = query.code.as_deref().unwrap_or("CODE");
+    let percent = query.percent.as_deref().unwrap_or("0");
+    let end = query.end.as_deref().unwrap_or("");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let safe_title = escape_html(title);
+    let safe_code = escape_html(code);
+    let safe_percent = escape_html(percent);
+    let safe_end = escape_html(end);
+
+    let html = format!(r##"<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; background: {bg_color}; color: {text_color}; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }}
+        .widget {{ padding: 20px; text-align: center; border-radius: 12px; max-width: 300px; width: 100%; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid rgba(128, 128, 128, 0.2); }}
+        .title {{ font-size: 1.2rem; font-weight: bold; margin: 0 0 10px 0; }}
+        .discount {{ color: #ef4444; font-weight: bold; }}
+        .code-box {{ border: 2px dashed #d1d5db; padding: 10px; margin: 15px 0; border-radius: 8px; font-family: monospace; font-weight: bold; letter-spacing: 2px; }}
+        .countdown {{ display: flex; justify-content: center; gap: 10px; margin: 15px 0; }}
+        .time-box {{ display: flex; flex-direction: column; align-items: center; }}
+        .time-val {{ font-size: 1.5rem; font-weight: bold; font-family: monospace; }}
+        .time-lbl {{ font-size: 0.6rem; text-transform: uppercase; color: #6b7280; }}
+        .footer {{ font-size: 0.75rem; margin-top: 15px; color: #6b7280; }}
+        .footer a {{ color: #6b7280; text-decoration: none; font-weight: 600; }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="title">⚡ {safe_title}</div>
+        <p style="margin: 0; font-size: 0.9rem;">Get <span class="discount">{safe_percent}% OFF</span> your order!</p>
+
+        <div class="countdown">
+            <div class="time-box"><div class="time-val" id="h">00</div><div class="time-lbl">Hours</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="m">00</div><div class="time-lbl">Mins</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="s" style="color: #ef4444;">00</div><div class="time-lbl">Secs</div></div>
+        </div>
+
+        <div class="code-box">{safe_code}</div>
+
+        <div class="footer">
+            <a href="https://ohc.app/join?ref={tenant}" target="_blank">⚡ Powered by OHC</a>
+        </div>
+    </div>
+
+    <script>
+        const targetDate = new Date('{safe_end}').getTime();
+
+        setInterval(function() {{
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0 || isNaN(distance)) {{
+                document.getElementById("h").innerText = "00";
+                document.getElementById("m").innerText = "00";
+                document.getElementById("s").innerText = "00";
+                return;
+            }}
+
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById("h").innerText = hours.toString().padStart(2, '0');
+            document.getElementById("m").innerText = minutes.toString().padStart(2, '0');
+            document.getElementById("s").innerText = seconds.toString().padStart(2, '0');
+        }}, 1000);
+    </script>
+</body>
+</html>
+"##);
+    axum::response::Html(html)
+}
+
 
 async fn handle_og_card(
     Extension(state): Extension<GrowthState>,
