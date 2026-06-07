@@ -169,6 +169,14 @@ export default function CostDashboardPage() {
                     </div>
                     <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
                 </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-green-700">Prompt Cache Savings</span>
+                        <p className="text-sm text-green-600 mt-1">Savings from AI prompt context caching and token reuse.</p>
+                    </div>
+                    <span id="cost-dashboard-prompt-cache-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.prompt_cache_savings || 0)}</span>
+                </div>
             </div>
         </section>
 
