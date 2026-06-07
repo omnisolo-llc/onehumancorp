@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createAutomation } from '../store';
+import { createAutomation, listAutomations } from '../store';
+
+export async function GET() {
+  return NextResponse.json({ automations: listAutomations() });
+}
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);

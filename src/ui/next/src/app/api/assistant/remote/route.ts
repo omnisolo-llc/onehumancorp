@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createRemoteTask } from '../store';
+import { createRemoteTask, listRemotePlatforms } from '../store';
+
+export async function GET() {
+  return NextResponse.json(listRemotePlatforms());
+}
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);
