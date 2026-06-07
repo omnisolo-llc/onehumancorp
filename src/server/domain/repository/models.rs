@@ -213,20 +213,3 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct InboxMessage {
-    pub message_id: String,
-    pub tenant_id: String,
-    pub channel_type: String,
-    pub status: String,
-    pub created_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct AiDraft {
-    pub draft_id: String,
-    pub message_id: String,
-    pub proposed_content: String,
-    pub approval_status: String,
-}
