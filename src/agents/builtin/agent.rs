@@ -1020,8 +1020,12 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
-                                return (id, final_res);
+                                let args_str = match serde_json::to_string(&args) {
+                                    Ok(s) => if s.chars().count() > 100 { format!("{}...", s.chars().take(100).collect::<String>()) } else { s },
+                                    Err(_) => "<unprintable>".to_string(),
+                                };
+                                let err_msg = format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.", e, args_str);
+                                return (id, Err(crate::types::ToolError::LlmRecoverable(err_msg)));
                             }
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
@@ -1123,27 +1127,21 @@ impl Agent {
                     }
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
-                        if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
-                            let tool_name = name.to_string();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
-                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
-                            if count > std::cmp::min(cfg_max_retries, 2) as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
-                            }
-                            tool_results_json[idx] = serde_json::json!({
-                                "tool_call_id": id,
-                                "content": "",
-                                "error": format!("Schema validation failed: {}. Please correct your tool arguments.", e)
-                            });
-                            continue;
-                        }
-                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
-                            tool,
-                            &tc,
-                            max_retries
-                        ).await;
+                        let final_res = if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
+                            let args_str = match serde_json::to_string(&args) {
+                                Ok(s) => if s.chars().count() > 100 { format!("{}...", s.chars().take(100).collect::<String>()) } else { s },
+                                Err(_) => "<unprintable>".to_string(),
+                            };
+                            let err_msg = format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.", e, args_str);
+                            Err(crate::types::ToolError::LlmRecoverable(err_msg))
+                        } else {
+                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                            crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                tool,
+                                &tc,
+                                max_retries
+                            ).await
+                        };
 
                         match final_res {
                             Err(crate::types::ToolError::Transient(msg)) => {
