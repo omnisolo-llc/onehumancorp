@@ -1,22 +1,30 @@
 use ohc_builtin_agent_core::types::ToolError;
 use reqwest::Client;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct WebFetchArgs {
+    url: String,
+    #[serde(default)]
+    prompt: String,
+}
 
 struct WebFetchExecutor {
     client: Client,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for WebFetchExecutor {
-    async fn execute(
+impl PydanticToolExecutor<WebFetchArgs> for WebFetchExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: WebFetchArgs,
     ) -> Result<String, ToolError> {
-        let url = args["url"].as_str().ok_or_else(|| ToolError::LlmRecoverable("webfetch: url is required".to_string()))?;
-        let prompt = args["prompt"].as_str().unwrap_or("");
+        let url = &args.url;
+        let prompt = &args.prompt;
 
         let resp = self
             .client
@@ -101,11 +109,11 @@ pub fn webfetch_tool() -> Tool {
             },
             "required": ["url"]
         }),
-        execute: Arc::new(WebFetchExecutor {
+        execute: Arc::new(PydanticAdapter::new(WebFetchExecutor {
             client: Client::builder()
                 .timeout(std::time::Duration::from_secs(30))
                 .build()
                 .unwrap(),
-        }),
+        })),
     }
 }
