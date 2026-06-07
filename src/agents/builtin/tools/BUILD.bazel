@@ -55,6 +55,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/agents/builtin:core",
+        "//src/agents/builtin/llm",
         "//src/proto:agent_service_tonic",
         "//src/server/ohc:server_ohc",
         "@crates//:base64",
