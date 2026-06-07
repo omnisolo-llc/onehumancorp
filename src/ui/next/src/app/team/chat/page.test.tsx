@@ -4,6 +4,15 @@ import TeamChatPage from './page';
 
 const mockFetch = vi.fn();
 
+vi.mock('next/navigation', () => ({
+  useRouter() {
+    return {
+      push: vi.fn(),
+      replace: vi.fn(),
+    };
+  },
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   global.fetch = mockFetch;
