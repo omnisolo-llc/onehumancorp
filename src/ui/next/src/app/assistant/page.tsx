@@ -159,6 +159,7 @@ export default function AssistantPage() {
   const [constraints, setConstraints] = useState('Ask before sharing or overwriting files');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
+  const [actionNotice, setActionNotice] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -227,6 +228,97 @@ export default function AssistantPage() {
       setError(startError.message || 'Task could not be started');
     } finally {
       setStarting(false);
+    }
+  }
+
+  async function runApiAction(path: string, method: 'POST' | 'PATCH', body: unknown, successMessage: string) {
+    setError('');
+    setActionNotice('');
+    try {
+      const response = await fetch(path, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Action failed');
+      setActionNotice(successMessage);
+      return data;
+    } catch (actionError: any) {
+      setError(actionError.message || 'Action failed');
+      return null;
+    }
+  }
+
+  async function runResultAction(action: string) {
+    const artifact = activeTask.artifacts[0];
+    if (action.startsWith('Share') && artifact) {
+      const target = action.replace('Share to ', '').replace('Share Link', 'Share Link');
+      await runApiAction('/api/assistant/share', 'POST', {
+        taskId: activeTask.id,
+        artifactId: artifact.id,
+        target,
+      }, `${action} queued`);
+      return;
+    }
+    if (action === 'Open External Preview' && artifact) {
+      await runApiAction('/api/assistant/previews', 'PATCH', {
+        action: 'open_external',
+        artifactId: artifact.id,
+      }, 'Preview opened externally');
+      return;
+    }
+    if (action.startsWith('Export ') && artifact) {
+      await runApiAction('/api/assistant/artifacts', 'POST', {
+        taskId: activeTask.id,
+        outputFormat: action.replace('Export ', ''),
+        title: activeTask.title,
+      }, `${action} created`);
+      return;
+    }
+    setActionNotice(`${action} ready`);
+  }
+
+  async function runFeatureAction(action: string) {
+    if (action === 'upload_remote_file') {
+      await runApiAction('/api/assistant/uploads', 'POST', {
+        platform: 'WeChat ClawBot',
+        userId: 'jarvis-user',
+        filename: 'remote-upload.png',
+        mimeType: 'image/png',
+        sizeBytes: 2048,
+        previewText: 'Remote image upload',
+      }, 'Remote upload added');
+    } else if (action === 'summon_expert') {
+      await runApiAction('/api/assistant/experts', 'PATCH', {
+        action: 'summon',
+        id: 'expert-research-strategist',
+        taskId: activeTask.id,
+      }, 'Expert summoned');
+    } else if (action === 'summarize') {
+      await runApiAction('/api/assistant/commands', 'POST', {
+        command: '/summarize',
+        taskId: activeTask.id,
+      }, 'Summary command complete');
+    } else if (action === 'try_mcp') {
+      await runApiAction('/api/assistant/mcp', 'PATCH', {
+        action: 'try_tool',
+        name: 'MCP Endpoint',
+        tool: 'read_resource',
+      }, 'MCP tool completed');
+    } else if (action === 'collapse_workspaces') {
+      await runApiAction('/api/assistant/workspaces', 'PATCH', {
+        action: 'collapse_all',
+      }, 'Workspaces collapsed');
+    } else if (action === 'save_custom_model') {
+      await runApiAction('/api/assistant/models', 'PATCH', {
+        action: 'upsert',
+        provider: 'Custom OpenAI Compatible',
+        modelId: 'jarvis-custom',
+        endpoint: 'https://models.example.test/v1',
+        parameters: { temperature: 0.2 },
+        skipChatCompletions: true,
+      }, 'Custom model saved');
     }
   }
 
@@ -449,7 +541,8 @@ export default function AssistantPage() {
             </div>
           </section>
 
-          <FeaturePanel panel={panel} capabilities={capabilities} />
+          {actionNotice && <div className={styles.resultItem} role="status">{actionNotice}</div>}
+          <FeaturePanel panel={panel} capabilities={capabilities} onAction={runFeatureAction} />
         </section>
 
         <aside className={styles.panel}>
@@ -475,8 +568,8 @@ export default function AssistantPage() {
             </div>
           </div>
           <div className={styles.resultActions}>
-            {['Share Link', 'Share to WeChat', 'Share to Slack', 'Download', 'Copy', 'Archive', 'Export DOCX', 'Export XLSX', 'Export PPTX', 'Export PDF', 'Export ZIP'].map((action) => (
-              <button key={action} type="button" className={styles.smallButton}>
+            {['Share Link', 'Share to WeChat', 'Share to Slack', 'Open External Preview', 'Download', 'Copy', 'Archive', 'Export DOCX', 'Export XLSX', 'Export PPTX', 'Export PDF', 'Export ZIP'].map((action) => (
+              <button key={action} type="button" onClick={() => runResultAction(action)} className={styles.smallButton}>
                 {action}
               </button>
             ))}
@@ -541,7 +634,15 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
   );
 }
 
-function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: AssistantCapabilities }) {
+function FeaturePanel({
+  panel,
+  capabilities,
+  onAction,
+}: {
+  panel: Panel;
+  capabilities: AssistantCapabilities;
+  onAction: (action: string) => void;
+}) {
   if (panel === 'remote') {
     return (
       <section className={styles.panel}>
@@ -555,6 +656,11 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
               </div>
             </div>
           ))}
+        </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('upload_remote_file')} className={styles.smallButton}>
+            Upload Remote File
+          </button>
         </div>
       </section>
     );
@@ -611,6 +717,14 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
             </div>
           ))}
         </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('summon_expert')} className={styles.smallButton}>
+            Summon Expert
+          </button>
+          <button type="button" onClick={() => onAction('summarize')} className={styles.smallButton}>
+            Run /summarize
+          </button>
+        </div>
       </section>
     );
   }
@@ -634,6 +748,11 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
               <div className={styles.cardDetail}>MCP connector support</div>
             </div>
           ))}
+        </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('try_mcp')} className={styles.smallButton}>
+            Try MCP Tool
+          </button>
         </div>
       </section>
     );
@@ -670,6 +789,11 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
             </div>
           ))}
         </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('collapse_workspaces')} className={styles.smallButton}>
+            Collapse All Workspaces
+          </button>
+        </div>
       </section>
     );
   }
@@ -697,6 +821,11 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
               <div className={styles.cardDetail}>{detail}</div>
             </div>
           ))}
+        </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('save_custom_model')} className={styles.smallButton}>
+            Save Custom Model
+          </button>
         </div>
       </section>
     );
