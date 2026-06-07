@@ -1178,6 +1178,47 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn get_services_catalog(&self, tenant_id: &str) -> Result<String, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT name, CAST(price AS DOUBLE PRECISION) as price_f64 FROM services WHERE tenant_id = $1 LIMIT 10")
+                    .bind(tenant_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if rows.is_empty() {
+                    return Ok("No catalog available.".to_string());
+                }
+                use sqlx::Row;
+                let mut summary = String::from("Product Catalog:\n");
+                for row in rows {
+                    let n: String = row.get("name");
+                    let p: f64 = row.get("price_f64");
+                    summary.push_str(&format!("- {}: ${}\n", n, p));
+                }
+                Ok(summary)
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT name, CAST(price AS REAL) as price_f64 FROM services WHERE tenant_id = ? LIMIT 10")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if rows.is_empty() {
+                    return Ok("No catalog available.".to_string());
+                }
+                use sqlx::Row;
+                let mut summary = String::from("Product Catalog:\n");
+                for row in rows {
+                    let n: String = row.get("name");
+                    let p: f64 = row.get("price_f64");
+                    summary.push_str(&format!("- {}: ${}\n", n, p));
+                }
+                Ok(summary)
+            }
+        }
+    }
+
     pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64)>, String> {
         let pattern = format!("%{}%", name);
         match &self.db.store {
@@ -1212,6 +1253,107 @@ impl DepartmentOrchestrator {
                 } else {
                     Ok(None)
                 }
+            }
+        }
+    }
+
+    pub async fn resolve_customer_identity(&self, tenant_id: &str, from_identifier: &str) -> Result<Option<String>, String> {
+        let pattern = format!("%{}%", from_identifier);
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT id FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2 OR phone ILIKE $2) LIMIT 1")
+                    .bind(tenant_id)
+                    .bind(&pattern)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(r.get("id")))
+                } else {
+                    let new_id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query("INSERT INTO customers (id, tenant_id, name, created_at, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&new_id)
+                        .bind(tenant_id)
+                        .bind(from_identifier)
+                        .execute(&self.db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    Ok(Some(new_id))
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT id FROM customers WHERE tenant_id = ? AND (name LIKE ? OR email LIKE ? OR phone LIKE ?) LIMIT 1")
+                    .bind(tenant_id)
+                    .bind(&pattern)
+                    .bind(&pattern)
+                    .bind(&pattern)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    Ok(Some(r.get("id")))
+                } else {
+                    let new_id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query("INSERT INTO customers (id, tenant_id, name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&new_id)
+                        .bind(tenant_id)
+                        .bind(from_identifier)
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    Ok(Some(new_id))
+                }
+            }
+        }
+    }
+
+    pub async fn get_orders_by_customer(&self, tenant_id: &str, customer_id: &str) -> Result<String, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT id, total_amount, status FROM orders WHERE tenant_id = $1 AND customer_id = $2")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if rows.is_empty() {
+                    return Ok("No past orders.".to_string());
+                }
+
+                use sqlx::Row;
+                let mut summary = String::from("Past Orders:\n");
+                for row in rows {
+                    let id: String = row.get("id");
+                    let total: f64 = row.get("total_amount");
+                    let status: String = row.get("status");
+                    summary.push_str(&format!("- Order ID: {}, Total: ${}, Status: {}\n", id, total, status));
+                }
+                Ok(summary)
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT id, total_amount, status FROM orders WHERE tenant_id = ? AND customer_id = ?")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if rows.is_empty() {
+                    return Ok("No past orders.".to_string());
+                }
+
+                use sqlx::Row;
+                let mut summary = String::from("Past Orders:\n");
+                for row in rows {
+                    let id: String = row.get("id");
+                    let total: f64 = row.get("total_amount");
+                    let status: String = row.get("status");
+                    summary.push_str(&format!("- Order ID: {}, Total: ${}, Status: {}\n", id, total, status));
+                }
+                Ok(summary)
             }
         }
     }

@@ -28,7 +28,8 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     const webhookPayload = {
       tenant_id: tenantId,
       message: 'Do you have vegan chocolate cake available for Saturday?',
-      source: 'instagram'
+      source: 'instagram',
+      from_identifier: 'Ava Customer'
     };
 
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
@@ -48,13 +49,20 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // Ensure we are viewing the Ambassador inbox specifically
     await expect(page.getByRole('heading', { name: 'The Ambassador' })).toBeVisible({ timeout: 5000 });
 
-    // Wait for either a pending item or the empty inbox state.
+    // Wait for the new item.
     const inquiryLocator = page.getByText('Do you have vegan chocolate cake available for Saturday?').first();
-    const approveButton = page.getByRole('button', { name: 'Approve' }).first();
     await expect(page.getByText(/All Caught Up!|Do you have vegan chocolate cake available for Saturday?/)).toBeVisible({ timeout: 15000 });
 
-    if (await approveButton.isVisible()) {
-      await approveButton.click();
+    const reviewButton = page.getByRole('button', { name: 'Edit' }).first();
+    if (await reviewButton.isVisible()) {
+      // Validate split UI before clicking Send
+      await expect(page.getByText('Customer Message')).toBeVisible();
+      await expect(page.getByText('AI Drafted Reply')).toBeVisible();
+
+      const sendButton = page.getByRole('button', { name: 'Send Draft' }).first();
+      await expect(sendButton).toBeVisible();
+
+      await sendButton.click();
 
       // Validate empty state or removal
       await expect(inquiryLocator).toBeHidden();

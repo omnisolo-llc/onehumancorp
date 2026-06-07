@@ -20,6 +20,8 @@ pub struct WebhookPayload {
     pub source: String,
     #[serde(default)]
     pub target_language: Option<String>,
+    #[serde(default)]
+    pub from_identifier: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -117,7 +119,7 @@ async fn handle_webhook(
         }
     };
 
-    let draft_reply = match generate_inbox_draft_reply(&payload.tenant_id, &payload.source, &translation).await {
+    let draft_reply = match generate_inbox_draft_reply(orchestrator.as_ref(), &payload.tenant_id, &payload.source, payload.from_identifier.as_deref(), &translation).await {
         Ok(reply) => reply,
         Err(e) => {
             ::server_telemetry::record_error_signal("Inbox draft generation failed");
@@ -177,14 +179,34 @@ async fn handle_webhook(
 }
 
 async fn generate_inbox_draft_reply(
+    orchestrator: &DepartmentOrchestrator,
     tenant_id: &str,
     source: &str,
+    from_identifier: Option<&str>,
     translation: &InboxTranslation,
 ) -> Result<String, String> {
+    let mut customer_context = String::new();
+    if let Some(ident) = from_identifier {
+        if let Ok(Some(customer_id)) = orchestrator.resolve_customer_identity(tenant_id, ident).await {
+            if let Ok(orders_summary) = orchestrator.get_orders_by_customer(tenant_id, &customer_id).await {
+                customer_context = format!("\nCustomer Context:\n{}", orders_summary);
+            }
+        }
+    }
+
+    let mut catalog_context = String::new();
+    if let Ok(catalog) = orchestrator.get_services_catalog(tenant_id).await {
+        if catalog != "No catalog available." {
+            catalog_context = format!("\n{}", catalog);
+        }
+    }
+
     let prompt = format!(
-        "Write one concise, warm customer-service reply in {} for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {tenant_id}. Source: {source}. Customer message: {}",
+        "Write one concise, warm customer-service reply in {} for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided product catalog if answering questions about products. Tenant: {tenant_id}. Source: {source}. Customer message: {}{}{}",
         translation.target_language,
-        translation.translated_content
+        translation.translated_content,
+        customer_context,
+        catalog_context
     );
     let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 

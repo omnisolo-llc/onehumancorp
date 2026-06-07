@@ -160,7 +160,7 @@ export default function ApprovalInbox({
                     {desc}
                   </p>
 
-                  {req.payload?.feature_type === "ambassador_reply" && (
+                  {(!req.payload?.feature_type || req.payload?.feature_type === "ambassador_reply" || req.payload?.original_content) && (
                     <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
@@ -176,12 +176,30 @@ export default function ApprovalInbox({
                             d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
                           />
                         </svg>
-                        Customer Inquiry
+                        {req.payload?.source ? `1 New Message (${req.payload.source})` : "Customer Inquiry"}
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
-                        "{req.payload.original_message}"
-                      </div>
+                      {req.payload?.original_content && (
+                        <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700">
+                          <span className="font-bold uppercase text-[10px] text-gray-400 block mb-1">Customer Message</span>
+                          "{req.payload.original_content}"
+                          {req.payload.translated_from_language && req.payload.translated_from_language !== 'en' && (
+                            <span className="block mt-1 text-[10px] text-gray-400">Translated from: {req.payload.translated_from_language}</span>
+                          )}
+                        </div>
+                      )}
+                      {req.payload?.original_message && !req.payload?.original_content && (
+                        <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
+                          "{req.payload.original_message}"
+                        </div>
+                      )}
+
+                      {req.payload?.draft_reply && (
+                        <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-800 relative mt-2 shadow-sm">
+                          <span className="font-bold uppercase text-[10px] text-blue-500 block mb-1">AI Drafted Reply</span>
+                          {req.payload.draft_reply}
+                        </div>
+                      )}
 
                       <div className="text-blue-800 font-semibold text-sm mt-2 flex items-center gap-2">
                         <svg
@@ -558,7 +576,7 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && payload.original_message) {
+                        if (payload && (payload.original_message || payload.draft_reply)) {
                           setSelectedReview(req);
                         } else {
                           onReject(req.id);
@@ -566,8 +584,8 @@ export default function ApprovalInbox({
                       }}
                       className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                     >
-                      {payload && payload.original_message
-                        ? "Review"
+                      {(payload && (payload.original_message || payload.draft_reply))
+                        ? "Edit"
                         : "Reject / Edit"}
                     </button>
                     <button
@@ -578,6 +596,8 @@ export default function ApprovalInbox({
                         ? "Publish to Website"
                         : req.payload?.feature_type === "social_post"
                         ? "Schedule Post"
+                        : req.payload?.draft_reply
+                        ? "Send Draft"
                         : "Approve"}
                     </button>
                   </div>
@@ -604,8 +624,9 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Context
                 </p>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap">
                   {extractPayload(selectedReview.description).payload
+                    ?.original_content || extractPayload(selectedReview.description).payload
                     ?.original_message || "N/A"}
                 </div>
               </div>
@@ -614,8 +635,9 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Draft
                 </p>
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
+                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative whitespace-pre-wrap">
                   {extractPayload(selectedReview.description).payload
+                    ?.draft_reply || extractPayload(selectedReview.description).payload
                     ?.generated_response || "N/A"}
                 </div>
               </div>
