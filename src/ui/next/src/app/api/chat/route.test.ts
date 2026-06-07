@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { POST } from './route';
 
 describe('chat API', () => {
@@ -32,6 +32,7 @@ describe('chat API', () => {
   });
 
   it('returns successful reply for valid message', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
     // In vitest environment without backend, it falls through to the catch block
     const response = await POST(new Request('http://localhost/api/chat', {
       method: 'POST',
@@ -42,5 +43,6 @@ describe('chat API', () => {
     const data = await response.json();
     expect(data).toHaveProperty('reply');
     expect(data.reply).toContain("I'm having trouble connecting to my brain right now");
+    vi.unstubAllGlobals();
   });
 });
