@@ -82,19 +82,24 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
     const margin = 16;
     const position = currentStep.position || 'bottom';
 
+    // Clamp to screen edges for mobile
+    const maxLeft = typeof window !== 'undefined' ? window.innerWidth - 150 - 16 : 1000;
+    const minLeft = 150 + 16;
+    const clampLeft = (l: number) => Math.max(Math.min(l, maxLeft), minLeft);
+
     switch (position) {
       case 'bottom':
         bubbleStyle = {
           top: targetRect.bottom + margin,
-          left: targetRect.left + (targetRect.width / 2),
+          left: clampLeft(targetRect.left + (targetRect.width / 2)),
           transform: 'translateX(-50%)'
         };
         arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white/90 border-x-transparent border-t-0 border-8";
         break;
       case 'top':
         bubbleStyle = {
-          top: targetRect.top - margin,
-          left: targetRect.left + (targetRect.width / 2),
+          top: Math.max(targetRect.top - margin, 16),
+          left: clampLeft(targetRect.left + (targetRect.width / 2)),
           transform: 'translate(-50%, -100%)'
         };
         arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white/90 border-x-transparent border-b-0 border-8";
@@ -110,7 +115,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       case 'left':
          bubbleStyle = {
           top: targetRect.top + (targetRect.height / 2),
-          left: targetRect.left - margin,
+          left: Math.max(targetRect.left - margin, 16),
           transform: 'translate(-100%, -50%)'
         };
         arrowClass = "left-full top-1/2 -translate-y-1/2 border-l-white/90 border-y-transparent border-r-0 border-8";
@@ -137,7 +142,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       <div
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
-        className="fixed z-[1000] bg-white/90 backdrop-blur-[30px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] font-inter animate-pop-in"
+        className="fixed z-[1000] bg-white/90 backdrop-blur-[30px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (

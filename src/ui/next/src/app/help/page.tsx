@@ -30,11 +30,11 @@ export default function HelpCenterPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#F5F5F7]/80 backdrop-blur-[20px] saturate-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+      <div className="max-w-4xl mx-auto w-full">
         <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 text-center tracking-tight">Help Center</h1>
 
-        <div className="mb-10 w-full sm:w-3/4 mx-auto">
+        <div className="mb-10 w-full sm:w-3/4 mx-auto px-2 sm:px-0">
           <input
             type="text"
             placeholder="Search for help articles and videos..."
@@ -45,15 +45,15 @@ export default function HelpCenterPage() {
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <p className="text-center text-gray-500 font-medium bg-white/40 backdrop-blur-[20px] saturate-200 py-8 rounded-2xl border border-white/30 w-full">
+          <p className="text-center text-gray-500 font-medium bg-white/40 backdrop-blur-[20px] saturate-200 py-8 rounded-2xl border border-white/30 w-full mx-auto">
             No results found matching "{searchQuery}"
           </p>
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-12 w-full">
             {filteredArticles.length > 0 && (
-              <section>
-                <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Articles</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <section className="w-full">
+                <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6 px-2 sm:px-0">Articles</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 px-2 sm:px-0">
                   {filteredArticles.map((article, idx) => (
                     <Link key={idx} href={article.link} className="block group">
                       <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-white/50 group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
@@ -67,9 +67,9 @@ export default function HelpCenterPage() {
             )}
 
             {filteredVideos.length > 0 && (
-              <section>
-                <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Video Tutorials</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <section className="w-full">
+                <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6 px-2 sm:px-0">Video Tutorials</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 px-2 sm:px-0">
                   {filteredVideos.map((v) => (
                     <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group shadow-sm border border-white/30 cursor-pointer hover:shadow-md transition-all">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>

@@ -120,9 +120,9 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
+        <div className="fixed bottom-4 right-4 sm:bottom-24 sm:right-6 z-[60] w-[350px] max-w-[calc(100vw-32px)] max-h-[80vh] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
           {/* Header */}
-          <div id="ai-chat-header" className="bg-gray-900/95 text-white p-4 flex justify-between items-center backdrop-blur-[20px]">
+          <div id="ai-chat-header" className="bg-gray-900/95 text-white p-4 flex justify-between items-center backdrop-blur-[20px] flex-shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
               <div>
@@ -137,7 +137,7 @@ export function HelpChat() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent flex flex-col gap-5 font-inter text-sm">
+          <div className="flex-1 p-5 overflow-y-auto min-h-[250px] h-[350px] max-h-[calc(80vh-140px)] bg-gradient-to-b from-white/40 to-transparent flex flex-col gap-5 font-inter text-sm overscroll-contain">
             {messages.map(msg => (
               <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${
@@ -167,14 +167,14 @@ export function HelpChat() {
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="p-3 bg-white/60 backdrop-blur-[20px] saturate-200 border-t border-white/50 flex gap-2">
+          <form onSubmit={handleSend} className="p-3 bg-white/60 backdrop-blur-[20px] saturate-200 border-t border-white/50 flex gap-2 flex-shrink-0">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/70 backdrop-blur-[20px] saturate-200 border border-white/60 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
+              className="flex-1 bg-white/70 backdrop-blur-[20px] saturate-200 border border-white/60 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
             <button
               type="submit"

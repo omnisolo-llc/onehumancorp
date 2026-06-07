@@ -26,8 +26,8 @@ export default function HelpArticlePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
-        <div className="max-w-3xl mx-auto text-center">
+      <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#F5F5F7]/80 backdrop-blur-[20px] saturate-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+        <div className="max-w-3xl mx-auto text-center px-2 sm:px-0">
             <h1 className="text-3xl font-bold text-gray-900 mb-4 font-outfit">Oops!</h1>
             <p className="text-gray-600 mb-8">{error}</p>
             <Link href="/help" className="text-blue-600 font-medium hover:underline">← Back to Help Center</Link>
@@ -38,15 +38,15 @@ export default function HelpArticlePage() {
 
   if (!article) {
      return (
-       <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter flex items-center justify-center">
+       <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#F5F5F7]/80 backdrop-blur-[20px] saturate-200 py-12 px-4 sm:px-6 lg:px-8 font-inter flex items-center justify-center">
           <p className="text-gray-500 font-medium animate-pulse">Loading article...</p>
        </div>
      )
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#F5F5F7]/80 backdrop-blur-[20px] saturate-200 py-12 px-4 sm:px-6 lg:px-8 font-inter">
+      <div className="max-w-3xl mx-auto w-full px-2 sm:px-0">
         <div className="mb-8">
             <Link href="/help" className="text-blue-600 font-medium hover:underline inline-flex items-center">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
