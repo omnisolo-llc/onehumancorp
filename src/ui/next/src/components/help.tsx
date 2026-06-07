@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import DOMPurify from 'dompurify';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
+import Link from 'next/link';
 import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 // --- Walkthrough System ---
@@ -364,6 +365,15 @@ export function HelpWidget() {
                 </div>
               </div>
             )}
+
+            <div className="mt-8 border-t border-white/50 pt-4 flex flex-col items-center justify-center space-y-2">
+              <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
+                <Link href="/api-docs" onClick={() => setOpen(false)} className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline inline-flex items-center transition-colors">
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                  API Documentation (Advanced)
+                </Link>
+              </WithTooltip>
+            </div>
           </div>
         </div>
       )}
