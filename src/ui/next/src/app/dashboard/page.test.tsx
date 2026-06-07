@@ -48,4 +48,5 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByText(/Action Required/)).toBeDefined();
   expect(screen.getByText("Recent Orders")).toBeDefined();
   expect(screen.getByText("Inbox Activity")).toBeDefined();
+  expect(screen.getByText("Pro Plan ROI Calculator")).toBeDefined();
 });
