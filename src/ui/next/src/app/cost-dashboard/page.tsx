@@ -26,6 +26,7 @@ interface CostDashboardData {
   period_end: string;
   trend: DailyCost[];
   department_tier_usage?: DepartmentTierUsage;
+  compute_cost?: number;
 }
 
 interface DepartmentTierUsage {

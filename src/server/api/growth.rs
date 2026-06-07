@@ -147,12 +147,32 @@ where
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
+        .route("/qr/scan", get(handle_qr_scan))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+#[derive(Deserialize)]
+pub struct QrScanQuery {
+    target: Option<String>,
+    tenant: Option<String>,
+}
+
+async fn handle_qr_scan(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<QrScanQuery>,
+) -> impl IntoResponse {
+    let target = query.target.unwrap_or_else(|| "/".to_string());
+    let tenant = query.tenant.unwrap_or_else(|| "unknown".to_string());
+
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.qr_scanned", "tenant_id": tenant, "target": target }));
+    state.hub.append_recent_event(msg);
+
+    axum::response::Redirect::temporary(&target)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
