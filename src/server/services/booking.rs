@@ -354,7 +354,7 @@ use ::server_ohc::app::{
 };
 
 const TIMESLOT_LOCK_TTL: Duration = Duration::from_secs(60);
-const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(15 * 60);
+const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(5 * 60);
 const INVENTORY_CAPACITY_LOCK_TTL: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, PartialEq, Eq)]

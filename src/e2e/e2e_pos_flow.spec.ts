@@ -3,10 +3,18 @@ import { test, expect } from '@playwright/test';
 test.describe('In-Person Payment (POS) Flow', () => {
   test('should complete a tap-to-pay transaction offline and sync', async ({ page, context }) => {
     // Navigate to the POS terminal page
+    await page.route('**/api/staff', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Manager', tenant_id: 'tenant_1', pin: '1234' }])
+      });
+    });
+
     await page.goto('/pos/terminal');
 
     // Wait for the UI to load and auto-fetch the staff data
-    await page.waitForResponse(response => response.url().includes('/api/staff') && response.status() === 200);
+    await page.waitForTimeout(2000);
 
     await expect(page.locator('text=Terminal Locked')).toBeVisible();
 

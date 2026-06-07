@@ -287,7 +287,7 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type IN ('OrderReceived', 'OrderPlaced', 'PosSyncFailure', 'LowStockAlert'))
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
@@ -310,7 +310,7 @@ impl OperationsWorker {
                     let row = sqlx::query(
                         r#"
                         SELECT id, tenant_id, payload FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type IN ('OrderReceived', 'OrderPlaced', 'PosSyncFailure', 'LowStockAlert'))
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -354,8 +354,19 @@ impl OperationsWorker {
             let mut final_status = "COMPLETED";
 
             // Check inventory levels
-            let items = payload.get("items").and_then(|v| v.as_array());
-            if let Some(items) = items {
+            let mut all_items = vec![];
+            if let Some(items) = payload.get("items").and_then(|v| v.as_array()) {
+                for item in items {
+                    all_items.push(item.clone());
+                }
+            } else if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                all_items.push(serde_json::json!({
+                    "product_id": product_id,
+                    "quantity": payload.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1)
+                }));
+            }
+            if !all_items.is_empty() {
+                let items = all_items;
                 for item in items {
                     if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
                         let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
