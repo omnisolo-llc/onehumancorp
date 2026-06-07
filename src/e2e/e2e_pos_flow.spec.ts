@@ -41,9 +41,9 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Wait for background sync to trigger (interval is 10s) and clear events
     await expect(async () => {
       const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'));
-      const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
       expect(remainingEvents.length).toBe(0);
-      expect(remainingPosTx.length).toBe(0);
+      const remainingQueue = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]'));
+      expect(remainingQueue.length).toBe(0);
     }).toPass({ timeout: 15000 });
   });
 });
