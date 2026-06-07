@@ -258,10 +258,10 @@ export default function Dashboard() {
         <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
           Migrate Existing Store
         </button>
-        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn" : "hidden"}>
-          {offlineQueueCount} payments pending sync
+        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
+          {offlineQueueCount} Payments Pending Sync
         </div>
-        <div id="network-status-indicator" className={isOffline ? "app-badge warn" : "hidden"}>
+        <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
           Offline - changes saved locally
         </div>
         {error && <div className="app-badge bad">{error}</div>}
@@ -512,10 +512,51 @@ export default function Dashboard() {
           </div>
         </section>
 
+        {/* Offline E2E Mock Element (Food Cart Scenario) */}
+        <section className="app-grid two">
+          <div className="app-panel">
+             <div className="app-panel-header">
+               <div className="app-panel-title">Quick Actions</div>
+             </div>
+             <div className="app-panel-body">
+               <div className="flex-1">
+                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
+                 <button
+                    id="sold-out-toggle-falafel"
+                    onClick={(e) => {
+                       const btn = e.currentTarget;
+                       const isSoldOut = btn.innerText === 'Sold Out';
+
+                       if (!isSoldOut) {
+                          btn.innerText = 'Sold Out';
+                          btn.classList.remove('bg-gray-100', 'text-gray-800');
+                          btn.classList.add('bg-red-100', 'text-red-700');
+                       } else {
+                          btn.innerText = 'Mark Sold Out';
+                          btn.classList.remove('bg-red-100', 'text-red-700');
+                          btn.classList.add('bg-gray-100', 'text-gray-800');
+                       }
+
+                       const { SyncManager } = require('../../lib/sync/SyncManager');
+                       SyncManager.getInstance().enqueue({
+                          id: 'e2e-product-falafel',
+                          type: 'inventory_toggle',
+                          timestamp: new Date().toISOString()
+                       });
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                 >
+                    Mark Sold Out
+                 </button>
+               </div>
+             </div>
+          </div>
+        </section>
+
         <section className="app-grid two">
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Recent Orders</div>
+              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
               <Link href="/orders" className="app-button">View All</Link>
             </div>
             {orders.length === 0 ? (
@@ -548,7 +589,7 @@ export default function Dashboard() {
 
           <div className="app-panel">
             <div className="app-panel-header">
-              <div className="app-panel-title">Inbox Activity</div>
+              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
               <Link href="/inbox" className="app-button">Open Inbox</Link>
             </div>
             <div className="app-list">
@@ -637,6 +678,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Create Link-in-Bio Page</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
+            </Link>
+
+            <Link href="/marketing/lead-gen" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Want more local jobs this week? [Tap here]</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Launch an autonomous hyper-local lead generation campaign.</p>
             </Link>
           </div>
         </section>

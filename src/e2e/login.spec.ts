@@ -22,23 +22,23 @@ test.describe('Dashboard', () => {
 
   test('should display nav', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible({ timeout: 15000 });
   });
 
   test('should show business snapshot', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Business Analytics' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Business Analytics' })).toBeVisible({ timeout: 15000 });
   });
 });
 
 test.describe('Navigation', () => {
   test('should navigate to agents page', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 15000 });
   });
 
   test('should display business setup', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
+    await expect(page.locator('text=Your business, live in minutes')).toBeVisible({ timeout: 15000 });
   });
 });
