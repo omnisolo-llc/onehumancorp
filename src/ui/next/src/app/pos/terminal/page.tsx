@@ -38,6 +38,21 @@ export default function TerminalPage() {
   const [offlineConversion, setOfflineConversion] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
   const [reserving, setReserving] = useState(false);
+
+  useEffect(() => {
+    if (navigator.onLine) {
+      fetch('/api/staff')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            OfflineStore.setStaff(data);
+          } else if (data && data.staff) {
+            OfflineStore.setStaff(data.staff);
+          }
+        })
+        .catch(console.error);
+    }
+  }, []);
   const [isOffline, setIsOffline] = useState(false);
 
   // Network listener
@@ -196,15 +211,12 @@ export default function TerminalPage() {
 
         setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
-        // Simulate payment completion
-        setTimeout(async () => {
-          await fetch('/api/v1/payments/terminal/commit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
-          });
-          setOrderStatus(`${t('Payment Completed')}`);
-        }, 1000);
+        await fetch('/api/v1/payments/terminal/commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+        });
+        setOrderStatus(`${t('Payment Completed')}`);
       } catch (err) {
         setOrderStatus(t('Error connecting to server'));
       } finally {

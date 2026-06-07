@@ -5,16 +5,8 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Navigate to the POS terminal page
     await page.goto('/pos/terminal');
 
-    // Wait for the pin pad
-    await expect(page.locator('text=Terminal Locked')).toBeVisible();
-
-    // Setup local storage mock for offline staff
-    await page.evaluate(() => {
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Manager', pin_hash: '1234' }]));
-    });
-
-    // Reload to pick up local storage
-    await page.reload();
+    // Wait for the UI to load and auto-fetch the staff data
+    await page.waitForResponse(response => response.url().includes('/api/staff') && response.status() === 200);
 
     await expect(page.locator('text=Terminal Locked')).toBeVisible();
 
