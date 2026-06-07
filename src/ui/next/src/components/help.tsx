@@ -5,13 +5,9 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import DOMPurify from 'dompurify';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
-import { InteractiveWalkthrough } from './Walkthrough';
+import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 // --- Walkthrough System ---
-type Step = {
-  targetId: string;
-  message: string;
-};
 
 type HelpArticle = { title: string; desc: string; link?: string };
 type HelpVideo = { id: number; title: string; duration: string };
@@ -126,7 +122,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
+          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.content, position: "top" }))}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
