@@ -241,6 +241,8 @@ pub struct HarnessMcpServer {
 }
 
 impl HarnessMcpServer {
+
+} impl Default for HarnessMcpServer { fn default() -> Self { Self::new() } } impl HarnessMcpServer {
     pub fn new() -> Self {
         Self {}
     }

@@ -229,6 +229,8 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
 
 /// Implements the Output Parsing mechanic from the Master Catalog:
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
+/// the failed completion, and the parsing error back to the model)."
+
 /// Parses structured output from the LLM, relying heavily on the native `tool_calls` API.
 ///
 /// **Contract / Industry Standard:**

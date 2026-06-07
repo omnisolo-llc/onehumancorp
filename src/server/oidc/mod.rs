@@ -14,7 +14,7 @@ pub struct OIDCConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct JWK {
+struct Jwk {
     kid: String,
     n: String,
     e: String,
@@ -22,7 +22,7 @@ struct JWK {
 
 #[derive(Debug, Clone, Deserialize)]
 struct JWKSet {
-    keys: Vec<JWK>,
+    keys: Vec<Jwk>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -31,7 +31,7 @@ struct OIDCDiscovery {
 }
 
 struct CachedJWKS {
-    keys: Vec<JWK>,
+    keys: Vec<Jwk>,
     fetch_at: chrono::DateTime<Utc>,
 }
 
@@ -82,7 +82,7 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
     Ok((host.to_string(), ip))
 }
 
-async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
+async fn fetch_jwks(issuer_url: &str) -> Result<Vec<Jwk>, String> {
     {
         let cache = get_cache().read().unwrap();
         if let Some(cached) = cache.get(issuer_url) {

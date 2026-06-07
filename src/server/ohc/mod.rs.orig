@@ -1,4 +1,4 @@
-#[cfg(not(feature = "ohc_bazel"))]
+#[cfg(not(ohc_bazel))]
 pub mod ohc {
     pub mod interop {
         tonic::include_proto!("ohc.interop");
@@ -37,7 +37,7 @@ pub mod ohc {
     }
 }
 
-#[cfg(feature = "ohc_bazel")]
+#[cfg(ohc_bazel)]
 pub mod ohc {
     pub mod interop {
         pub use interop_proto::ohc::interop::*;

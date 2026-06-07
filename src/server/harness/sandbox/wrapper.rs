@@ -8,6 +8,8 @@ pub struct BashWrapper {
 }
 
 impl BashWrapper {
+
+} impl Default for BashWrapper { fn default() -> Self { Self::new() } } impl BashWrapper {
     pub fn new() -> Self {
         BashWrapper {
             read_only_paths: Vec::new(),

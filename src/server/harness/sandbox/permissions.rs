@@ -7,6 +7,8 @@ pub struct PermissionEvaluator {
 }
 
 impl PermissionEvaluator {
+
+} impl Default for PermissionEvaluator { fn default() -> Self { Self::new() } } impl PermissionEvaluator {
     pub fn new() -> Self {
         let disabled_commands = vec![
             "rm -rf /".to_string(),

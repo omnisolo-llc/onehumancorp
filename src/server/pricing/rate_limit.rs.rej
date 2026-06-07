@@ -1,0 +1,86 @@
+--- rate_limit.rs
++++ rate_limit.rs
+@@ -188,11 +184,9 @@
+
+-        if let Some(limit) = tier.monthly_action_limit() {
+-            if tenant_used >= limit {
+-                if let Some(store) = &self.telemetry_store {
+-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "tenant_monthly")]);
+-                }
+-                return Err(tonic::Status::resource_exhausted(format!(
+-                    "Tenant monthly action limit exceeded (used {} / allowed {})",
+-                    tenant_used, limit
+-                )));
+-            }
++        if let Some(limit) = tier.monthly_action_limit() && tenant_used >= limit {
++            if let Some(store) = &self.telemetry_store {
++                store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "tenant_monthly")]);
++            }
++            return Err(tonic::Status::resource_exhausted(format!(
++                "Tenant monthly action limit exceeded (used {} / allowed {})",
++                tenant_used, limit
++            )));
+--- /dev/null
++++ /dev/null
+@@ -213,11 +207,9 @@
+-        if let Some(limit) = tier.agent_action_limit() {
+-            if agent_used >= limit {
+-                if let Some(store) = &self.telemetry_store {
+-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "agent_monthly")]);
+-                }
+-                return Err(tonic::Status::resource_exhausted(format!(
+-                    "Agent monthly action limit exceeded (used {} / allowed {})",
+-                    agent_used, limit
+-                )));
+-            }
++        if let Some(limit) = tier.agent_action_limit() && agent_used >= limit {
++            if let Some(store) = &self.telemetry_store {
++                store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "agent_monthly")]);
++            }
++            return Err(tonic::Status::resource_exhausted(format!(
++                "Agent monthly action limit exceeded (used {} / allowed {})",
++                agent_used, limit
++            )));
+         }
+@@ -253,11 +245,9 @@
+
+-        if let Some(limit) = tier.max_products() {
+-            if total_products >= limit {
+-                if let Some(store) = &self.telemetry_store {
+-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "max_products")]);
+-                }
+-                return Err(tonic::Status::resource_exhausted(format!(
+-                    "Max products limit exceeded (current {} / allowed {})",
+-                    total_products, limit
+-                )));
+-            }
++        if let Some(limit) = tier.max_products() && total_products >= limit {
++            if let Some(store) = &self.telemetry_store {
++                store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "max_products")]);
++            }
++            return Err(tonic::Status::resource_exhausted(format!(
++                "Max products limit exceeded (current {} / allowed {})",
++                total_products, limit
++            )));
+--- /dev/null
++++ /dev/null
+@@ -300,11 +290,9 @@
+-        if let Some(limit) = tier.max_agents() {
+-            if total_agents >= limit {
+-                if let Some(store) = &self.telemetry_store {
+-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "max_agents")]);
+-                }
+-                return Err(tonic::Status::resource_exhausted(format!(
+-                    "Max agents limit exceeded (current {} / allowed {})",
+-                    total_agents, limit
+-                )));
+-            }
++        if let Some(limit) = tier.max_agents() && total_agents >= limit {
++            if let Some(store) = &self.telemetry_store {
++                store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("limit_type", "max_agents")]);
++            }
++            return Err(tonic::Status::resource_exhausted(format!(
++                "Max agents limit exceeded (current {} / allowed {})",
++                total_agents, limit
++            )));
+         }

@@ -24,11 +24,13 @@ impl ASTParser {
         let node_kind = node.kind();
 
         // zmodload check
-        if node_kind == "command" && let Some(command_name_node) = node.child_by_field_name("name") {
+        if node_kind == "command" {
+            if let Some(command_name_node) = node.child_by_field_name("name") {
                 let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
                 if name == "zmodload" {
                     return Err("Dangerous pattern detected: zmodload".to_string());
                 }
+            }
         }
 
         // process substitution <() or >()
@@ -114,11 +116,5 @@ mod tests {
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
-    }
-}
-
-impl Default for ASTParser {
-    fn default() -> Self {
-        Self::new()
     }
 }

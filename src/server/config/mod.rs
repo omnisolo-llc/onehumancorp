@@ -149,10 +149,8 @@ impl ModeEnforcer for StandaloneModeEnforcer {
             default_sqlite_url
         };
 
-        if let Some(redis_url) = &cfg.redis_url {
-            if !redis_url.is_empty() {
+        if let Some(redis_url) = &cfg.redis_url && !redis_url.is_empty() {
                 tracing::info!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
-            }
         }
 
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
@@ -179,19 +177,18 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 use std::os::unix::fs::PermissionsExt;
 
                 let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
-                if let Some(parent) = std::path::Path::new(db_path).parent() {
-                    if !parent.as_os_str().is_empty() {
+                if let Some(parent) = std::path::Path::new(db_path).parent() && !parent.as_os_str().is_empty() {
                         #[cfg(unix)] use std::os::unix::fs::DirBuilderExt;
                         let mut builder = std::fs::DirBuilder::new();
                         builder.recursive(true);
                         #[cfg(unix)] builder.mode(0o700);
                         let _ = builder.create(parent);
-                    }
                 }
                 match OpenOptions::new()
                     .read(true)
                     .write(true)
                     .create(true)
+                    .truncate(false)
                     .mode(0o600)
                     .open(db_path)
                 {
