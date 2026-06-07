@@ -10,7 +10,9 @@ struct CacheItem<T> {
     tags: Vec<String>,
 }
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static EVICTION_SEED: AtomicUsize = AtomicUsize::new(0);
 
 struct CacheValue<T> {
     val: T,
