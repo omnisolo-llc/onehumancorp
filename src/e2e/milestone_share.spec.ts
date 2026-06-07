@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Growth Loop: Milestone Viral Share', () => {
   test('User can share milestone and unlock reward', async ({ page }) => {

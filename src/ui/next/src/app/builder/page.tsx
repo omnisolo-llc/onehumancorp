@@ -26,6 +26,7 @@ export default function BuilderPage() {
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [startY, setStartY] = useState(0);
+  const [saveMessage, setSaveMessage] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
@@ -171,7 +172,7 @@ export default function BuilderPage() {
       if (response.ok) {
         const data = await response.json();
         setStatus("live");
-        setLiveUrl(`https://${data.domain || 'myshop'}.ohc.store`);
+        setLiveUrl(`/bio/${data.domain || 'myshop'}`);
       } else {
         console.error('Failed to publish');
       }
@@ -476,27 +477,36 @@ export default function BuilderPage() {
             <div className="bg-white/60 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
-<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
+<script src="/embed.js" data-store="${tenantId}"></script>
 <div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
+  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
 </div>`}
                 </pre>
                 <button
                     onClick={() => {
-                        const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
+                        const code = `<div id="ohc-embed-root"></div>\n<script src="/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
                         navigator.clipboard.writeText(code);
-                        alert("Copied embed code to clipboard!");
+                        setSaveMessage("Embed code copied.");
                     }}
                     className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
                 >
                     Copy
                 </button>
             </div>
+            {saveMessage && <p role="status" className="mt-2 text-xs font-semibold text-green-600">{saveMessage}</p>}
           </div>
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(liveUrl);
+                setSaveMessage("Live URL copied.");
+              }}
+              className="text-blue-600 font-semibold text-sm hover:underline shrink-0"
+            >
+              Copy
+            </button>
           </div>
 
           {/* Growth Loop 1: Acquisition (Get your first customer) */}
@@ -685,6 +695,7 @@ export default function BuilderPage() {
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 glassmorphism border-t border-white/40 dark:border-white/10 z-50">
           <div className="flex gap-3 mb-2">
+            <WithTooltip id="change-vibe-tooltip" defaultText="Change the theme and colors of your website.">
             <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px] inline-flex items-center justify-center gap-2">
               <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
                 <path d="M4 7h16" />
@@ -693,7 +704,9 @@ export default function BuilderPage() {
               </svg>
               <span>Change Vibe</span>
             </button>
+          </WithTooltip>
             {!isPremium && (
+              <WithTooltip id="remove-branding-tooltip" defaultText="Upgrade to Premium to remove OHC branding.">
               <button
                 className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px] inline-flex items-center justify-center gap-2"
                 onClick={() => setShowUpgradeModal(true)}
@@ -705,6 +718,7 @@ export default function BuilderPage() {
                 </svg>
                 <span>Remove Branding</span>
               </button>
+            </WithTooltip>
             )}
           </div>
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
@@ -780,9 +794,9 @@ export default function BuilderPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
       `}} />
     </div>

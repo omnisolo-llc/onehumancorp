@@ -44,7 +44,11 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
+<<<<<<< HEAD
+          className="fixed z-[100] bg-gray-900/80 text-white text-sm font-inter p-3 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-white/40 animate-fade-in-up"
+=======
           className="fixed z-[100] bg-white/70 text-gray-900 text-sm font-inter p-3 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.1)] pointer-events-none w-64 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-white/50 animate-fade-in-up"
+>>>>>>> 42ebd8a4 (Enhance help center and walkthrough components with premium glassmorphism and fix Next.js build errors)
           style={{
             top: tooltipRect.top - 10,
             left: tooltipRect.left + tooltipRect.width / 2,

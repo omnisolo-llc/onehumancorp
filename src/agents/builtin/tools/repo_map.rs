@@ -7,11 +7,11 @@ use once_cell::sync::Lazy;
 
 use super::{Tool, ToolExecutor};
 
-static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").unwrap());
-static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").unwrap());
-static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").unwrap());
-static GO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(func|type)\s+([a-zA-Z0-9_]+)").unwrap());
-static CPP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:virtual\s+|static\s+)?(?:[a-zA-Z0-9_:]+(?:<[^>]+>)?\s+)+(?:\*|&)?\s*([a-zA-Z0-9_:]+)\s*\([^\)]*\)\s*(?:const)?\s*(?:override)?\s*(?:;|\{)|class\s+([a-zA-Z0-9_]+)|struct\s+([a-zA-Z0-9_]+)").unwrap());
+static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
+static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
+static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
+static GO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(func|type)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
+static CPP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:virtual\s+|static\s+)?(?:[a-zA-Z0-9_:]+(?:<[^>]+>)?\s+)+(?:\*|&)?\s*([a-zA-Z0-9_:]+)\s*\([^\)]*\)\s*(?:const)?\s*(?:override)?\s*(?:;|\{)|class\s+([a-zA-Z0-9_]+)|struct\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
 
 /// SOTA Harness Pattern: Aider: RepoMap for large codebases.
 /// Generates a compact summary of the repository's architecture including file structure and basic symbol signatures.
@@ -177,36 +177,36 @@ mod tests {
 
     #[tokio::test]
     async fn test_repomap_generation() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should succeed in test");
         let root = dir.path();
 
         // Create a dummy structure
         let src_dir = root.join("src");
-        fs::create_dir(&src_dir).unwrap();
+        fs::create_dir(&src_dir).expect("should succeed in test");
 
         let rs_file = src_dir.join("main.rs");
-        fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").unwrap();
+        fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").expect("should succeed in test");
 
         let py_file = src_dir.join("utils.py");
-        fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").unwrap();
+        fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").expect("should succeed in test");
 
         let ts_file = src_dir.join("app.ts");
-        fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").unwrap();
+        fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").expect("should succeed in test");
 
         let go_file = src_dir.join("server.go");
-        fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").unwrap();
+        fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
 
         let cpp_file = src_dir.join("engine.cpp");
-        fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").unwrap();
+        fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");
 
         // Should ignore hidden and target
         let hidden_dir = root.join(".git");
-        fs::create_dir(&hidden_dir).unwrap();
+        fs::create_dir(&hidden_dir).expect("should succeed in test");
         let target_dir = root.join("target");
-        fs::create_dir(&target_dir).unwrap();
+        fs::create_dir(&target_dir).expect("should succeed in test");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
-        let result = executor.execute(json!({})).await.unwrap();
+        let result = executor.execute(json!({})).await.expect("should succeed in test");
 
         assert!(result.contains("RepoMap for"));
         assert!(result.contains("📁 src/"));
@@ -244,7 +244,7 @@ mod extra_tests {
 
     #[tokio::test]
     async fn test_repomap_path_traversal() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("should succeed in test");
         let root = dir.path();
         let executor = RepoMapExecutor::new(root.to_path_buf());
         let result = executor.execute(json!({"path": "../out_of_bounds"})).await;

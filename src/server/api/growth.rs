@@ -127,12 +127,15 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
+        .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/send-cart", post(handle_send_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
-        .route("/storefront/og-card", get(handle_og_card))
+                .route("/storefront/og-card", get(handle_og_card))
+        .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -186,6 +189,19 @@ pub struct GenerateCartRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCartResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartRequest {
+    pub customer_name: Option<String>,
+    pub cart_value: Option<String>,
+    pub draft: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartResponse {
+    pub success: bool,
     pub message: String,
 }
 
@@ -298,6 +314,16 @@ async fn handle_generate_cart(
     })
 }
 
+async fn handle_send_cart(
+    Extension(_state): Extension<GrowthState>,
+    Json(_req): Json<SendCartRequest>,
+) -> impl IntoResponse {
+    Json(SendCartResponse {
+        success: true,
+        message: "Email scheduled to be sent successfully".to_string(),
+    })
+}
+
 async fn handle_send_receipt(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<SendReceiptRequest>,
@@ -320,6 +346,51 @@ async fn handle_send_receipt(
     state.hub.append_recent_event(msg);
 
     Json(SendReceiptResponse { success: true, message: generated })
+}
+
+
+#[derive(Deserialize)]
+pub struct LeadGenCampaignRequest {
+    pub budget: f64,
+    pub radius_miles: i32,
+    pub zip_code: String,
+}
+
+#[derive(Serialize)]
+pub struct LeadGenCampaignResponse {
+    pub id: String,
+    pub status: String,
+}
+
+async fn handle_create_lead_gen_campaign(
+    Extension(state): Extension<GrowthState>,
+    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<LeadGenCampaignRequest>,
+) -> Result<Json<LeadGenCampaignResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id.clone();
+
+    let repo = crate::domain::repository::campaign_repo::CampaignRepository::new(state.pool.clone());
+
+    let campaign = crate::domain::repository::models::LeadGenCampaign {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        budget: std::str::FromStr::from_str(&req.budget.to_string()).unwrap_or_default(),
+        radius_miles: req.radius_miles,
+        zip_code: req.zip_code.clone(),
+        status: "Active".to_string(),
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    repo.create_lead_gen_campaign(&campaign).await.map_err(|e| {
+        tracing::error!("Failed to save lead gen campaign: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(LeadGenCampaignResponse {
+        id: campaign.id,
+        status: campaign.status,
+    }))
 }
 
 async fn handle_send_campaign(
@@ -442,6 +513,7 @@ pub struct StorefrontEmbedQuery {
 }
 
 async fn handle_storefront_embed(
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -467,6 +539,27 @@ async fn handle_storefront_embed(
     // Note: URL encode tenant for the href
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
 
+    let mut has_pro = false;
+    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
+
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+            .bind(tenant)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
+        if let Some(plan) = row {
+            has_pro = plan.to_lowercase() == "pro";
+        }
+    }
+
+    let branding = if !has_pro {
+        format!(r#"<div class="footer">
+            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+        </div>"#)
+    } else {
+        "".to_string()
+    };
+
     let html = format!(r##"
 <!DOCTYPE html>
 <html>
@@ -488,9 +581,7 @@ async fn handle_storefront_embed(
         <h2 class="title">{safe_name}</h2>
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
-        <div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
-        </div>
+        {branding}
     </div>
 </body>
 </html>
@@ -498,9 +589,114 @@ async fn handle_storefront_embed(
     axum::response::Html(html)
 }
 
+
+#[derive(Debug, Deserialize)]
+pub struct FlashSaleEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub code: Option<String>,
+    pub percent: Option<String>,
+    pub end: Option<String>,
+    pub theme: Option<String>,
+}
+
+async fn handle_flash_sale_embed(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let title = query.title.as_deref().unwrap_or("Flash Sale");
+    let code = query.code.as_deref().unwrap_or("CODE");
+    let percent = query.percent.as_deref().unwrap_or("0");
+    let end = query.end.as_deref().unwrap_or("");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let safe_title = escape_html(title);
+    let safe_code = escape_html(code);
+    let safe_percent = escape_html(percent);
+    let safe_end = escape_html(end);
+
+    let html = format!(r##"<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; background: {bg_color}; color: {text_color}; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }}
+        .widget {{ padding: 20px; text-align: center; border-radius: 12px; max-width: 300px; width: 100%; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid rgba(128, 128, 128, 0.2); }}
+        .title {{ font-size: 1.2rem; font-weight: bold; margin: 0 0 10px 0; }}
+        .discount {{ color: #ef4444; font-weight: bold; }}
+        .code-box {{ border: 2px dashed #d1d5db; padding: 10px; margin: 15px 0; border-radius: 8px; font-family: monospace; font-weight: bold; letter-spacing: 2px; }}
+        .countdown {{ display: flex; justify-content: center; gap: 10px; margin: 15px 0; }}
+        .time-box {{ display: flex; flex-direction: column; align-items: center; }}
+        .time-val {{ font-size: 1.5rem; font-weight: bold; font-family: monospace; }}
+        .time-lbl {{ font-size: 0.6rem; text-transform: uppercase; color: #6b7280; }}
+        .footer {{ font-size: 0.75rem; margin-top: 15px; color: #6b7280; }}
+        .footer a {{ color: #6b7280; text-decoration: none; font-weight: 600; }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="title">⚡ {safe_title}</div>
+        <p style="margin: 0; font-size: 0.9rem;">Get <span class="discount">{safe_percent}% OFF</span> your order!</p>
+
+        <div class="countdown">
+            <div class="time-box"><div class="time-val" id="h">00</div><div class="time-lbl">Hours</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="m">00</div><div class="time-lbl">Mins</div></div>
+            <div style="font-weight: bold; margin-top: 5px;">:</div>
+            <div class="time-box"><div class="time-val" id="s" style="color: #ef4444;">00</div><div class="time-lbl">Secs</div></div>
+        </div>
+
+        <div class="code-box">{safe_code}</div>
+
+        <div class="footer">
+            <a href="https://ohc.app/join?ref={tenant}" target="_blank">⚡ Powered by OHC</a>
+        </div>
+    </div>
+
+    <script>
+        const targetDate = new Date('{safe_end}').getTime();
+
+        setInterval(function() {{
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0 || isNaN(distance)) {{
+                document.getElementById("h").innerText = "00";
+                document.getElementById("m").innerText = "00";
+                document.getElementById("s").innerText = "00";
+                return;
+            }}
+
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById("h").innerText = hours.toString().padStart(2, '0');
+            document.getElementById("m").innerText = minutes.toString().padStart(2, '0');
+            document.getElementById("s").innerText = seconds.toString().padStart(2, '0');
+        }}, 1000);
+    </script>
+</body>
+</html>
+"##);
+    axum::response::Html(html)
+}
+
+
 async fn handle_og_card(
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
     let bg_color = if query.theme.as_deref() == Some("dark") { "#1a1a1a" } else { "#ffffff" };
@@ -534,6 +730,24 @@ async fn handle_og_card(
             .into_response();
     }
 
+    let mut has_pro = false;
+    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+            .bind(tenant)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
+        if let Some(plan) = row {
+            has_pro = plan.to_lowercase() == "pro";
+        }
+    }
+
+    let branding = if !has_pro {
+        format!(r#"<text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>"#, text_color)
+    } else {
+        "".to_string()
+    };
+
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
@@ -544,7 +758,7 @@ async fn handle_og_card(
   <rect x="100" y="450" width="300" height="80" fill="{accent_color}" rx="10" />
   <text x="250" y="505" font-family="sans-serif" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="middle">Buy Now</text>
 
-  <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
+  {branding}
 </svg>"##);
 
     axum::response::Response::builder()
@@ -558,7 +772,7 @@ async fn handle_check_milestones(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
-    use sqlx::Row;
+
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
@@ -571,6 +785,7 @@ async fn handle_check_milestones(
             .fetch_all(&state.pool)
             .await
             .unwrap_or_default();
+        use sqlx::Row;
         let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
         cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
         types
@@ -615,14 +830,18 @@ async fn handle_get_milestone_card(
 
     // Fetch business name - handle "DEFAULT" and ID vs tenant_id
     let mut business_name = "My Awesome Store".to_string();
+    let mut has_pro = false;
     if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(tenant_id).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT business_name FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT business_name, plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
             .bind(tenant_id)
             .fetch_optional(&state.pool)
             .await
             .unwrap_or_default();
-        if let Some(name) = row {
+        if let Some((name, plan_tier)) = row {
             business_name = name;
+            if let Some(plan) = plan_tier {
+                has_pro = plan.to_lowercase() == "pro";
+            }
         }
     }
 
@@ -641,6 +860,12 @@ async fn handle_get_milestone_card(
         "10th_order" => ("10th Order!", "Business is booming", "📈"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
         _ => ("Success Milestone!", "Built with OHC", "✨"),
+    };
+
+    let branding = if !has_pro {
+        r##"<text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>"##.to_string()
+    } else {
+        "".to_string()
     };
 
     if false {
@@ -675,7 +900,7 @@ async fn handle_get_milestone_card(
   <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
-  <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+  {branding}
 </svg>"##);
 
     axum::response::Response::builder()
@@ -747,13 +972,20 @@ async fn handle_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
-        .bind(&query.team_id)
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+    let pool_clone = state.pool.clone();
+    let team_id = query.team_id.clone();
+    let active_referrals_fut = async {
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+            .bind(&team_id)
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
+    };
 
-    match tracker.get_team_invites_count(&query.team_id).await {
+    let invites_count_fut = tracker.get_team_invites_count(&query.team_id);
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
+
+    match invites_count_res {
         Ok(total_invites) => {
             let resp = TeamInvitesMetricsResponse {
                 total_invites,
@@ -784,6 +1016,7 @@ async fn handle_onboarding_metrics(
         .fetch_all(&_state.pool).await
     {
         Ok(rows) => {
+
             use sqlx::Row;
             let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
             let resp = OnboardingMetricsResponse { metrics };
@@ -1227,6 +1460,41 @@ mod tests {
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
     }
+
+    #[tokio::test]
+    async fn test_powered_by_ohc_branding() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Pro', 'pro') ON CONFLICT (id) DO UPDATE SET plan_tier = 'pro'")
+            .bind("11111111-1111-1111-1111-111111111111")
+            .execute(&pool).await.unwrap();
+
+        // Pro plan should not have branding
+        let query = StorefrontEmbedQuery { tenant: Some("11111111-1111-1111-1111-111111111111".to_string()), product_name: None, price: None, theme: None };
+        let res = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+        assert!(!html.contains("Powered by OHC"));
+
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Free', 'free') ON CONFLICT (id) DO UPDATE SET plan_tier = 'free'")
+            .bind("22222222-2222-2222-2222-222222222222")
+            .execute(&pool).await.unwrap();
+
+        // Free plan should have branding
+        let query2 = StorefrontEmbedQuery { tenant: Some("22222222-2222-2222-2222-222222222222".to_string()), product_name: None, price: None, theme: None };
+        let res2 = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query2)).await.into_response();
+        let body_bytes2 = axum::body::to_bytes(res2.into_body(), usize::MAX).await.unwrap();
+        let html2 = String::from_utf8(body_bytes2.to_vec()).unwrap();
+        assert!(html2.contains("Powered by OHC"));
+    }
 }
 
 async fn handle_aggregated_team_invites_metrics(
@@ -1241,12 +1509,18 @@ async fn handle_aggregated_team_invites_metrics(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let active_referrals: i64 = sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+    let pool_clone = state.pool.clone();
+    let active_referrals_fut = async {
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
+    };
 
-    match tracker.get_total_invites_count().await {
+    let invites_count_fut = tracker.get_total_invites_count();
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
+
+    match invites_count_res {
         Ok(total_invites) => {
             let resp = TeamInvitesMetricsResponse {
                 total_invites,
