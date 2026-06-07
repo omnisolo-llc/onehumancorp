@@ -272,8 +272,23 @@ message SyncOfflineTransactionsResponse {
   repeated string failed_transaction_ids = 3;
 }
 
+message ProcessInStoreCheckoutRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  string client_id = 5;
+}
+
+message ProcessInStoreCheckoutResponse {
+  bool success = 1;
+  string transaction_id = 2;
+  string message = 3;
+}
+
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+  rpc ProcessInStoreCheckout(ProcessInStoreCheckoutRequest) returns (ProcessInStoreCheckoutResponse);
 }
 
 message SyncCalendarRequest {
