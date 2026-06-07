@@ -634,7 +634,7 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<crate::integrations::shippo::client::ShippoRate>, String> {
+    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -649,7 +649,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn purchase_label(&self, integration_id: &str, rate_id: &str) -> Result<crate::integrations::shippo::client::PurchaseLabelResponse, String> {
+    pub async fn purchase_label(&self, integration_id: &str, rate_id: &str) -> Result<String, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -796,16 +796,11 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
-        let resend_client = {
-            if integration_id == "resend" {
-                let clients = self.resend_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
+        if integration_id == "resend" {
+            let clients = self.resend_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
             }
-        };
-        if let Some(c) = resend_client {
-            return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
         }
 
         let client = {

@@ -1,2 +1,1 @@
 Miser Cost Feature verified
-Verified UI and backend implementation

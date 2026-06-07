@@ -19,8 +19,6 @@ export default function AgentsPage() {
  const [workflowLoading, setWorkflowLoading] = useState(false);
  const [loading, setLoading] = useState(false);
  const [actionLoading, setActionLoading] = useState<string | null>(null);
- const [selectedDepartment, setSelectedDepartment] = useState('operations');
- const [teamMessage, setTeamMessage] = useState('Operations agent is active and running.');
 
  const fetchFeed = async () => {
  setFeedLoading(true);
@@ -66,29 +64,6 @@ export default function AgentsPage() {
  fetchApprovals();
  fetchFeed();
  fetchWorkflows();
- }, []);
-
- useEffect(() => {
- if (typeof EventSource === 'undefined') return;
-
- const events = new EventSource('/api/agents/events');
- events.onmessage = (event) => {
- try {
- const item = JSON.parse(event.data);
- if (!item?.id || !item?.description) return;
- setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
- if (String(item.status || '').toLowerCase().includes('draft')) {
- setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
- }
- } catch (e) {
- console.error('Failed to parse agent event:', e);
- }
- };
- events.onerror = () => {
- events.close();
- };
-
- return () => events.close();
  }, []);
 
  const createWorkflow = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -165,14 +140,12 @@ export default function AgentsPage() {
  {/* Header */}
  <header className="px-5 pt-8 pb-4 sticky top-0 z-20 border-b bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40">
  <div className="flex justify-between items-center mb-4">
- <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-400 hover:text-gray-600">
+ <Link href="/dashboard" className="text-gray-400 hover:text-gray-600">
  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
  </Link>
  <div className="flex items-center gap-2">
  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pro Mode</span>
  <button
- aria-label="Toggle Pro Mode"
- aria-pressed={showAdvanced}
  onClick={() => {
  if (!hasPro && !showAdvanced) {
  setShowSoftPaywall(true);
@@ -193,35 +166,36 @@ export default function AgentsPage() {
  {/* Tabs */}
  <div className="flex border-b border-gray-100">
  <button
- aria-pressed={activeTab === 'departments'}
  onClick={() => setActiveTab('departments')}
  className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'departments' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
 >
  My Team
  </button>
  <button
- aria-pressed={activeTab === 'workflows'}
  onClick={() => setActiveTab('workflows')}
  className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'workflows' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
 >
  Workflows
  </button>
  <button
-                aria-pressed={activeTab === 'feed'}
                 onClick={() => setActiveTab('feed')}
                 className={`pb-4 px-2 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'feed' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
               >
                 Activity Feed
               </button>
               <button
-                aria-pressed={activeTab === 'automations'}
+                onClick={() => setActiveTab('automations')}
+                className={`pb-4 px-2 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'automations' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                Automations
+              </button>
+              <button
                 onClick={() => setActiveTab('automations')}
                 className={`pb-4 px-2 text-sm font-bold uppercase tracking-wide transition-colors ${activeTab === 'automations' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
               >
                 Automations
               </button>
  <button
- aria-pressed={activeTab === 'approvals'}
  onClick={() => setActiveTab('approvals')}
  className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'approvals' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
 >
@@ -263,20 +237,10 @@ export default function AgentsPage() {
  )}
  {activeTab === 'departments' ? (
  <div className="space-y-4">
- {teamMessage && (
- <div className="rounded-[16px] border border-indigo-100 bg-indigo-50 p-4 text-sm font-semibold text-indigo-800" role="status">
- {teamMessage}
- </div>
- )}
  {departments.map((dept) => (
  <button
  type="button"
  key={dept.id}
- aria-pressed={selectedDepartment === dept.id}
- onClick={() => {
- setSelectedDepartment(dept.id);
- setTeamMessage(`${dept.name} is selected. ${dept.description}`);
- }}
  className="w-full text-left shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
 >
  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
@@ -299,16 +263,7 @@ export default function AgentsPage() {
  </div>
  </button>
  ))}
- <button
- type="button"
- onClick={() => {
- setActiveTab('workflows');
- setWorkflowName('Hire agent');
- setWorkflowTask('Create a hiring plan for a new AI department agent and list the first tasks it should own.');
- setTeamMessage('Hire Agent opened the workflow builder.');
- }}
- className="w-full rounded-[16px] border border-indigo-200 bg-indigo-50 p-4 text-left font-bold text-indigo-700"
->
+ <button type="button" className="w-full rounded-[16px] border border-indigo-200 bg-indigo-50 p-4 text-left font-bold text-indigo-700">
  Hire Agent
  </button>
  <div className="rounded-[16px] border border-gray-100 bg-white/65 p-4 text-sm text-gray-700">

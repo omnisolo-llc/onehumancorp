@@ -5608,7 +5608,6 @@ dependencies = [
  "server_integrations_resend",
  "server_integrations_restic",
  "server_integrations_sendgrid",
- "server_integrations_shipday",
  "server_integrations_shipengine",
  "server_integrations_shippo",
  "server_integrations_stripe",
@@ -8833,17 +8832,6 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
-]
-
-[[package]]
-name = "server_integrations_shipday"
-version = "0.1.0"
-dependencies = [
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "server_integrations_core",
- "tokio",
 ]
 
 [[package]]
