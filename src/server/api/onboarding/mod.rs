@@ -37,8 +37,10 @@ async fn process_intake_handler(
             Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
                 business_name: {
                     let desc = payload.description.trim();
-                    if desc.len() > 30 {
-                        format!("{}...", &desc[..27])
+                    let char_count = desc.chars().count();
+                    if char_count > 30 {
+                        let truncated: String = desc.chars().take(27).collect();
+                        format!("{}...", truncated)
                     } else {
                         desc.to_string()
                     }
