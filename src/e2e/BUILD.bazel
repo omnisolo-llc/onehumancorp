@@ -40,6 +40,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/referrals.spec.ts",
     "//src/ui/next:e2e/social-proof-nudge.spec.ts",
     "//src/ui/next:e2e/storefront_v2.spec.ts",
+    "//src/ui/next:e2e/test-help.spec.ts",
 ]
 
 _ROOT_UI_E2E_SPECS = [

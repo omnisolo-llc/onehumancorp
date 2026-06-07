@@ -18,9 +18,7 @@ ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier)
-VALUES
-  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter'),
-  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro')
+VALUES ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
@@ -48,17 +46,6 @@ VALUES
     ARRAY['OPERATOR'],
     TRUE,
     'e2e-tenant',
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP
-  ),
-  (
-    'e2e-unlimited-admin-user',
-    'pro@example.com',
-    'pro@example.com',
-    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
-    ARRAY['ADMIN'],
-    TRUE,
-    'e2e-tenant-unlimited',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   )

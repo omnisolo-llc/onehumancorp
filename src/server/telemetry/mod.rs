@@ -1169,9 +1169,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("salary")
         || k.contains("tax")
         || k.contains("social_security")
-        || k.contains("ip_address")
-        || k.contains("mac_address")
-        || k.contains("credit_card")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1230,12 +1227,11 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = (size_bytes as f64 * 0.00000001) as f32;
     buffer_metric(
         pool,
         "ohc_storage_rw_cost",
         "counter",
-        cost_cents,
+        size_bytes as f32,
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,

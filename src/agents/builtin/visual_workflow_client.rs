@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use crate::visual_workflow::{WorkflowGraph, WorkflowExecutor};
 use crate::agent::{Agent, AgentRunConfig};
+use crate::llm::LlmClient;
 
 /// HTTP Server AppState
 pub struct VisualWorkflowState {
@@ -77,7 +78,7 @@ mod tests {
 
     struct MockVisualClientLlm;
     #[async_trait::async_trait]
-    impl crate::llm::LlmClient for MockVisualClientLlm {
+    impl LlmClient for MockVisualClientLlm {
         async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let last_user = req.messages.last().unwrap().content.clone();
             Ok(ChatResponse {

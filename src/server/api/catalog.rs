@@ -14,21 +14,6 @@ use crate::utils::cache::HybridCache;
 
 pub static CATALOG_CACHE: OnceLock<HybridCache<i64>> = OnceLock::new();
 
-
-#[derive(Deserialize)]
-pub struct GenerateOfferingRequest {
-    pub prompt: String,
-}
-
-#[derive(Serialize)]
-pub struct GenerateOfferingResponse {
-    pub title: String,
-    pub description: String,
-    pub price: String,
-    pub item_type: String,
-    pub is_subscription: bool,
-}
-
 #[derive(Deserialize)]
 pub struct CreateProductRequest {
     pub name: String,
@@ -237,56 +222,8 @@ async fn handle_create_product(
         .into_response()
 }
 
-
-async fn handle_generate_offering(
-    Json(payload): Json<GenerateOfferingRequest>,
-) -> impl IntoResponse {
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let prompt = format!(
-        "Extract the product or service offering details from the following text:\n\n'{}'\n\nOutput ONLY a raw JSON object (do not wrap in markdown or backticks) matching this exact schema: {{\"title\": \"string\", \"description\": \"string\", \"price\": \"string\", \"item_type\": \"string (either Product or Service)\", \"is_subscription\": \"boolean\"}}. Suggest an appropriate market price if none is provided.",
-        payload.prompt
-    );
-
-    let client = crate::minimax::MinimaxClient::new(api_key);
-    let mut response_json = GenerateOfferingResponse {
-        title: "Generated Offering".to_string(),
-        description: "AI description".to_string(),
-        price: "10.00".to_string(),
-        item_type: "Service".to_string(),
-        is_subscription: false,
-    };
-
-    if let Ok(reasoned) = client.reason(&prompt).await {
-        let cleaned = reasoned.replace("", "").trim().to_string();
-        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&cleaned) {
-            if let Some(title) = parsed.get("title").and_then(|v| v.as_str()) {
-                response_json.title = title.to_string();
-            }
-            if let Some(description) = parsed.get("description").and_then(|v| v.as_str()) {
-                response_json.description = description.to_string();
-            }
-            if let Some(price) = parsed.get("price").and_then(|v| v.as_str()) {
-                response_json.price = price.to_string();
-            } else if let Some(price) = parsed.get("price").and_then(|v| v.as_f64()) {
-                response_json.price = format!("{:.2}", price);
-            }
-            if let Some(item_type) = parsed.get("item_type").and_then(|v| v.as_str()) {
-                response_json.item_type = item_type.to_string();
-            }
-            if let Some(is_sub) = parsed.get("is_subscription").and_then(|v| v.as_bool()) {
-                response_json.is_subscription = is_sub;
-            }
-        } else {
-             tracing::warn!("Failed to parse LLM JSON: {}", cleaned);
-        }
-    }
-
-    (axum::http::StatusCode::OK, Json(response_json)).into_response()
-}
-
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
-        .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
 }

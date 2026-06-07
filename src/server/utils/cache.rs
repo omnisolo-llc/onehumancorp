@@ -9,9 +9,7 @@ struct CacheItem<T> {
     tags: Vec<String>,
 }
 
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-static EVICTION_SEED: AtomicUsize = AtomicUsize::new(0);
+use std::sync::atomic::Ordering;
 
 struct CacheValue<T> {
     val: T,
@@ -151,10 +149,12 @@ where
                 if guard.len() >= self.max_local_capacity {
                     // Random sample 5 keys and evict the one with lowest access count.
                     // This avoids O(N) iteration while providing reasonable eviction quality.
-                    let offset = EVICTION_SEED.fetch_add(7, Ordering::Relaxed) % guard.len();
                     let mut sampled_keys = Vec::new();
-                    for (k, entry) in guard.iter().skip(offset).chain(guard.iter()).take(5) {
+                    for (k, entry) in guard.iter() {
                         sampled_keys.push((k.clone(), entry.access_count.load(Ordering::Relaxed)));
+                        if sampled_keys.len() >= 5 {
+                            break;
+                        }
                     }
 
                     if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {

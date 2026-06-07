@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { POST } from "./route";
 
-const mockBackendUrl = "http://127.0.0.1:18789";
+const mockBackendUrl = "http://localhost:8080";
 
 // Mock the global fetch
 global.fetch = vi.fn();

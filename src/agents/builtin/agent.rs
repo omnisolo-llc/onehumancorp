@@ -704,45 +704,6 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
                     }
                 }
-                let mut verification_manager = crate::verification_loops::VerificationManager::new();
-                if cfg.enable_computational_guides && !cfg.computational_guide_command.is_empty() {
-                    verification_manager.add_computational(std::sync::Arc::new(crate::verification_loops::BashComputationalGuide { command: cfg.computational_guide_command.clone(), workspace_path: cfg.workspace_path.clone() }));
-                }
-                if cfg.enable_visual_verification {
-                    if cfg.visual_verification_command == "playwright" {
-                        verification_manager.add_visual(std::sync::Arc::new(crate::verification_loops::PlaywrightVisualVerifier));
-                    } else if !cfg.visual_verification_command.is_empty() {
-                        verification_manager.add_visual(std::sync::Arc::new(crate::verification_loops::BashVisualVerifier { command: cfg.visual_verification_command.clone(), workspace_path: cfg.workspace_path.clone() }));
-                    }
-                }
-                if cfg.enable_llm_judge {
-                    verification_manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
-                        llm: self.llm.clone(),
-                        model: cfg.model.clone(),
-                        criteria: Some(format!(
-                            "correctness, completeness, and strict adherence to these instructions: {}",
-                            cfg.developer_instructions
-                        )),
-                        confidence_threshold: cfg.confidence_threshold,
-                    }));
-                }
-
-                let current_context = serde_json::to_string(&messages).unwrap_or_default();
-                if let Err(e) = verification_manager.run_computational_guides(&msg.content, &current_context).await {
-                    messages.push(crate::types::Message::user(e));
-                    continue;
-                }
-                if let Err(e) = verification_manager.run_visual_verifiers(&msg.content).await {
-                    messages.push(crate::types::Message::user(e));
-                    continue;
-                }
-                if let Err(e) = verification_manager.run_inferential_sensors(&msg.content, initial_message).await {
-                    messages.push(crate::types::Message::user(format!(
-                        "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
-                        e
-                    )));
-                    continue;
-                }
                 if let Some(store) = &self.memory_store {
                     let _ = store.store_session_message(&cfg.agent_id, "assistant", &msg.content).await;
                 }
@@ -1582,20 +1543,6 @@ impl Agent {
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
                             // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                             let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                            let error_result = crate::types::ToolResult {
-                                tool_call_id: current_tc.id.clone(),
-                                content: String::new(),
-                                error: self_correct_msg.clone(),
-                            };
-                            let _msg_to_push = crate::types::Message {
-                                role: crate::types::Role::Tool,
-                                content: String::new(),
-                                tool_calls: vec![],
-                                tool_results: vec![error_result],
-                                response_id: None,
-                                previous_response_id: None,
-                            };
-                            // NOTE: run_workflow context
                             break Ok(self_correct_msg);
                         }
                         Err(e) => {
@@ -1677,19 +1624,6 @@ impl Agent {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                        let error_result = crate::types::ToolResult {
-                            tool_call_id: current_tc.id.clone(),
-                            content: String::new(),
-                            error: self_correct_msg.clone(),
-                        };
-                        let _msg_to_push = crate::types::Message {
-                            role: crate::types::Role::Tool,
-                            content: String::new(),
-                            tool_calls: vec![],
-                            tool_results: vec![error_result],
-                            response_id: None,
-                            previous_response_id: None,
-                        };
                         break self_correct_msg;
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -2752,20 +2686,11 @@ impl Agent {
                             result: self_correct_msg.clone(),
                             iteration,
                         });
-                        let error_result = ToolResult {
+                        tool_results[idx] = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: self_correct_msg.clone(),
+                            error: self_correct_msg,
                         };
-                        let _msg_to_push = Message {
-                            role: Role::Tool,
-                            content: String::new(),
-                            tool_calls: vec![],
-                            tool_results: vec![error_result.clone()],
-                            response_id: None,
-                            previous_response_id: None,
-                        };
-                        tool_results[idx] = error_result;
                     }
                     Err(ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
@@ -2954,19 +2879,6 @@ impl Agent {
                                 result: self_correct_msg.clone(),
                                 iteration,
                             });
-                            let error_result = ToolResult {
-                                tool_call_id: tc.id.clone(),
-                                content: String::new(),
-                                error: self_correct_msg.clone(),
-                            };
-                            let _msg_to_push = Message {
-                                role: Role::Tool,
-                                content: String::new(),
-                                tool_calls: vec![],
-                                tool_results: vec![error_result],
-                                response_id: None,
-                                previous_response_id: None,
-                            };
                             error = self_correct_msg;
                             content = String::new();
                             break;
@@ -3480,7 +3392,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_to_end_pydantic_self_correction_loop() {
 
-        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role};
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role, ToolResult};
         use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
@@ -5043,7 +4955,7 @@ mod tests {
     use serde_json::Value;
 
     struct MockLlmClient {
-        pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+        responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
     }
 
     #[async_trait::async_trait]
@@ -6971,7 +6883,7 @@ mod stream_tests {
     use std::sync::Arc;
 
     struct StreamMockLlmClient {
-        pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+        responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
     }
 
     #[async_trait::async_trait]
@@ -7391,7 +7303,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_tools_read_only_concurrent_mutating_serial() {
         struct MockLlmClientTools {
-            pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+            responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
         }
 
         #[async_trait::async_trait]
@@ -7850,6 +7762,7 @@ mod tao_tests {
 }
 #[cfg(test)]
 mod guardrail_tests {
+    use crate::tools::ToolExecutor;
     use super::*;
     use crate::guardrails::{GuardrailRegistry, InputGuardrail, OutputGuardrail, ToolGuardrail};
     use crate::types::{ChatResponse, Message, Role, ToolCall, Usage};
@@ -8017,6 +7930,7 @@ mod guardrail_tests {
 
 #[cfg(test)]
 mod sona_pattern_tests {
+    use crate::tools::ToolExecutor;
     use super::*;
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -8139,7 +8053,7 @@ mod sona_pattern_tests {
 
 #[tokio::test]
 async fn test_anthropic_3_stage_gating_end_to_end() {
-    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, Message};
+    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError, Message};
 
     struct HighRiskLlmClient;
     #[async_trait::async_trait]
@@ -8191,124 +8105,4 @@ async fn test_anthropic_3_stage_gating_end_to_end() {
     let err_str = result.unwrap_err().to_string();
     assert!(err_str.contains("USER_FIXABLE") || err_str.contains("User intervention required") || err_str.contains("Confirmation") || err_str.contains("Stage 3"));
 }
-}
-
-
-
-
-
-
-
-
-#[cfg(test)]
-mod e2e_verification_tests {
-    use crate::agent::{Agent, AgentRunConfig};
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
-
-    struct EndToEndJudgeMockLlm {
-        pub responses: Mutex<Vec<ChatResponse>>,
-    }
-
-    #[async_trait::async_trait]
-    impl crate::llm::LlmClient for EndToEndJudgeMockLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let mut resps = self.responses.lock().await;
-            if !resps.is_empty() {
-                Ok(resps.remove(0))
-            } else {
-                Ok(ChatResponse {
-                    message: Message::assistant("Done"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                })
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_tao_verification_loop_retry() {
-        let llm = Arc::new(EndToEndJudgeMockLlm {
-            responses: Mutex::new(vec![
-                // 1. Initial agent response (bad answer)
-                ChatResponse {
-                    message: Message::assistant("Bad initial answer."),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                },
-                // 2. Verification Loop LLM Judge rejects it
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_judge_reject".to_string(),
-                            name: "structured_output".to_string(),
-                            arguments: serde_json::json!({
-                                "data": {
-                                    "status": "REJECT",
-                                    "reason": "It is bad.",
-                                    "confidence": 0.95,
-                                    "missing_elements": ["goodness"],
-                                    "suggested_fixes": ["make it good"]
-                                }
-                            })
-                        }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                },
-                // 3. Agent retry response (corrected answer)
-                ChatResponse {
-                    message: Message::assistant("Corrected answer."),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: None,
-                },
-                // 4. Verification Loop LLM Judge approves it
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_judge_approve".to_string(),
-                            name: "structured_output".to_string(),
-                            arguments: serde_json::json!({
-                                "data": {
-                                    "status": "APPROVE",
-                                    "reason": "It is good.",
-                                    "confidence": 0.95,
-                                    "missing_elements": [],
-                                    "suggested_fixes": []
-                                }
-                            })
-                        }],
-                        tool_results: vec![],
-                        response_id: None,
-                        previous_response_id: None,
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                    response_id: None,
-                }
-            ]),
-        });
-
-        let agent = Agent::new(llm as Arc<dyn crate::llm::LlmClient>, vec![]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.max_iterations = 5;
-        cfg.enable_llm_judge = true; // Enables Verification Loops
-
-        let mut events = vec![];
-        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), "Corrected answer.");
-    }
 }

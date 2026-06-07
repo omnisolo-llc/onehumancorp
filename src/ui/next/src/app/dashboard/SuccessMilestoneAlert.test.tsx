@@ -18,7 +18,7 @@ beforeEach(() => {
 test('renders empty state initially or when not reached', async () => {
   fetchMock.mockResolvedValueOnce({
     ok: true,
-    json: () => Promise.resolve({ milestones: [] })
+    json: () => Promise.resolve({ reached: false })
   });
 
   const { container } = render(<SuccessMilestoneAlert />);
@@ -30,23 +30,13 @@ test('renders empty state initially or when not reached', async () => {
 test('renders alert when reached', async () => {
   fetchMock.mockResolvedValueOnce({
     ok: true,
-    json: () => Promise.resolve({
-      milestones: [
-        {
-          id: 'first_order',
-          title: 'First Order!',
-          description: 'You completed your first order!',
-          reached: true
-        }
-      ]
-    })
+    json: () => Promise.resolve({ reached: true, type: 'first_order', message: 'You completed your first order!' })
   });
 
   render(<SuccessMilestoneAlert />);
 
   await waitFor(() => {
     expect(screen.getByTestId('success-milestone-alert')).toBeInTheDocument();
-    expect(screen.getByText('First Order!')).toBeInTheDocument();
     expect(screen.getByText('You completed your first order!')).toBeInTheDocument();
   });
 });
