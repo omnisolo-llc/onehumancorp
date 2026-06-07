@@ -50,7 +50,7 @@ pub async fn compact_context(
 
         let summary_req = ChatRequest {
             model: model.to_string(),
-            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
+            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. KEEP exact IDs of critical resources created or discovered. BE CONCISE, returning only the summary.".to_string(),
             messages: vec![Message::user(format!("Compact this conversation:\n{}", middle_text))],
             tools: vec![],
             max_tokens: 2000,
