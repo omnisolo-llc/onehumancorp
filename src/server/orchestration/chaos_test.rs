@@ -573,3 +573,333 @@ mod chaos_tests {
         assert_eq!(res.unwrap().len(), 0);
     }
 }
+
+    #[tokio::test]
+    async fn test_mesh_lock_time_parity() {
+        use ohc_builtin_agent::mesh::transport::{PgTransport, SqliteTransport, MeshTransport};
+        use std::sync::Arc;
+        use rand::Rng;
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(5)
+            .connect("postgres://postgres:postgres@localhost:5432/test")
+            .await
+            .unwrap();
+
+        let pg_transport: Arc<dyn MeshTransport> = Arc::new(PgTransport::new("postgres://postgres:postgres@localhost:5432/test").await.unwrap());
+
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:?cache=shared")
+            .await
+            .unwrap();
+
+        let sqlite_transport: Arc<dyn MeshTransport> = Arc::new(SqliteTransport::new(sqlite_pool.clone()).await.unwrap());
+
+        let transports: Vec<(&str, Arc<dyn MeshTransport>, Arc<crate::db::DB>)> = vec![
+            ("postgres", pg_transport.clone(), Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres })),
+            ("sqlite", sqlite_transport.clone(), Arc::new(crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(sqlite_pool.clone()) })),
+        ];
+
+        let run_id: u32 = rand::thread_rng().gen();
+
+        for (name, transport, db) in transports {
+            let resource = format!("test_parity_lock_{}_{}", name, run_id);
+
+            // 1. Basic TTL Expiry
+            let acq = transport.acquire_lock(&resource, "owner1", 1).await.unwrap();
+            assert!(acq, "{} failed to acquire initial lock", name);
+
+            let acq_fail = transport.acquire_lock(&resource, "owner2", 1).await.unwrap();
+            assert!(!acq_fail, "{} acquired locked resource", name);
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+            let acq_after = transport.acquire_lock(&resource, "owner3", 1).await.unwrap();
+            assert!(acq_after, "{} failed to acquire after TTL expiry", name);
+
+            // 2. Heartbeat (same owner extending TTL)
+            let acq_heartbeat = transport.acquire_lock(&resource, "owner3", 2).await.unwrap();
+            assert!(acq_heartbeat, "{} failed heartbeat extension", name);
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+            let acq_fail_heartbeat = transport.acquire_lock(&resource, "owner4", 1).await.unwrap();
+            assert!(!acq_fail_heartbeat, "{} heartbeat was not respected", name);
+
+            transport.release_lock(&resource, "owner3").await.unwrap();
+
+            // 3. Stale-lock reclamation (edge case timestamps)
+            // We manually insert edge cases into the DB to see how acquire_lock's DELETE/UPDATE handles them
+            let edge_cases = vec![
+                ("1969-12-31 23:59:59Z", "pre_epoch"),
+                ("2024-12-31 23:59:59Z", "near_midnight"),
+                ("2024-03-10 01:59:59Z", "dst_boundary"), // US Spring Forward
+                ("2024-10-23 15:00:00.123456Z", "sub_second"),
+            ];
+
+            for (ts, case_name) in edge_cases {
+                let res_edge = format!("{}_{}", resource, case_name);
+                if name == "postgres" {
+                    let result = sqlx::query("INSERT INTO mesh_locks (resource, owner, expires_at) VALUES ($1, $2, $3::timestamptz)")
+                        .bind(&res_edge).bind("stale_owner").bind(ts).execute(&db.pool).await;
+                    assert!(result.is_ok(), "Postgres failed to insert edge case {}: {}", case_name, ts);
+                } else {
+                    if let crate::db::DbStore::Sqlite(sqlite_pool) = &db.store {
+        let pg_transport: Arc<dyn MeshTransport> = Arc::new(PgTransport::new("postgres://postgres:postgres@localhost:5432/test").await.unwrap());
+
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:?cache=shared")
+            .await
+            .unwrap();
+
+        let sqlite_transport: Arc<dyn MeshTransport> = Arc::new(SqliteTransport::new(sqlite_pool.clone()).await.unwrap());
+
+        let transports: Vec<(&str, Arc<dyn MeshTransport>, Arc<crate::db::DB>)> = vec![
+            ("postgres", pg_transport.clone(), Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres })),
+            ("sqlite", sqlite_transport.clone(), Arc::new(crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(sqlite_pool.clone()) })),
+        ];
+
+        let run_id: u32 = rand::thread_rng().gen();
+
+        for (name, transport, db) in transports {
+            let resource = format!("test_parity_lock_{}_{}", name, run_id);
+
+            // 1. Basic TTL Expiry
+            let acq = transport.acquire_lock(&resource, "owner1", 1).await.unwrap();
+            assert!(acq, "{} failed to acquire initial lock", name);
+
+            let acq_fail = transport.acquire_lock(&resource, "owner2", 1).await.unwrap();
+            assert!(!acq_fail, "{} acquired locked resource", name);
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+            let acq_after = transport.acquire_lock(&resource, "owner3", 1).await.unwrap();
+            assert!(acq_after, "{} failed to acquire after TTL expiry", name);
+
+            // 2. Heartbeat (same owner extending TTL)
+            let acq_heartbeat = transport.acquire_lock(&resource, "owner3", 2).await.unwrap();
+            assert!(acq_heartbeat, "{} failed heartbeat extension", name);
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+            let acq_fail_heartbeat = transport.acquire_lock(&resource, "owner4", 1).await.unwrap();
+            assert!(!acq_fail_heartbeat, "{} heartbeat was not respected", name);
+
+            transport.release_lock(&resource, "owner3").await.unwrap();
+
+            // 3. Stale-lock reclamation (edge case timestamps)
+            // We manually insert edge cases into the DB to see how acquire_lock's DELETE/UPDATE handles them
+            let edge_cases = vec![
+                ("1969-12-31 23:59:59Z", "pre_epoch"),
+                ("2024-12-31 23:59:59Z", "near_midnight"),
+                ("2024-03-10 01:59:59Z", "dst_boundary"), // US Spring Forward
+                ("2024-10-23 15:00:00.123456Z", "sub_second"),
+            ];
+
+            for (ts, case_name) in edge_cases {
+                let res_edge = format!("{}_{}", resource, case_name);
+                if name == "postgres" {
+                    let result = sqlx::query("INSERT INTO mesh_locks (resource, owner, expires_at) VALUES ($1, $2, $3::timestamptz)")
+                        .bind(&res_edge).bind("stale_owner").bind(ts).execute(&db.pool).await;
+                    assert!(result.is_ok(), "Postgres failed to insert edge case {}: {}", case_name, ts);
+                } else {
+                    if let crate::db::DbStore::Sqlite(sqlite_pool) = &db.store {
+                        // SQLite datetime() doesn't handle trailing Z or sub-second.
+                        // Convert the string to match SQLite's expected format (YYYY-MM-DD HH:MM:SS) if possible
+                        let sqlite_ts = ts.replace("Z", "").split('.').next().unwrap().to_string();
+                        let result = sqlx::query("INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime(?))")
+                            .bind(&res_edge).bind("stale_owner").bind(&sqlite_ts)
+                            .execute(sqlite_pool).await;
+                        assert!(result.is_ok(), "SQLite failed to insert edge case {}: {}", case_name, sqlite_ts);
+                    }
+                }
+
+                // This should succeed because the inserted timestamps are in the past
+                let acq_stale = transport.acquire_lock(&res_edge, "new_owner", 1).await.unwrap();
+                assert!(acq_stale, "{} failed to reclaim stale lock for case: {}", name, case_name);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_in_process_transport_fallback() {
+        use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+        use std::sync::Arc;
+
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let resource = "test_inprocess_fallback";
+
+        // 1. Basic TTL Expiry
+        let acq = transport.acquire_lock(&resource, "owner1", 1).await.unwrap();
+        assert!(acq, "InProcess failed to acquire initial lock");
+
+        let acq_fail = transport.acquire_lock(&resource, "owner2", 1).await.unwrap();
+        assert!(!acq_fail, "InProcess acquired locked resource");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+        let acq_after = transport.acquire_lock(&resource, "owner3", 1).await.unwrap();
+        assert!(acq_after, "InProcess failed to acquire after TTL expiry");
+
+        // 2. Heartbeat (same owner extending TTL)
+        let acq_heartbeat = transport.acquire_lock(&resource, "owner3", 2).await.unwrap();
+        assert!(acq_heartbeat, "InProcess failed heartbeat extension");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+        let acq_fail_heartbeat = transport.acquire_lock(&resource, "owner4", 1).await.unwrap();
+        assert!(!acq_fail_heartbeat, "InProcess heartbeat was not respected");
+
+        transport.release_lock(&resource, "owner3").await.unwrap();
+
+        // 3. Re-acquire after release
+        let acq_after_release = transport.acquire_lock(&resource, "owner5", 1).await.unwrap();
+        assert!(acq_after_release, "InProcess failed to acquire after release");
+
+        // Presence and Agents logic
+        transport.register_presence("agent1", "active", 1).await.unwrap();
+        let agents = transport.get_active_agents().await.unwrap();
+        assert_eq!(agents.len(), 1, "InProcess presence registration failed");
+        assert_eq!(agents[0].0, "agent1");
+        assert_eq!(agents[0].1, "active");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+        let agents_after_expiry = transport.get_active_agents().await.unwrap();
+        assert_eq!(agents_after_expiry.len(), 0, "InProcess presence TTL expiry failed");
+    }
+    #[tokio::test]
+    async fn test_mesh_lock_time_parity() {
+        use ohc_builtin_agent::mesh::transport::{PgTransport, SqliteTransport, MeshTransport};
+        use std::sync::Arc;
+        use rand::Rng;
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost:5432/test")
+            .await
+            .unwrap();
+        let pg_transport: Arc<dyn MeshTransport> = Arc::new(PgTransport::new("postgres://postgres:postgres@localhost:5432/test").await.unwrap());
+
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:?cache=shared")
+            .await
+            .unwrap();
+
+        let sqlite_transport: Arc<dyn MeshTransport> = Arc::new(SqliteTransport::new(sqlite_pool.clone()).await.unwrap());
+
+        let transports: Vec<(&str, Arc<dyn MeshTransport>, Arc<crate::db::DB>)> = vec![
+            ("postgres", pg_transport.clone(), Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres })),
+            ("sqlite", sqlite_transport.clone(), Arc::new(crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(sqlite_pool.clone()) })),
+        ];
+
+        let run_id: u32 = rand::thread_rng().gen();
+
+        for (name, transport, db) in transports {
+            let resource = format!("test_parity_lock_{}_{}", name, run_id);
+
+            // 1. Basic TTL Expiry
+            let acq = transport.acquire_lock(&resource, "owner1", 1).await.unwrap();
+            assert!(acq, "{} failed to acquire initial lock", name);
+
+            let acq_fail = transport.acquire_lock(&resource, "owner2", 1).await.unwrap();
+            assert!(!acq_fail, "{} acquired locked resource", name);
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+            let acq_after = transport.acquire_lock(&resource, "owner3", 1).await.unwrap();
+            assert!(acq_after, "{} failed to acquire after TTL expiry", name);
+
+            // 2. Heartbeat (same owner extending TTL)
+            let acq_heartbeat = transport.acquire_lock(&resource, "owner3", 2).await.unwrap();
+            assert!(acq_heartbeat, "{} failed heartbeat extension", name);
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+            let acq_fail_heartbeat = transport.acquire_lock(&resource, "owner4", 1).await.unwrap();
+            assert!(!acq_fail_heartbeat, "{} heartbeat was not respected", name);
+
+            transport.release_lock(&resource, "owner3").await.unwrap();
+
+            // 3. Stale-lock reclamation (edge case timestamps)
+            // We manually insert edge cases into the DB to see how acquire_lock's DELETE/UPDATE handles them
+            let edge_cases = vec![
+                ("1969-12-31 23:59:59Z", "pre_epoch"),
+                ("2024-12-31 23:59:59Z", "near_midnight"),
+                ("2024-03-10 01:59:59Z", "dst_boundary"), // US Spring Forward
+                ("2024-10-23 15:00:00.123456Z", "sub_second"),
+            ];
+
+            for (ts, case_name) in edge_cases {
+                let res_edge = format!("{}_{}", resource, case_name);
+                if name == "postgres" {
+                    let result = sqlx::query("INSERT INTO mesh_locks (resource, owner, expires_at) VALUES ($1, $2, $3::timestamptz)")
+                        .bind(&res_edge).bind("stale_owner").bind(ts).execute(&db.pool).await;
+                    assert!(result.is_ok(), "Postgres failed to insert edge case {}: {}", case_name, ts);
+                } else {
+                    if let crate::db::DbStore::Sqlite(sqlite_pool) = &db.store {
+                        // SQLite datetime() doesn't handle trailing Z or sub-second.
+                        // Convert the string to match SQLite's expected format (YYYY-MM-DD HH:MM:SS) if possible
+                        let sqlite_ts = ts.replace("Z", "").split('.').next().unwrap().to_string();
+                        let result = sqlx::query("INSERT INTO mesh_locks (resource, owner, expires_at) VALUES (?, ?, datetime(?))")
+                            .bind(&res_edge).bind("stale_owner").bind(&sqlite_ts)
+                            .execute(sqlite_pool).await;
+                        assert!(result.is_ok(), "SQLite failed to insert edge case {}: {}", case_name, sqlite_ts);
+                    }
+                }
+
+                // This should succeed because the inserted timestamps are in the past
+                let acq_stale = transport.acquire_lock(&res_edge, "new_owner", 1).await.unwrap();
+                assert!(acq_stale, "{} failed to reclaim stale lock for case: {}", name, case_name);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_in_process_transport_fallback() {
+        use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+        use std::sync::Arc;
+
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let resource = "test_inprocess_fallback";
+
+        // 1. Basic TTL Expiry
+        let acq = transport.acquire_lock(&resource, "owner1", 1).await.unwrap();
+        assert!(acq, "InProcess failed to acquire initial lock");
+
+        let acq_fail = transport.acquire_lock(&resource, "owner2", 1).await.unwrap();
+        assert!(!acq_fail, "InProcess acquired locked resource");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+        let acq_after = transport.acquire_lock(&resource, "owner3", 1).await.unwrap();
+        assert!(acq_after, "InProcess failed to acquire after TTL expiry");
+
+        // 2. Heartbeat (same owner extending TTL)
+        let acq_heartbeat = transport.acquire_lock(&resource, "owner3", 2).await.unwrap();
+        assert!(acq_heartbeat, "InProcess failed heartbeat extension");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+
+        let acq_fail_heartbeat = transport.acquire_lock(&resource, "owner4", 1).await.unwrap();
+        assert!(!acq_fail_heartbeat, "InProcess heartbeat was not respected");
+
+        transport.release_lock(&resource, "owner3").await.unwrap();
+
+        // 3. Re-acquire after release
+        let acq_after_release = transport.acquire_lock(&resource, "owner5", 1).await.unwrap();
+        assert!(acq_after_release, "InProcess failed to acquire after release");
+
+        // Presence and Agents logic
+        transport.register_presence("agent1", "active", 1).await.unwrap();
+        let agents = transport.get_active_agents().await.unwrap();
+        assert_eq!(agents.len(), 1, "InProcess presence registration failed");
+        assert_eq!(agents[0].0, "agent1");
+        assert_eq!(agents[0].1, "active");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+        let agents_after_expiry = transport.get_active_agents().await.unwrap();
+        assert_eq!(agents_after_expiry.len(), 0, "InProcess presence TTL expiry failed");
+    }
+}
