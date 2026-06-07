@@ -13,7 +13,8 @@ export default function ShareCardsPage() {
 
   useEffect(() => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-    setShareLink(`https://ohc.store/join?ref=${tenant}`);
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    setShareLink(`${origin}/onboarding?ref=${tenant}`);
   }, []);
 
   const getThemeStyles = () => {
@@ -55,6 +56,7 @@ export default function ShareCardsPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
                         <input
+                            aria-label="Store name"
                             type="text"
                             value={storeName}
                             onChange={(e) => setStoreName(e.target.value)}
@@ -64,6 +66,7 @@ export default function ShareCardsPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
                         <textarea
+                            aria-label="Tagline"
                             rows={2}
                             value={tagline}
                             onChange={(e) => setTagline(e.target.value)}
@@ -73,10 +76,10 @@ export default function ShareCardsPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                         <div className="flex gap-2">
-                            <button onClick={() => setTheme('gradient')} className={`w-8 h-8 rounded-full border-2 ${theme === 'gradient' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }}></button>
-                            <button onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: '#1D1D1F' }}></button>
-                            <button onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-200'}`} style={{ background: '#ffffff' }}></button>
-                            <button onClick={() => setTheme('purple')} className={`w-8 h-8 rounded-full border-2 ${theme === 'purple' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></button>
+                            <button aria-label="Gradient theme" aria-pressed={theme === 'gradient'} onClick={() => setTheme('gradient')} className={`w-8 h-8 rounded-full border-2 ${theme === 'gradient' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }}></button>
+                            <button aria-label="Dark theme" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: '#1D1D1F' }}></button>
+                            <button aria-label="Light theme" aria-pressed={theme === 'light'} onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-200'}`} style={{ background: '#ffffff' }}></button>
+                            <button aria-label="Purple theme" aria-pressed={theme === 'purple'} onClick={() => setTheme('purple')} className={`w-8 h-8 rounded-full border-2 ${theme === 'purple' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></button>
                         </div>
                     </div>
                 </div>

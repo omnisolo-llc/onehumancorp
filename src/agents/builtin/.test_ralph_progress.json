@@ -1,0 +1,33 @@
+{
+  "task_description": "test task",
+  "features": [
+    {
+      "name": "Step 1",
+<<<<<<< HEAD
+      "status": "completed"
+    },
+    {
+      "name": "Step 2",
+      "status": "completed"
+    }
+  ],
+  "current_feature_index": 2,
+  "notes": [
+    "Initialized task and broken down into features.",
+    "Completed feature Step 1: default output",
+    "Completed feature Step 2: default output"
+=======
+      "status": "pending"
+    },
+    {
+      "name": "Step 2",
+      "status": "pending"
+    }
+  ],
+  "current_feature_index": 0,
+  "notes": [
+    "Initialized task and broken down into features."
+>>>>>>> 8e391c15 (Ralph Loop Initial Commit)
+  ],
+  "is_complete": false
+}
