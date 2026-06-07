@@ -9,12 +9,13 @@ interface DailyCost {
   llm_cost: number;
   storage_cost: number;
   network_cost: number;
-  compute_cost: number;
+  compute_cost?: number;
 }
 
 interface CostDashboardData {
   total_revenue: number;
   total_costs: number;
+  compute_cost?: number;
   llm_cost: number;
   storage_cost: number;
   compute_cost: number;
@@ -26,6 +27,7 @@ interface CostDashboardData {
   period_start: string;
   period_end: string;
   trend: DailyCost[];
+  agent_costs?: { agent_id: string; cost_cents: number; }[];
   department_tier_usage?: DepartmentTierUsage;
 }
 
@@ -133,11 +135,11 @@ export default function CostDashboardPage() {
               </div>
               <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                   <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit ? `/ ${myPlanData.ai_actions_limit}` : ''}</span></p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
               </div>
               <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                   <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : ''}</span></p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : '/ Unlimited'}</span></p>
               </div>
               <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                   <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
@@ -200,6 +202,23 @@ export default function CostDashboardPage() {
                         <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900 block">{formatCurrency(data?.llm_cost || 0)}</span>
                         <span className="text-xs text-gray-500 font-medium">Efficiency: {data?.cache_hit_rate}% cache hit rate, ${data?.cost_per_1k_tokens.toFixed(4)}/1k tokens</span>
                     </div>
+                </div>
+
+                {/* Per-Agent / Per-Feature Costs */}
+                <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <h3 className="font-medium text-gray-900 mb-2">Agent & Feature Costs</h3>
+                    {data?.agent_costs && data.agent_costs.length > 0 ? (
+                        <ul id="cost-dashboard-agent-costs" className="space-y-2">
+                            {data.agent_costs.map((agent, index) => (
+                                <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
+                                    <span className="text-sm text-gray-700 capitalize">{agent.agent_id.replace(/_/g, ' ')}</span>
+                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(agent.cost_cents)}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-gray-500">No agent cost data available.</p>
+                    )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
