@@ -871,6 +871,19 @@ mod tests {
         if !res_mobile.orders.is_empty() {
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
+        if let Some(ref cost_summary) = res_mobile.cost_summary {
+            if !cost_summary.agents.is_empty() {
+                assert_eq!(cost_summary.agents[0].storage_usage_bytes, 0, "Mobile optimization should clear agent storage_usage_bytes");
+            }
+        }
+        if !res_mobile.bookings.is_empty() {
+            assert_eq!(res_mobile.bookings[0].organization_id, "", "Mobile optimization should clear booking organization_id");
+        }
+        if !res_mobile.products.is_empty() {
+            assert_eq!(res_mobile.products[0].organization_id, "", "Mobile optimization should clear product organization_id");
+            assert_eq!(res_mobile.products[0].description, "", "Mobile optimization should clear product description");
+            assert_eq!(res_mobile.products[0].metadata_json, "", "Mobile optimization should clear product metadata_json");
+        }
     }
 
     #[tokio::test]
