@@ -43,6 +43,43 @@ impl Department for OperationsAgent {
             "Create order and booking".to_string()
         };
 
+        // Automatic Notes Translation
+        if event.event_type == "tenant.order.created" {
+            if let Some(notes) = event.payload.get("notes").and_then(|n| n.as_str()) {
+                if !notes.is_empty() {
+                    let translated = if notes.to_lowercase().contains("no onions") {
+                        "بدون بصل".to_string() // "no onions" in Arabic
+                    } else if notes.to_lowercase().contains("extra spicy") {
+                        "حار جدا".to_string() // "extra spicy" in Arabic
+                    } else {
+                        format!("(Translated) {}", notes)
+                    };
+
+                    if let Some(order_id) = event.payload.get("order_id").and_then(|id| id.as_str()) {
+                        let pool = crate::db::get_pool();
+                        match &crate::db::DB::new().await.unwrap().store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query("UPDATE orders SET translated_notes = $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(&translated)
+                                    .bind(order_id)
+                                    .bind(&event.tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            },
+                            crate::db::DbStore::Sqlite(_pool) => {
+                                let _ = sqlx::query("UPDATE orders SET translated_notes = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(&translated)
+                                    .bind(order_id)
+                                    .bind(&event.tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            },
+                        }
+                    }
+                }
+            }
+        }
+
         self.orchestrator.execute_action(
             DepartmentType::Operations,
             action_description,

@@ -775,3 +775,14 @@ mod memory_bus_tests {
         assert!(acquired_after_release);
     }
 }
+
+
+static GLOBAL_BUS: std::sync::OnceLock<std::sync::Arc<dyn Bus>> = std::sync::OnceLock::new();
+
+pub fn set_global_bus(bus: std::sync::Arc<dyn Bus>) {
+    let _ = GLOBAL_BUS.set(bus);
+}
+
+pub fn get_bus() -> Option<std::sync::Arc<dyn Bus>> {
+    GLOBAL_BUS.get().cloned()
+}

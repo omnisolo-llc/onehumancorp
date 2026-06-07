@@ -20,3 +20,4 @@ pub mod catalog;
 pub mod shipping;
 pub mod meta_webhook;
 pub mod docs;
+pub mod food_pre_order;

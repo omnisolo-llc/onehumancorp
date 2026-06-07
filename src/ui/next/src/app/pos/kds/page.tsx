@@ -39,7 +39,7 @@ export default function KDSPage() {
 
   // Initial Data Load
   useEffect(() => {
-    fetch('/api/pos/orders').then(res => res.json()).then(setOrders).catch(console.error);
+    fetch('/api/v1/food-pre-order/list').then(res => res.json()).then(setOrders).catch(console.error);
     fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
   }, []);
 
@@ -54,11 +54,13 @@ export default function KDSPage() {
           const inventoryEvents = events.filter((e: any) => e.type === 'TOGGLE_SOLD_OUT');
 
           if (orderEvents.length > 0) {
-            await fetch('/api/pos/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(orderEvents)
-            });
+            for (const orderEvent of orderEvents) {
+               await fetch(`/api/v1/food-pre-order/${orderEvent.payload.order_id}/status`, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ status: orderEvent.payload.status })
+               });
+            }
           }
 
           if (inventoryEvents.length > 0) {
@@ -177,10 +179,17 @@ export default function KDSPage() {
                   </span>
                 </div>
                 <ul className="mb-4 text-gray-700 font-medium">
-                  {order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
+                  {(order.items || []).map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
                 </ul>
+                {(order.notes || order.translated_notes) && (
+                   <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded-lg text-sm font-semibold border border-blue-100">
+                     <p className="opacity-70 text-xs mb-1 uppercase tracking-wider">{texts.customerNotes || "Customer Notes"}:</p>
+                     <p className="mb-1">{order.notes}</p>
+                     {order.translated_notes && <p className="text-blue-600 font-bold border-t border-blue-100/50 pt-1 mt-1">{order.translated_notes}</p>}
+                   </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
-                   {order.status === 'Received' && (
+                   {(!order.status || order.status.toLowerCase() === 'received' || order.status.toLowerCase() === 'pending') && (
                       <button
                         onClick={() => handleUpdateOrderStatus(order.id, 'Preparing')}
                         className="col-span-2 w-full py-4 bg-yellow-500 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
@@ -189,7 +198,7 @@ export default function KDSPage() {
                         {texts.preparing}
                       </button>
                    )}
-                   {order.status === 'Preparing' && (
+                   {order.status?.toLowerCase() === 'preparing' && (
                       <button
                         onClick={() => handleUpdateOrderStatus(order.id, 'Ready')}
                         className="col-span-2 w-full py-4 bg-green-500 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
@@ -198,7 +207,7 @@ export default function KDSPage() {
                         {texts.ready}
                       </button>
                    )}
-                   {order.status === 'Ready' && (
+                   {order.status?.toLowerCase() === 'ready' && (
                       <button
                          className="col-span-2 w-full py-4 bg-gray-300 text-gray-600 font-bold text-lg rounded-xl"
                          disabled

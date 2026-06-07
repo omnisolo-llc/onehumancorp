@@ -4,6 +4,7 @@ exports_files(
     [
         "autodream.rs",
         "terminal_api.rs",
+        "food_pre_order.rs",
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
@@ -32,6 +33,7 @@ rust_library(
     name = "server_api",
     srcs = [
         "terminal_api.rs",
+        "food_pre_order.rs",
         "bazel_lib.rs",
         "autodream.rs",
         "billing_api.rs",
