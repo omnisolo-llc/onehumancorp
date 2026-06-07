@@ -515,40 +515,10 @@ pub struct StorefrontEmbedQuery {
 async fn handle_storefront_embed(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
-    headers: axum::http::HeaderMap,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
-    let mut name = query.product_name.as_deref().unwrap_or("Premium Product").to_string();
+    let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
-
-    // Autonomous Multi-Language Edge Translation
-    // Check Accept-Language header to serve localized content directly from cache
-    if let Some(accept_lang) = headers.get(axum::http::header::ACCEPT_LANGUAGE) {
-        if let Ok(lang_str) = accept_lang.to_str() {
-            // Very naive parsing for demo purposes (e.g. "ar-EG,ar;q=0.9" -> "ar")
-            let preferred_lang = lang_str.split(',').next().unwrap_or("en").split('-').next().unwrap_or("en");
-
-            if preferred_lang != "en" {
-                // Query localization registry (simulating an edge lookup)
-                let translated_row: Option<String> = sqlx::query_scalar!(
-                    "SELECT translated_text FROM localization_registry WHERE tenant_id = $1 AND language_code = $2 LIMIT 1",
-                    tenant,
-                    preferred_lang
-                )
-                .fetch_optional(&state.pool)
-                .await
-                .unwrap_or(None);
-
-                if let Some(localized_json) = translated_row {
-                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&localized_json) {
-                        if let Some(translated_title) = parsed.get("title").and_then(|t| t.as_str()) {
-                            name = translated_title.to_string();
-                        }
-                    }
-                }
-            }
-        }
-    }
     let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
     let text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
     let border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
@@ -564,7 +534,7 @@ async fn handle_storefront_embed(
          .replace("'", "&#x27;")
     };
 
-    let safe_name = escape_html(&name);
+    let safe_name = escape_html(name);
     let safe_price = escape_html(price);
     // Note: URL encode tenant for the href
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
