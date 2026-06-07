@@ -515,40 +515,10 @@ pub struct StorefrontEmbedQuery {
 async fn handle_storefront_embed(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
-    headers: axum::http::HeaderMap,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
-    let mut name = query.product_name.as_deref().unwrap_or("Premium Product").to_string();
+    let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
-
-    // Autonomous Multi-Language Edge Translation
-    // Check Accept-Language header to serve localized content directly from cache
-    if let Some(accept_lang) = headers.get(axum::http::header::ACCEPT_LANGUAGE) {
-        if let Ok(lang_str) = accept_lang.to_str() {
-            // Very naive parsing for demo purposes (e.g. "ar-EG,ar;q=0.9" -> "ar")
-            let preferred_lang = lang_str.split(',').next().unwrap_or("en").split('-').next().unwrap_or("en");
-
-            if preferred_lang != "en" {
-                // Query localization registry (simulating an edge lookup)
-                let translated_row: Option<String> = sqlx::query_scalar!(
-                    "SELECT translated_text FROM localization_registry WHERE tenant_id = $1 AND language_code = $2 LIMIT 1",
-                    tenant,
-                    preferred_lang
-                )
-                .fetch_optional(&state.pool)
-                .await
-                .unwrap_or(None);
-
-                if let Some(localized_json) = translated_row {
-                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&localized_json) {
-                        if let Some(translated_title) = parsed.get("title").and_then(|t| t.as_str()) {
-                            name = translated_title.to_string();
-                        }
-                    }
-                }
-            }
-        }
-    }
     let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
     let text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
     let border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
@@ -564,7 +534,7 @@ async fn handle_storefront_embed(
          .replace("'", "&#x27;")
     };
 
-    let safe_name = escape_html(&name);
+    let safe_name = escape_html(name);
     let safe_price = escape_html(price);
     // Note: URL encode tenant for the href
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
@@ -630,7 +600,7 @@ pub struct FlashSaleEmbedQuery {
 }
 
 async fn handle_flash_sale_embed(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -839,6 +809,24 @@ async fn handle_check_milestones(
             description: "Your storefront reached 100 visitors today!".to_string(),
             reached: reached_types.contains(&"100_visitors".to_string()),
         },
+        Milestone {
+            id: "5_referrals".to_string(),
+            title: "🤝 High Connector!".to_string(),
+            description: "You've successfully referred 5 other businesses to OHC.".to_string(),
+            reached: reached_types.contains(&"5_referrals".to_string()),
+        },
+        Milestone {
+            id: "revenue_1k".to_string(),
+            title: "💰 Four-Figure Club".to_string(),
+            description: "Your business has surpassed $1,000 in total revenue!".to_string(),
+            reached: reached_types.contains(&"revenue_1k".to_string()),
+        },
+        Milestone {
+            id: "100_orders".to_string(),
+            title: "📦 Century of Orders".to_string(),
+            description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
+            reached: reached_types.contains(&"100_orders".to_string()),
+        },
     ];
     Json(MilestonesResponse { milestones })
 }
@@ -884,15 +872,20 @@ async fn handle_get_milestone_card(
 
     let safe_business_name = escape_xml(&business_name);
 
-    let (title, sub, icon) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰"),
-        "10th_order" => ("10th Order!", "Business is booming", "📈"),
-        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
-        _ => ("Success Milestone!", "Built with OHC", "✨"),
+    let (title, sub, icon, grad_start, grad_end) = match milestone_id {
+        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
+        "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
+        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
+        "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
+        "revenue_1k" => ("Four-Figure Club", "Revenue > $1,000", "💰", "#84fab0", "#8fd3f4"),
+        "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
+        _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
-        r##"<text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>"##.to_string()
+        format!(r##"<a href="https://ohc.app/join?ref={}" target="_blank">
+    <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+  </a>"##, tenant_id)
     } else {
         "".to_string()
     };
@@ -916,8 +909,8 @@ async fn handle_get_milestone_card(
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
   </defs>
   <rect width="1200" height="630" fill="url(#grad1)" />
@@ -930,7 +923,14 @@ async fn handle_get_milestone_card(
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
-</svg>"##);
+</svg>"##,
+    grad_start = grad_start,
+    grad_end = grad_end,
+    icon = icon,
+    title = title,
+    sub = sub,
+    safe_business_name = safe_business_name,
+    branding = branding);
 
     axum::response::Response::builder()
         .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")

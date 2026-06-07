@@ -280,7 +280,6 @@ SERVER_RS_SRCS = [
     "//src/server/workers:memory.rs",
     "//src/server/workers:pos_sync_worker.rs",
     "//src/server/workers:calendar_sync.rs",
-    "//src/server/workers:translation_worker.rs",
     "//src/server/workers:mod.rs",
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",

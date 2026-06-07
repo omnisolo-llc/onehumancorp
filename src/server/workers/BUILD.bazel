@@ -9,7 +9,6 @@ exports_files(
         "pos_sync_worker.rs",
         "mod.rs",
         "calendar_sync.rs",
-        "translation_worker.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -25,7 +24,6 @@ rust_library(
         "pos_sync_worker.rs",
         "mod.rs",
         "calendar_sync.rs",
-        "translation_worker.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
