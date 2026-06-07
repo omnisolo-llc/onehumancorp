@@ -10,7 +10,15 @@ rust_library(
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
-    deps = ["//src/server/integrations/core:server_integrations_core"],
+    deps = [
+        "//src/server/integrations/core:server_integrations_core",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:reqwest",
+        "@crates//:tokio",
+        "@crates//:uuid",
+        "@crates//:rand",
+    ],
 )
 
 rust_test(

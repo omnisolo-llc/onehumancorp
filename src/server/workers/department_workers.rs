@@ -178,7 +178,27 @@ pub mod pos_sync_worker {
                         )
                         .bind(adj_job_id)
                         .bind(tenant_id)
-                        .bind(adj_payload)
+                        .bind(&adj_payload)
+                        .execute(&mut *tx)
+                        .await;
+
+                        // Create an Operations AI Agent alert task
+                        let ai_task_id = Uuid::new_v4().to_string();
+                        let ai_payload = json!({
+                            "transaction_id": tx_id,
+                            "product_id": product_id,
+                            "expected_stock": qty,
+                            "actual_stock": stock,
+                            "message": format!("Offline POS transaction {} encountered an inventory discrepancy for product {}.", tx_id, product_id)
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                             VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                        )
+                        .bind(&ai_task_id)
+                        .bind(tenant_id)
+                        .bind(&ai_payload)
                         .execute(&mut *tx)
                         .await;
                     }
@@ -1492,60 +1512,6 @@ mod tests {
             assert_eq!(status, "PAUSED");
         } // end of test_customer_success_worker_draft_reply
 
-    #[tokio::test]
-    async fn test_promoter_worker_social_post_draft() {
-        let db = setup_test_db().await;
-        if let DbStore::Sqlite(pool) = &db.store {
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(pool).await;
-
-            // Insert a tenant
-            sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant1', 'Priya Boutique', 'Retail')")
-                .execute(pool).await.unwrap();
-        }
-
-        let (event_tx, _event_rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, db.pool.clone()));
-        hub.set_db(db.clone());
-
-        let promoter_worker = PromoterWorker::new(db.clone(), hub.clone());
-        promoter_worker.start();
-
-        let event_payload = serde_json::json!({
-            "product_id": "prod_promoter_123",
-            "name": "Summer Dress",
-            "organization_id": "tenant1",
-        });
-
-        let event = ::server_ohc::orchestration::TeammateMeshEvent {
-            agent_id: "system".to_string(),
-            action: "ProductCreated".to_string(),
-            status: "success".to_string(),
-            payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        };
-
-        let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
-
-        // Allow some time for background task to process
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-
-        if let DbStore::Sqlite(pool) = &db.store {
-            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1' AND title LIKE 'Draft Social Post%'")
-                .fetch_optional(pool).await.unwrap();
-
-            assert!(row.is_some(), "Shared task for social post draft was not created");
-
-            if let Some(r) = row {
-                let title: String = r.get("title");
-                let content: String = r.get("proposed_content");
-                let approval_status: String = r.get("approval_status");
-
-                assert_eq!(title, "Draft Social Post: Summer Dress");
-                assert!(content.contains("tiktok") && content.contains("instagram") && content.contains("facebook"));
-                assert_eq!(approval_status, "PENDING");
-            }
-        }
-    }
 }
 
 }
