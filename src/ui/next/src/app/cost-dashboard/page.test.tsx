@@ -34,7 +34,7 @@ describe('CostDashboardPage', () => {
   });
 
   test('renders cost data after fetch', async () => {
-    const mockData = {
+    const mockCostData = {
       total_revenue: 150000,
       total_costs: 51000,
       llm_cost: 20000,
@@ -49,12 +49,55 @@ describe('CostDashboardPage', () => {
       trend: [
         { date: "2023-10-01", total_cost: 1000, llm_cost: 500, storage_cost: 200, network_cost: 100, compute_cost: 200 },
         { date: "2023-10-02", total_cost: 1500, llm_cost: 800, storage_cost: 200, network_cost: 200, compute_cost: 300 }
-      ]
+      ],
+      department_tier_usage: {
+        current_plan: "Free",
+        period: "2023-10",
+        departments: [
+          {
+            id: "dept-marketing",
+            department_type: "marketing",
+            agent_id: "marketing_agent",
+            actions_used: 12,
+            action_limit: 20,
+            usage_percent: 60,
+            soft_limit_reached: false,
+          },
+          {
+            id: "dept-ops",
+            department_type: "operations",
+            agent_id: "operations_agent",
+            actions_used: 21,
+            action_limit: 20,
+            usage_percent: 100,
+            soft_limit_reached: true,
+          },
+        ],
+      },
     };
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue(mockData)
+    const mockPlanData = {
+      current_plan: "Starter",
+      ai_actions_used: 150,
+      ai_actions_limit: 1000,
+      storage_used_bytes: 2 * 1024 * 1024,
+      storage_limit_bytes: 5 * 1024 * 1024 * 1024,
+      next_bill_estimated: 2900,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCostData)
+        });
+      } else if (url.includes('my-plan')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockPlanData)
+        });
+      }
+      return Promise.reject(new Error('not found'));
     }) as any;
 
     render(<CostDashboardPage />);
@@ -62,6 +105,17 @@ describe('CostDashboardPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('Loading...')).toBeNull();
     });
+
+    // My Plan assertions
+    expect(screen.getByText('My Plan')).toBeDefined();
+    expect(screen.getByText('Starter')).toBeDefined();
+    // AI actions used: 150 / 1000. Text split.
+    expect(screen.getAllByText(/150/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ 1000/)[0]).toBeDefined();
+    // Storage used
+    expect(screen.getByText(/2.0 MB/)).toBeDefined();
+    // Next bill estimated
+    expect(screen.getByText('$29.00')).toBeDefined();
 
     expect(screen.getByText('Cost Transparency')).toBeDefined();
     expect(screen.getByText('Period: 2023-10-01 to 2023-10-31')).toBeDefined();
@@ -86,12 +140,20 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('$10.00')).toBeDefined(); // 1000 cents
     expect(screen.getByText('2023-10-02')).toBeDefined();
     expect(screen.getByText('$15.00')).toBeDefined(); // 1500 cents
+
+    expect(screen.getByText('Department Tier Usage')).toBeDefined();
+    expect(screen.getByText('marketing')).toBeDefined();
+    expect(screen.getByText('12 / 20 actions')).toBeDefined();
+    expect(screen.getByText('operations')).toBeDefined();
+    expect(screen.getByText('Tier limit reached')).toBeDefined();
   });
 
   test('handles fetch error gracefully', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500
+    global.fetch = vi.fn().mockImplementation(() => {
+      return Promise.resolve({
+        ok: false,
+        status: 500
+      });
     }) as any;
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

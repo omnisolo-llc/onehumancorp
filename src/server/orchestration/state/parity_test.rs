@@ -591,6 +591,77 @@ mod parity_tests {
         }
     }
 
+
+    #[tokio::test]
+    async fn test_parity_jsonb_merging() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "org_parity_jsonb";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload) VALUES (?, ?, 'ops', 'jsonb_test', '{\"original\": true}')")
+                .bind(&task_id)
+                .bind(org_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let reason = "Task failed due to error XYZ";
+            let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap();
+
+            sqlx::query("UPDATE department_tasks SET payload = json_patch(COALESCE(payload, '{}'), ?) WHERE id = ?")
+                .bind(&payload_update)
+                .bind(&task_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let payload_str: String = sqlx::query_scalar("SELECT payload FROM department_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+            let parsed: serde_json::Value = serde_json::from_str(&payload_str).unwrap();
+            assert_eq!(parsed["original"], true);
+            assert_eq!(parsed["error"], reason);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
+
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload) VALUES ($1, $2, 'ops', 'jsonb_test', '{\"original\": true}'::jsonb)")
+                .bind(parsed_id)
+                .bind(org_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let reason = "Task failed due to error XYZ";
+            let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap();
+
+            sqlx::query("UPDATE department_tasks SET payload = COALESCE(payload::jsonb, '{}'::jsonb) || $2::jsonb WHERE id = $1")
+                .bind(parsed_id)
+                .bind(&payload_update)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let payload_value: serde_json::Value = sqlx::query_scalar("SELECT payload FROM department_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+            assert_eq!(payload_value["original"], true);
+            assert_eq!(payload_value["error"], reason);
+        }
+    }
+
     #[tokio::test]
     async fn test_parity_delete_stale_sessions() {
         let sqlite_db = setup_sqlite_db().await;
@@ -606,6 +677,91 @@ mod parity_tests {
         if let Some(pg) = pg_db {
             let res = pg.delete_stale_sessions(threshold).await;
             assert!(res.is_ok());
+        }
+    }
+
+
+
+    #[tokio::test]
+    async fn test_parity_empty_string_vs_null() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id_empty = uuid::Uuid::new_v4().to_string();
+        let task_id_null = uuid::Uuid::new_v4().to_string();
+        let mission_id = "mission_empty_null";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            // Insert empty string for description
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, description, status, tenant_id) VALUES (?, ?, 'Empty Title', '', 'PENDING', 'default_tenant')")
+                .bind(&task_id_empty)
+                .bind(mission_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            // Insert NULL for description
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, description, status, tenant_id) VALUES (?, ?, 'Null Title', NULL, 'PENDING', 'default_tenant')")
+                .bind(&task_id_null)
+                .bind(mission_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            // Read back
+            let desc_empty: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id_empty)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+            let desc_null: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id_null)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+            assert_eq!(desc_empty, Some("".to_string()));
+            assert_eq!(desc_null, None);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id_empty = uuid::Uuid::parse_str(&task_id_empty).unwrap();
+            let parsed_id_null = uuid::Uuid::parse_str(&task_id_null).unwrap();
+
+            // Insert empty string for description
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, description, status, tenant_id) VALUES ($1, $2, 'Empty Title', '', 'PENDING', 'default_tenant')")
+                .bind(parsed_id_empty)
+                .bind(mission_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            // Insert NULL for description
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, description, status, tenant_id) VALUES ($1, $2, 'Null Title', NULL, 'PENDING', 'default_tenant')")
+                .bind(parsed_id_null)
+                .bind(mission_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            // Read back
+            let desc_empty: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id_empty)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+            let desc_null: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id_null)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+            assert_eq!(desc_empty, Some("".to_string()));
+            assert_eq!(desc_null, None);
         }
     }
 

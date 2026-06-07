@@ -12,14 +12,25 @@ export default function GrowthReferralWidget() {
     setLoading(true);
     setError(null);
     try {
+      const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
+      const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
+
       const res = await fetch('/api/v1/growth/team-invites', {
+
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          team_id: tenantId,
+          inviter_id: inviterId,
+        }),
       });
       if (!res.ok) {
         throw new Error('Failed to generate invite');
       }
       const data = await res.json();
-      setReferralLink(data.invite_url);
+      setReferralLink(data.invite_link);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
