@@ -3486,6 +3486,26 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
+        .route("/api/v1/booking/request", axum::routing::post(api::booking::create_booking_request).with_state(db.clone()).layer(
+            axum::middleware::from_fn(
+                |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    use axum::response::IntoResponse;
+                    let store = std::sync::Arc::new(crate::auth::Store::new());
+                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                    let token = match auth_header {
+                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let claims = match store.validate_token(token).await {
+                        Ok(c) => c,
+                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            )
+        ))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {

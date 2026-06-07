@@ -4,19 +4,36 @@ import React, { useState } from "react";
 
 export default function Booking() {
   const [description, setDescription] = useState("");
+  const [serviceId, setServiceId] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Simulating form submission
+    let startTimeStr = undefined;
+    if (date && time) {
+      const dateTime = new Date(`${date}T${time}:00`);
+      startTimeStr = dateTime.toISOString();
+    } else {
+      startTimeStr = new Date().toISOString();
+    }
+
+    const tenantId = localStorage.getItem('tenant_id') || 'default';
+    const userId = localStorage.getItem('user_id') || 'default';
     await fetch("/api/v1/booking/request", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-tenant-id": tenantId,
+        "x-user-id": userId,
+      },
       body: JSON.stringify({
         description,
-        fileName: file?.name,
+        service_id: serviceId,
+        start_time: startTimeStr,
         timestamp: new Date().toISOString()
       }),
     });
@@ -56,6 +73,40 @@ export default function Booking() {
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 px-6 py-6 overflow-y-auto hide-scrollbar space-y-6">
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Service</label>
+            <input
+              type="text"
+              value={serviceId}
+              onChange={(e) => setServiceId(e.target.value)}
+              placeholder="e.g. Cake Decorating Class"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+          </div>
+
+          <div className="flex space-x-4">
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Date</label>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Time</label>
+              <input
+                type="time"
+                required
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">What do you need help with?</label>

@@ -6,14 +6,13 @@ use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 use serde::Deserialize;
 use chrono::{DateTime, Utc};
 
-// Types defined here to avoid circular dependency with server_lib
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Service {
     pub id: String,
     pub tenant_id: String,
-    pub title: String,
+    pub name: String,
     pub description: Option<String>,
-    pub price_cents: i64,
+    pub price: rust_decimal::Decimal,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -21,40 +20,44 @@ pub struct BookingRecord {
     pub id: String,
     pub tenant_id: String,
     pub customer_id: String,
-    pub product_id: String,
+    pub service_id: Option<String>,
+    pub product_id: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
-    pub status: String,
+    pub status: Option<String>,
 }
-
-#[derive(Default)]
-pub struct BookingStore {
-    pub services: Vec<Service>,
-    pub bookings: Vec<BookingRecord>,
-}
-
-pub type SharedBookingStore = Arc<RwLock<BookingStore>>;
 
 #[derive(Deserialize)]
 pub struct BookingGetServicesArgs {
     pub tenant_id: String,
 }
 
-pub struct BookingGetServicesExecutor {
-    pub store: SharedBookingStore,
-}
+pub struct BookingGetServicesExecutor;
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingGetServicesArgs> for BookingGetServicesExecutor {
     async fn execute_typed(&self, args: BookingGetServicesArgs) -> Result<String, ToolError> {
         let tenant_id = args.tenant_id;
-        let store = self.store.read().await;
-        let services: Vec<_> = store.services.iter().filter(|s| s.tenant_id == tenant_id).cloned().collect();
+
+        let db_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = sqlx::PgPool::connect_lazy(&db_url)
+            .map_err(|e| ToolError::LlmRecoverable(format!("DB connection failed: {}", e)))?;
+
+        let services = sqlx::query_as!(
+            Service,
+            "SELECT id, tenant_id, name, description, price FROM services WHERE tenant_id = $1",
+            tenant_id
+        )
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| ToolError::LlmRecoverable(format!("DB query failed: {}", e)))?;
+
         Ok(json!(services).to_string())
     }
 }
 
-pub fn booking_get_services_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_get_services_tool() -> Tool {
     Tool {
         name: "booking_get_services".to_string(),
         description: "List all available services for booking in the business.".to_string(),
@@ -66,7 +69,7 @@ pub fn booking_get_services_tool(store: SharedBookingStore) -> Tool {
             },
             "required": ["tenant_id"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingGetServicesExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingGetServicesExecutor)),
     }
 }
 
@@ -79,9 +82,7 @@ pub struct BookingUpsertServiceArgs {
     pub price_cents: i64,
 }
 
-pub struct BookingUpsertServiceExecutor {
-    pub store: SharedBookingStore,
-}
+pub struct BookingUpsertServiceExecutor;
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingUpsertServiceArgs> for BookingUpsertServiceExecutor {
@@ -90,28 +91,39 @@ impl PydanticToolExecutor<BookingUpsertServiceArgs> for BookingUpsertServiceExec
         let id = args.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         let title = args.title;
         let description = args.description;
-        let price_cents = args.price_cents;
+        // The DB expects a DECIMAL price. Convert cents to decimal dollars.
+        let price = rust_decimal::Decimal::new(args.price_cents, 0) / rust_decimal::Decimal::new(100, 0);
 
-        let service = Service {
-            id: id.clone(),
-            tenant_id: tenant_id.to_string(),
-            title: title.to_string(),
+        let db_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = sqlx::PgPool::connect_lazy(&db_url)
+            .map_err(|e| ToolError::LlmRecoverable(format!("DB connection failed: {}", e)))?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO services (id, tenant_id, name, description, price)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                price = EXCLUDED.price,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+            id,
+            tenant_id,
+            title,
             description,
-            price_cents,
-        };
-
-        let mut store = self.store.write().await;
-        if let Some(existing) = store.services.iter_mut().find(|s| s.id == id) {
-            *existing = service;
-        } else {
-            store.services.push(service);
-        }
+            price
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| ToolError::LlmRecoverable(format!("DB query failed: {}", e)))?;
 
         Ok(json!({"status": "success", "message": "Service upserted successfully", "id": id}).to_string())
     }
 }
 
-pub fn booking_upsert_service_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_upsert_service_tool() -> Tool {
     Tool {
         name: "booking_upsert_service".to_string(),
         description: "Add or update a service that customers can book.".to_string(),
@@ -127,7 +139,7 @@ pub fn booking_upsert_service_tool(store: SharedBookingStore) -> Tool {
             },
             "required": ["tenant_id", "title", "price_cents"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingUpsertServiceExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingUpsertServiceExecutor)),
     }
 }
 
@@ -136,21 +148,32 @@ pub struct BookingListAppointmentsArgs {
     pub tenant_id: String,
 }
 
-pub struct BookingListAppointmentsExecutor {
-    pub store: SharedBookingStore,
-}
+pub struct BookingListAppointmentsExecutor;
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingListAppointmentsArgs> for BookingListAppointmentsExecutor {
     async fn execute_typed(&self, args: BookingListAppointmentsArgs) -> Result<String, ToolError> {
         let tenant_id = args.tenant_id;
-        let store = self.store.read().await;
-        let bookings: Vec<_> = store.bookings.iter().filter(|b| b.tenant_id == tenant_id).cloned().collect();
+
+        let db_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = sqlx::PgPool::connect_lazy(&db_url)
+            .map_err(|e| ToolError::LlmRecoverable(format!("DB connection failed: {}", e)))?;
+
+        let bookings = sqlx::query_as!(
+            BookingRecord,
+            "SELECT id, tenant_id, customer_id, service_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1",
+            tenant_id
+        )
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| ToolError::LlmRecoverable(format!("DB query failed: {}", e)))?;
+
         Ok(json!(bookings).to_string())
     }
 }
 
-pub fn booking_list_appointments_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_list_appointments_tool() -> Tool {
     Tool {
         name: "booking_list_appointments".to_string(),
         description: "List all scheduled appointments for the business.".to_string(),
@@ -162,7 +185,7 @@ pub fn booking_list_appointments_tool(store: SharedBookingStore) -> Tool {
             },
             "required": ["tenant_id"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingListAppointmentsExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingListAppointmentsExecutor)),
     }
 }
 
@@ -175,9 +198,7 @@ pub struct BookingCreateAppointmentArgs {
     pub end_time: Option<String>,
 }
 
-pub struct BookingCreateAppointmentExecutor {
-    pub store: SharedBookingStore,
-}
+pub struct BookingCreateAppointmentExecutor;
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingCreateAppointmentArgs> for BookingCreateAppointmentExecutor {
@@ -200,24 +221,32 @@ impl PydanticToolExecutor<BookingCreateAppointmentArgs> for BookingCreateAppoint
             None
         };
 
-        let booking = BookingRecord {
-            id: uuid::Uuid::new_v4().to_string(),
-            tenant_id: tenant_id.to_string(),
-            customer_id: customer_id.to_string(),
-            product_id: service_id.to_string(),
+        let id = uuid::Uuid::new_v4().to_string();
+
+        let db_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pool = sqlx::PgPool::connect_lazy(&db_url)
+            .map_err(|e| ToolError::LlmRecoverable(format!("DB connection failed: {}", e)))?;
+
+        sqlx::query!(
+            "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            id,
+            tenant_id,
+            customer_id,
+            service_id,
             start_time,
             end_time,
-            status: "confirmed".to_string(),
-        };
-
-        let mut store = self.store.write().await;
-        store.bookings.push(booking);
+            "confirmed"
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| ToolError::LlmRecoverable(format!("DB query failed: {}", e)))?;
 
         Ok(json!({"status": "success", "message": "Appointment created successfully"}).to_string())
     }
 }
 
-pub fn booking_create_appointment_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_create_appointment_tool() -> Tool {
     Tool {
         name: "booking_create_appointment".to_string(),
         description: "Schedule a new appointment for a customer.".to_string(),
@@ -233,6 +262,6 @@ pub fn booking_create_appointment_tool(store: SharedBookingStore) -> Tool {
             },
             "required": ["tenant_id", "customer_id", "service_id", "start_time"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingCreateAppointmentExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingCreateAppointmentExecutor)),
     }
 }

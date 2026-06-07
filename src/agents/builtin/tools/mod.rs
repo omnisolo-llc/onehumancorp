@@ -106,7 +106,6 @@ pub fn all_tools(
     observation_store: Arc<dashmap::DashMap<String, String>>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
-    let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
     let mut tools = vec![
         repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
@@ -119,10 +118,10 @@ pub fn all_tools(
         grep::grep_tool(working_dir.clone()),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
-        booking::booking_get_services_tool(booking_store.clone()),
-        booking::booking_upsert_service_tool(booking_store.clone()),
-        booking::booking_list_appointments_tool(booking_store.clone()),
-        booking::booking_create_appointment_tool(booking_store.clone()),
+        booking::booking_get_services_tool(),
+        booking::booking_upsert_service_tool(),
+        booking::booking_list_appointments_tool(),
+        booking::booking_create_appointment_tool(),
         sendmessage::sendmessage_tool(mailbox.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),

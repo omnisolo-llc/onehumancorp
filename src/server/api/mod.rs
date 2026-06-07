@@ -1,3 +1,4 @@
+pub mod booking;
 pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;
