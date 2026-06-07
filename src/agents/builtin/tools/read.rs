@@ -4,14 +4,16 @@ use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 // Pydantic-first tool schema validation: ReadArgs
 #[derive(Deserialize)]
 struct ReadArgs {
     path: String,
-    start_line: Option<u64>,
-    end_line: Option<u64>,
+    #[serde(default)]
+    start_line: Option<usize>,
+    #[serde(default)]
+    end_line: Option<usize>,
 }
 
 struct ReadExecutor {
@@ -166,7 +168,7 @@ mod tests {
 
         // 1. Try reading the whole file - should fail
         let args = json!({ "path": test_file.to_string_lossy().to_string() });
-        let result: Result<String, _> = crate::ToolExecutor::execute(&executor, args).await;
+        let result: Result<String, ohc_builtin_agent_core::types::ToolError> = crate::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("JIT Retrieval Error: File is too large"));
@@ -180,7 +182,7 @@ mod tests {
             "start_line": 1,
             "end_line": 1200
         });
-        let result2 = executor.execute(args2).await;
+        let result2: Result<String, ohc_builtin_agent_core::types::ToolError> = crate::ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result2 {
             assert!(msg.contains("Cannot read more than 1000 lines at once"));
@@ -194,7 +196,7 @@ mod tests {
             "start_line": 500,
             "end_line": 600
         });
-        let result3 = executor.execute(args3).await;
+        let result3: Result<String, ohc_builtin_agent_core::types::ToolError> = crate::ToolExecutor::execute(&executor, args3).await;
         assert!(result3.is_ok());
 
         let _ = std::fs::remove_file(&test_file);

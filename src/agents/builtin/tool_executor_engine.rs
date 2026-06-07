@@ -7,35 +7,6 @@ use tracing::{info, warn, error};
 pub struct ToolExecutionEngine;
 
 impl ToolExecutionEngine {
-    async fn prompt_user(msg: &str) -> String {
-        // Read the mock input from env to allow automated tests to provide responses.
-        if let Ok(mock_input) = std::env::var("OHC_MOCK_USER_INPUT") {
-            return mock_input;
-        }
-
-        #[cfg(test)]
-        {
-            // Always abort in tests if no specific mock is provided to prevent blocking tests.
-            // Also prefix unused variables to silence warnings.
-            let _msg = msg;
-            return "abort".to_string();
-        }
-
-        #[cfg(not(test))]
-        {
-            tracing::info!("\n[Agent Harness] USER INTERVENTION REQUIRED:");
-            tracing::info!("{}", msg);
-            print!("Please provide input to resolve this (or type 'abort' to cancel): ");
-            tokio::task::spawn_blocking(|| {
-                use std::io::{self, Write};
-                let mut input = String::new();
-                let _ = io::stdout().flush();
-                let _ = io::stdin().read_line(&mut input);
-                input.trim().to_string()
-            }).await.unwrap_or_else(|_| "abort".to_string())
-        }
-    }
-
     /// Executes a single tool using the LangGraph 4-tier Error Handling Mechanic (Compounding Error Prevention).
     #[tracing::instrument(skip(tool, tc), fields(tool_name = %tc.name, tool_call_id = %tc.id))]
     pub async fn execute_tool_with_langgraph_mechanics(
@@ -74,16 +45,9 @@ impl ToolExecutionEngine {
                     return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
-                    // 3) User-fixable: interrupt execution and ask user for input.
-                    warn!("User-fixable error encountered, prompting user: {}", msg);
-                    let input = Self::prompt_user(&msg).await;
-                    if input.is_empty() || input.to_lowercase() == "abort" {
-                        warn!("User aborted resolution for: {}", msg);
-                        return Err(ToolError::UserFixable(format!("User aborted. Original error: {}", msg)));
-                    } else {
-                        info!("User provided resolution input");
-                        return Ok(format!("User provided input to resolve the issue: {}", input));
-                    }
+                    // 3) User-fixable: immediately bubble up to the orchestrator to request human-in-loop input.
+                    warn!("User-fixable error encountered, bubbling up: {}", msg);
+                    return Err(ToolError::UserFixable(msg));
                 }
                 Err(ToolError::Fatal(msg)) => {
                     // 4) Fatal: bubbles up to debug/halt immediately.

@@ -41,6 +41,7 @@ pub mod create_skill;
 pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
+pub mod expert_team_tool;
 pub mod workflow;
 pub mod checkout;
 
@@ -97,6 +98,7 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
+    llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<Arc<RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     todos: SharedTodos,
     task_store: SharedTaskStore,
@@ -138,7 +140,7 @@ pub fn all_tools(
         finance::finance_report_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
-        subagent::subagent_tool(runner.clone()),
+        subagent::subagent_tool(runner.clone(), llm.clone()),
         workflow::workflow_tool(runner.clone()),
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
@@ -149,6 +151,7 @@ pub fn all_tools(
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
+        aider_pair_programming::aider_pair_programming_tool(),
     ];
 
     if let Some(env) = native_env {
@@ -164,3 +167,5 @@ pub fn all_tools(
 }
 
 pub mod native_state;
+mod aider_pair_programming;
+pub use aider_pair_programming::aider_pair_programming_tool;

@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use crate::visual_workflow::{WorkflowGraph, WorkflowExecutor};
 use crate::agent::{Agent, AgentRunConfig};
-use crate::llm::LlmClient;
 
 /// HTTP Server AppState
 pub struct VisualWorkflowState {
@@ -78,7 +77,7 @@ mod tests {
 
     struct MockVisualClientLlm;
     #[async_trait::async_trait]
-    impl LlmClient for MockVisualClientLlm {
+    impl crate::llm::LlmClient for MockVisualClientLlm {
         async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let last_user = req.messages.last().unwrap().content.clone();
             Ok(ChatResponse {
@@ -106,7 +105,7 @@ mod tests {
         let graph = WorkflowGraph {
             nodes: vec![
                 Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
-                Node { id: "llm1".to_string(), node_type: NodeType::Llm { prompt_template: "Input was: {{in}}".to_string(), max_retries: None } },
+                Node { id: "llm1".to_string(), node_type: NodeType::Llm { prompt_template: "Input was: {{in}}".to_string() } },
                 Node { id: "out".to_string(), node_type: NodeType::Output },
             ],
             edges: vec![
