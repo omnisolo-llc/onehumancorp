@@ -157,6 +157,7 @@ rust_library(
         "@crates//:tonic",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
+        "@crates//:urlencoding",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
