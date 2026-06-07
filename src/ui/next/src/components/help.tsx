@@ -9,7 +9,9 @@ import { InteractiveWalkthrough } from './Walkthrough';
 // --- Walkthrough System ---
 type Step = {
   targetId: string;
-  message: string;
+  title?: string;
+  content?: string;
+  message?: string;
 };
 
 type HelpArticle = { title: string; desc: string; link?: string };
@@ -212,7 +214,7 @@ export function HelpWidget() {
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-210 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
             aria-label="Help"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -243,10 +245,10 @@ export function HelpWidget() {
             {tab === "center" && (
               <div>
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">Help Center</h3>
-                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
+                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-210 min-h-[44px]" />
                 <div className="space-y-3 mb-8">
                   {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white/70 backdrop-blur-[20px] saturate-200 p-5 rounded-2xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
+                    <div key={idx} className="bg-white/70 backdrop-blur-[30px] saturate-210 p-5 rounded-2xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
                       {a.link ? (
                         <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
                       ) : (
@@ -260,17 +262,17 @@ export function HelpWidget() {
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input", title: "Set up your store", content: "Enter your business description." }, { targetId: "generate-btn", title: "Set up your store", content: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input", title: "Set up your store", message: "Enter your business description." }, { targetId: "generate-btn", title: "Set up your store", message: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-210 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "stripe-setup-btn", title: "Accept your first payment", content: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "stripe-setup-btn", title: "Accept your first payment", message: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-210 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "generate-btn", title: "Activate your AI Support Agent", content: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "generate-btn", title: "Activate your AI Support Agent", message: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-210 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-210 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                   <button
@@ -279,7 +281,7 @@ export function HelpWidget() {
                       setOpen(false);
                       router.push("/kairos?walkthrough=true");
                     }}
-                    className="w-full text-left bg-indigo-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-indigo-100 hover:bg-indigo-100/90 hover:shadow-md transition-all min-h-[44px]"
+                    className="w-full text-left bg-indigo-50/80 backdrop-blur-[30px] saturate-210 p-4 rounded-2xl shadow-sm border border-indigo-100 hover:bg-indigo-100/90 hover:shadow-md transition-all min-h-[44px]"
                   >
                     <span className="font-bold font-outfit text-indigo-800 text-base block">Tour: KAIROS AI OS Orchestration</span>
                   </button>
@@ -288,7 +290,7 @@ export function HelpWidget() {
             )}
 
             {tab === "chat" && (
-              <div className="flex flex-col h-full bg-white/30 backdrop-blur-[20px] saturate-200 rounded-xl p-2">
+              <div className="flex flex-col h-full bg-white/30 backdrop-blur-[30px] saturate-210 rounded-xl p-2">
                 <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
@@ -353,7 +355,7 @@ export function HelpWidget() {
                      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                    </div>
                 </div>
-                <div className="bg-white/60 backdrop-blur-[20px] saturate-200 border border-white/50 p-5 rounded-2xl shadow-sm mb-6">
+                <div className="bg-white/60 backdrop-blur-[30px] saturate-210 border border-white/50 p-5 rounded-2xl shadow-sm mb-6">
                   <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-md mb-2">LATEST</span>
                   <h4 className="font-bold font-outfit text-gray-900 text-base mb-2">New AI Store Builder</h4>
                   <p className="text-sm text-gray-600 leading-relaxed mb-4">You can now generate a complete storefront from just a short description of your business. Try it out in the Storefront Builder.</p>
@@ -373,7 +375,7 @@ export function HelpWidget() {
 
       {/* Video Player Modal */}
       {activeVideo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[20px] saturate-200 p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[30px] saturate-210 p-4 animate-fade-in">
           <div className="bg-black backdrop-blur-[30px] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">

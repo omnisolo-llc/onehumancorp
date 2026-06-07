@@ -335,7 +335,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 1 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
-                  <div className="flex flex-col gap-4 mt-6">
+                  <div className="flex flex-col gap-4 mt-6 w-full max-w-[375px] mx-auto">
                     <button
                       className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
                       onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
@@ -567,7 +567,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 9 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
-                  <div className="flex flex-col gap-4 mt-6">
+                  <div className="flex flex-col gap-4 mt-6 w-full max-w-[375px] mx-auto">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => {
@@ -586,19 +586,19 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 'instant-build' && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Tell us about your business</h1>
-                  <div className="flex flex-col gap-4 mt-6">
+                  <div className="flex flex-col gap-4 mt-6 w-full max-w-[375px] mx-auto">
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      enterKeyHint="done" className="w-full glassmorphism p-3 sm:p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
-                      disabled={!bio.trim()}
+
                       onClick={async () => {
-                        if (!bio.trim()) return;
+                        if (!bio.trim()) { alert("Please tell us about your business"); return; }
                         setStatus('generating');
                         let completed = false;
                         const finishWithFallback = () => {
@@ -610,9 +610,9 @@ export default function WebsiteBuilderPage() {
                           setProductPrice('10.00');
                           setStatus('live');
                         };
-                        const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
+                        // removed safetyTimeout
                         const controller = new AbortController();
-                        const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
+                        // removed abortTimeout
                         try {
                           const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
                           const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -631,7 +631,7 @@ export default function WebsiteBuilderPage() {
                           const data = await res.json();
                           if (res.ok) {
                             completed = true;
-                            window.clearTimeout(safetyTimeout);
+
                             setBusinessName(data.business_name || 'My Business');
                             setBusinessType(data.business_type || 'Online Store');
                             setProductName(data.initial_products?.[0]?.name || 'First Product');
@@ -643,13 +643,16 @@ export default function WebsiteBuilderPage() {
                             }, 2000);
                           } else {
                             console.error('Failed to generate storefront:', data);
-                            finishWithFallback();
+                            alert("Failed to build storefront");
+                            setStatus("idle");
+                            return;
                           }
                         } catch (err) {
                           console.error(err);
-                          finishWithFallback();
+                          alert("Failed to build storefront");
+                          setStatus("idle");
                         } finally {
-                          window.clearTimeout(abortTimeout);
+
                         }
                       }}
                     >
