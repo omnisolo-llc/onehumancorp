@@ -32,7 +32,6 @@ describe('chat API', () => {
   });
 
   it('returns successful reply for valid message', async () => {
-    // In vitest environment without backend, it falls through to the catch block
     const response = await POST(new Request('http://localhost/api/chat', {
       method: 'POST',
       body: JSON.stringify({ message: 'How do I add a product?' }),
@@ -41,6 +40,8 @@ describe('chat API', () => {
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(data).toHaveProperty('reply');
-    expect(data.reply).toContain("I'm having trouble connecting to my brain right now");
+    expect(data.reply).toContain('AI Help Agent');
+    expect(data).toHaveProperty('link');
+    expect(data.link.url).toBe('/help');
   });
 });

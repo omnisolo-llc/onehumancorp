@@ -146,17 +146,11 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
             <div key={i} className="mac-glass-container shadow-sm p-4 rounded-[16px] flex flex-col">
-              {item.image && (
-                <div className="w-full h-32 bg-gray-200 mb-3 rounded-[8px] bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
-              )}
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.name}</h3>
                 <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
               </div>
               <p className="text-sm text-gray-600 dark:text-[#A1A1A6] leading-relaxed">{item.description}</p>
-              <button className="mt-4 w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-semibold py-2 rounded-[8px] min-h-[44px] flex items-center justify-center hover:bg-opacity-80 transition-colors">
-                {item.buttonText || "Order Now"}
-              </button>
             </div>
           ))}
         </div>

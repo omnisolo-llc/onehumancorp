@@ -26,7 +26,7 @@ defaults:
 jobs:
   check-changes:
     name: Check what files changed
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
@@ -594,7 +594,7 @@ jobs:
       - kind-e2e
       - docker-e2e
     if: ${{ always() }}
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check required CI results

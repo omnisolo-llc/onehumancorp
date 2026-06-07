@@ -3,22 +3,21 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const { orderId, weight, dimensions } = body;
 
-    const baseUrl = process.env.OHC_API_URL || 'http://127.0.0.1:18789';
-    const response = await fetch(`${baseUrl}/api/v1/shipping/rates`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    // Simulate fetching rates from Shippo backend
+    // In a real app, this would call the Go backend which calls Shippo
 
-    if (!response.ok) {
-      throw new Error(`Backend returned status ${response.status}`);
-    }
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate latency
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const mockRates = [
+      { id: 'rate_usps_1', carrier: 'USPS', service: 'Priority Mail', amount: '8.50', days: 2 },
+      { id: 'rate_usps_2', carrier: 'USPS', service: 'First-Class Mail', amount: '4.20', days: 4 },
+      { id: 'rate_ups_1', carrier: 'UPS', service: 'Ground', amount: '9.75', days: 3 },
+    ];
+
+    return NextResponse.json({ rates: mockRates });
   } catch (error) {
-    console.error('Failed to proxy rates:', error);
     return NextResponse.json({ error: 'Failed to fetch rates' }, { status: 500 });
   }
 }

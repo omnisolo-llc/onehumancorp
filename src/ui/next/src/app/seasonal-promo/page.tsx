@@ -21,7 +21,7 @@ export default function SeasonalPromoPage() {
   const generatePromo = () => {
     setIsGenerating(true);
     const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
-    setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}\n\n⚡ Powered by OHC`);
+    setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
     setIsGenerating(false);
   };
 
