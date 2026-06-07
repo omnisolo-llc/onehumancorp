@@ -6,6 +6,10 @@ import TrialExtensionPage from './page';
 describe('TrialExtensionPage', () => {
   beforeEach(() => {
     vi.spyOn(window, 'open').mockImplementation(() => null);
+    global.fetch = vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({})
+    })) as any;
   });
 
   afterEach(() => {
