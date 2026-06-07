@@ -182,29 +182,74 @@ impl PosService for MyPosService {
             }
         }
 
+        // Helper macro for safely releasing the redis lock and returning an error
+        macro_rules! return_err_release_lock {
+            ($status:expr) => {
+                {
+                    if let Some(client) = &self.redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
+                        }
+                    }
+                    return Err($status);
+                }
+            };
+        }
+
+        // Helper macro for safely releasing the redis lock and returning a response
+        macro_rules! return_ok_release_lock {
+            ($response:expr) => {
+                {
+                    if let Some(client) = &self.redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
+                        }
+                    }
+                    return Ok($response);
+                }
+            };
+        }
+
+        // Helper macro for safely releasing the redis lock and returning an error
+        macro_rules! return_err_release_lock {
+            ($status:expr) => {
+                {
+                    if let Some(client) = &self.redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
+                        }
+                    }
+                    return Err($status);
+                }
+            };
+        }
+
+        // Helper macro for safely releasing the redis lock and returning a response
+        macro_rules! return_ok_release_lock {
+            ($response:expr) => {
+                {
+                    if let Some(client) = &self.redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
+                        }
+                    }
+                    return Ok($response);
+                }
+            };
+        }
 
         let pool = crate::db::get_pool();
         let mut db_tx = match pool.begin().await {
             Ok(t) => t,
             Err(e) => {
                 tracing::error!("Failed to begin transaction: {}", e);
-                if let Some(client) = &self.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                    }
-                }
-                return Err(Status::internal("Internal database error"));
+                return_err_release_lock!(Status::internal("Internal database error"));
             }
         };
 
         if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &req.tenant_id).await {
             tracing::error!("Failed to set org context: {}", e);
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Err(Status::internal("Internal database error"));
+            return_err_release_lock!(Status::internal("Internal database error"));
         }
 
         let inventory_count: i32 = match sqlx::query_scalar(
@@ -217,12 +262,7 @@ impl PosService for MyPosService {
             Ok(count) => count,
             Err(_) => {
                 let _ = db_tx.rollback().await;
-                if let Some(client) = &self.redis_client {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                    }
-                }
-                return Ok(Response::new(ProcessInStoreCheckoutResponse {
+                return_ok_release_lock!(Response::new(ProcessInStoreCheckoutResponse {
                     success: false,
                     transaction_id: "".to_string(),
                     message: "Product not found".to_string(),
@@ -232,12 +272,7 @@ impl PosService for MyPosService {
 
         if inventory_count <= 0 {
             let _ = db_tx.rollback().await;
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Ok(Response::new(ProcessInStoreCheckoutResponse {
+            return_ok_release_lock!(Response::new(ProcessInStoreCheckoutResponse {
                 success: false,
                 transaction_id: "".to_string(),
                 message: "Item just sold out".to_string(),
@@ -254,12 +289,7 @@ impl PosService for MyPosService {
         .await {
             tracing::error!("Failed to update inventory: {}", e);
             let _ = db_tx.rollback().await;
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Err(Status::internal("Internal database error"));
+            return_err_release_lock!(Status::internal("Internal database error"));
         }
 
         let tx_id = Uuid::new_v4().to_string();
@@ -271,12 +301,13 @@ impl PosService for MyPosService {
 
         // Insert into pos_offline_transactions (as SYNCED)
         if let Err(e) = sqlx::query(
-            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-             VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'SYNCED')"
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, product_id, amount_cents, currency, payload, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'SYNCED')"
         )
         .bind(&tx_id)
         .bind(&req.tenant_id)
         .bind(&req.client_id)
+        .bind(&req.product_id)
         .bind(req.amount_cents)
         .bind(&req.currency)
         .bind(&payload)
@@ -284,12 +315,7 @@ impl PosService for MyPosService {
         .await {
             tracing::error!("Failed to insert synced pos transaction: {}", e);
             let _ = db_tx.rollback().await;
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Err(Status::internal("Internal database error"));
+            return_err_release_lock!(Status::internal("Internal database error"));
         }
 
         let order_id = Uuid::new_v4().to_string();
@@ -304,12 +330,7 @@ impl PosService for MyPosService {
         .await {
             tracing::error!("Failed to insert order: {}", e);
             let _ = db_tx.rollback().await;
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Err(Status::internal("Internal database error"));
+            return_err_release_lock!(Status::internal("Internal database error"));
         }
 
         let order_item_id = Uuid::new_v4().to_string();
@@ -325,12 +346,7 @@ impl PosService for MyPosService {
         .await {
             tracing::error!("Failed to insert order item: {}", e);
             let _ = db_tx.rollback().await;
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Err(Status::internal("Internal database error"));
+            return_err_release_lock!(Status::internal("Internal database error"));
         }
 
         // Queue job for OperationsAgent
@@ -353,39 +369,19 @@ impl PosService for MyPosService {
         .await {
             tracing::error!("Failed to enqueue order created job: {}", e);
             let _ = db_tx.rollback().await;
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Err(Status::internal("Internal database error"));
+            return_err_release_lock!(Status::internal("Internal database error"));
         }
 
         if let Err(e) = db_tx.commit().await {
             tracing::error!("Failed to commit transaction: {}", e);
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let _: () = redis::cmd("DEL").arg(&inventory_lock_id).query_async(&mut conn).await.unwrap_or(());
-                }
-            }
-            return Err(Status::internal("Internal database error"));
+            return_err_release_lock!(Status::internal("Internal database error"));
         }
 
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                let _: () = redis::cmd("DEL")
-                    .arg(&inventory_lock_id)
-                    .query_async(&mut conn)
-                    .await
-                    .unwrap_or(());
-            }
-        }
-
-        Ok(Response::new(ProcessInStoreCheckoutResponse {
+        return_ok_release_lock!(Response::new(ProcessInStoreCheckoutResponse {
             success: true,
             transaction_id: tx_id,
             message: "Success".to_string(),
-        }))
+        }));
     }
 }
 
