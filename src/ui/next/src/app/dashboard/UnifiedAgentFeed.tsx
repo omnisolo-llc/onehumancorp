@@ -195,9 +195,9 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {approval.payload?.context && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined) && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      {approval.payload.context.smart_pricing === true ? (
+                      {approval.payload?.context?.smart_pricing === true ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
                             <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
@@ -220,7 +220,7 @@ export function UnifiedAgentFeed() {
                         </>
                       ) : (
                         <>
-                          {approval.payload.context.weekly_health_report === true ? (
+                          {approval.payload?.context?.weekly_health_report === true ? (
                             <div className="flex flex-col gap-2">
                               <div className="text-sm text-gray-700 dark:text-gray-300">
                                 <span className="font-semibold">Summary:</span> {approval.payload.context.summary}
@@ -231,18 +231,34 @@ export function UnifiedAgentFeed() {
                             </div>
                           ) : (
                             <>
-                              {approval.payload.context.abandoned_carts_count !== undefined && (
+                              {approval.payload?.context?.abandoned_carts_count !== undefined && (
                                 <div className="flex justify-between items-center text-sm">
                                   <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
                                   <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.context.abandoned_carts_count}</span>
                                 </div>
                               )}
-                              {approval.payload.context.potential_revenue !== undefined && (
+                              {approval.payload?.context?.potential_revenue !== undefined && (
                                 <div className="flex justify-between items-center text-sm">
                                   <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
                                   <span className="font-semibold text-green-600 dark:text-green-400">
                                     ${Number(approval.payload.context.potential_revenue).toFixed(2)}
                                   </span>
+                                </div>
+                              )}
+                              {approval.payload?.remaining_stock !== undefined && (
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-500 dark:text-gray-400">Product ID:</span>
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.product_id}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-500 dark:text-gray-400">Remaining Stock:</span>
+                                    <span className="font-semibold text-red-600 dark:text-red-400">{approval.payload.remaining_stock}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-500 dark:text-gray-400">Alert Message:</span>
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.message}</span>
+                                  </div>
                                 </div>
                               )}
                             </>
@@ -288,6 +304,25 @@ export function UnifiedAgentFeed() {
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Dismiss proposal"
                         data-testid="dismiss-draft"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.remaining_stock !== undefined ? (
+                    <div className="flex gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve Restock"
+                        data-testid="approve-restock"
+                      >
+                        Approve Restock
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss restock"
+                        data-testid="dismiss-restock"
                       >
                         Dismiss
                       </button>
