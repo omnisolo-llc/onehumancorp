@@ -28,6 +28,7 @@ static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
 static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -491,6 +492,28 @@ pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type:
 pub fn record_sub_agent_queue_delay(delay: f64, deployment_mode: &str) {
     let histogram = get_sub_agent_queue_delay_histogram();
     histogram.record(delay, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+}
+
+pub fn autodream_sync_duration_metric_name() -> &'static str {
+    "ohc_autodream_sync_duration_seconds"
+}
+
+pub fn get_autodream_sync_duration_histogram() -> &'static Histogram<f64> {
+    AUTODREAM_SYNC_DURATION.get_or_init(|| {
+        let meter = global::meter("ohc.autodream");
+        meter
+            .f64_histogram(autodream_sync_duration_metric_name())
+            .with_description("Duration of AutoDream sync batches in seconds")
+            .build()
+    })
+}
+
+pub fn record_autodream_sync_duration(duration_seconds: f64, deployment_mode: &str) {
+    let histogram = get_autodream_sync_duration_histogram();
+    histogram.record(
+        duration_seconds,
+        &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())],
+    );
 }
 
 pub fn record_task_claim_contention(mode: &str) {
@@ -1367,7 +1390,8 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
-    // use super::*;
+    use super::*;
+    use std::fs;
 
 
     #[test]
@@ -1375,6 +1399,20 @@ mod additional_tests {
         // Just checking that `get_deployment_mode` is exported and we can use it.
         let mode = crate::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
+    }
+
+    #[test]
+    fn autodream_sync_duration_metric_is_registered_and_dashboarded() {
+        let metric_name = autodream_sync_duration_metric_name();
+        assert_eq!(metric_name, "ohc_autodream_sync_duration_seconds");
+        record_autodream_sync_duration(0.25, "Standalone");
+
+        let dashboard = fs::read_to_string("../monitoring/dashboards/hybrid-telemetry.json").or_else(|_| {
+            fs::read_to_string("../../monitoring/dashboards/hybrid-telemetry.json").or_else(|_| {
+                fs::read_to_string("src/server/monitoring/dashboards/hybrid-telemetry.json")
+            })
+        }).expect("hybrid telemetry dashboard should be readable");
+        assert!(dashboard.contains(metric_name));
     }
 }
 
@@ -1477,8 +1515,30 @@ mod harness_io_bytes_tests {
     }
 }
 
+pub static HARNESS_SECURITY_DIVERGENCE_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
 pub static RAG_RECORDS_SYNCED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 pub static RAG_SYNC_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_harness_security_divergence_total() -> &'static Counter<u64> {
+    HARNESS_SECURITY_DIVERGENCE_TOTAL.get_or_init(|| {
+        global::meter("ohc.telemetry")
+            .u64_counter("ohc_harness_security_divergence_total")
+            .with_description("Total number of security divergence validations triggered in Harness")
+            .build()
+    })
+}
+
+pub fn record_harness_security_divergence(reason: &str, command_snippet: &str) {
+    let counter = get_harness_security_divergence_total();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("reason", reason.to_string()),
+            opentelemetry::KeyValue::new("command_snippet", command_snippet.to_string()),
+        ],
+    );
+}
 
 pub fn get_rag_records_synced_total() -> &'static Counter<u64> {
     let meter = global::meter("ohc.hybrid_sync");
@@ -1577,5 +1637,17 @@ impl ChaosRecoveryTracker {
 impl Drop for ChaosRecoveryTracker {
     fn drop(&mut self) {
         record_task_recovery_time(&self.env_mode, self.start.elapsed().as_millis() as f64);
+    }
+}
+
+#[cfg(test)]
+mod harness_security_divergence_tests {
+    use super::*;
+
+    #[test]
+    fn test_record_harness_security_divergence() {
+        record_harness_security_divergence("test_reason", "test_cmd");
+        let counter = get_harness_security_divergence_total();
+        counter.add(0, &[]);
     }
 }

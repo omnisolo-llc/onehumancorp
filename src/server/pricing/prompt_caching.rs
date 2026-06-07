@@ -40,16 +40,19 @@ impl PromptCache {
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
-            // very rough estimate of saved cents for cache hit
-            // Miser cost optimization: Estimate cost saved by cache hit based on token ratio.
-            static RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
-            let ratio = RATIO.get_or_init(|| {
-                std::env::var("MISER_TOKEN_RATIO")
+            // Use heuristic token efficiency logic directly to accurately estimate savings.
+            let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string());
+            let ratio = super::calculator::calculate_heuristic_token_efficiency(r.token_count as i64, 0, &model);
+            // Fallback back to standard cache estimation if ratio is 0
+            if ratio == 0.0 {
+                let fallback_ratio = std::env::var("MISER_TOKEN_RATIO")
                     .unwrap_or_else(|_| "0.0001".to_string())
                     .parse::<f64>()
-                    .unwrap_or(0.0001)
-            });
-            (r.token_count as f64 * ratio).round() as i64
+                    .unwrap_or(0.0001);
+                (r.token_count as f64 * fallback_ratio * 100.0).round() as i64
+            } else {
+                (ratio * 100.0).round() as i64
+            }
         } else {
             0
         };
@@ -112,14 +115,15 @@ mod tests {
 
     #[test]
     fn test_prompt_cache_get_with_cost_cents() {
+        unsafe { std::env::set_var("OHC_LLM_MODEL", "gpt-4o"); } // 5.00 per 1M tokens
         let cache = PromptCache::new(Duration::from_secs(10));
-        cache.set("What is the capital of France?", "Paris", 10000);
+        cache.set("What is the capital of France?", "Paris", 1_000_000);
 
         let (response, cost) = cache.get_with_cost_cents("What is the capital of France?");
         assert!(response.is_some());
         assert_eq!(response.unwrap().text, "Paris");
-        // 10000 * 0.0001 = 1.0 = 1 cent
-        assert_eq!(cost, 1);
+        // 1,000,000 tokens * 5.00 / 1M = 5.0 dollars = 500 cents
+        assert_eq!(cost, 500);
     }
 
     #[test]

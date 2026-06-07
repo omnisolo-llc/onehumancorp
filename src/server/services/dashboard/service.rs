@@ -25,54 +25,100 @@ impl MyDashboardService {
         Self { db, hub }
     }
 
-    async fn fetch_agents(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
-        let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
-        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+    #[tracing::instrument(skip(self))]
+    async fn fetch_agents_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+        let hub = self.hub.clone();
+        let org_id_clone = org_id.to_string();
+        let mut agents = tokio::task::spawn_blocking(move || {
+            hub.get_agents_by_org(&org_id_clone)
+        }).await.map_err(|e| e.to_string())?;
 
-        if let Some(agents) = cache.get(&cache_key).await {
-            return Ok(agents);
-        }
-
-        let mut agents = self.hub.get_agents_by_org(org_id);
         if mobile_optimized {
             for agent in agents.iter_mut() {
                 agent.name = String::new();
             }
         }
+        Ok(agents)
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn fetch_agents(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+        let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
+        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some((agents, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(agents);
+            }
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(agents) = s.fetch_agents_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = AGENTS_CACHE.get() {
+                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(5)).await;
+                    }
+                }
+            });
+            return Ok(agents);
+        }
+
+        let agents = self.fetch_agents_impl(org_id, mobile_optimized).await?;
         cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
         Ok(agents)
     }
 
-    async fn fetch_meetings(&self, org_id: &str) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
-        let cache_key = format!("hub:meetings:{}", org_id);
-        let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-
-        if let Some(meetings) = cache.get(&cache_key).await {
-            return Ok(meetings);
-        }
-
+    #[tracing::instrument(skip(self))]
+    async fn fetch_meetings_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
         let all_meetings = self.hub.get_meetings().await;
         let mut filtered = Vec::new();
         for m in all_meetings.iter() {
             if m.id.starts_with(org_id) || m.id.contains(org_id) {
-                filtered.push(m.clone());
+                let mut mtg = m.clone();
+                if mobile_optimized {
+                    mtg.transcript.clear();
+                }
+                filtered.push(mtg);
             } else if m.participants.iter().any(|p| p.starts_with(org_id) || p.contains(org_id)) {
-                filtered.push(m.clone());
+                let mut mtg = m.clone();
+                if mobile_optimized {
+                    mtg.transcript.clear();
+                }
+                filtered.push(mtg);
             }
         }
-        let meetings = Arc::new(filtered);
+        Ok(Arc::new(filtered))
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn fetch_meetings(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+        let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
+        let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some((meetings, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(meetings);
+            }
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(meetings) = s.fetch_meetings_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = MEETINGS_CACHE.get() {
+                        c.set(&cache_key_bg, meetings, std::time::Duration::from_secs(5)).await;
+                    }
+                }
+            });
+            return Ok(meetings);
+        }
+
+        let meetings = self.fetch_meetings_impl(org_id, mobile_optimized).await?;
         cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
         Ok(meetings)
     }
 
-    async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
-        let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
-        let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-
-        if let Some(cost_data) = cache.get(&cache_key).await {
-            return Ok(cost_data);
-        }
-
+    #[tracing::instrument(skip(self))]
+    async fn fetch_cost_summary_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let hub_clone = self.hub.clone();
         let cost_data = tokio::task::spawn_blocking(move || {
             let cost_auditor = hub_clone.get_cost_auditor();
@@ -89,11 +135,37 @@ impl MyDashboardService {
                 snapshot,
             )
         }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
+        Ok(cost_data)
+    }
 
+    #[tracing::instrument(skip(self))]
+    async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+        let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
+        let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some((cost_data, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(cost_data);
+            }
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(cost_data) = s.fetch_cost_summary_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = COST_CACHE.get() {
+                        c.set(&cache_key_bg, cost_data, std::time::Duration::from_secs(60)).await;
+                    }
+                }
+            });
+            return Ok(cost_data);
+        }
+
+        let cost_data = self.fetch_cost_summary_impl(org_id, mobile_optimized).await?;
         cache.set(&cache_key, cost_data.clone(), std::time::Duration::from_secs(60)).await;
         Ok(cost_data)
     }
 
+    #[tracing::instrument(skip(self))]
     async fn fetch_products(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
         let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
         let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
@@ -119,7 +191,7 @@ impl MyDashboardService {
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
-                            currency: if mobile_optimized { String::new() } else { r.try_get("currency").unwrap_or_else(|_| "USD".to_string()) },
+                            currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                             fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
                             metadata_json: if mobile_optimized { String::new() } else {
                                 match r.try_get::<serde_json::Value, _>("metadata") {
@@ -141,7 +213,7 @@ impl MyDashboardService {
                             name: r.try_get("name").unwrap_or_default(),
                             description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
-                            currency: if mobile_optimized { String::new() } else { r.try_get("currency").unwrap_or_else(|_| "USD".to_string()) },
+                            currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                             fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
                             metadata_json: if mobile_optimized { String::new() } else {
                                 match r.try_get::<serde_json::Value, _>("metadata") {
@@ -160,6 +232,7 @@ impl MyDashboardService {
         Ok(results)
     }
 
+    #[tracing::instrument(skip(self))]
     async fn fetch_orders(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
         let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
         let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
@@ -214,6 +287,7 @@ impl MyDashboardService {
         Ok(results)
     }
 
+    #[tracing::instrument(skip(self))]
     async fn fetch_bookings(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
         let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
         let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
@@ -280,6 +354,7 @@ impl MyDashboardService {
         Ok(results)
     }
 
+    #[tracing::instrument(skip(self))]
     async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
         let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
@@ -333,6 +408,7 @@ impl MyDashboardService {
 
 #[tonic::async_trait]
 impl DashboardService for MyDashboardService {
+    #[tracing::instrument(skip(self, request))]
     async fn get_dashboard(
         &self,
         request: Request<GetDashboardRequest>,
@@ -371,7 +447,7 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o).await })
+                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
             },
             {
                 let s = self.clone();
@@ -733,7 +809,7 @@ mod tests {
         sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'test_org', 50.0, 'completed')").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.unwrap();
 
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = crate::db::get_pool();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -789,7 +865,7 @@ mod tests {
             assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
         }
         if !res_mobile.products.is_empty() {
-            assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
+            assert_ne!(res_mobile.products[0].currency, "", "Mobile payload should include product currency");
             assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
         }
         if !res_mobile.orders.is_empty() {

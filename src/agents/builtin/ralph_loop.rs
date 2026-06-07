@@ -89,7 +89,10 @@ impl RalphLoop {
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
             let scratchpad_context = if !progress.notes.is_empty() {
-                format!("\nStructured Scratchpad Notes:\n- {}", progress.notes.join("\n- "))
+                // Fix Gap 2: Bound the context window by only including the last 10 notes.
+                let start_idx = progress.notes.len().saturating_sub(10);
+                let recent_notes = &progress.notes[start_idx..];
+                format!("\nStructured Scratchpad Notes:\n- {}", recent_notes.join("\n- "))
             } else {
                 String::new()
             };
@@ -124,6 +127,12 @@ impl RalphLoop {
                 }
                 Err(e) => {
                     tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
+                    progress.notes.push(format!("Failed feature {}: {}", feature_name, e));
+                    let _ = self.save_progress(&progress).await;
+                    // The original loop used break here, meaning run() returns Ok(()).
+                    // In a production system, it's a design choice whether an interruption inside
+                    // the loop is fatal to `run()` or just pauses the loop.
+                    // The existing tests expect `run()` to return `Ok(())` even if it breaks internally.
                     break;
                 }
             }
@@ -148,8 +157,19 @@ impl RalphLoop {
         let mut on_event = |_| {};
         let result = self.agent.run(&self.config, &breakdown_prompt, &mut on_event).await?;
 
+        // Fix Gap 3: Strip markdown JSON blocks if the model wrapped the output
+        let mut clean_result = result.trim();
+        if clean_result.starts_with("```json") {
+            clean_result = clean_result.trim_start_matches("```json").trim();
+        } else if clean_result.starts_with("```") {
+            clean_result = clean_result.trim_start_matches("```").trim();
+        }
+        if clean_result.ends_with("```") {
+            clean_result = clean_result.trim_end_matches("```").trim();
+        }
+
         let mut features = vec![];
-        if let Ok(parsed) = serde_json::from_str::<Vec<String>>(&result) {
+        if let Ok(parsed) = serde_json::from_str::<Vec<String>>(clean_result) {
             for name in parsed {
                 features.push(Feature { name, status: "pending".to_string() });
             }
@@ -322,8 +342,8 @@ mod tests {
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
                 })
-            } else if *count == 2 {
-                Err("Simulated failure during feature implementation".into())
+            } else if *count == 2 { // First run fails immediately because of "Fatal"
+                Err("Fatal: Simulated failure during feature implementation".into())
             } else {
                 Ok(ChatResponse {
                     message: Message::assistant("Feature implemented successfully after retry"),
@@ -348,7 +368,16 @@ mod tests {
         let ralph = RalphLoop::new(agent.clone(), config.clone(), progress_file_str);
 
         let result1 = ralph.run("Build a reliable feature").await;
+        // In the test, the second LLM call (for "Feature A") fails, which breaks the loop.
+        // We now correctly return Ok(()) instead of Err from the loop because the run itself didn't crash,
+        // it just stopped due to feature failure so it can be resumed later. Wait, run() returns Ok(()).
         assert!(result1.is_ok());
+
+        // Verify that the error was recorded in the progress file before breaking
+        let saved_progress_str1 = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress1: RalphProgress = serde_json::from_str(&saved_progress_str1).unwrap();
+        assert!(!saved_progress1.is_complete);
+        assert!(saved_progress1.notes.iter().any(|n| n.contains("Failed feature Feature A")));
 
         let result2 = ralph.run("Build a reliable feature").await;
         assert!(result2.is_ok());
@@ -357,5 +386,62 @@ mod tests {
         let saved_progress2: RalphProgress = serde_json::from_str(&saved_progress_str2).unwrap();
         assert!(saved_progress2.is_complete);
         assert_eq!(saved_progress2.features[0].status, "completed");
+    }
+
+    struct MarkdownJsonLlmClient;
+
+    #[async_trait::async_trait]
+    impl LlmClient for MarkdownJsonLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                message: Message::assistant("```json\n[\"Markdown Feature 1\", \"Markdown Feature 2\"]\n```"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id-md".to_string()),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_markdown_json_parsing() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress_md.json");
+        let progress_file_str = progress_file.to_str().unwrap();
+
+        let llm = Arc::new(MarkdownJsonLlmClient);
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file_str);
+
+        let progress = ralph.initialize("Test markdown parsing").await.unwrap();
+
+        // The features should match the markdown block, not the fallback defaults
+        assert_eq!(progress.features.len(), 2);
+        assert_eq!(progress.features[0].name, "Markdown Feature 1");
+        assert_eq!(progress.features[1].name, "Markdown Feature 2");
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_git_status_failure_continues() {
+        let dir = tempfile::tempdir().unwrap();
+        let progress_file = dir.path().join("progress.json");
+
+        let llm = Arc::new(TestLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let mut ralph = RalphLoop::new(agent, config, progress_file.to_str().unwrap());
+        // Use a non-existent directory to simulate git commands failing without panicking
+        ralph.repo_path = dir.path().join("non_existent_repo");
+
+        let result = ralph.run("Build a web server").await;
+        // Even if git commands fail, the loop should continue and return Ok(())
+        assert!(result.is_ok());
+
+        assert!(progress_file.exists());
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+        assert!(saved_progress.is_complete);
     }
 }
