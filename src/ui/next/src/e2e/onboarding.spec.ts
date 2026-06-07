@@ -179,4 +179,43 @@ test.describe('OnboardingWizard CUJ', () => {
     // Ensure it hasn't progressed to the success screen
     await expect(page.getByText("You're Live!")).toBeHidden();
   });
+
+  test('Submitting empty inputs displays validation errors with visual indicators', async ({ page }) => {
+    await page.goto('/onboarding');
+
+    // Step 1: Empty Business Name
+    await expect(page.getByText("What's the name of your business?")).toBeVisible();
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('  ');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    const businessNameInput = page.getByPlaceholder(/Maya's Custom Cake/i);
+    await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
+    await expect(businessNameInput).toHaveClass(/border-red-500/);
+
+    // Proceed to Step 2
+    await businessNameInput.fill('Valid Business Name');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 2: Empty What you sell
+    await expect(page.getByText("What do you sell?")).toBeVisible();
+    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    const whatYouSellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
+    await expect(page.getByText('Please tell us what you sell.')).toBeVisible();
+    await expect(whatYouSellInput).toHaveClass(/border-red-500/);
+
+    // Proceed to Step 3
+    await whatYouSellInput.fill('Valid products');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 3: Empty Location
+    await expect(page.getByText("Where are you located?")).toBeVisible();
+    await page.getByPlaceholder(/Portland, OR/i).fill('  ');
+    await page.getByRole('button', { name: 'Generate My Business' }).click();
+
+    const locationInput = page.getByPlaceholder(/Portland, OR/i);
+    await expect(page.getByText('Please tell us your location.')).toBeVisible();
+    await expect(locationInput).toHaveClass(/border-red-500/);
+  });
 });
