@@ -161,11 +161,14 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
+        const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+        const mobileParam = isMobile ? "&mobile_optimized=true" : "";
+
         const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
-          fetch(`/api/ui/orders?tenant_id=${tenant}`),
-          fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
-          fetch(`/api/ui/supply?tenant_id=${tenant}`),
+          fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}${mobileParam}`),
+          fetch(`/api/ui/orders?tenant_id=${tenant}${mobileParam}`),
+          fetch(`/api/ui/inbox/messages?tenant_id=${tenant}${mobileParam}`),
+          fetch(`/api/ui/supply?tenant_id=${tenant}${mobileParam}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
         ]);
 
