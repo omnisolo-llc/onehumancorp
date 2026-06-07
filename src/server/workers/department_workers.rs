@@ -1205,6 +1205,51 @@ impl AdvisorWorker {
                     Ok(tx) => tx,
                     Err(_) => continue,
                 };
+                // Generate Smart Pricing suggestions
+                let stagnant_products: Vec<(String, String, String, f64, i32, f64, f64)> = match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_as(
+                            "SELECT p.id::text, p.tenant_id::text, p.name, p.price, spp.auto_discount_trigger_days_stagnant, spp.min_margin_percent, spp.max_discount_percent
+                             FROM products p
+                             JOIN smart_pricing_policies spp ON p.id = spp.product_id
+                             WHERE p.updated_at < NOW() - (spp.auto_discount_trigger_days_stagnant || ' days')::interval
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM active_discounts ad WHERE ad.policy_id = spp.id AND ad.expires_at > NOW()
+                             )
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM shared_tasks st
+                                 WHERE st.organization_id = p.tenant_id::text
+                                 AND st.status = 'PENDING'
+                                 AND st.proposed_content LIKE '%' || p.id::text || '%'
+                                 AND st.proposed_content LIKE '%smart_pricing_approval%'
+                             )"
+                        )
+                        .fetch_all(&mut *transaction)
+                        .await
+                        .unwrap_or_default()
+                    },
+                    crate::db::DbStore::Sqlite(_) => {
+                        vec![] // Add SQLite implementation later if needed
+                    }
+                };
+
+                for (product_id, tenant_id, name, price, days, _min_margin, max_discount) in stagnant_products {
+                    let discount_amount = price * max_discount / 100.0;
+                    let suggested_price = price - discount_amount;
+
+                    let _ = sqlx::query(
+                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                         VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'LOW', 'PENDING', $5)"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(format!("Smart Price Suggestion: {}", name))
+                    .bind(format!("{} has been stagnant for {} days. Suggesting a {}% discount. Your margin stays safe.", name, days, max_discount))
+                    .bind(format!("{{\"type\": \"smart_pricing_approval\", \"product_id\": \"{}\", \"suggested_price\": {}, \"discount_percent\": {}}}", product_id, suggested_price, max_discount))
+                    .execute(&mut *transaction)
+                    .await;
+                }
+
                 // Grab pending reports with SKIP LOCKED
                 let reports: Vec<(String, String)> = match &db.store {
                     crate::db::DbStore::Postgres => {

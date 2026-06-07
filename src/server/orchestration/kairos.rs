@@ -405,6 +405,56 @@ impl KairosOrchestrator {
                 DbStore::Postgres => {
                     let mut tx = self.db.pool.begin().await?;
 
+                    // We need to fetch the proposed content so we can parse out the side effects.
+                    let proposed_content_row = sqlx::query("SELECT proposed_content FROM shared_tasks WHERE id = $1 AND organization_id = $2")
+                        .bind(task_id)
+                        .bind(tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await?;
+
+                    let mut maybe_product_to_invalidate = None;
+
+                    if approved {
+                        if let Some(row) = proposed_content_row {
+                            if let Ok(Some(content)) = row.try_get::<Option<String>, _>("proposed_content") {
+                                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&content) {
+                                    if parsed.get("type").and_then(|v| v.as_str()) == Some("smart_pricing_approval") {
+                                        let product_id_str = parsed.get("product_id").and_then(|v| v.as_str());
+                                        let discount_percent = parsed.get("discount_percent").and_then(|v| v.as_f64());
+
+                                        if let (Some(product_id_str), Some(discount)) = (product_id_str, discount_percent) {
+                                            if let Ok(product_id) = uuid::Uuid::parse_str(product_id_str) {
+                                                // Find the policy_id
+                                                let policy_row = sqlx::query("SELECT id FROM smart_pricing_policies WHERE product_id = $1 AND tenant_id = $2")
+                                                    .bind(product_id)
+                                                    .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or_default())
+                                                    .fetch_optional(&mut *tx)
+                                                    .await?;
+
+                                                if let Some(p_row) = policy_row {
+                                                    let policy_id: uuid::Uuid = p_row.try_get("id")?;
+
+                                                    // Insert active discount for the weekend (e.g. 3 days)
+                                                    let expires_at = Utc::now() + chrono::Duration::days(3);
+
+                                                    sqlx::query("INSERT INTO active_discounts (policy_id, tenant_id, discount_amount, expires_at) VALUES ($1, $2, $3, $4)")
+                                                        .bind(policy_id)
+                                                        .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or_default())
+                                                        .bind(discount)
+                                                        .bind(expires_at)
+                                                        .execute(&mut *tx)
+                                                        .await?;
+
+                                                    maybe_product_to_invalidate = Some(product_id_str.to_string());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     sqlx::query(
                         "UPDATE shared_tasks SET approval_status = $1, status = $2, updated_at = $3 WHERE id = $4 AND organization_id = $5"
                     )
@@ -417,6 +467,21 @@ impl KairosOrchestrator {
                     .await?;
 
                     tx.commit().await?;
+
+                    // Now invalidate the cache safely *after* the database commit
+                    if let Some(product_id_str) = maybe_product_to_invalidate {
+                        let cache_key = format!("ohc:price:{}:{}", tenant_id, product_id_str);
+                        // In a real scenario we would pass down the redis client, but for now we spawn a quick connection to just invalidate.
+                        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL") {
+                            tokio::spawn(async move {
+                                if let Ok(client) = redis::Client::open(redis_url) {
+                                    if let Ok(mut con) = client.get_async_connection().await {
+                                        let _: () = redis::cmd("DEL").arg(&cache_key).query_async(&mut con).await.unwrap_or(());
+                                    }
+                                }
+                            });
+                        }
+                    }
                     Ok(())
                 }
                 DbStore::Sqlite(sqlite_pool) => {

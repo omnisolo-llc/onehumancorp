@@ -215,6 +215,22 @@ export function UnifiedAgentFeed() {
                       )}
                     </div>
                   )}
+                  {approval.payload?.type === 'smart_pricing_approval' && (
+                    <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {approval.payload.suggested_price !== undefined && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
+                          <span className="font-semibold text-green-600 dark:text-green-400">${Number(approval.payload.suggested_price).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {approval.payload.discount_percent !== undefined && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500 dark:text-gray-400">Discount:</span>
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.discount_percent}%</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
