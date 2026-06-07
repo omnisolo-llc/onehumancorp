@@ -171,3 +171,58 @@ describe('CostDashboardPage', () => {
     expect(zeroElements.length).toBeGreaterThan(0);
   });
 });
+
+  test('renders "Unlimited" when limits are null', async () => {
+    const mockCostData = {
+      total_revenue: 150000,
+      total_costs: 51000,
+      llm_cost: 20000,
+      storage_cost: 10000,
+      payment_fees: 5000,
+      network_cost: 16000,
+      bandwidth_savings: 5000,
+      cache_hit_rate: 85.5,
+      cost_per_1k_tokens: 0.0015,
+      period_start: "2023-10-01",
+      period_end: "2023-10-31",
+      trend: [],
+      department_tier_usage: null,
+    };
+
+    const mockPlanDataUnlimited = {
+      current_plan: "Pro",
+      ai_actions_used: 1500,
+      ai_actions_limit: null,
+      storage_used_bytes: 10 * 1024 * 1024,
+      storage_limit_bytes: null,
+      next_bill_estimated: 9900,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCostData)
+        });
+      } else if (url.includes('my-plan')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockPlanDataUnlimited)
+        });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).toBeNull();
+    });
+
+    // AI actions used: 1500 / Unlimited
+    expect(screen.getAllByText(/1500/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ Unlimited/)[0]).toBeDefined();
+
+    // Storage used
+    expect(screen.getByText(/10.0 MB/)).toBeDefined();
+  });

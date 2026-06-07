@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable',
-});
+let pool: any;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tenantId = searchParams.get('tenant_id') || 'default';
 
   try {
+    if (!pool) {
+      const { Pool } = require('pg');
+      pool = new Pool({
+        connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable',
+      });
+    }
     const client = await pool.connect();
 
     // Using a simplistic check: if tenant has orders, maybe they hit "first_order" milestone
