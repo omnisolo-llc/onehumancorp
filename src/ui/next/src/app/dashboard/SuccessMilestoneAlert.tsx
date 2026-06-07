@@ -7,8 +7,15 @@ function tenantId() {
   return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
 }
 
+type Milestone = {
+  id: string;
+  title: string;
+  description: string;
+  reached: boolean;
+};
+
 export function SuccessMilestoneAlert() {
-  const [milestone, setMilestone] = useState<{ reached: boolean; type?: string; message?: string } | null>(null);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -16,15 +23,16 @@ export function SuccessMilestoneAlert() {
     async function checkMilestone() {
       try {
         const tenant = encodeURIComponent(tenantId());
-        const res = await fetch(`/api/v1/growth/milestones/check?tenant_id=${tenant}`);
+        const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
         if (res.ok) {
           const data = await res.json();
-          setMilestone(data);
-        } else {
-          setMilestone({ reached: false });
+          const reachedMilestone = data.milestones?.find((m: Milestone) => m.reached);
+          if (reachedMilestone) {
+            setMilestone(reachedMilestone);
+          }
         }
       } catch (e) {
-        setMilestone({ reached: false });
+        console.error("Failed to check milestones", e);
       } finally {
         setLoading(false);
       }
@@ -32,7 +40,7 @@ export function SuccessMilestoneAlert() {
     checkMilestone();
   }, []);
 
-  if (loading || !milestone || !milestone.reached) {
+  if (loading || !milestone) {
     return null;
   }
 
@@ -56,10 +64,10 @@ export function SuccessMilestoneAlert() {
           </div>
           <div>
             <h3 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white flex items-center gap-2">
-              Milestone Reached!
+              {milestone.title}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 mt-1">
-              {milestone.message || "You've hit a new milestone!"}
+              {milestone.description}
             </p>
           </div>
         </div>
