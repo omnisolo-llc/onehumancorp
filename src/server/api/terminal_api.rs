@@ -371,7 +371,7 @@ pub async fn sync_offline_transactions_handler(
 
             let job_res = sqlx::query(
                 "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                 VALUES ($1, $2, 'pos_offline_sync', $3::jsonb)"
+                 VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
             )
             .bind(&job_id)
             .bind(&tenant_id_clone)
