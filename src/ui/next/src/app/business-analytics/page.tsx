@@ -29,7 +29,7 @@ export default function BusinessAnalytics() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       <title>Business Analytics | OHC</title>
 
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Analytics 📊</h1>
          <div className="flex items-center gap-3">
              <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
