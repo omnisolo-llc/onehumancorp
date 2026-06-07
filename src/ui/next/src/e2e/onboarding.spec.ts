@@ -6,6 +6,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.addInitScript(() => {
       window.localStorage.clear();
     });
+  });
 
 
   test('Maya the Baker can complete the onboarding flow', async ({ page }) => {
