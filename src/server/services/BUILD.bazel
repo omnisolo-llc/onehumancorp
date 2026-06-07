@@ -30,6 +30,8 @@ rust_library(
         "//src/server/services/billing:auditor.rs",
         "//src/server/services/billing:mod.rs",
         "//src/server/services/billing:service.rs",
+        "//src/server/services/campaign:mod.rs",
+        "//src/server/services/campaign:service.rs",
         "//src/server/services/chat:mod.rs",
         "//src/server/services/chat:service.rs",
         "//src/server/services/dashboard:mod.rs",
