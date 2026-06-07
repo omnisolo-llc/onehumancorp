@@ -523,6 +523,7 @@ impl DashboardService for MyDashboardService {
         let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
+        if req.mobile_optimized { final_statuses.clear(); }
 
         let final_agents_payload = agents
             .iter()

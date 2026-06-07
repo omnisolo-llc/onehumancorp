@@ -347,9 +347,9 @@ mod tests {
 use tonic::{Request, Response, Status};
 use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
 use ::server_ohc::app::{
-    SyncCalendarRequest, SyncCalendarResponse,
+
     CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
-    ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
+    SyncCalendarRequest, SyncCalendarResponse, ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
     ConversationalCheckoutSession,
 };
 
