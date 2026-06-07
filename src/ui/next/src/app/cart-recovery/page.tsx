@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function CartRecoveryPage() {
   const router = useRouter();
@@ -132,7 +133,7 @@ export default function CartRecoveryPage() {
             </div>
             <div className="flex flex-col gap-4">
               <div>
-                <label htmlFor="customer-name" className="block text-sm font-medium text-gray-700 mb-1">Customer Name (Optional preview)</label>
+                <WithTooltip id="cart-recovery-customer-name" defaultText="Enter a customer name to see how it will look in the generated draft."><label htmlFor="customer-name" className="block text-sm font-medium text-gray-700 mb-1">Customer Name (Optional preview)</label></WithTooltip>
                 <input
                   id="customer-name"
                   type="text"
@@ -143,7 +144,7 @@ export default function CartRecoveryPage() {
                 />
               </div>
               <div>
-                <label htmlFor="cart-value" className="block text-sm font-medium text-gray-700 mb-1">Cart Value (Optional preview)</label>
+                <WithTooltip id="cart-recovery-cart-value" defaultText="Enter the value of the abandoned items to customize the message."><label htmlFor="cart-value" className="block text-sm font-medium text-gray-700 mb-1">Cart Value (Optional preview)</label></WithTooltip>
                 <input
                   id="cart-value"
                   type="text"
@@ -153,6 +154,7 @@ export default function CartRecoveryPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
+              <WithTooltip id="cart-recovery-generate-btn" defaultText="Click to let AI write a personalized email for recovering abandoned carts.">
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating}
@@ -160,6 +162,7 @@ export default function CartRecoveryPage() {
               >
                 {isGenerating ? 'Drafting with AI...' : 'Generate AI Campaign'}
               </button>
+              </WithTooltip>
             </div>
           </section>
 
@@ -182,6 +185,7 @@ export default function CartRecoveryPage() {
                     ✅ Campaign sent to {abandonedCartsCount} abandoned carts!
                   </div>
                 ) : (
+                  <WithTooltip id="cart-recovery-send-btn" defaultText="Sends the drafted email to all customers with an abandoned cart.">
                   <button
                     onClick={handleSend}
                     disabled={abandonedCartsCount === 0}
@@ -189,6 +193,7 @@ export default function CartRecoveryPage() {
                   >
                     Send to {abandonedCartsCount} Abandoned Carts
                   </button>
+                  </WithTooltip>
                 )}
               </div>
             ) : (

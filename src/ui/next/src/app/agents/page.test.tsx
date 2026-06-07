@@ -1,6 +1,10 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, vi, beforeEach } from 'vitest';
 import AgentsPage from './page';
+vi.mock('../../components/TooltipRegistry', () => ({
+  WithTooltip: ({ children }: any) => <>{children}</>,
+  TooltipProvider: ({ children }: any) => <>{children}</>
+}));
 import * as TooltipContext from '@/components/TooltipContext';
 
 vi.mock('@/components/TooltipContext', () => ({

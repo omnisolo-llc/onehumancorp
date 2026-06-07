@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 type RawMaterial = {
   id: string;
@@ -86,8 +87,8 @@ export default function InventoryDashboard() {
                 <thead>
                   <tr>
                     <th>Material</th>
-                    <th>On Hand</th>
-                    <th>Threshold</th>
+                    <th><WithTooltip id="inventory-on-hand" defaultText="The total count of items currently physically available.">On Hand</WithTooltip></th>
+                    <th><WithTooltip id="inventory-threshold" defaultText="When stock drops below this number, you should reorder.">Threshold</WithTooltip></th>
                     <th>Status</th>
                   </tr>
                 </thead>

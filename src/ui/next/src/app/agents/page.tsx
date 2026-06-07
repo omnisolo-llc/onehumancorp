@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AgentAutomations from './components/AgentAutomations';
+import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function AgentsPage() {
  const [activeTab, setActiveTab] = useState<'departments' | 'workflows' | 'feed' | 'approvals' | 'automations'>('departments');
@@ -169,7 +170,7 @@ export default function AgentsPage() {
  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
  </Link>
  <div className="flex items-center gap-2">
- <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pro Mode</span>
+ <WithTooltip id="agents-toggle-pro" defaultText="Unlock advanced features for your AI agents."><span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pro Mode</span></WithTooltip>
  <button
  aria-label="Toggle Pro Mode"
  aria-pressed={showAdvanced}
@@ -312,7 +313,7 @@ export default function AgentsPage() {
  Hire Agent
  </button>
  <div className="rounded-[16px] border border-gray-100 bg-white/65 p-4 text-sm text-gray-700">
- <div className="font-bold">Marketing Pro</div>
+ <WithTooltip id="agents-marketing-pro" defaultText="The Marketing Pro agent automatically runs your campaigns."><div className="font-bold">Marketing Pro</div></WithTooltip>
  <div className="font-bold">Create Workflow</div>
  </div>
  </div>

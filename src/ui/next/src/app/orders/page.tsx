@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 type Order = {
   id: string;
@@ -65,7 +66,7 @@ export default function OrdersPage() {
       <div className="app-panel">
         <div className="app-panel-header">
           <div>
-            <div className="app-panel-title">Order List</div>
+            <WithTooltip id="orders-order-list" defaultText="All orders placed by customers across your sales channels."><div className="app-panel-title">Order List</div></WithTooltip>
             <div className="app-list-subtitle">Loaded from `/api/ui/orders`.</div>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -202,7 +203,7 @@ export default function SettingsPage() {
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
-              <div className="app-panel-title">Critical SMS Alerts</div>
+              <WithTooltip id="settings-sms-alerts" defaultText="Get text messages for important events like new orders or failed payments."><div className="app-panel-title">Critical SMS Alerts</div></WithTooltip>
               <div className="app-list-subtitle">Immediate text alerts for urgent events.</div>
             </div>
           </div>
@@ -272,7 +273,7 @@ export default function SettingsPage() {
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
-              <div className="app-panel-title">Local Delivery (DoorDash Drive)</div>
+              <WithTooltip id="settings-doordash" defaultText="Offer local delivery powered by DoorDash drivers without a DoorDash storefront."><div className="app-panel-title">Local Delivery (DoorDash Drive)</div></WithTooltip>
               <div className="app-list-subtitle">Configure white-label delivery powered by DoorDash.</div>
             </div>
           </div>
@@ -320,7 +321,7 @@ export default function SettingsPage() {
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
-              <div className="app-panel-title">Autonomous Voice Receptionist</div>
+              <WithTooltip id="settings-voice-receptionist" defaultText="An AI phone agent that answers calls and books appointments for you."><div className="app-panel-title">Autonomous Voice Receptionist</div></WithTooltip>
               <div className="app-list-subtitle">Never miss a call. Let AI answer, book appointments, and take orders.</div>
             </div>
           </div>

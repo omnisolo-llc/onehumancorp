@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { WithTooltip } from "../../components/TooltipRegistry";
 import Link from 'next/link';
 
 export default function CalendarPage() {
@@ -45,6 +46,7 @@ export default function CalendarPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">AI Scheduling (Zero-Setup)</span>
+          <WithTooltip id="calendar-toggle-ai" defaultText="Turn on to let AI automatically schedule and reschedule your appointments.">
           <button
             aria-label="Toggle AI Scheduling"
             aria-pressed={aiEnabled}
@@ -53,6 +55,7 @@ export default function CalendarPage() {
           >
             <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${aiEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
+          </WithTooltip>
         </div>
       </header>
 
