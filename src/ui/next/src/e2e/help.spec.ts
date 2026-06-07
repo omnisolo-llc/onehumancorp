@@ -76,3 +76,33 @@ test.describe('Help Center', () => {
         await expect(chatHeader).not.toBeVisible();
     });
 });
+
+    test('should provide correct link in help chat for getting started', async ({ page }) => {
+        await page.goto('/help?test_chat=true');
+
+        // Find and click the floating Ask anything button
+        const chatButton = page.locator('button[aria-label="Open help chat"]');
+        await expect(chatButton).toBeVisible();
+        await chatButton.click({ force: true });
+
+        // Wait for the chat to open
+        const chatHeader = page.locator('#ai-chat-header');
+        await expect(chatHeader).toBeVisible();
+
+        // Type "getting started" in chat
+        const chatInput = page.locator('input[placeholder="Ask me anything..."]');
+        await expect(chatInput).toBeVisible();
+        await chatInput.fill('getting started');
+
+        // Use Promise.all to wait for the request to the chat endpoint
+        const [response] = await Promise.all([
+            page.waitForResponse(response =>
+                response.url().includes('/api/chat') && response.status() === 200
+            ),
+            page.locator('button[aria-label="Send message"]').click()
+        ]);
+
+        // Check the response from chat for the correct link
+        const articleLink = page.locator('.help-chat-wrapper a[href="/help/getting-started-1"]');
+        await expect(articleLink).toBeVisible();
+    });

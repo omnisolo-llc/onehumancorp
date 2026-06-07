@@ -3821,11 +3821,11 @@ async fn create_ui_bom_item_handler(
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let mut link_url = "/help/getting-started-1";
 
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
+                link_url = "/help/getting-started-1";
             } else if query.contains("store") {
                 reply = format!("Based on our help center: {}", help_articles[1].1);
                 link_url = "/help/my-store";
