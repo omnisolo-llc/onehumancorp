@@ -12,7 +12,16 @@ describe('MilestonesPage', () => {
     vi.clearAllMocks();
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
+<<<<<<< HEAD
+      json: async () => ({
+        milestones: [
+          { id: 'first_sale', title: 'First Sale!', description: 'Congrats!', reached: true },
+          { id: '10th_order', title: '10th Order!', description: 'Booming!', reached: false }
+        ]
+      })
+=======
       json: async () => ({ referral_link: 'https://ohc.app/ref/mocked123' })
+>>>>>>> 6448c02f (🛡️ Sentry: Fix SQLite & Postgres parity mismatch in schema definitions (#24827))
     });
 
     const localStorageMock = {
@@ -32,15 +41,15 @@ describe('MilestonesPage', () => {
     });
 
     expect(screen.getByText('Your Achievements')).toBeDefined();
-    expect(screen.getByText('First Order! 🎉')).toBeDefined();
+    expect(screen.getByText('First Sale!')).toBeDefined();
   });
 
-  it('shows embed widget after clicking a milestone', async () => {
+  it('shows card preview after clicking a milestone', async () => {
     await act(async () => {
       render(<MilestonesPage />);
     });
 
-    const milestoneTitle = screen.getByText('First Order! 🎉');
+    const milestoneTitle = screen.getByText('First Sale!');
     const container = milestoneTitle.closest('div.glassmorphism');
     expect(container).toBeDefined();
 

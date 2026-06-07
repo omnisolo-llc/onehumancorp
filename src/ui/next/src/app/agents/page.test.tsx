@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { expect, test, vi, beforeEach } from 'vitest';
 import AgentsPage from './page';
 import * as TooltipContext from '@/components/TooltipContext';
@@ -48,114 +48,60 @@ beforeEach(() => {
     if (url.includes('/api/agents/approvals')) {
       return Promise.resolve({ ok: true, json: async () => ({ pending_approvals: [], next_cursor: null }) });
     }
-    return Promise.resolve({ ok: true, json: async () => ({}) });
-  });
-});
-
-test('renders AI Departments heading', async () => {
-  render(<AgentsPage />);
-
-  await waitFor(() => {
-    expect(screen.getByText('AI Departments')).toBeDefined();
-  });
-});
-
-test('switches tabs correctly', async () => {
-  render(<AgentsPage />);
-
-  // Default is 'teams'
-  expect(screen.getByText('The Manager')).toBeDefined();
-
-  // Click on 'workflows'
-  fireEvent.click(screen.getByText('Workflows'));
-
-  await waitFor(() => {
-    expect(screen.getByText('Create Workflow')).toBeDefined();
-  });
-});
-
-test('renders approvals tab correctly', async () => {
-  mockFetch.mockImplementation((url: string) => {
-    if (url.includes('/api/agents/workflows')) return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
-    if (url.includes('/api/agents/feed')) return Promise.resolve({ ok: true, json: async () => ({ feed: [], next_cursor: null }) });
-    if (url.includes('/api/agents/approvals')) {
+    if (url.includes('/api/agents/hire')) {
       return Promise.resolve({
         ok: true,
+        status: 201,
         json: async () => ({
-          pending_approvals: [
-            {
-              id: '123',
-              department: 'customer_success',
-              description: 'Draft reply to customer',
-              status: 'pending'
-            }
-          ],
-          next_cursor: null
-        })
+          id: 'agent-growth',
+          status: 'running',
+          agent_id: 'agent-growth',
+          workflow_id: 'workflow-growth',
+          message: 'Hired Growth Strategist',
+        }),
       });
     }
     return Promise.resolve({ ok: true, json: async () => ({}) });
   });
-
-  render(<AgentsPage />);
-
-  fireEvent.click(screen.getByText('Needs Approval'));
-
-  await waitFor(() => {
-    expect(screen.getByText('Draft For Review')).toBeDefined();
-    expect(screen.getByText('customer_success')).toBeDefined();
-    expect(screen.getByText('Draft reply to customer')).toBeDefined();
-  });
 });
 
-test('renders feed tab correctly', async () => {
+test('replaces /agents with a Workbuddy-style Expert Center catalog', async () => {
   render(<AgentsPage />);
 
-  fireEvent.click(screen.getByText('Activity Feed'));
-
-  await waitFor(() => {
-    expect(screen.getByText('No activity yet.')).toBeDefined();
-  });
+  expect(await screen.findByRole('heading', { name: 'Expert Center' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Browse experts' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Expert Teams' })).toBeDefined();
+  expect(screen.getByText('Most used')).toBeDefined();
+  expect(screen.getAllByText('Growth Strategist').length).toBeGreaterThan(0);
+  expect(screen.getByText('Launch Team')).toBeDefined();
+  expect(screen.getAllByText('Use cases').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Model').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Skills').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Connectors').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Memory').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Automations').length).toBeGreaterThan(0);
+  expect(screen.getByRole('heading', { name: 'AI Departments' })).toBeDefined();
 });
 
-test('approves a draft successfully', async () => {
-  mockFetch.mockImplementation((url: string) => {
-    if (url.includes('/api/agents/workflows')) return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
-    if (url.includes('/api/agents/feed')) return Promise.resolve({ ok: true, json: async () => ({ feed: [], next_cursor: null }) });
-    if (url.includes('/api/agents/approvals/123')) return Promise.resolve({ ok: true, json: async () => ({ success: true }) });
-    if (url.includes('/api/agents/approvals')) {
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          pending_approvals: [
-            {
-              id: '123',
-              department: 'customer_success',
-              description: 'Draft reply to customer',
-              status: 'pending'
-            }
-          ],
-          next_cursor: null
-        })
-      });
-    }
-    return Promise.resolve({ ok: true, json: async () => ({}) });
-  });
-
+test('summons an expert into the task composer and starts a hire workflow', async () => {
   render(<AgentsPage />);
 
-  fireEvent.click(screen.getByText('Needs Approval'));
+  fireEvent.click(await screen.findByRole('button', { name: /Hire Growth Strategist/i }));
 
-  await waitFor(() => {
-    expect(screen.getByText('Approve & Send')).toBeDefined();
+  expect(screen.getByRole('heading', { name: 'Hire Growth Strategist' })).toBeDefined();
+  expect(screen.getByText('Assign a specific goal to this expert.')).toBeDefined();
+
+  fireEvent.change(screen.getByPlaceholderText('e.g., Increase repeat purchases by 15% this quarter'), {
+    target: { value: 'Create a summer marketing campaign' },
   });
 
-  fireEvent.click(screen.getByText('Approve & Send'));
+  fireEvent.click(screen.getByRole('button', { name: 'Hire Expert' }));
 
-  // Wait for the mock to have been called for the approval API
-  await waitFor(() => {
-    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/agents/approvals/123'), expect.objectContaining({ method: 'POST' }));
-  });
+  expect(await screen.findByText('Hired Growth Strategist')).toBeDefined();
+  expect(mockFetch).toHaveBeenCalledWith('/api/agents/hire', expect.objectContaining({
+    method: 'POST',
+    body: expect.stringContaining('Create a summer marketing campaign'),
+  }));
 });
 
 test('pushes agent approval events into the activity feed in real time', async () => {
@@ -165,14 +111,48 @@ test('pushes agent approval events into the activity feed in real time', async (
     expect(eventSources[0]?.url).toBe('/api/agents/events');
   });
 
-  fireEvent.click(screen.getByText('Activity Feed'));
+  fireEvent.click(screen.getByRole('button', { name: 'Activity Feed' }));
+  act(() => {
+    eventSources[0].emit({
+      id: 'evt-1',
+      department: 'sales',
+      description: 'Draft quote for priority lead',
+      status: 'Draft',
+    });
+  });
+  expect(await screen.findByText('Draft quote for priority lead')).toBeDefined();
 
-  eventSources[0].emit({
-    id: 'evt-1',
-    department: 'sales',
-    description: 'Draft quote for Plumbing Fix',
-    status: 'Draft',
+  fireEvent.click(screen.getByRole('button', { name: /Needs Approval/i }));
+  expect(screen.getByText('Draft quote for priority lead')).toBeDefined();
+  expect(screen.getByText('Approve & Send')).toBeDefined();
+});
+
+test('sends Workbuddy context, attachment, model, and output controls in the hire payload', async () => {
+  render(<AgentsPage />);
+
+  fireEvent.click(await screen.findByRole('button', { name: /Hire Growth Strategist/i }));
+
+  fireEvent.change(screen.getByLabelText('Context references'), {
+    target: { value: 'https://example.com/guide' },
   });
 
-  expect(await screen.findByText('Draft quote for Plumbing Fix')).toBeDefined();
+  fireEvent.change(screen.getByLabelText('Model preference'), {
+    target: { value: 'gpt-4o' },
+  });
+
+  const file = new File(['hello'], 'hello.png', { type: 'image/png' });
+  const input = screen.getByLabelText('Attach files');
+  Object.defineProperty(input, 'files', {
+    value: [file]
+  });
+  fireEvent.change(input);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Hire Expert' }));
+
+  await waitFor(() => {
+    expect(mockFetch).toHaveBeenCalledWith('/api/agents/hire', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('gpt-4o'),
+    }));
+  });
 });
