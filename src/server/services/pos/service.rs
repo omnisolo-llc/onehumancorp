@@ -2,8 +2,7 @@ use ::server_ohc::app::pos_service_server::PosService;
 use ::server_ohc::app::{
     SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
     TerminalSession, StartTerminalSessionRequest,
-    UpdateTerminalSessionStatusRequest, EndTerminalSessionRequest,
-    PosOfflineTransaction
+    UpdateTerminalSessionStatusRequest, EndTerminalSessionRequest
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};

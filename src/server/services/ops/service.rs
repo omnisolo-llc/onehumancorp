@@ -9,6 +9,7 @@ use std::pin::Pin;
 use tokio_stream::StreamExt;
 use ::server_utils::cache::HybridCache;
 use std::sync::OnceLock;
+use sqlx::Row;
 
 static INCIDENTS_CACHE: OnceLock<HybridCache<Vec<Incident>>> = OnceLock::new();
 static COMPUTE_PROFILES_CACHE: OnceLock<HybridCache<Vec<ComputeProfile>>> = OnceLock::new();
@@ -465,21 +466,24 @@ impl OpsService for MyOpsService {
         }
 
         // Find sessions that have been offline for > 24 hours with pending changes
-        let stale_sessions = sqlx::query!(
+        let stale_sessions = sqlx::query(
             "SELECT id, hardware_id, offline_changes_count FROM pos_terminal_sessions
              WHERE tenant_id = $1 AND status != 'RECONCILED'
              AND last_synced_at < (CURRENT_TIMESTAMP - INTERVAL '24 hours')
-             AND offline_changes_count > 0",
-            org_id
+             AND offline_changes_count > 0"
         )
+        .bind(&org_id)
         .fetch_all(&mut *conn)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         for session in stale_sessions {
+            let hardware_id: String = session.get("hardware_id");
+            let offline_changes_count: i32 = session.get("offline_changes_count");
+
             let summary = format!(
                 "POS Terminal {} has {} pending offline transactions and hasn't synced in over 24 hours.",
-                session.hardware_id, session.offline_changes_count
+                hardware_id, offline_changes_count
             );
 
             let _ = self.create_incident(Request::new(CreateIncidentRequest {
