@@ -106,7 +106,7 @@ mod tests {
         let graph = WorkflowGraph {
             nodes: vec![
                 Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
-                Node { id: "llm1".to_string(), node_type: NodeType::Llm { prompt_template: "Input was: {{in}}".to_string() } },
+                Node { id: "llm1".to_string(), node_type: NodeType::Llm { prompt_template: "Input was: {{in}}".to_string(), max_retries: None } },
                 Node { id: "out".to_string(), node_type: NodeType::Output },
             ],
             edges: vec![
