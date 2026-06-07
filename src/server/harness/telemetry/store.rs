@@ -13,6 +13,7 @@ pub struct ViolationStore {
     pub storage_bytes_counter: Counter<u64>,
     pub rate_limit_checks_total: Counter<u64>,
     pub rate_limit_exceeded_total: Counter<u64>,
+    pub security_divergence_counter: Counter<u64>,
 }
 
 impl ViolationStore {
@@ -24,6 +25,7 @@ impl ViolationStore {
         let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
         let rate_limit_checks_total = meter.u64_counter("ohc_rate_limit_checks_total").build();
         let rate_limit_exceeded_total = meter.u64_counter("ohc_rate_limit_exceeded_total").build();
+        let security_divergence_counter = meter.u64_counter("ohc_harness_security_divergence_total").build();
 
         Self {
             pool,
@@ -33,6 +35,7 @@ impl ViolationStore {
             storage_bytes_counter,
             rate_limit_checks_total,
             rate_limit_exceeded_total,
+            security_divergence_counter,
         }
     }
 

@@ -17,7 +17,25 @@ impl ASTParser {
         let tree = self.parser.parse(cmd, None).ok_or("Failed to parse command")?;
         let root_node = tree.root_node();
 
-        self.walk_node_for_security(root_node, cmd)
+        let old_result = self.walk_node_for_security(root_node, cmd);
+
+        let mut parsed_command = super::bash_security::ParsedCommand::new(cmd);
+        let new_result = parsed_command.parse_and_validate();
+
+        // the prompt suggests "Note divergence where applicable"
+        // Since we emit telemetry in `SandboxManager`, we can just log here or
+        // rely on `SandboxManager` to handle the error. For now, we prefer the new result
+        // if it caught something the old one didn't, or just return the new result entirely.
+        // Returning new_result allows the more robust validators to block.
+        // However, we also want to keep the old walk_node_for_security to catch
+        // `>` and `<` process substitution, and `$[]` which were not explicitly asked to be removed,
+        // so we'll run both and fail if either fails.
+
+        if old_result.is_err() {
+            return old_result;
+        }
+
+        new_result
     }
 
     fn walk_node_for_security(&self, node: Node<'_>, source: &str) -> Result<(), String> {
@@ -28,7 +46,7 @@ impl ASTParser {
             if let Some(command_name_node) = node.child_by_field_name("name") {
                 let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
                 if name == "zmodload" {
-                    return Err("Dangerous pattern detected: zmodload".to_string());
+                    return Err("Dangerous pattern detected: zsh dangerous command/expansion (zmodload)".to_string());
                 }
             }
         }
@@ -37,10 +55,10 @@ impl ASTParser {
         if node_kind == "process_substitution" {
             let text = &source[node.start_byte()..node.end_byte()];
             if text.starts_with("<(") {
-                return Err("Dangerous pattern detected: <() process substitution".to_string());
+                return Err("Dangerous pattern detected: process substitution".to_string());
             }
             if text.starts_with(">(") {
-                return Err("Dangerous pattern detected: >() process substitution".to_string());
+                return Err("Dangerous pattern detected: process substitution".to_string());
             }
         }
 
@@ -50,7 +68,7 @@ impl ASTParser {
         if node_kind == "expansion" || node_kind == "arithmetic_expansion" {
             let text = &source[node.start_byte()..node.end_byte()];
             if text.starts_with("$[") && text.ends_with("]") {
-                return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
+                return Err("Dangerous pattern detected: dynamic command names (subshells/expansions) are not allowed".to_string());
             }
         }
 
@@ -59,10 +77,9 @@ impl ASTParser {
         if node_kind == "word" || node_kind == "raw_string" {
              let text = &source[node.start_byte()..node.end_byte()];
              if text.starts_with("$[") && text.ends_with("]") {
-                  return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
+                  return Err("Dangerous pattern detected: dynamic command names (subshells/expansions) are not allowed".to_string());
              }
         }
-
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {

@@ -59,13 +59,34 @@ impl SandboxManager {
             policy: SandboxPolicy::default(),
         }
     }
+
+    pub async fn should_use_sandbox(&self, _cmd: &str) -> bool {
+        // Simulates a check via SIP Redis configurations to enable or disable sandboxing dynamically.
+        // For now, default to returning true to enforce sandboxing unless otherwise configured.
+        if std::env::var("OHC_DISABLE_SANDBOX").unwrap_or_else(|_| "false".to_string()) == "true" {
+            return false;
+        }
+        true
+    }
 }
 
 #[async_trait]
 impl SandboxAdapter for SandboxManager {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
         let mut ast_parser = ASTParser::new();
-        if let Err(reason) = ast_parser.parse_for_security(cmd) {
+
+        let old_err = ast_parser.parse_for_security(cmd).err();
+        let mut parsed_cmd = super::bash_security::ParsedCommand::new(cmd);
+        let new_err = parsed_cmd.parse_and_validate().err();
+
+        // Track divergence logic
+        if old_err.is_some() != new_err.is_some() {
+            self.violation_store.security_divergence_counter.add(1, &[]);
+        }
+
+        let actual_err = new_err.or(old_err);
+
+        if let Some(reason) = actual_err {
             let details = json!({ "command": cmd, "reason": reason });
             let _ = self.violation_store.record_violation(
                 "system",

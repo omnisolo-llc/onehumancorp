@@ -15,6 +15,7 @@ rust_library(
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
         "sandbox/macos_sandbox.rs",
+        "sandbox/bash_security.rs",
         "mcp/mod.rs",
         "mcp/client.rs",
     ],
