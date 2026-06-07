@@ -249,7 +249,7 @@ impl StateMachine {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row = sqlx::query(
-                    "SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE"
+                    "SELECT status, organization_id FROM shared_tasks WHERE id = $1 FOR UPDATE"
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
@@ -258,6 +258,7 @@ impl StateMachine {
 
                 if let Some(r) = row {
                     let status: String = r.get("status");
+                    let organization_id: String = r.get("organization_id");
                     if status != "IN_PROGRESS" {
                         return Err(format!("Cannot complete task in {} state", status));
                     }
@@ -273,9 +274,23 @@ impl StateMachine {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
                     Self::increment_transition_metric(&TaskStatus::Completed);
+
+                    // Emitting telemetry for general tasks as well.
+                    // Shared_tasks don't track tokens individually yet but we can log 0 tokens and role 'system' or similar,
+                    // However, we should emit token usage here if possible. Since shared_tasks lacks token_usage, we omit or set to 0.
+                    let _ = ::server_telemetry::record_task_resolution_efficiency(
+                        &self.db.pool,
+                        "SUCCESS",
+                        "general-task",
+                        "system",
+                        0,
+                        &organization_id,
+                    )
+                    .await;
+
                     Ok(())
                 } else {
-                    Err("Task not found".to_string())
+                    return Err("Task not found".to_string());
                 }
             }
             DbStore::Sqlite(pool) => {
