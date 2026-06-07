@@ -1511,6 +1511,7 @@ mod tests {
                 .fetch_one(pool).await.unwrap();
             assert_eq!(status, "PAUSED");
         } // end of test_customer_success_worker_draft_reply
-    }
+
+}
 
 }

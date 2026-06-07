@@ -178,14 +178,6 @@ impl Tracker {
         }
     }
 
-    pub async fn get_agent_actions_used(&self, tenant_id: &str, agent_id: &str) -> Result<u32, String> {
-        if let Some(ref limiter) = self.rate_limiter {
-            limiter.get_agent_actions_used(tenant_id, agent_id).await
-        } else {
-            Ok(0)
-        }
-    }
-
     pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.get_tenant_storage_used(tenant_id).await

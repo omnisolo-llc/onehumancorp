@@ -9,16 +9,6 @@ exports_files([
     "setup_k8s.sh",
 ])
 
-filegroup(
-    name = "hybrid_telemetry_dashboard_mirrors",
-    srcs = [
-        "docker/grafana/provisioning/dashboards/hybrid-telemetry.json",
-        "grafana/dashboards/hybrid-telemetry.json",
-        "helm/ohc/dashboards/hybrid-telemetry.json",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 # ── server image (onehumancorp/server) ────────────────────────────────────────
 
 # Package backend binary
@@ -245,8 +235,8 @@ sh_test(
     timeout = "long",
     srcs = ["tests/docker_compose_e2e_test.sh"],
     data = [
-        "docker-compose.yml",
         "docker/postgres/init-multiple-databases.sh",
+        "docker-compose.yml",
     ] + [
         ":server_load",
         "//src/server",

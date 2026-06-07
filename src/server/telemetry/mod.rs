@@ -28,7 +28,6 @@ static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
 static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
-static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -492,28 +491,6 @@ pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type:
 pub fn record_sub_agent_queue_delay(delay: f64, deployment_mode: &str) {
     let histogram = get_sub_agent_queue_delay_histogram();
     histogram.record(delay, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
-}
-
-pub fn autodream_sync_duration_metric_name() -> &'static str {
-    "ohc_autodream_sync_duration_seconds"
-}
-
-pub fn get_autodream_sync_duration_histogram() -> &'static Histogram<f64> {
-    AUTODREAM_SYNC_DURATION.get_or_init(|| {
-        let meter = global::meter("ohc.autodream");
-        meter
-            .f64_histogram(autodream_sync_duration_metric_name())
-            .with_description("Duration of AutoDream sync batches in seconds")
-            .build()
-    })
-}
-
-pub fn record_autodream_sync_duration(duration_seconds: f64, deployment_mode: &str) {
-    let histogram = get_autodream_sync_duration_histogram();
-    histogram.record(
-        duration_seconds,
-        &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())],
-    );
 }
 
 pub fn record_task_claim_contention(mode: &str) {
@@ -1390,8 +1367,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
-    use super::*;
-    use std::fs;
+    // use super::*;
 
 
     #[test]
@@ -1399,17 +1375,6 @@ mod additional_tests {
         // Just checking that `get_deployment_mode` is exported and we can use it.
         let mode = crate::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
-    }
-
-    #[test]
-    fn autodream_sync_duration_metric_is_registered_and_dashboarded() {
-        let metric_name = autodream_sync_duration_metric_name();
-        assert_eq!(metric_name, "ohc_autodream_sync_duration_seconds");
-        record_autodream_sync_duration(0.25, "Standalone");
-
-        let dashboard = fs::read_to_string("src/server/monitoring/dashboards/hybrid-telemetry.json")
-            .expect("hybrid telemetry dashboard should be readable");
-        assert!(dashboard.contains(metric_name));
     }
 }
 

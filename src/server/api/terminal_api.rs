@@ -17,7 +17,7 @@ pub struct PaymentIntentRequest {
 
 #[derive(serde::Serialize)]
 pub struct PaymentIntentResponse {
-    pub client_secret: String,
+    pub intent_id: String,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -54,7 +54,10 @@ pub async fn get_terminal_connection_token_handler(
         0.05
     ).await;
 
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let stripe_key = match std::env::var("STRIPE_API_KEY") {
+        Ok(k) => k,
+        Err(_) => "sk_test_123".to_string(), // Fallback for dev/test
+    };
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     match client.create_terminal_connection_token(&tenant_id).await {
@@ -246,11 +249,14 @@ pub async fn create_payment_intent_handler(
         0.05
     ).await;
 
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let stripe_key = match std::env::var("STRIPE_API_KEY") {
+        Ok(k) => k,
+        Err(_) => "sk_test_123".to_string(), // Fallback for dev/test
+    };
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
-        Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
+        Ok(intent_id) => Json(Ok(PaymentIntentResponse { intent_id })),
         Err(e) => Json(Err(e)),
     }
 }

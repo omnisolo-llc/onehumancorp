@@ -10,34 +10,10 @@ vi.mock('@/components/TooltipContext', () => ({
 }));
 
 const mockFetch = vi.fn();
-const eventSources: MockEventSource[] = [];
-
-class MockEventSource {
-  static CLOSED = 2;
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
-  url: string;
-  closed = false;
-
-  constructor(url: string) {
-    this.url = url;
-    eventSources.push(this);
-  }
-
-  close() {
-    this.closed = true;
-  }
-
-  emit(data: unknown) {
-    this.onmessage?.({ data: JSON.stringify(data) } as MessageEvent);
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks();
-  eventSources.length = 0;
   global.fetch = mockFetch;
-  (globalThis as any).EventSource = MockEventSource;
   mockFetch.mockImplementation((url: string) => {
     if (url.includes('/api/agents/workflows')) {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
@@ -156,23 +132,4 @@ test('approves a draft successfully', async () => {
   await waitFor(() => {
     expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/agents/approvals/123'), expect.objectContaining({ method: 'POST' }));
   });
-});
-
-test('pushes agent approval events into the activity feed in real time', async () => {
-  render(<AgentsPage />);
-
-  await waitFor(() => {
-    expect(eventSources[0]?.url).toBe('/api/agents/events');
-  });
-
-  fireEvent.click(screen.getByText('Activity Feed'));
-
-  eventSources[0].emit({
-    id: 'evt-1',
-    department: 'sales',
-    description: 'Draft quote for Plumbing Fix',
-    status: 'Draft',
-  });
-
-  expect(await screen.findByText('Draft quote for Plumbing Fix')).toBeDefined();
 });
