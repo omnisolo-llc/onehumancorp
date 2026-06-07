@@ -48,4 +48,15 @@ test.describe('Help Center', () => {
         const articleLink = page.locator('a[href="/help/my-store"]');
         await expect(articleLink).toBeVisible();
     });
+
+    test('should render global help button and navigate to help center', async ({ page }) => {
+        await page.goto('/dashboard');
+
+        const helpButton = page.locator('a[aria-label="Open Help Center"]');
+        await expect(helpButton).toBeVisible();
+        await helpButton.click();
+
+        await page.waitForURL('/help');
+        await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
+    });
 });

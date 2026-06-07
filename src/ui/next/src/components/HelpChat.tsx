@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
+import Link from 'next/link';
 
 type Message = {
   id: string;
@@ -104,17 +105,26 @@ export function HelpChat() {
 
   return (
     <div className="help-chat-wrapper">
-      {/* Floating Button */}
-      <div className="fixed bottom-6 right-[5.5rem] z-50">
+      {/* Floating Buttons */}
+      <div className="fixed bottom-6 right-[5.5rem] z-50 flex items-center gap-3">
         {!isOpen && (
-          <button
-            onClick={() => setIsOpen(true)}
-            className="bg-gray-900/90 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group animate-pulse backdrop-blur-[20px] saturate-200"
-            aria-label="Open help chat"
-          >
-            <span className="text-xl">✨</span>
-            <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">Ask anything</span>
-          </button>
+          <>
+            <Link
+              href="/help"
+              className="bg-white/90 text-gray-800 p-4 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center font-bold text-lg border border-gray-200"
+              aria-label="Open Help Center"
+            >
+              ?
+            </Link>
+            <button
+              onClick={() => setIsOpen(true)}
+              className="bg-gray-900/90 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group animate-pulse backdrop-blur-[20px] saturate-200"
+              aria-label="Open help chat"
+            >
+              <span className="text-xl">✨</span>
+              <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">Ask anything</span>
+            </button>
+          </>
         )}
       </div>
 
