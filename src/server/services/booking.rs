@@ -1034,7 +1034,7 @@ mod native_booking_tests {
     use tonic::Request;
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
     use ::server_ohc::app::{
-    SyncCalendarRequest, SyncCalendarResponse,ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
+    ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
 
     #[tokio::test]
     async fn local_capacity_lock_blocks_and_releases_timeslot() {
