@@ -26,7 +26,7 @@ async fn test_ohc_job_queue_e2e() {
     let payload = serde_json::json!({"key": "value"});
 
     // 1. Enqueue job
-    let job_id = queue.enqueue(tenant_id, job_type, &payload).await.unwrap();
+    let job_id = queue.enqueue(tenant_id, job_type, &payload, None, 3).await.unwrap();
 
     // 2. Dequeue job
     let job = queue.dequeue(vec![job_type]).await.unwrap().expect("Job should be available");
@@ -69,12 +69,12 @@ async fn test_ohc_job_queue_fail_backoff() {
     let job_type = "fail_job_type";
     let payload = serde_json::json!({});
 
-    let job_id = queue.enqueue(tenant_id, job_type, &payload).await.unwrap();
+    let job_id = queue.enqueue(tenant_id, job_type, &payload, None, 3).await.unwrap();
 
     queue.dequeue(vec![job_type]).await.unwrap().unwrap();
 
     // 1st fail
-    queue.fail(&job_id, 3).await.unwrap();
+    queue.fail(&job_id).await.unwrap();
     let status_retry: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
         .bind(&job_id)
         .fetch_one(&pool)
@@ -88,7 +88,7 @@ async fn test_ohc_job_queue_fail_backoff() {
     sqlx::query("UPDATE ohc_job_queue SET next_retry_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
     queue.dequeue(vec![job_type]).await.unwrap();
 
-    queue.fail(&job_id, 3).await.unwrap();
+    queue.fail(&job_id).await.unwrap();
     let status_retry2: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
         .bind(&job_id)
         .fetch_one(&pool)
@@ -100,7 +100,7 @@ async fn test_ohc_job_queue_fail_backoff() {
     // 3rd fail (should dead letter)
     sqlx::query("UPDATE ohc_job_queue SET next_retry_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
     queue.dequeue(vec![job_type]).await.unwrap();
-    queue.fail(&job_id, 3).await.unwrap();
+    queue.fail(&job_id).await.unwrap();
 
     let status_retry3: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
         .bind(&job_id)
@@ -154,7 +154,7 @@ async fn test_worker_pool_and_ledger() {
     let worker_pool = WorkerPool::new(queue.clone(), 2, vec!["test_worker_job".to_string()], handler);
 
     let tenant_id = "tenant_worker_test";
-    queue.enqueue(tenant_id, "test_worker_job", &serde_json::json!({})).await.unwrap();
+    queue.enqueue(tenant_id, "test_worker_job", &serde_json::json!({}), None, 3).await.unwrap();
 
     // Give the worker pool time to process
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -204,7 +204,7 @@ async fn test_worker_pool_chaos_timeout() {
     let worker_pool = WorkerPool::new_with_timeout(queue.clone(), 1, vec!["chaos_timeout_job".to_string()], handler, 150);
 
     let tenant_id = "tenant_chaos_timeout";
-    let job_id = queue.enqueue(tenant_id, "chaos_timeout_job", &serde_json::json!({})).await.unwrap();
+    let job_id = queue.enqueue(tenant_id, "chaos_timeout_job", &serde_json::json!({}), None, 3).await.unwrap();
 
     // Give the worker pool time to process and timeout (should take ~150ms to timeout + overhead)
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
