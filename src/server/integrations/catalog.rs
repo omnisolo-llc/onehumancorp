@@ -1,91 +1,174 @@
 pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 
 pub fn get_catalog() -> Vec<IntegrationProvider> {
-    let mut catalog = vec![];
+    vec![
+        metadata_provider(
+            "nats",
+            "NATS Event Mesh",
+            "event_mesh",
+            "nats://localhost:4222".to_string(),
+        ),
+        metadata_provider(
+            "twilio",
+            "Twilio SMS",
+            "sms",
+            "https://api.twilio.com".to_string(),
+        ),
+        metadata_provider(
+            "chromadb",
+            "ChromaDB MCP Local Vector Embeddings",
+            "vector_db",
+            chromadb_base_url(),
+        ),
+        metadata_provider(
+            "meta",
+            "Meta Graph API (Facebook, Instagram, WhatsApp)",
+            "social",
+            "https://graph.facebook.com/v19.0".to_string(),
+        ),
+        metadata_provider(
+            "google_calendar",
+            "Google Calendar",
+            "calendar",
+            "https://www.googleapis.com/calendar/v3".to_string(),
+        ),
+        metadata_provider(
+            "cal_com",
+            "Cal.com",
+            "calendar",
+            "https://api.cal.com/v1".to_string(),
+        ),
+        metadata_provider(
+            "resend",
+            "Resend Email Marketing",
+            "email_marketing",
+            "https://api.resend.com".to_string(),
+        ),
+        metadata_provider(
+            "sendgrid",
+            "SendGrid Email",
+            "email",
+            "https://api.sendgrid.com/v3".to_string(),
+        ),
+        metadata_provider(
+            "shippo",
+            "Shippo Logistics",
+            "shipping",
+            "https://api.goshippo.com".to_string(),
+        ),
+        metadata_provider(
+            "zoom",
+            "Zoom Video Conferencing",
+            "video",
+            "https://api.zoom.us/v2".to_string(),
+        ),
+        metadata_provider(
+            "mercadopago",
+            "Mercado Pago",
+            "payment",
+            "https://api.mercadopago.com".to_string(),
+        ),
+        metadata_provider(
+            "alipay",
+            "Alipay",
+            "payment",
+            "https://openapi.alipay.com".to_string(),
+        ),
+        metadata_provider(
+            "razorpay",
+            "Razorpay",
+            "payment",
+            "https://api.razorpay.com/v1".to_string(),
+        ),
+        metadata_provider(
+            "calendly",
+            "Calendly",
+            "calendar",
+            "https://api.calendly.com".to_string(),
+        ),
+        metadata_provider(
+            "mailchimp",
+            "Mailchimp",
+            "email_marketing",
+            "https://server.api.mailchimp.com/3.0".to_string(),
+        ),
+        metadata_provider(
+            "manychat",
+            "Manychat",
+            "operations",
+            "https://api.manychat.com".to_string(),
+        ),
+        metadata_provider(
+            "ayrshare",
+            "Ayrshare",
+            "social_media",
+            "https://app.ayrshare.com/api".to_string(),
+        ),
+        metadata_provider(
+            "listmonk",
+            "Listmonk",
+            "email_marketing",
+            "http://localhost:9000/api".to_string(),
+        ),
+        metadata_provider(
+            "doordash",
+            "DoorDash Drive",
+            "delivery",
+            "https://openapi.doordash.com".to_string(),
+        ),
+        metadata_provider(
+            "shipday",
+            "Shipday Local Delivery",
+            "delivery",
+            "https://api.shipday.com".to_string(),
+        ),
+        metadata_provider(
+            "easypost",
+            "EasyPost",
+            "shipping",
+            "https://api.easypost.com/v2".to_string(),
+        ),
+        metadata_provider(
+            "jitsi",
+            "Jitsi Meet",
+            "video_conferencing",
+            "https://api.jitsi.net".to_string(),
+        ),
+        metadata_provider(
+            "restic",
+            "Restic Local Backup MCP",
+            "backup",
+            "local://restic".to_string(),
+        ),
+    ]
+}
 
-    // We instantiate nats as a placeholder, without making actual network connection
-    // since this is used in synchronous `new()` of registry
-    let nats_provider = ::server_integrations_core::IntegrationProvider {
-        metadata: ::server_integrations_core::ProviderMetadata {
-            id: "nats".to_string(),
-            name: "NATS Event Mesh".to_string(),
-            category: "event_mesh".to_string(),
-            base_url: "nats://localhost:4222".to_string(),
-        }
-    };
-    catalog.push(nats_provider);
+fn metadata_provider(
+    id: &str,
+    name: &str,
+    category: &str,
+    base_url: String,
+) -> IntegrationProvider {
+    IntegrationProvider {
+        metadata: ProviderMetadata {
+            id: id.to_string(),
+            name: name.to_string(),
+            category: category.to_string(),
+            base_url,
+        },
+    }
+}
 
-    // We avoid initializing a real TwilioProvider client here just for metadata
-    // to prevent unwanted HTTP client instantiation during registry initialization
-    let twilio_provider = ::server_integrations_core::IntegrationProvider {
-        metadata: ::server_integrations_core::ProviderMetadata {
-            id: "twilio".to_string(),
-            name: "Twilio SMS".to_string(),
-            category: "sms".to_string(),
-            base_url: "https://api.twilio.com".to_string(),
-        }
-    };
-    catalog.push(twilio_provider);
-    let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
-    catalog.push(chromadb_provider.to_integration_provider());
+fn chromadb_base_url() -> String {
+    let mode = std::env::var("OHC_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
+    let headless = std::env::var("OHC_HEADLESS").unwrap_or_else(|_| "false".to_string());
 
-    let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
-    catalog.push(meta_provider.to_integration_provider());
+    if mode == "cloud" && headless != "true" {
+        return "mock://chromadb".to_string();
+    }
 
-    let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("dummy_token".to_string());
-    catalog.push(google_calendar_provider.to_integration_provider());
+    let host = std::env::var("CHROMADB_HOST").unwrap_or_else(|_| "localhost".to_string());
+    let port = std::env::var("CHROMADB_PORT").unwrap_or_else(|_| "8000".to_string());
 
-    let cal_com_provider = crate::integrations::cal_com::provider::CalComProvider::new("dummy_token".to_string());
-    catalog.push(cal_com_provider.to_integration_provider());
-
-    let resend_provider = crate::integrations::resend::provider::ResendProvider::new("dummy_token".to_string());
-    catalog.push(resend_provider.to_integration_provider());
-
-    let sendgrid_provider = crate::integrations::sendgrid::provider::SendGridProvider::new("dummy_token".to_string());
-    catalog.push(sendgrid_provider.to_integration_provider());
-
-    let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
-    catalog.push(shippo_provider.to_integration_provider());
-
-    let zoom_provider = crate::integrations::zoom::provider::ZoomProvider::new("dummy_token".to_string());
-    catalog.push(zoom_provider.to_integration_provider());
-
-    let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
-    catalog.push(mercadopago_provider.to_integration_provider());
-
-    let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
-    catalog.push(alipay_provider.to_integration_provider());
-
-    let razorpay_provider = crate::integrations::razorpay::provider::RazorpayProvider::new("dummy_key".to_string(), "dummy_secret".to_string());
-    catalog.push(razorpay_provider.to_integration_provider());
-
-
-    let calendly_provider = crate::integrations::calendly::provider::CalendlyProvider::new("dummy_token".to_string());
-    catalog.push(calendly_provider.to_integration_provider());
-
-    let mailchimp_provider = crate::integrations::mailchimp::provider::MailchimpProvider::new("dummy_token".to_string());
-    catalog.push(mailchimp_provider.to_integration_provider());
-
-    let manychat_provider = crate::integrations::manychat::provider::ManychatProvider::new("dummy_token".to_string());
-    catalog.push(manychat_provider.to_integration_provider());
-
-    let ayrshare_provider = crate::integrations::ayrshare::provider::AyrshareProvider::new("dummy_token".to_string());
-    catalog.push(ayrshare_provider.to_integration_provider());
-
-    let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
-    catalog.push(listmonk_provider.to_integration_provider());
-
-    let doordash_provider = crate::integrations::doordash::provider::DoorDashProvider::new("dummy_token".to_string());
-    catalog.push(doordash_provider.to_integration_provider());
-
-    let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
-    catalog.push(easypost_provider.to_integration_provider());
-
-    let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
-    catalog.push(jitsi_provider.to_integration_provider());
-
-    let restic_provider = crate::integrations::restic::provider::ResticProvider::new();
-    catalog.push(restic_provider.to_integration_provider());
-
-    catalog
+    format!("http://{host}:{port}")
 }

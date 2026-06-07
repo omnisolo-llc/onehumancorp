@@ -1,44 +1,56 @@
 import { NextResponse } from 'next/server';
 
-let orders: any[] = [];
-
-const resetOrders = () => {
-  orders = [
-    { id: '1', customer_name: 'Ahmed', items: ['2x Chicken Over Rice'], status: 'Received', created_at: new Date().toISOString() },
-    { id: '2', customer_name: 'Sarah', items: ['1x Lamb Combo', '1x Soda'], status: 'Preparing', created_at: new Date().toISOString() }
-  ];
-};
-resetOrders();
-
-export async function GET() {
-  return NextResponse.json(orders);
+function headersFor(req: Request, withJson = false): Record<string, string> {
+  const headers: Record<string, string> = {
+    'x-tenant-id': req.headers.get('x-tenant-id') || 'default',
+    'x-user-id': req.headers.get('x-user-id') || 'default',
+  };
+  const authHeader = req.headers.get('authorization');
+  const spiffeId = req.headers.get('x-spiffe-id');
+  if (withJson) headers['Content-Type'] = 'application/json';
+  if (authHeader) headers.authorization = authHeader;
+  if (spiffeId) headers['x-spiffe-id'] = spiffeId;
+  return headers;
 }
 
-export async function DELETE() {
-  resetOrders();
-  return NextResponse.json({ success: true });
+export async function GET(req: Request) {
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  const { search } = new URL(req.url);
+  try {
+    const res = await fetch(`${backendUrl}/api/pos/orders${search}`, {
+      method: 'GET',
+      headers: headersFor(req),
+    });
+    return NextResponse.json(await res.json(), { status: res.status });
+  } catch {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
 }
 
-export async function POST(request: Request) {
-  const body = await request.json();
-  const events = Array.isArray(body) ? body : [body];
+export async function DELETE(req: Request) {
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  try {
+    const res = await fetch(`${backendUrl}/api/pos/orders`, {
+      method: 'DELETE',
+      headers: headersFor(req),
+    });
+    return NextResponse.json(await res.json(), { status: res.status });
+  } catch {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
+}
 
-  const processedEvents = events.map((event) => {
-    if (event.type === 'UPDATE_ORDER_STATUS') {
-      const order = orders.find(o => o.id === event.payload.order_id);
-      if (order) {
-        order.status = event.payload.status;
-      }
-    } else if (event.type === 'NEW_ORDER') {
-      orders.push(event.payload);
-    }
-    return {
-      id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...event,
-      sync_status: 'SYNCED',
-      synced_at: new Date().toISOString()
-    };
-  });
-
-  return NextResponse.json(processedEvents, { status: 201 });
+export async function POST(req: Request) {
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  try {
+    const body = await req.json();
+    const res = await fetch(`${backendUrl}/api/pos/orders`, {
+      method: 'POST',
+      headers: headersFor(req, true),
+      body: JSON.stringify(body),
+    });
+    return NextResponse.json(await res.json(), { status: res.status });
+  } catch {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
 }
