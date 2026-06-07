@@ -118,16 +118,22 @@ impl OrgService for MyOrgService {
                 let org_id_clone = org_id_bg.clone();
                 let org_id_for_agents = org_id_bg.clone();
                 let org_id_for_summary = org_id_bg.clone();
-                let (agents_res, all_meetings, summary_res, quota_res) = tokio::join!(
+                let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
                     tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
-                    hub_bg.get_meetings(),
+                    tokio::spawn({ let h = hub_bg.clone(); async move { h.get_meetings().await } }),
                     tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
-                    hub_bg.tracker().check_agent_quota(&org_id_clone)
+                    tokio::spawn({ let h = hub_bg.clone(); async move { h.tracker().check_agent_quota(&org_id_clone).await } })
                 );
 
                 let Ok(agents) = agents_res else { return; };
+                let Ok(all_meetings) = all_meetings_res else { return; };
                 let Ok(summary) = summary_res else { return; };
-                let quota_result = quota_res;
+                let quota_result = quota_res.unwrap_or(Err("Spawn error".to_string()));
+                let quota_result = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+                    is_allowed: true,
+                    soft_limit_reached: false,
+                    user_message: None,
+                });
 
                 let org_id_for_metrics = org_id_bg.clone();
                 let total_agents = agents.len() as i32;
@@ -167,11 +173,7 @@ impl OrgService for MyOrgService {
                     0.0
                 };
 
-                let status = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-                    is_allowed: true,
-                    soft_limit_reached: false,
-                    user_message: None,
-                });
+                let status = quota_result;
 
                 let response = AnalyticsSummaryResponse {
                     human_agent_ratio,
@@ -202,15 +204,20 @@ impl OrgService for MyOrgService {
         let org_id_clone = org_id.clone();
         let org_id_for_agents = org_id.clone();
         let org_id_for_summary = org_id.clone();
-        let (agents_res, all_meetings, summary_res, quota_res) = tokio::join!(
+        let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
-            self.hub.get_meetings(),
+            tokio::spawn({ let h = self.hub.clone(); async move { h.get_meetings().await } }),
             tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
-            self.hub.tracker().check_agent_quota(&org_id_clone)
+            tokio::spawn({ let h = self.hub.clone(); let o = org_id_clone.clone(); async move { h.tracker().check_agent_quota(&o).await } })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let all_meetings = all_meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
-        let quota_result = quota_res;
+        let quota_result = quota_res.map_err(|e| Status::internal(e.to_string()))?.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
 
         let org_id_for_metrics = org_id.clone();
         let total_agents = agents.len() as i32;
@@ -249,11 +256,7 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let status = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-            is_allowed: true,
-            soft_limit_reached: false,
-            user_message: None,
-        });
+        let status = quota_result;
 
         let response = AnalyticsSummaryResponse {
             human_agent_ratio,
