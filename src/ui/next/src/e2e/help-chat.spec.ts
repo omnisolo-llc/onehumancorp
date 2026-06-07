@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Help Chat Agent', () => {
   test('should return context-aware answers and links from help articles', async ({ page }) => {
+    // Open a page where the HelpChat component is rendered
     await page.goto('/dashboard?test_chat=true');
 
     // Click the "Ask anything" button

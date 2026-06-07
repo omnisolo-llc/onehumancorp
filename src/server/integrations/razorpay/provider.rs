@@ -36,6 +36,14 @@ impl RazorpayProvider {
     pub async fn create_checkout_preference(&self, price_id: &str, tenant_id: &str) -> Result<String, String> {
         self._client.create_checkout_preference(price_id, tenant_id).await
     }
+
+    pub async fn create_payment(&self, amount: f64, description: &str, receipt: &str) -> Result<String, String> {
+        self._client.create_payment(amount, description, receipt).await
+    }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        self._client.handle_webhook(payload).await
+    }
 }
 
 #[cfg(test)]
