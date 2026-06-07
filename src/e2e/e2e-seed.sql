@@ -181,3 +181,6 @@ ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload)
+VALUES ('e2e-advisory-approval', 'e2e-tenant', 'business_advisory', 'Weekly Business Report', 'PENDING', 'DRAFT_FOR_REVIEW', '{"summary": "Great week! You made $450. Your top seller was the Vegan Chocolate Cake.", "actionable_suggestion": "You have 0 Vegan Chocolate Cakes left. Create a restock order?"}')
+ON CONFLICT (id) DO NOTHING;

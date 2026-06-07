@@ -395,8 +395,33 @@ export default function AgentsPage() {
  <span className="text-xs text-gray-400 font-medium">{item.status === "Approved" ? "Approved" : item.status === "Rejected" ? "Rejected" : "Draft"}</span>
  </div>
  <p className="text-gray-800 text-sm font-medium leading-relaxed">
- {item.description}
- </p>
+                          {item.department === "business_advisory" && item.payload && item.payload.summary ? item.payload.summary : item.description}
+                        </p>
+                        {item.department === "business_advisory" && item.payload && item.payload.actionable_suggestion && (
+                          <div className="mt-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                            <p className="text-sm text-indigo-900 font-semibold mb-3">
+                              Suggestion: {item.payload.actionable_suggestion}
+                            </p>
+                            {(item.status === "PendingApproval" || item.status === "PENDING" || item.status === "Draft") ? (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleDecision(item.id, true)}
+                                  disabled={actionLoading === item.id}
+                                  className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleDecision(item.id, false)}
+                                  disabled={actionLoading === item.id}
+                                  className="flex-1 py-2 px-3 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-lg transition-colors shadow-sm border border-gray-200 disabled:opacity-50"
+                                >
+                                  Dismiss
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
  </div>
  ))}
  </div>

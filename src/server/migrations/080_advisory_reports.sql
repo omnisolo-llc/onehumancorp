@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS advisory_reports (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    payload JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -1222,8 +1222,55 @@ impl AdvisorWorker {
                 };
 
                 for (report_id, tenant_id) in reports {
-                    let prompt = format!("You are The Advisor. The user had 8 orders this week. Tuesday was the busiest day. Most people bought Lemon Pound Cake. 3 people asked about vegan options in DMs. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.");
-                    let mut drafted_msg = r#"{"summary": "Great job this week! You made $450 from 8 orders.", "actionable_suggestion": "We noticed 3 people asked about vegan options in DMs. Want me to draft a new 'Vegan Options' menu section for your website?"}"#.to_string();
+                    let mut order_count: i64 = 0;
+                    let mut total_revenue: f64 = 0.0;
+                    let mut top_seller = "Unknown".to_string();
+
+                    match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            if let Ok(row) = sqlx::query("SELECT COUNT(id) as count FROM orders WHERE tenant_id = $1 AND created_at >= NOW() - INTERVAL '7 days'")
+                                .bind(&tenant_id)
+                                .fetch_one(&mut *transaction).await
+                            {
+                                order_count = row.get("count");
+                            }
+                            if let Ok(row) = sqlx::query("SELECT COALESCE(SUM(oi.price * oi.quantity), 0) as rev FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND o.created_at >= NOW() - INTERVAL '7 days'")
+                                .bind(&tenant_id)
+                                .fetch_one(&mut *transaction).await
+                            {
+                                total_revenue = row.try_get::<f64, _>("rev").unwrap_or(0.0);
+                            }
+                            if let Ok(row) = sqlx::query("SELECT p.name FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND o.created_at >= NOW() - INTERVAL '7 days' GROUP BY p.name ORDER BY SUM(oi.quantity) DESC LIMIT 1")
+                                .bind(&tenant_id)
+                                .fetch_one(&mut *transaction).await
+                            {
+                                top_seller = row.try_get("name").unwrap_or("Unknown".to_string());
+                            }
+                        },
+                        crate::db::DbStore::Sqlite(_) => {
+                            if let Ok(row) = sqlx::query("SELECT COUNT(id) as count FROM orders WHERE tenant_id = $1 AND created_at >= datetime('now', '-7 days')")
+                                .bind(&tenant_id)
+                                .fetch_one(&mut *transaction).await
+                            {
+                                order_count = row.get("count");
+                            }
+                            if let Ok(row) = sqlx::query("SELECT COALESCE(SUM(oi.price * oi.quantity), 0) as rev FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND o.created_at >= datetime('now', '-7 days')")
+                                .bind(&tenant_id)
+                                .fetch_one(&mut *transaction).await
+                            {
+                                total_revenue = row.try_get::<f64, _>("rev").unwrap_or(0.0);
+                            }
+                            if let Ok(row) = sqlx::query("SELECT p.name FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND o.created_at >= datetime('now', '-7 days') GROUP BY p.name ORDER BY SUM(oi.quantity) DESC LIMIT 1")
+                                .bind(&tenant_id)
+                                .fetch_one(&mut *transaction).await
+                            {
+                                top_seller = row.try_get("name").unwrap_or("Unknown".to_string());
+                            }
+                        }
+                    }
+
+                    let prompt = format!("You are The Advisor. The user had {} orders this week. Total revenue was ${:.2}. The top seller was {}. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.", order_count, total_revenue, top_seller);
+                    let mut drafted_msg = format!(r#"{{"summary": "Great job this week! You made ${:.2} from {} orders. Your top seller was {}.", "actionable_suggestion": "Consider running a promotion on {} or restocking your inventory!"}}"#, total_revenue, order_count, top_seller, top_seller);
                     let mut final_status = "COMPLETED";
 
                     let mut attempts = 0;
@@ -1258,7 +1305,7 @@ impl AdvisorWorker {
                                     )
                                     .bind(Uuid::new_v4().to_string())
                                     .bind(&tenant_id)
-                                    .execute(&db.pool)
+                                    .execute(&mut *transaction)
                                     .await;
                                 }
                                 tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
@@ -1268,15 +1315,27 @@ impl AdvisorWorker {
 
                     let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
                         "summary": drafted_msg,
-                        "actionable_suggestion": "Consider adding a new vegan option."
+                        "actionable_suggestion": "Consider checking your inventory levels."
                     }));
 
                     match &db.store {
                         crate::db::DbStore::Postgres => {
                             let _ = sqlx::query("UPDATE advisory_reports SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                                 .bind(final_status)
-                                .bind(parsed)
+                                .bind(&parsed)
                                 .bind(&report_id)
+                                .execute(&mut *transaction)
+                                .await;
+
+                            // Push it to the agent_approvals queue so it shows up in UI
+                            let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                                .bind(Uuid::new_v4().to_string())
+                                .bind(&tenant_id)
+                                .bind("business_advisory")
+                                .bind("Weekly Business Report")
+                                .bind("PENDING")
+                                .bind("DRAFT_FOR_REVIEW")
+                                .bind(parsed)
                                 .execute(&mut *transaction)
                                 .await;
                         },
@@ -1287,6 +1346,17 @@ impl AdvisorWorker {
                                 .bind(&report_id)
                                 .execute(&mut *transaction)
                                 .await;
+
+                             let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                                .bind(Uuid::new_v4().to_string())
+                                .bind(&tenant_id)
+                                .bind("business_advisory")
+                                .bind("Weekly Business Report")
+                                .bind("PENDING")
+                                .bind("DRAFT_FOR_REVIEW")
+                                .bind(parsed.to_string())
+                                .execute(&mut *transaction)
+                                .await;
                         }
                     }
                 }
@@ -1295,7 +1365,6 @@ impl AdvisorWorker {
         });
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
