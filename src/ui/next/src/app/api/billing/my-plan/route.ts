@@ -3,23 +3,12 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
     if (process.env.MOCK_BACKEND === 'true') {
         return NextResponse.json({
-          total_revenue: 1000,
-          total_costs: 50,
-          llm_cost: 10,
-          storage_cost: 5,
-          payment_fees: 25,
-          network_cost: 10,
-          bandwidth_savings: 5,
-          cache_hit_rate: 80.5,
-          cost_per_1k_tokens: 0.002,
-          period_start: "2024-05-01",
-          period_end: "2024-05-31",
-          trend: [],
-          department_tier_usage: {
-            current_plan: "Free",
-            period: "2024-05",
-            departments: []
-          }
+          current_plan: "Free",
+          ai_actions_used: 15,
+          ai_actions_limit: 100,
+          storage_used_bytes: 52428800,
+          storage_limit_bytes: 1073741824,
+          next_bill_estimated: 0
         });
     }
 
@@ -27,21 +16,21 @@ export async function GET(request: Request) {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
     try {
-        const response = await fetch(`${backendUrl}/api/billing/cost-dashboard`, {
+        const response = await fetch(`${backendUrl}/api/billing/my-plan`, {
             headers: {
                 ...(authHeader ? { Authorization: authHeader } : {})
             }
         });
 
         if (!response.ok) {
-            console.error('Failed to fetch from backend', response.status);
+            console.error('Failed to fetch my-plan from backend', response.status);
             return NextResponse.json({ error: 'Failed to fetch from backend' }, { status: response.status });
         }
 
         const data = await response.json();
         return NextResponse.json(data);
     } catch (error) {
-        console.error('Error proxying to backend', error);
+        console.error('Error proxying my-plan to backend', error);
         return NextResponse.json({ error: 'Error proxying to backend' }, { status: 500 });
     }
 }
