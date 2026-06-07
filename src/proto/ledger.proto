@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package ohc.ledger;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/ledger;ledgerpb";
+
+message AccountBalance {
+  string tenant_id = 1;
+  string account_id = 2;
+  string currency = 3;
+  int64 balance_cents = 4;
+}
+
+message LedgerEntry {
+  string entry_id = 1;
+  string tx_id = 2;
+  string account_id = 3;
+  string direction = 4; // "DEBIT" or "CREDIT"
+  int64 amount_cents = 5;
+}
+
+message Transaction {
+  string tx_id = 1;
+  int64 amount_cents = 2;
+  string currency = 3;
+  int64 timestamp = 4;
+  repeated LedgerEntry entries = 5;
+}
+
+message RecordTransactionRequest {
+  string tenant_id = 1;
+  string tx_id = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  repeated LedgerEntry entries = 5;
+}
+
+message RecordTransactionResponse {
+  string tx_id = 1;
+  bool success = 2;
+}
+
+message GetBalanceRequest {
+  string tenant_id = 1;
+  string account_id = 2;
+  string currency = 3;
+}
+
+message GetBalanceResponse {
+  AccountBalance balance = 1;
+}
+
+message GetStatementRequest {
+  string tenant_id = 1;
+  string account_id = 2;
+  int64 start_time = 3;
+  int64 end_time = 4;
+}
+
+message GetStatementResponse {
+  repeated Transaction transactions = 1;
+}
+
+service LedgerService {
+  rpc RecordTransaction(RecordTransactionRequest) returns (RecordTransactionResponse);
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+  rpc GetStatement(GetStatementRequest) returns (GetStatementResponse);
+}

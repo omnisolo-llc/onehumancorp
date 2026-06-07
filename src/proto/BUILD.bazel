@@ -3,6 +3,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 
 exports_files([
+    "ledger.proto",
     "agent.proto",
     "agent_service.proto",
     "app.proto",
@@ -266,6 +267,21 @@ proto_library(
 proto_rust_library(
     name = "collective",
     proto = ":collective_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Ledger ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "ledger_proto",
+    srcs = ["ledger.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "ledger",
+    proto = ":ledger_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )

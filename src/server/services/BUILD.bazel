@@ -3,6 +3,8 @@ load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 exports_files(
     [
+        "ledger/mod.rs",
+        "ledger/service.rs",
         "booking.rs",
         "mod.rs",
         "cache_invalidator.rs",
@@ -14,6 +16,8 @@ exports_files(
 rust_library(
     name = "server_services",
     srcs = [
+        "//src/server/services/ledger:mod.rs",
+        "//src/server/services/ledger:service.rs",
         "bazel_lib.rs",
         "booking.rs",
         "mod.rs",

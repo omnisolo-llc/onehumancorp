@@ -13,6 +13,8 @@ rust_library(
         "//src/proto:billing_tonic",
         "//src/proto:campaign_tonic",
         "//src/proto:collective_tonic",
+        "//src/proto:ledger_tonic",
+        "//src/proto:ledger_prost",
         "//src/proto:common_prost",
         "//src/proto:hub_tonic",
         "//src/proto:interop_prost",

@@ -61,6 +61,9 @@ pub fn router() -> Router<AppState> {
         .route("/api/ledger/invoice/:id/update", put(update_invoice_status))
         .route("/api/ledger/invoice/:id/pay", post(apply_payment))
         .route("/api/ledger/entries/:tenant_id", get(get_ledger_entries))
+        .route("/api/v1/ledger/balance", get(get_balance))
+        .route("/api/v1/ledger/statement", get(get_statement))
+
 }
 
 async fn get_invoice(
@@ -162,4 +165,166 @@ async fn get_ledger_entries(
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
+}
+
+
+#[derive(Deserialize)]
+pub struct GetBalanceApiQuery {
+    pub tenant_id: String,
+    pub account_id: String,
+}
+
+#[derive(Serialize)]
+pub struct ApiAccountBalance {
+    pub tenant_id: String,
+    pub account_id: String,
+    pub currency: String,
+    pub balance_cents: i64,
+}
+
+async fn get_balance(
+    State(state): State<AppState>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::extract::Query(query): axum::extract::Query<GetBalanceApiQuery>,
+) -> impl IntoResponse {
+    let auth_tenant_id = claims.organization_id.unwrap_or(query.tenant_id.clone());
+    if auth_tenant_id != query.tenant_id && auth_tenant_id != "SYSTEM" {
+        return (StatusCode::FORBIDDEN, "Unauthorized tenant access").into_response();
+    }
+
+    let mut tx = match state.db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    };
+
+    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &query.tenant_id).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
+    }
+
+    use sqlx::Row;
+    let record = match sqlx::query("SELECT balance, currency FROM accounts WHERE tenant_id = $1 AND account_id = $2")
+        .bind(&query.tenant_id)
+        .bind(&query.account_id)
+        .fetch_optional(&mut *tx)
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    };
+
+    let balance = if let Some(r) = record {
+        ApiAccountBalance {
+            tenant_id: query.tenant_id.clone(),
+            account_id: query.account_id.clone(),
+            currency: r.get("currency"),
+            balance_cents: r.get("balance"),
+        }
+    } else {
+        ApiAccountBalance {
+            tenant_id: query.tenant_id.clone(),
+            account_id: query.account_id.clone(),
+            currency: "USD".to_string(),
+            balance_cents: 0,
+        }
+    };
+
+    (StatusCode::OK, Json(balance)).into_response()
+}
+
+#[derive(Deserialize)]
+pub struct GetStatementApiQuery {
+    pub tenant_id: String,
+    pub account_id: String,
+}
+
+#[derive(Serialize)]
+pub struct ApiLedgerEntry {
+    pub entry_id: String,
+    pub tx_id: String,
+    pub account_id: String,
+    pub direction: String,
+    pub amount_cents: i64,
+}
+
+#[derive(Serialize)]
+pub struct ApiTransaction {
+    pub tx_id: String,
+    pub amount_cents: i64,
+    pub currency: String,
+    pub timestamp: i64,
+    pub entries: Vec<ApiLedgerEntry>,
+}
+
+async fn get_statement(
+    State(state): State<AppState>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::extract::Query(query): axum::extract::Query<GetStatementApiQuery>,
+) -> impl IntoResponse {
+    let auth_tenant_id = claims.organization_id.unwrap_or(query.tenant_id.clone());
+    if auth_tenant_id != query.tenant_id && auth_tenant_id != "SYSTEM" {
+        return (StatusCode::FORBIDDEN, "Unauthorized tenant access").into_response();
+    }
+
+    let mut tx = match state.db.pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    };
+
+    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &query.tenant_id).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
+    }
+
+    use sqlx::Row;
+    let entries_records = match sqlx::query("SELECT entry_id, tx_id, direction, amount FROM entries WHERE tenant_id = $1 AND account_id = $2")
+        .bind(&query.tenant_id)
+        .bind(&query.account_id)
+        .fetch_all(&mut *tx)
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    };
+
+    let mut tx_ids = std::collections::HashSet::new();
+    for e in &entries_records {
+        tx_ids.insert(e.get::<String, _>("tx_id"));
+    }
+
+    let mut transactions = vec![];
+
+    for tx_id in tx_ids {
+        let tx_record = match sqlx::query("SELECT amount, currency, timestamp FROM transactions WHERE tenant_id = $1 AND tx_id = $2")
+            .bind(&query.tenant_id)
+            .bind(&tx_id)
+            .fetch_optional(&mut *tx)
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        };
+
+        if let Some(r) = tx_record {
+            let tx_entries: Vec<ApiLedgerEntry> = entries_records
+                .iter()
+                .filter(|e| e.get::<String, _>("tx_id") == tx_id)
+                .map(|e| ApiLedgerEntry {
+                    entry_id: e.get("entry_id"),
+                    tx_id: tx_id.clone(),
+                    account_id: query.account_id.clone(),
+                    direction: e.get("direction"),
+                    amount_cents: e.get("amount"),
+                })
+                .collect();
+
+            transactions.push(ApiTransaction {
+                tx_id: tx_id,
+                amount_cents: r.get("amount"),
+                currency: r.get("currency"),
+                timestamp: r.get::<chrono::DateTime<Utc>, _>("timestamp").timestamp(),
+                entries: tx_entries,
+            });
+        }
+    }
+
+    (StatusCode::OK, Json(transactions)).into_response()
 }
