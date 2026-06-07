@@ -1,4 +1,5 @@
 pub mod rag_sync;
+pub mod cart_recovery;
 pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
@@ -40,7 +41,7 @@ static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCach
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
-use server_utils::cache::HybridCache as LocalHybridCache;
+
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
@@ -334,8 +335,10 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod subscription;
     pub mod pos;
     pub mod collective;
+
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2295,6 +2298,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
+    if matches!(&db.store, crate::db::DbStore::Postgres) {
+        crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
+    }
+
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
@@ -2638,7 +2645,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
 
-    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+    match sqlx::query(
+        "SELECT id, tenant_id, source, content,
+                COALESCE(original_content, content) AS original_content,
+                COALESCE(translated_from_language, '') AS translated_from_language,
+                draft_reply, status, created_at
+         FROM inbox_messages
+         ORDER BY created_at DESC"
+    )
         .fetch_all(&mut *tx)
         .await
     {
@@ -2653,6 +2667,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
+                    "original_content": row.get::<String, _>("original_content"),
+                    "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "draft_reply": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
                     "created_at": created_at_str,
@@ -2683,6 +2699,56 @@ fn ui_tenant_id(query: &UiTenantQuery) -> String {
         .filter(|tenant| !tenant.is_empty())
         .unwrap_or("default")
         .to_string()
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub(crate) struct UiDashboardMetrics {
+    active_customers: i64,
+    pending_orders: i64,
+    total_sales: f64,
+    total_campaigns_sent: i64,
+}
+
+pub(crate) async fn load_ui_dashboard_metrics(
+    db: &crate::db::DB,
+    tenant_id: &str,
+) -> Result<UiDashboardMetrics, sqlx::Error> {
+    let (active_customers, pending_orders, total_sales, total_campaigns_sent) = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+                "SELECT \
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
+                    (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales, \
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+            )
+            .bind(tenant_id)
+            .fetch_one(&db.pool)
+            .await?
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+                "SELECT \
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
+                    (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales, \
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+            )
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .fetch_one(pool)
+            .await?
+        }
+    };
+
+    Ok(UiDashboardMetrics {
+        active_customers,
+        pending_orders,
+        total_sales,
+        total_campaigns_sent,
+    })
 }
 
 async fn list_ui_orders_handler(
@@ -2842,7 +2908,20 @@ async fn list_ui_inbox_handler(
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_from_language, '') AS translated_from_language,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(created_at::text, '') AS created_at
+                 FROM inbox_messages
+                 WHERE tenant_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
                 .bind(&tenant_id)
                 .fetch_all(&db.pool)
                 .await {
@@ -2850,6 +2929,8 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
@@ -2858,7 +2939,20 @@ async fn list_ui_inbox_handler(
                 }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_from_language, '') AS translated_from_language,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                 FROM inbox_messages
+                 WHERE tenant_id = ?
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await {
@@ -2866,6 +2960,8 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
@@ -2901,41 +2997,11 @@ async fn ui_dashboard_metrics_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let metrics = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_as::<_, (i64, i64, f64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&db.pool)
-            .await
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, (i64, i64, f64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales"
-            )
-            .bind(&tenant_id)
-            .bind(&tenant_id)
-            .bind(&tenant_id)
-            .fetch_one(pool)
-            .await
-        }
-    };
+    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await;
 
     match metrics {
-        Ok((active_customers, pending_orders, total_sales)) => {
-            let res = serde_json::json!({
-                "active_customers": active_customers,
-                "pending_orders": pending_orders,
-                "total_sales": total_sales,
-                "total_campaigns_sent": 0
-            });
+        Ok(metrics) => {
+            let res = serde_json::to_value(metrics).unwrap_or_else(|_| serde_json::json!({}));
             cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
             (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
@@ -3700,6 +3766,9 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
+        .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
+        .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
+        .nest("/api/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -3722,6 +3791,7 @@ async fn create_ui_bom_item_handler(
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
+        .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
             let m = registry.read().unwrap();
@@ -3780,6 +3850,12 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
+        .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
+            default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
+            tools: vec![],
+            sub_agents: std::collections::HashMap::new(),
+            default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
+        })))
         .merge(meta_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
@@ -3932,6 +4008,7 @@ async fn api_not_found_handler(req: axum::extract::Request) -> impl axum::respon
     )
         .into_response()
 }
+
 pub mod crypto;
 
 #[cfg(test)]

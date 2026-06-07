@@ -34,7 +34,12 @@ impl MyDashboardService {
             return Ok(agents);
         }
 
-        let mut agents = self.hub.get_agents_by_org(org_id);
+        let hub = self.hub.clone();
+        let org_id_clone = org_id.to_string();
+        let mut agents = tokio::task::spawn_blocking(move || {
+            hub.get_agents_by_org(&org_id_clone)
+        }).await.map_err(|e| e.to_string())?;
+
         if mobile_optimized {
             for agent in agents.iter_mut() {
                 agent.name = String::new();

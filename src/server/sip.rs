@@ -12,7 +12,35 @@ pub fn get_sqlite_limiter() -> &'static Semaphore {
     SQLITE_CONCURRENCY_LIMITER.get_or_init(|| Semaphore::new(1))
 }
 
+pub fn is_retryable_database_error_message(message: &str) -> bool {
+    let lower = message.to_lowercase();
+    lower.contains("database is locked")
+        || lower.contains("database is busy")
+        || lower.contains("sqlite_busy")
+        || lower.contains("deadlock detected")
+        || lower.contains("deadlock")
+        || lower.contains("serialization failure")
+        || lower.contains("serialization")
+        || lower.contains("sqlstate 40p01")
+        || lower.contains("40p01")
+        || lower.contains("sqlstate 40001")
+        || lower.contains("40001")
+        || lower.contains("sqlstate 55p03")
+        || lower.contains("55p03")
+        || lower.contains("could not obtain lock")
+        || lower.contains("timeout")
+        || lower.contains("closed")
+}
 
+fn is_retryable_sqlx_error(err: &sqlx::Error) -> bool {
+    if let Some(db_err) = err.as_database_error() {
+        let code = db_err.code();
+        if matches!(code.as_deref(), Some("40P01") | Some("40001") | Some("55P03")) {
+            return true;
+        }
+    }
+    is_retryable_database_error_message(&err.to_string())
+}
 
 pub struct SipDB {
     pool: PgPool,
@@ -35,7 +63,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
@@ -59,8 +87,7 @@ impl SipDB {
             match res {
                 Ok(Ok(_)) => return Ok(()),
                 Ok(Err(err)) => {
-                    let err_str = err.to_string().to_lowercase();
-                    if !err_str.contains("deadlock detected") && !err_str.contains("database is locked") && !err_str.contains("database is busy") && !err_str.contains("sqlite_busy") {
+                    if !is_retryable_sqlx_error(&err) {
                         return Err(err);
                     }
                     attempt += 1;
@@ -96,7 +123,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
@@ -136,17 +163,8 @@ impl SipDB {
                     return Ok(());
                 },
                 Ok(Err(err)) => {
-                    let mut retry = false;
-                    if let Some(db_err) = err.as_database_error() {
-                        let code = db_err.code();
-                        if code.as_deref() == Some("40P01") || code.as_deref() == Some("40001") {
-                            retry = true; // deadlock_detected or serialization_failure
-                        }
-                    }
+                    let retry = is_retryable_sqlx_error(&err);
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
-                        retry = true;
-                    }
 
                     if retry {
                         attempt += 1;
@@ -198,17 +216,8 @@ impl SipDB {
             match res {
                 Ok(_) => return Ok(()),
                 Err(err) => {
-                    let mut retry = false;
-                    if let Some(db_err) = err.as_database_error() {
-                        let code = db_err.code();
-                        if code.as_deref() == Some("40P01") || code.as_deref() == Some("40001") {
-                            retry = true;
-                        }
-                    }
+                    let retry = is_retryable_sqlx_error(&err);
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
-                        retry = true;
-                    }
 
                     if retry {
                         attempt += 1;
@@ -275,7 +284,7 @@ impl SipDB {
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
-        let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+        let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
             self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
         }).await;
 
@@ -294,7 +303,7 @@ impl SipDB {
         let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
 
         loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
                 let _permit = if is_standalone {
                     match get_sqlite_limiter().try_acquire() {
                         Ok(p) => Some(p),
@@ -317,7 +326,7 @@ impl SipDB {
                 Ok(Ok(_)) => return Ok(()),
                 Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
+                    if is_retryable_sqlx_error(&err) || err_str.contains("connection refused") || err_str.contains("connection reset") {
                         attempt += 1;
                         if attempt >= max_attempts {
                             if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
@@ -419,6 +428,21 @@ mod tests {
         let payload = "Original Task Payload";
         let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
         assert_eq!(enriched, payload, "Payload should be unmodified when no context root is set");
+    }
+
+    #[test]
+    fn retryable_database_error_message_includes_postgres_lock_codes() {
+        assert!(is_retryable_database_error_message(
+            "db error: ERROR: could not serialize access due to concurrent update (SQLSTATE 40001)",
+        ));
+        assert!(is_retryable_database_error_message(
+            "db error: ERROR: deadlock detected (SQLSTATE 40P01)",
+        ));
+        assert!(is_retryable_database_error_message(
+            "db error: ERROR: could not obtain lock on row (SQLSTATE 55P03)",
+        ));
+        assert!(is_retryable_database_error_message("database is locked"));
+        assert!(!is_retryable_database_error_message("permission denied for table agent_missions"));
     }
 
     // Helper to create a temporary directory without external crate

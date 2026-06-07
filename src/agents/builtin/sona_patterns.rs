@@ -1,5 +1,4 @@
 
-
 /// Ruflo Unique Harness Innovations: SONA neural patterns (Self-learning trajectory patterns)
 /// Implements a simple pattern matching system to record and retrieve successful trajectories.
 
@@ -67,6 +66,15 @@ impl PatternMatcher {
     pub fn get_patterns(&self) -> &[TrajectoryPattern] {
         &self.patterns
     }
+
+    /// Suggests tools based on the current context matching stored SONA neural patterns.
+    pub fn suggest_tools(&self, current_context: &str) -> Vec<String> {
+        if let Some(best_match) = self.find_best_match(current_context) {
+            best_match.successful_tools.clone()
+        } else {
+            Vec::new()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -131,5 +139,25 @@ mod tests {
 
         // Let's test the threshold explicitly. "kubernetes deployment" has 0 overlap.
         assert!(matcher.find_best_match("kubernetes deployment").is_none());
+    }
+
+    #[test]
+    fn test_suggest_tools() {
+        let mut matcher = PatternMatcher::new();
+
+        matcher.record_pattern(TrajectoryPattern {
+            id: "1".to_string(),
+            initial_context: "find text in files".to_string(),
+            successful_tools: vec!["grep".to_string(), "read_file".to_string()],
+            outcome_score: 1.0,
+        });
+
+        let suggested_tools = matcher.suggest_tools("how to find text in my files");
+        assert_eq!(suggested_tools.len(), 2);
+        assert_eq!(suggested_tools[0], "grep");
+        assert_eq!(suggested_tools[1], "read_file");
+
+        let unknown_tools = matcher.suggest_tools("do something random");
+        assert!(unknown_tools.is_empty());
     }
 }
