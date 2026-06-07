@@ -70,6 +70,7 @@ pub mod actor_model;
 pub mod visual_workflow;
 pub mod visual_workflow_client;
 pub mod marketplace;
+pub mod crewai;
 pub mod swarm_topology;
 pub mod sona_patterns;
 pub mod gpt_researcher;

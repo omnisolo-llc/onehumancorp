@@ -67,6 +67,7 @@ rust_library(
         "lib.rs",
         "local_provider.rs",
         "marketplace.rs",
+        "crewai.rs",
         "memory_exhaustive_tests.rs",
         "memory_store.rs",
         "mesh/mod.rs",
@@ -243,6 +244,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "sona_patterns",
     "visual_workflow",
     "visual_workflow_client",
+    "crewai",
 ]
 
 rust_test(
