@@ -12,7 +12,20 @@ test.describe('Edge-Cached Storefront Store SEO & Multi-Channel Inventory Sync',
     // "Add E2E tests verifying that an offline sync mutation correctly updates inventory and prevents subsequent online cart checkouts."
 
     // We navigate to POS terminal
+
+    // Set up mock offline staff
+    await page.addInitScript(() => {
+      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+        id: 'staff_1',
+        tenant_id: 'default_tenant',
+        name: 'Test Staff',
+        role: 'Cashier',
+        pin_hash: '1111'
+      }]));
+    });
+
     await page.goto('/pos/terminal');
+
 
     // Unlock POS terminal
     const pinButtons = page.locator('button', { hasText: /^[0-9]$/ });
@@ -56,6 +69,6 @@ test.describe('Edge-Cached Storefront Store SEO & Multi-Channel Inventory Sync',
     // If it doesn't exist, it might 404, but we assert the absence of an Add to Cart button
     // or presence of Sold Out text as requested by AC.
     // We'll assert we don't see an Add To Cart button
-    await expect(page.locator('button', { name: 'Add to Cart' })).toBeHidden({ timeout: 5000 });
+    await expect(page.locator('button', { hasText: 'Add to Cart' })).toBeHidden({ timeout: 5000 });
   });
 });
