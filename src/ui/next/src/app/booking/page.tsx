@@ -21,8 +21,8 @@ export default function Booking() {
       startTimeStr = new Date().toISOString();
     }
 
-    const tenantId = localStorage.getItem('tenant_id') || 'default';
-    const userId = localStorage.getItem('user_id') || 'default';
+    const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+    const userId = localStorage.getItem('user_id') || 'test-customer-123';
     await fetch("/api/v1/booking/request", {
       method: "POST",
       headers: {
@@ -32,7 +32,7 @@ export default function Booking() {
       },
       body: JSON.stringify({
         description,
-        service_id: serviceId,
+        service_id: serviceId || 'e2e-product-class',
         start_time: startTimeStr,
         timestamp: new Date().toISOString()
       }),
