@@ -181,3 +181,12 @@ ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+ALTER TABLE IF EXISTS agent_actions DISABLE ROW LEVEL SECURITY;
+INSERT INTO agent_actions (id, tenant_id, agent_id, action_type, payload, status, created_at, updated_at)
+VALUES
+  ('e2e-action-1', 'e2e-tenant', 'e2e-agent-ops', 'review_proposal', '{"context": {"abandoned_carts_count": 3, "potential_revenue": 150.50}}', 'pending', now(), now()),
+  ('e2e-action-2', 'e2e-tenant', 'e2e-agent-marketing', 'draft_email', '{"context": {"subject": "Promo"}}', 'pending', now(), now())
+ON CONFLICT (id) DO NOTHING;
+ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_actions FORCE ROW LEVEL SECURITY;

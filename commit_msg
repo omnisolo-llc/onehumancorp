@@ -1,0 +1,13 @@
+Issue #24668: [Architecture] Proactive Agent Feed System & Action Cards Engine
+
+This PR implements the requested backend infrastructure and API endpoint for the proactive agent feed system:
+- Defines strict multi-tenant schema `agent_actions` table.
+- Orchestrates `AgentFeedService` taking gRPC endpoints.
+- Avoids duplicated actions using Redis Redlock (`SET NX EX`).
+- Builds a `GET /api/v1/agent-feed` and `GET /api/v1/agent-feed/activity` endpoint that maps the backend models appropriately to the Next.js UI component's structure.
+- Migrates the existing dashboard UI in `UnifiedAgentFeed.tsx` to rely on the new `api/v1/agent-feed` rather than the old approvals interface.
+- 100% unit tests added for `agent_feed` service.
+- End-to-end testing fully covers the unified agent feed interactions.
+- Loaded Superpowers UI workflow for strict validation.
+
+Resolves #24668

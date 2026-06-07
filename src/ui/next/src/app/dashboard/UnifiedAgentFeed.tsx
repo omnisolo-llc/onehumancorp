@@ -37,7 +37,7 @@ export function UnifiedAgentFeed() {
       try {
         const tenant = tenantId();
         // Fetch proposals
-        const res = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+        const res = await fetch(`/api/v1/agent-feed?tenant_id=${tenant}`, {
           headers: {
             "x-tenant-id": tenant,
             "x-user-id": "default",
@@ -67,7 +67,7 @@ export function UnifiedAgentFeed() {
       try {
         setActivityLoading(true);
         const tenant = tenantId();
-        const res = await fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
+        const res = await fetch(`/api/v1/agent-feed/activity?tenant_id=${tenant}`, {
           headers: {
             "x-tenant-id": tenant,
             "x-user-id": "default",
@@ -112,7 +112,7 @@ export function UnifiedAgentFeed() {
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+        const refreshRes = await fetch(`/api/v1/agent-feed?tenant_id=${tenant}`, {
             headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
         if (refreshRes.ok) {
