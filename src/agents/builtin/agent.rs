@@ -255,6 +255,7 @@ pub struct Agent {
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
     pub sona_matcher: Option<Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
+    pub skill_trace: Arc<tokio::sync::Mutex<crate::expert_team::SkillTrace>>,
 }
 
 impl Agent {
@@ -272,6 +273,7 @@ impl Agent {
             event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
             sona_matcher: None,
+            skill_trace: Arc::new(tokio::sync::Mutex::new(crate::expert_team::SkillTrace::new())),
         }
     }
 
@@ -768,7 +770,8 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
-                sona_matcher: self.sona_matcher.clone(),
+            sona_matcher: self.sona_matcher.clone(),
+            skill_trace: self.skill_trace.clone(),
         });
 
         let coord_actor = crate::actor_model::AgentActor {
@@ -1809,7 +1812,8 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
-                sona_matcher: self.sona_matcher.clone(),
+            sona_matcher: self.sona_matcher.clone(),
+            skill_trace: self.skill_trace.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1923,6 +1927,7 @@ impl Agent {
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
                 sona_matcher: self.sona_matcher.clone(),
+                skill_trace: self.skill_trace.clone(),
             };
             self_with_memory = &owned_agent;
         }
@@ -3232,6 +3237,13 @@ impl Agent {
 
         let mut modified_tc = tc.clone();
         modified_tc.arguments = args;
+
+        // Skill-trace tracking: record the skill usage in the agent's skill_trace
+        {
+            let mut trace = self.skill_trace.lock().await;
+            trace.record_skill(&format!("{}_invoked", tc.name));
+        }
+
         crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries).await
     }
 }

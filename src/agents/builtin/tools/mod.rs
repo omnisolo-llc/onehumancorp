@@ -41,6 +41,7 @@ pub mod create_skill;
 pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
+pub mod expert_team_tool;
 pub mod workflow;
 pub mod checkout;
 
