@@ -77,6 +77,12 @@ impl SandboxAdapter for SandboxManager {
             return Err(reason);
         }
 
+        let is_ast_denied = ast_parser.parse_for_security(cmd).is_err();
+        let is_regex_denied = !self.evaluator.evaluate(cmd);
+        if is_ast_denied != is_regex_denied {
+            self.violation_store.record_divergence(if is_ast_denied { "ast_only" } else { "regex_only" });
+        }
+
         if !self.evaluator.evaluate(cmd) {
             let details = json!({ "command": cmd });
             let _ = self.violation_store.record_violation(
