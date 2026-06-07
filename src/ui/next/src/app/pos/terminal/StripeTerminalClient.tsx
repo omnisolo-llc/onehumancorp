@@ -10,6 +10,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
   const [connectedReader, setConnectedReader] = useState<any>(null);
   const [reserving, setReserving] = useState<boolean>(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     async function initTerminal() {
@@ -25,16 +26,61 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           const data = await res.json();
           return data.secret;
         },
-        onUnexpectedReaderDisconnect: () => {
+        onUnexpectedReaderDisconnect: async () => {
           setStatus('Reader disconnected unexpectedly.');
           setConnectedReader(null);
+          if (sessionId && navigator.onLine) {
+            await fetch('/api/terminal/session/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: sessionId, status: 'OFFLINE' })
+            }).catch(console.error);
+          }
         }
       });
       setTerminal(term);
       setStatus('Terminal initialized. Ready to discover readers.');
     }
     initTerminal();
-  }, []);
+
+    return () => {
+      // End session on unmount
+      if (sessionId && navigator.onLine) {
+        fetch('/api/terminal/session/end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Keep-Alive': 'timeout=5, max=100' },
+          body: JSON.stringify({ session_id: sessionId }),
+          keepalive: true
+        }).catch(console.error);
+      }
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
+    const handleOnline = async () => {
+      if (sessionId && connectedReader) {
+        await fetch('/api/terminal/session/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, status: 'ACTIVE' })
+        }).catch(console.error);
+      }
+    };
+    const handleOffline = async () => {
+      if (sessionId) {
+        // Optimistic offline status locally, as we can't send a request when offline
+        setStatus('Terminal is Offline');
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [sessionId, connectedReader]);
 
   const discoverReaders = async () => {
     if (!terminal) return;
@@ -57,6 +103,28 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     } else {
       setConnectedReader(result.reader);
       setStatus('Connected to reader: ' + result.reader.label);
+
+      // Start a session
+      try {
+        const res = await fetch('/api/terminal/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_id: result.reader.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setSessionId(data.session_id);
+          if (typeof window !== 'undefined') {
+             localStorage.setItem('ohc_active_terminal_session_id', data.session_id);
+          }
+        } else {
+          console.error("Failed to start terminal session:", data.error_message);
+          setStatus("Connected, but session start failed: " + data.error_message);
+        }
+      } catch (err) {
+        console.error("Failed to start terminal session", err);
+        setStatus("Connected, but session start failed");
+      }
     }
   };
 
