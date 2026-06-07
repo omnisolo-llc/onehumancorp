@@ -17,6 +17,8 @@ pub struct TelemetryRow {
     pub total: Option<f64>,
 }
 
+const STORAGE_COST_SCALING_FACTOR: f64 = 0.00000001; // Scales storage cost units to cents
+
 pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
     let mut trends = std::collections::HashMap::new();
 
@@ -42,7 +44,7 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                 let val = row.total.unwrap_or(0.0) as i64;
                 match row.metric_name.as_str() {
                     "ohc_mission_cost_cents" => daily.llm_cost += val,
-                    "ohc_storage_rw_cost" => daily.storage_cost += (row.total.unwrap_or(0.0) * 0.00000001).round() as i64,
+                    "ohc_storage_rw_cost" => daily.storage_cost += (row.total.unwrap_or(0.0) * STORAGE_COST_SCALING_FACTOR).round() as i64,
                     "ohc_network_cost_cents" => daily.network_cost += val,
                     "ohc_compute_cost_cents" => daily.compute_cost += val,
                     _ => {
@@ -154,7 +156,7 @@ mod tests {
             TelemetryRow {
                 date: Some(today),
                 metric_name: "ohc_storage_rw_cost".to_string(),
-                total: Some(100000000.0), // Should become 1 after mult with 0.00000001
+                total: Some(100000000.0), // Should become 1 after mult with STORAGE_COST_SCALING_FACTOR
             },
             TelemetryRow {
                 date: Some(today),

@@ -77,7 +77,7 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 hover:shadow-xl transition-shadow duration-300" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Advisory Summary</h2>
             <p className="text-gray-700 font-medium leading-relaxed">
               Here's what happened this week and what you should do next:<br/><br/>
@@ -88,7 +88,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 hover:shadow-xl transition-shadow duration-300" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
@@ -112,7 +112,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Breakdown Section */}
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 hover:shadow-xl transition-shadow duration-300" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">

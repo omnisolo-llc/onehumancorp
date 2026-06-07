@@ -71,7 +71,7 @@ export default function MyPlanPage() {
       <main id="my-plan-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300 w-full">
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 hover:shadow-xl transition-shadow duration-300 w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
@@ -91,7 +91,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Usage Section */}
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300 w-full">
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 hover:shadow-xl transition-shadow duration-300 w-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)' }}>
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Your Current Usage</h2>
 
             <div className="space-y-6">
