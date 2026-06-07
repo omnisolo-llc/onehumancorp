@@ -63,7 +63,7 @@ const tasksPayload = {
     workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
     commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
     mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
-    paritySummary: { total: 50, implemented: 50, remaining: 0 },
+    paritySummary: { total: 100, implemented: 100, remaining: 0 },
     parityCategories: [
       'Cloud Agent lifecycle: 24/24',
       'Home execution controls: 4/4',
@@ -71,8 +71,15 @@ const tasksPayload = {
       'Plugin system: 7/7',
       'Remote assistant: 5/5',
       'Automation governance: 4/4',
+      'Task management: 10/10',
+      'Memory governance: 6/6',
+      'MCP configuration: 10/10',
+      'Mobile mini app: 10/10',
+      'Permission safety: 6/6',
+      'Create task context: 4/4',
+      'Hook lifecycle: 4/4',
     ],
-    parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates'],
+    parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates', 'Task search box', 'User-level MCP config', 'Mini app voice input', 'Permission risk boundary', 'Clipboard screenshot paste', 'Hook event family'],
   },
 };
 
@@ -324,10 +331,12 @@ test('opens feature panels for remote control, automations, memory, skills, conn
 
   fireEvent.click(screen.getByRole('button', { name: 'Parity Audit' }));
   const parityPanel = screen.getByLabelText('Parity audit panel');
-  expect(within(parityPanel).getByText('50 / 50 implemented')).toBeDefined();
+  expect(within(parityPanel).getByText('100 / 100 implemented')).toBeDefined();
   expect(within(parityPanel).getByText('Cloud Agent lifecycle: 24/24')).toBeDefined();
+  expect(within(parityPanel).getByText('MCP configuration: 10/10')).toBeDefined();
   expect(within(parityPanel).getByText('Hook plugins')).toBeDefined();
-  expect(within(parityPanel).getByText('Dedicated remote folder')).toBeDefined();
+  expect(within(parityPanel).getByText('Mini app voice input')).toBeDefined();
+  expect(within(parityPanel).getByText('Hook event family')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Permissions' }));
   expect(screen.getByText('Permission Mode')).toBeDefined();
