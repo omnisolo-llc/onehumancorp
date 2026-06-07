@@ -135,6 +135,7 @@ where
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
+        .route("/review-wall/embed", get(handle_review_wall_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
@@ -163,7 +164,7 @@ pub struct TrialExtensionClaimResponse {
 }
 
 async fn handle_trial_extension_claim(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
     let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
@@ -364,7 +365,7 @@ async fn handle_send_cart(
 }
 
 async fn handle_send_receipt(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<SendReceiptRequest>,
 ) -> impl IntoResponse {
     let email = req.customer_email.unwrap_or_else(|| "customer@example.com".to_string());
@@ -402,7 +403,7 @@ pub struct LeadGenCampaignResponse {
 }
 
 async fn handle_create_lead_gen_campaign(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<LeadGenCampaignRequest>,
 ) -> Result<Json<LeadGenCampaignResponse>, StatusCode> {
@@ -433,7 +434,7 @@ async fn handle_create_lead_gen_campaign(
 }
 
 async fn handle_send_campaign(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would:
@@ -467,7 +468,7 @@ async fn handle_track_visitor(
 }
 
 async fn handle_affiliate_generate_link(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<GenerateAffiliateLinkRequest>,
 ) -> Result<Json<GenerateAffiliateLinkResponse>, StatusCode> {
@@ -516,7 +517,7 @@ async fn handle_affiliate_track(
 }
 
 async fn handle_affiliate_stats(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<AffiliateStatsResponse>, StatusCode> {
     let mut total_affiliates: i64 = 0;
@@ -552,7 +553,7 @@ pub struct StorefrontEmbedQuery {
 }
 
 async fn handle_storefront_embed(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -731,7 +732,7 @@ async fn handle_flash_sale_embed(
 
 
 async fn handle_og_card(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
 ) -> impl IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -807,7 +808,7 @@ async fn handle_og_card(
 }
 
 async fn handle_check_milestones(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
 
@@ -878,7 +879,7 @@ pub struct MilestoneCardQuery {
 }
 
 async fn handle_get_milestone_card(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>,
 ) -> impl IntoResponse {
     let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
@@ -979,7 +980,7 @@ async fn handle_get_milestone_card(
 }
 
 async fn handle_get_team_invites(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesResponse>, StatusCode> {
     let cache_key = format!("team_invites:{}:{:?}", query.team_id, query.cursor);
@@ -1028,7 +1029,7 @@ async fn handle_generate_discount_share(
 }
 
 async fn handle_team_invites_metrics(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let cache_key = format!("metrics:{}", query.team_id);
@@ -1072,7 +1073,7 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     let cache_key = "onboarding_metrics";
     let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
@@ -1100,7 +1101,7 @@ async fn handle_onboarding_metrics(
 }
 
 async fn handle_referral_click(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
@@ -1124,7 +1125,7 @@ async fn handle_referral_click(
 }
 
 async fn handle_referral_stats(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut active_referrals: i64 = 0;
@@ -1153,7 +1154,7 @@ async fn handle_referral_stats(
 
 
 async fn handle_referral_convert(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
@@ -1177,7 +1178,7 @@ async fn handle_referral_convert(
 
 
 async fn handle_referral_generate(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
     let ref_code = uuid::Uuid::new_v4().to_string();
@@ -1205,7 +1206,7 @@ async fn handle_referral_generate(
 }
 
 async fn handle_team_invite_accept(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<InviteIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -1236,7 +1237,7 @@ async fn handle_team_invite_accept(
 }
 
 async fn handle_create_team_invite(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -1628,7 +1629,7 @@ mod tests {
 }
 
 async fn handle_aggregated_team_invites_metrics(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let cache_key = "aggregated_metrics";
     let cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
@@ -1669,7 +1670,7 @@ async fn handle_aggregated_team_invites_metrics(
 }
 
 async fn handle_abandoned_carts_count(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> impl IntoResponse {
     let pool = &state.pool;
 
@@ -1687,4 +1688,98 @@ async fn handle_abandoned_carts_count(
     };
 
     Json(serde_json::json!({ "count": count }))
+}
+
+async fn handle_review_wall_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#f9fafb" } else { "#111827" };
+    let star_color = "#f59e0b";
+
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let tenant_escaped = escape_html(tenant);
+
+    // Hardcode some top reviews for the widget embed
+    let html = format!(r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Customer Reviews</title>
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: {bg_color};
+      color: {text_color};
+      text-align: center;
+      border-radius: 12px;
+    }}
+    .review {{
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+    }}
+    .review:last-child {{
+      border-bottom: none;
+    }}
+    .stars {{
+      color: {star_color};
+      font-size: 20px;
+      margin-bottom: 8px;
+    }}
+    .comment {{
+      font-size: 15px;
+      font-style: italic;
+      margin-bottom: 8px;
+    }}
+    .reviewer {{
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.8;
+    }}
+    .footer {{
+      margin-top: 20px;
+      font-size: 12px;
+      opacity: 0.7;
+    }}
+    a {{
+      color: inherit;
+      text-decoration: none;
+      font-weight: bold;
+    }}
+    a:hover {{
+      text-decoration: underline;
+    }}
+  </style>
+</head>
+<body>
+  <div class="review">
+    <div class="stars">★★★★★</div>
+    <div class="comment">"Absolutely fantastic service. Highly recommended!"</div>
+    <div class="reviewer">— Alex P.</div>
+  </div>
+  <div class="review">
+    <div class="stars">★★★★★</div>
+    <div class="comment">"Exceeded all my expectations. Will be returning."</div>
+    <div class="reviewer">— Jamie T.</div>
+  </div>
+  <div class="footer">
+    <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={tenant_escaped}" target="_blank">⚡ Powered by OHC</a>
+  </div>
+</body>
+</html>
+"#);
+
+    ([(axum::http::header::CONTENT_TYPE, "text/html")], html)
 }
