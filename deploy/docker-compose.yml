@@ -125,6 +125,7 @@ services:
         max-size: "10m"
         max-file: "3"
     image: valkey/valkey:8-alpine
+    pull_policy: missing
     ports:
       - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
     healthcheck:
@@ -144,7 +145,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg15
+    pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       LOG_LEVEL: "info"
