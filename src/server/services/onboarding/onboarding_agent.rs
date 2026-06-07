@@ -2586,6 +2586,7 @@ mod tests {
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
             location: "New York, USA".to_string(),
+            target_audience: "Anyone".to_string(),
         };
 
         let req_categories = req.selling_categories.clone();
@@ -2663,6 +2664,7 @@ mod tests {
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
             location: "Oakland, CA".to_string(),
+            target_audience: "Anyone".to_string(),
         };
 
         let state = onboarding_feature_state(&req, "Maya Studio", &req.business_type, &req.location);
@@ -2704,6 +2706,7 @@ mod tests {
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
             location: "London, UK".to_string(),
+            target_audience: "Anyone".to_string(),
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -2742,6 +2745,7 @@ mod tests {
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
             location: "Austin, TX".to_string(),
+            target_audience: "Anyone".to_string(),
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

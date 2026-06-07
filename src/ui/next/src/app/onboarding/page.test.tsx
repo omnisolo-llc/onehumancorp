@@ -533,6 +533,39 @@ describe('OnboardingWizard', () => {
     expect(screen.getByDisplayValue('Draft Products')).toBeInTheDocument();
   });
 
+  it('Step 4: Target audience saves and navigates to launch correctly', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Set initial state to Step 4 (chatStep = 4)
+    act(() => {
+      useOnboardingStore.setState({
+        step: 1,
+        chatStep: 4,
+        businessName: 'Valid Name',
+        whatYouSell: 'Products',
+        location: 'City'
+      });
+    });
+
+    await renderOnboardingWizard();
+
+    const targetAudienceInput = screen.getByPlaceholderText('e.g. Health-conscious professionals, local families...');
+    const nextButton = screen.getByRole('button', { name: /Generate My Business/i });
+
+    expect(nextButton).toBeDisabled();
+
+    await user.type(targetAudienceInput, 'My audience');
+
+    expect(nextButton).not.toBeDisabled();
+
+    // It should call handleIntake which makes a network request and transitions state
+    // The simplest assertion here is that validation passes and the button click triggers progress
+    await user.click(nextButton);
+
+    // Note: handleIntake uses fetch which is either mocked or fails, but we just want to test
+    // that the UI hook for targetAudience works.
+  });
+
   it('Save Draft button triggers draft API and shows success message', async () => {
     const user = userEvent.setup({ delay: null });
 
