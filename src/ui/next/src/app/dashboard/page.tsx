@@ -1,5 +1,5 @@
 "use client";
-import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+
 
 
 
@@ -14,6 +14,7 @@ import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+
 
 type DashboardMetrics = {
   active_customers: number;
@@ -242,7 +243,7 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+      <div data-testid="dashboard-welcome-panel" className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
@@ -585,7 +586,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link href="/dashboard/campaigns" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/dashboard/campaigns" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
                 <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>
@@ -594,7 +595,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Plan, generate, review, and launch customer campaigns from live dashboard data.</p>
             </Link>
 
-            <Link href="/upgrade-roi" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/upgrade-roi" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
@@ -603,7 +604,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
             </Link>
 
-            <Link href="/referrals" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/referrals" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
@@ -612,7 +613,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
-            <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/milestones" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
@@ -622,7 +623,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 
-            <Link href="/share-cards" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/share-cards" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
                 <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Cards</div>
@@ -631,7 +632,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
             </Link>
 
-            <Link href="/storefront-widget" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/storefront-widget" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
@@ -640,7 +641,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
             </Link>
 
-            <Link href="/subscriptions" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/subscriptions" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
                 <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
@@ -649,7 +650,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
             </Link>
 
-            <Link href="/social-proof-nudge" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/social-proof-nudge" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
@@ -658,7 +659,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
             </Link>
 
-            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/link-in-bio-generator" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
@@ -667,7 +668,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
             </Link>
 
-            <Link href="/marketing/lead-gen" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/marketing/lead-gen" data-testid="dashboard-card" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
