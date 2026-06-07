@@ -6,17 +6,25 @@ export const E2E_ADMIN_USER = {
   role: 'ADMIN',
 } as const;
 
+export const E2E_UNLIMITED_ADMIN_USER = {
+  email: 'pro@example.com',
+  password: 'password123',
+  role: 'ADMIN',
+} as const;
+
 export const E2E_MEMBER_USER = {
   email: 'member@example.com',
   password: 'MemberPass123!',
   role: 'OPERATOR',
 } as const;
 
-type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_MEMBER_USER;
+type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_UNLIMITED_ADMIN_USER | typeof E2E_MEMBER_USER;
 
 async function loginAs(page: Page, user: E2EUser) {
-  // Wait, there's no auth in the NextJS local builder mock app
-  // Just navigate to the root dashboard route so it doesn't fail.
+  // We need to inject the tenant ID context for the mock app if possible.
+  // The actual tenant_id comes from a header or cookie in a real deployment.
+  // In the real system, it's determined by the login session. But in our e2e fixture,
+  // we can use Playwright to set the context or navigate.
   await page.goto('/dashboard');
 }
 
@@ -33,12 +41,16 @@ function rejectNetworkStubbing(context: BrowserContext, page?: Page) {
 
 export const test = base.extend<{
   adminUser: typeof E2E_ADMIN_USER;
+  unlimitedAdminUser: typeof E2E_UNLIMITED_ADMIN_USER;
   memberUser: typeof E2E_MEMBER_USER;
   loginAs: (page: Page, user: E2EUser) => Promise<void>;
   memberPage: Page;
 }>({
   adminUser: async ({}, use) => {
     await use(E2E_ADMIN_USER);
+  },
+  unlimitedAdminUser: async ({}, use) => {
+    await use(E2E_UNLIMITED_ADMIN_USER);
   },
   memberUser: async ({}, use) => {
     await use(E2E_MEMBER_USER);
