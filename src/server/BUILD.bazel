@@ -847,3 +847,21 @@ rust_test(
         "@crates//:tokio-tungstenite",
     ],
 )
+
+rust_test(
+    name = "parity_audit_test",
+    size = "large",
+    srcs = ["parity_audit_test.rs"],
+    data = ["//deploy/scripts:ohc-standalone.sh"] + ["//src/server/migrations"],
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":server_lib",
+        "@rules_rust//tools/runfiles",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+    ],
+)
