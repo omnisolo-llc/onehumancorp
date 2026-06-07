@@ -50,7 +50,7 @@ mod tests {
         }
 
         // Simulate new order event routing to Operations
-        let event = DepartmentEvent {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             event_type: "tenant.order.created".to_string(), // Operations agent subscribes to this
@@ -153,7 +153,7 @@ mod tests {
             agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0 });
         }
 
-        let event = DepartmentEvent {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             event_type: "tenant.message.received".to_string(),
@@ -283,7 +283,7 @@ mod tests {
             }
         }
 
-        let event = DepartmentEvent {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             event_type: "tenant.job.completed".to_string(),
@@ -342,7 +342,7 @@ mod tests {
             }
         }
 
-        let event = DepartmentEvent {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             event_type: "tenant.product.created".to_string(),
@@ -415,7 +415,7 @@ mod tests {
             }
         }
 
-        let event = DepartmentEvent {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             event_type: "tenant.message.received".to_string(),

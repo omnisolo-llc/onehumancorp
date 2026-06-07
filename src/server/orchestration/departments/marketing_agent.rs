@@ -25,12 +25,52 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.discount.applied".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
 
+
+
+
+        if event.event_type == "tenant.discount.applied" {
+            let context_default = serde_json::json!({});
+            let context = event.payload.get("context").unwrap_or(&context_default);
+            let product_name = context.get("product_name").and_then(|v| v.as_str()).unwrap_or("our products");
+            let discount_percent = context.get("suggested_discount_percent").and_then(|v| v.as_u64()).unwrap_or(0);
+
+
+            let prompt = format!("Draft a short, engaging Instagram caption announcing a flash sale of {}% off for '{}'. Include 3 relevant hashtags.", discount_percent, product_name);
+
+            let draft_copy = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
+                if provider == "minimax" {
+                    let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Flash Sale! Get {}% off our {} today!", discount_percent, product_name))
+                } else {
+                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Flash Sale! Get {}% off our {} today!", discount_percent, product_name))
+                }
+            } else {
+                crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Flash Sale! Get {}% off our {} today!", discount_percent, product_name))
+            };
+
+            let payload = serde_json::json!({
+                "feature_type": "social_post",
+                "product_name": product_name,
+                "draft_copy": draft_copy
+            });
+
+            let description = format!("Draft Flash Sale Social Post for {}", product_name);
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
 
         if event.event_type == "tenant.product.created" {
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");

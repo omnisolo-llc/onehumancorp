@@ -213,6 +213,19 @@ export function UnifiedAgentFeed() {
                           </span>
                         </div>
                       )}
+                      {approval.payload.context.feature_type === 'smart_pricing' && approval.payload.context.suggested_discount_percent !== undefined && (
+                        <>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Suggested Discount:</span>
+                            <span className="font-semibold text-red-500">{approval.payload.context.suggested_discount_percent}% OFF</span>
+                          </div>
+                          {approval.payload.context.margin_safe && (
+                            <div className="flex items-center text-xs text-green-600 dark:text-green-400 mt-1">
+                              <span className="mr-1">✓</span> Protected Margin Safe
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

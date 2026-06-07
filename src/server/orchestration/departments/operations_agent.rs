@@ -22,6 +22,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.discount.approved".to_string(),
         ]
     }
 
@@ -36,6 +37,46 @@ impl Department for OperationsAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+
+
+        if event.event_type == "tenant.discount.approved" {
+            let context_default = serde_json::json!({});
+            let context = event.payload.get("context").unwrap_or(&context_default);
+            let product_id = context.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let discount_percent = context.get("suggested_discount_percent").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let action_description = "Apply smart pricing discount".to_string();
+            self.orchestrator.execute_action(
+                DepartmentType::Operations,
+                action_description,
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                event.payload.clone(),
+            ).await?;
+
+            // Persist the discount in DB and invalidate Redis Cache
+            if let Some(db) = self.orchestrator.get_db() {
+                if let crate::db::DbStore::Sqlite(pool) = &db.store {
+                    let discount_amount = discount_percent as f64; // In a real app this would compute flat discount if needed
+                    let q = format!("INSERT INTO active_discounts (id, tenant_id, policy_id, product_id, discount_amount) VALUES ('{}', '{}', 'policy_1', '{}', {})", uuid::Uuid::new_v4().to_string(), event.tenant_id, product_id, discount_amount);
+                    let _ = sqlx::query(&q).execute(pool).await;
+                }
+            }
+
+            // Invalidate Redis Price Cache
+            let _cache_key = format!("ohc:price:{}:{}", event.tenant_id, product_id);
+            // Example invalidation: cache::invalidate(&cache_key).await;
+
+            // Notify marketing that the discount was applied so it can draft a post
+            let marketing_event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.discount.applied".to_string(),
+                payload: event.payload.clone(),
+            };
+            return self.orchestrator.dispatch_event(marketing_event).await;
+        }
 
         let action_description = if event.event_type == "tenant.order.created" {
             "Process Order & Update Inventory".to_string()
