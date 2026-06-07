@@ -13,7 +13,7 @@ impl PosSyncWorker {
 
     pub async fn handle(&self, job: crate::queue::Job) -> Result<Result<(), String>, String> {
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
-        let transaction_id = payload["transaction_id"].as_str().unwrap();
+        let transaction_id = payload["pos_transaction_id"].as_str().unwrap();
 
         let mut tx = match self.db.pool.begin().await {
             Ok(tx) => tx,
@@ -34,21 +34,61 @@ impl PosSyncWorker {
             .await
             .unwrap();
 
-        if let Some(mutation) = payload.get("mutation") {
-            let product_id = mutation["product_id"].as_str().unwrap();
-            let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
 
-            sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
-                .bind(quantity_deducted)
-                .bind(product_id)
-                .execute(&mut *tx)
-                .await
-                .unwrap();
+        let inner_payload_str = payload["payload"].as_str().unwrap_or("");
 
-            let cache = crate::builder::edge::get_edge_cache();
-            cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-            cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+        if let Ok(inner_payload) = serde_json::from_str::<serde_json::Value>(inner_payload_str) {
+            // First handle old object style or array style
+            if inner_payload.is_array() {
+                for item in inner_payload.as_array().unwrap() {
+                    let product_id = item["product_id"].as_str().unwrap();
+                    let quantity_deducted = item["quantity"].as_i64().unwrap_or(1);
+
+                    sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
+                        .bind(quantity_deducted)
+                        .bind(product_id)
+                        .execute(&mut *tx)
+                        .await
+                        .unwrap();
+
+                    let cache = crate::builder::edge::get_edge_cache();
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+                }
+            } else if let Some(mutation) = payload.get("mutation") {
+                let product_id = mutation["product_id"].as_str().unwrap();
+                let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
+
+                sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .execute(&mut *tx)
+                    .await
+                    .unwrap();
+
+                let cache = crate::builder::edge::get_edge_cache();
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+            }
+        } else {
+             // Fallback for tests if they use `mutation` on the root payload
+             if let Some(mutation) = payload.get("mutation") {
+                let product_id = mutation["product_id"].as_str().unwrap();
+                let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
+
+                sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .execute(&mut *tx)
+                    .await
+                    .unwrap();
+
+                let cache = crate::builder::edge::get_edge_cache();
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+            }
         }
+
 
         sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")
             .bind(&job.tenant_id)
@@ -85,16 +125,16 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-1', 'tenant-worker-test', 'Test Prod', 10) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, transaction_id, status) VALUES ('worker-tx-id', 'tenant-worker-test', 'tx-test-worker', 'PENDING') ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status) VALUES ('tx-test-worker', 'tenant-worker-test', 'client-test', 5000, 'USD', '{}'::jsonb, 'PENDING') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
 
         let job_payload = serde_json::json!({
-            "transaction_id": "tx-test-worker",
+            "pos_transaction_id": "tx-test-worker",
             "mutation": {
                 "product_id": "prod-worker-test-1",
                 "quantity_deducted": 2,
                 "amount": 5000,
-                "transaction_id": "tx-test-worker"
+                "pos_transaction_id": "tx-test-worker"
             }
         });
 
@@ -121,7 +161,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count.0, 8); // 10 - 2 = 8
 
-        let tx_status: (String,) = sqlx::query_as("SELECT status FROM pos_offline_transactions WHERE transaction_id = 'tx-test-worker'")
+        let tx_status: (String,) = sqlx::query_as("SELECT status FROM pos_offline_transactions WHERE id = 'tx-test-worker'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(tx_status.0, "RESOLVED");
 

@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { Client } from 'pg';
 
 test.describe('In-Person Payment (POS) Flow', () => {
   test('should complete a tap-to-pay transaction offline and sync', async ({ page, context }) => {
@@ -16,8 +17,14 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.getByRole('button', { name: '3' }).click();
     await page.getByRole('button', { name: '4' }).click();
 
-    // Verify unlocked and shows staff name
+    // Verify unlock
     await expect(page.locator('text=Carlos')).toBeVisible();
+
+    // Check inventory before via DB
+    const client = new Client({ connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc' });
+    await client.connect();
+    const resBefore = await client.query('SELECT inventory_count FROM products WHERE id = $1', ['e2e-product-cake']);
+    const inventoryBefore = resBefore.rows[0].inventory_count;
 
     // Set network to offline
     await context.setOffline(true);
@@ -45,5 +52,15 @@ test.describe('In-Person Payment (POS) Flow', () => {
       expect(remainingEvents.length).toBe(0);
       expect(remainingPosTx.length).toBe(0);
     }).toPass({ timeout: 15000 });
+
+    // Verify inventory reduced by 1
+    // The worker might take a moment to process the queue, so we retry
+    await expect(async () => {
+        const resAfter = await client.query('SELECT inventory_count FROM products WHERE id = $1', ['e2e-product-cake']);
+        const inventoryAfter = resAfter.rows[0].inventory_count;
+        expect(inventoryAfter).toBe(inventoryBefore - 1);
+    }).toPass({ timeout: 10000 });
+
+    await client.end();
   });
 });
