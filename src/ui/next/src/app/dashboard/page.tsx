@@ -1,5 +1,4 @@
 "use client";
-import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 
 
 
@@ -239,7 +238,7 @@ export default function Dashboard() {
       statusItems={statusItems}
       actions={[
         { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
-        { label: "New Product", href: "/products/new", primary: true },
+        { label: "New Offering", href: "/offerings/new", primary: true },
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
