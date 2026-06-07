@@ -10,20 +10,9 @@ export type ActionCard = {
   status: 'pending' | 'approved';
 };
 
-type ChatMessage = {
-  id: string;
-  role: 'user' | 'system';
-  content: string;
-  detail?: string;
-  card?: ActionCard;
-  error?: {
-    retryMessage: string;
-  };
-};
-
 export default function TeamChatPage() {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<{id: string, role: 'user'|'system', content: string, card?: ActionCard}[]>([]);
   const router = useRouter();
 
   const handleApprove = (msgId: string) => {
@@ -41,24 +30,13 @@ export default function TeamChatPage() {
     }));
   };
 
-  const handleEdit = (description: string) => {
-    setMessage(description);
-  };
-
   const handleSend = async () => {
     if (!message.trim()) return;
     const userMsg = message;
     setMessage('');
 
     const userMsgId = Date.now().toString() + '-user';
-    const pendingMsgId = Date.now().toString() + '-pending';
     setMessages(prev => [...prev, {id: userMsgId, role: 'user', content: userMsg}]);
-    setMessages(prev => [...prev, {
-      id: pendingMsgId,
-      role: 'system',
-      content: 'Working on your request...',
-      detail: 'The team is still drafting the action.',
-    }]);
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
@@ -70,11 +48,11 @@ export default function TeamChatPage() {
         },
         body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
       });
-      const data = await response.json().catch(() => ({}));
       if (response.ok) {
+        const data = await response.json();
 
         const msgId = Date.now().toString() + '-system';
-        setMessages(prev => prev.filter(msg => msg.id !== pendingMsgId).concat({
+        setMessages(prev => [...prev, {
           id: msgId,
           role: 'system',
           content: "I've drafted an action for your approval.",
@@ -82,25 +60,15 @@ export default function TeamChatPage() {
             id: Date.now().toString() + '-card',
             department: data.agent || 'The Manager',
             description: data.description || `Drafted action based on: "${userMsg}"`,
-              status: 'pending'
-            }
-        }));
+            status: 'pending'
+          }
+        }]);
 
       } else {
-        setMessages(prev => prev.map(msg => msg.id === pendingMsgId ? {
-          ...msg,
-          content: 'Action needs attention',
-          detail: data.error || data.message || 'Failed to process your request. Ensure backend auth is provided.',
-          error: { retryMessage: userMsg },
-        } : msg));
+        setMessages(prev => [...prev, {id: Date.now().toString(), role: 'system', content: "Failed to process your request. Ensure backend auth is provided."}]);
       }
     } catch (e) {
-      setMessages(prev => prev.map(msg => msg.id === pendingMsgId ? {
-        ...msg,
-        content: 'Action needs attention',
-        detail: 'Error connecting to the team.',
-        error: { retryMessage: userMsg },
-      } : msg));
+      setMessages(prev => [...prev, {id: Date.now().toString(), role: 'system', content: "Error connecting to the team."}]);
     }
   };
 
@@ -110,7 +78,7 @@ export default function TeamChatPage() {
 
         {/* Header */}
         <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
-          <button aria-label="Back to Team" onClick={() => router.push('/team')} className="text-gray-500">
+          <button onClick={() => router.push('/team')} className="text-gray-500">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <div>
@@ -142,25 +110,7 @@ export default function TeamChatPage() {
                 {/* Text Bubble */}
                 <div className={`p-3 text-sm ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-2xl rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-2xl rounded-tl-none'}`}>
                   {msg.content}
-                  {msg.detail && !msg.error && (
-                    <p className="mt-1 text-xs text-gray-600">
-                      {msg.detail}
-                    </p>
-                  )}
                 </div>
-
-                {msg.error && (
-                  <div className="bg-red-50 border border-red-100 rounded-xl p-3 shadow-sm" role="alert">
-                    <p className="text-xs font-semibold text-red-800 mb-2">{msg.detail}</p>
-                    <button
-                      type="button"
-                      onClick={() => setMessage(msg.error?.retryMessage || '')}
-                      className="min-h-[36px] rounded-lg bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700"
-                    >
-                      Try again
-                    </button>
-                  </div>
-                )}
 
                 {/* Action Card if present */}
                 {msg.card && (
@@ -185,11 +135,7 @@ export default function TeamChatPage() {
                         >
                           Approve & Execute
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(msg.card?.description || '')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
-                        >
+                        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors">
                           Edit
                         </button>
                       </div>

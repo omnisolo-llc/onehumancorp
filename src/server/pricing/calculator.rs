@@ -1,17 +1,3 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct CostConfig {
-    pub cost_per_input_token: f64,
-    pub cost_per_output_token: f64,
-    pub cost_per_cached_input_token: f64,
-    pub cost_per_local_embedding: f64,
-    pub discount_factor: f64,
-    pub cost_per_gb_month: f64,
-    pub cost_per_compute_hour: f64,
-    pub cost_per_network_gb: f64,
-}
-
 pub struct ModelPricing {
     pub input_cost: f64,
     pub output_cost: f64,
@@ -64,26 +50,34 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         _ => ModelPricing {
             input_cost: 3.00,
             output_cost: 15.00,
-            cached_cost: 1.50, // Standardize a default cached cost for unknown models
+            cached_cost: 1.50,
         },
     }
 }
 
-pub fn calculate_cost_cents(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> i64 {
-    let cost = calculate_cost(model, input_tokens, output_tokens, cached_input_tokens);
+pub fn calculate_cost(model: &str, prompt_tokens: i64, completion_tokens: i64, cached_tokens: i64) -> f64 {
+    let pricing = get_pricing(model);
+
+    (prompt_tokens as f64 * pricing.input_cost / 1_000_000.0) +
+    (completion_tokens as f64 * pricing.output_cost / 1_000_000.0) +
+    (cached_tokens as f64 * pricing.cached_cost / 1_000_000.0)
+}
+
+pub fn calculate_cost_cents(model: &str, prompt_tokens: i64, completion_tokens: i64, cached_tokens: i64) -> i64 {
+    let cost = calculate_cost(model, prompt_tokens, completion_tokens, cached_tokens);
     (cost * 100.0).round() as i64
 }
 
-pub fn calculate_cost(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> f64 {
-    let pricing = get_pricing(model);
-
-    // Per 1M tokens
-    let input_cost = (input_tokens as f64 / 1_000_000.0) * pricing.input_cost;
-    let output_cost = (output_tokens as f64 / 1_000_000.0) * pricing.output_cost;
-    let cached_cost = (cached_input_tokens as f64 / 1_000_000.0) * pricing.cached_cost;
-
-    let total = input_cost + output_cost + cached_cost;
-    (total * 10000.0).round() / 10000.0
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+pub struct CostConfig {
+    pub cost_per_input_token: f64,
+    pub cost_per_output_token: f64,
+    pub cost_per_cached_input_token: f64,
+    pub cost_per_local_embedding: f64,
+    pub discount_factor: f64,
+    pub cost_per_gb_month: f64,
+    pub cost_per_compute_hour: f64,
+    pub cost_per_network_gb: f64,
 }
 
 pub fn calculate_cost_with_config_cents(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> i64 {
@@ -115,6 +109,7 @@ pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, con
     let savings = saved_gb * config.cost_per_gb_month;
     (savings * 10000.0).round() / 10000.0
 }
+
 
 pub fn calculate_bandwidth_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
     let cost = calculate_bandwidth_savings(original_bytes, compressed_bytes, config);
@@ -171,17 +166,6 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
         return 0.0;
     }
     (output_tokens as f64) / cost
-}
-
-// Advanced heuristic: estimate savings when fallback logic kicks in or tokens are dynamically truncated
-pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_tokens: i64, model: &str) -> f64 {
-    if original_tokens <= truncated_tokens {
-        return 0.0;
-    }
-    let saved_tokens = original_tokens - truncated_tokens;
-    let pricing = get_pricing(model);
-    let estimated_savings = (saved_tokens as f64 / 1_000_000.0) * pricing.input_cost;
-    (estimated_savings * 10000.0).round() / 10000.0
 }
 
 pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
@@ -368,15 +352,5 @@ mod tests {
         assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
-    }
-
-    #[test]
-    fn test_calculate_heuristic_token_efficiency() {
-        // gpt-4o input cost is 5.00 per 1M tokens.
-        // We truncate from 100,000 to 50,000 tokens, saving 50,000.
-        // 50,000 / 1,000,000 * 5.00 = 0.25
-        assert_eq!(calculate_heuristic_token_efficiency(100_000, 50_000, "gpt-4o"), 0.25);
-        assert_eq!(calculate_heuristic_token_efficiency(10_000, 10_000, "gpt-4o"), 0.0);
-        assert_eq!(calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"), 0.0);
     }
 }

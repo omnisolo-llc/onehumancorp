@@ -674,7 +674,7 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     needs:
       - build-release-artifacts
       - build-desktop-installers
@@ -740,7 +740,7 @@ jobs:
   assemble-latest-json:
     name: Assemble latest.json
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     needs: publish-release
     permissions:
       contents: write
@@ -754,11 +754,6 @@ jobs:
           mkdir -p dl
           gh release download "$GITHUB_REF_NAME" --dir dl --repo "$GITHUB_REPOSITORY"
           ls -lh dl
-
-      - name: Setup Node
-        uses: actions/setup-node@v6.1.0
-        with:
-          node-version: "24"
 
       - name: Generate latest.json
         env:

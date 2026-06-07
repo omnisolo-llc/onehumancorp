@@ -177,11 +177,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   );
 }
 
-/**
- * Helper component to mark targets in the UI for the Interactive Walkthrough system.
- * It wraps its children in a relative container with the specified ID, which is then
- * targeted by the walkthrough overlay and speech bubble logic.
- */
+// Helper component to mark targets in the UI
 export function WalkthroughTarget({ id, children, className = "" }: { id: string, children: ReactNode, className?: string }) {
   return (
     <div id={id} className={`relative ${className}`}>

@@ -1,3 +1,4 @@
+pub mod escalator;
 pub mod service;
 pub mod telemetry_sync;
 pub mod local_repository;

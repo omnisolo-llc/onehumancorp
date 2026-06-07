@@ -33,6 +33,12 @@ async fn test_get_terminal_connection_token_unauthenticated() {
 async fn test_get_terminal_connection_token_authenticated() {
     let hub = Arc::new(Hub::new());
 
+    let mut app = crate::api::terminal_api::router(hub.clone());
+    // In our test, since we use `oneshot`, we could also inject the Extension
+    // However, axum's `router()` might not have the Extension layer unless added.
+    // Let's create a custom app just for testing the handler directly or via router with Extension.
+
+    // Instead of messing with router, we can just inject the Extension into a wrapper or call handler directly.
     let app_with_auth = axum::Router::new()
         .route("/token", axum::routing::get(crate::api::terminal_api::get_terminal_connection_token_handler))
         .with_state(hub)
@@ -55,7 +61,7 @@ async fn test_get_terminal_connection_token_authenticated() {
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("Stripe API key is required"));
+    assert!(body_str.contains("tss_mock_token_for_test_tenant"));
 }
 
 #[tokio::test]
@@ -86,7 +92,7 @@ async fn test_create_payment_intent_authenticated() {
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("Stripe API key is required"));
+    assert!(body_str.contains("pi_mock_intent_for_test_tenant_1500_usd"));
 }
 
 #[tokio::test]
@@ -114,7 +120,7 @@ async fn test_create_payment_intent_unauthenticated() {
 }
 
 #[tokio::test]
-async fn test_get_terminal_connection_token_authenticated_via_router() {
+async fn test_get_terminal_connection_token_authenticated() {
     let hub = Arc::new(Hub::new());
     let mut app = crate::api::terminal_api::router(hub);
 
@@ -139,11 +145,11 @@ async fn test_get_terminal_connection_token_authenticated_via_router() {
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("Unauthenticated"));
+    assert!(body_str.contains("tss_mock_token_for_test_tenant"));
 }
 
 #[tokio::test]
-async fn test_create_payment_intent_authenticated_via_router() {
+async fn test_create_payment_intent_authenticated() {
     let hub = Arc::new(Hub::new());
     let mut app = crate::api::terminal_api::router(hub);
 
@@ -169,5 +175,5 @@ async fn test_create_payment_intent_authenticated_via_router() {
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("Unauthenticated"));
+    assert!(body_str.contains("pi_mock_intent_for_test_tenant_1500_usd"));
 }

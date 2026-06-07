@@ -22,7 +22,6 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
-            "tenant.subscription.fulfillment_batch.created".to_string(),
         ]
     }
 
@@ -38,25 +37,10 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
-        let action_description = match event.event_type.as_str() {
-            "tenant.order.created" => "Process Order & Update Inventory".to_string(),
-            "tenant.subscription.fulfillment_batch.created" => {
-                let batch_id = event
-                    .payload
-                    .get("batch_id")
-                    .and_then(|value| value.as_str())
-                    .unwrap_or("unknown batch");
-                let subscriber_count = event
-                    .payload
-                    .get("subscriber_count")
-                    .and_then(|value| value.as_i64())
-                    .unwrap_or(0);
-                format!(
-                    "Prepare subscription fulfillment batch {} for {} subscribers",
-                    batch_id, subscriber_count
-                )
-            }
-            _ => "Create order and booking".to_string(),
+        let action_description = if event.event_type == "tenant.order.created" {
+            "Process Order & Update Inventory".to_string()
+        } else {
+            "Create order and booking".to_string()
         };
 
         self.orchestrator.execute_action(
@@ -66,10 +50,6 @@ impl Department for OperationsAgent {
             risk,
             event.payload.clone(),
         ).await?;
-
-        if event.event_type == "tenant.subscription.fulfillment_batch.created" {
-            return Ok(());
-        }
 
         // Dispatch event for customer success agent
         let cs_event = DepartmentEvent {
@@ -109,116 +89,5 @@ impl BaseAgent for OperationsAgent {
 
     async fn execute(&self, _payload: Value) -> Result<(), String> {
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::orchestration::departments::orchestrator::Department;
-    use crate::orchestration::departments::types::{ApprovalStatus, DepartmentType};
-    use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
-    use sqlx::sqlite::SqlitePoolOptions;
-    use std::sync::Arc;
-
-    async fn test_orchestrator() -> Arc<DepartmentOrchestrator> {
-        let sqlite_pool = SqlitePoolOptions::new()
-            .max_connections(1)
-            .connect("sqlite::memory:")
-            .await
-            .unwrap();
-        sqlx::query(
-            "CREATE TABLE tenants (
-                tenant_id TEXT PRIMARY KEY,
-                business_name TEXT,
-                tier TEXT
-            )",
-        )
-        .execute(&sqlite_pool)
-        .await
-        .unwrap();
-        sqlx::query(
-            "CREATE TABLE tenant_ai_budgets (
-                tenant_id TEXT NOT NULL,
-                year_month TEXT NOT NULL,
-                actions_used INTEGER NOT NULL DEFAULT 0,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (tenant_id, year_month)
-            )",
-        )
-        .execute(&sqlite_pool)
-        .await
-        .unwrap();
-        sqlx::query(
-            "CREATE TABLE agent_approvals (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                department TEXT NOT NULL,
-                description TEXT NOT NULL,
-                status TEXT NOT NULL,
-                action_risk TEXT NOT NULL,
-                payload TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )",
-        )
-        .execute(&sqlite_pool)
-        .await
-        .unwrap();
-        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('tenant-ops', 'Ops Test', 'starter')")
-            .execute(&sqlite_pool)
-            .await
-            .unwrap();
-
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        let db = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(sqlite_pool),
-        });
-        let transport = Arc::new(InProcessTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        Arc::new(DepartmentOrchestrator::new(db, mesh))
-    }
-
-    #[tokio::test]
-    async fn operations_agent_consumes_subscription_fulfillment_batch_events() {
-        let orchestrator = test_orchestrator().await;
-        let agent = OperationsAgent::new(orchestrator.clone());
-
-        assert!(agent
-            .subscribed_events()
-            .contains(&"tenant.subscription.fulfillment_batch.created".to_string()));
-
-        let event = DepartmentEvent {
-            id: "evt-batch".to_string(),
-            tenant_id: "tenant-ops".to_string(),
-            event_type: "tenant.subscription.fulfillment_batch.created".to_string(),
-            payload: serde_json::json!({
-                "batch_id": "batch-123",
-                "subscription_plan_id": "plan-123",
-                "fulfillment_date": "2026-06-15",
-                "subscriber_count": 2
-            }),
-        };
-
-        agent.handle_event(&event).await.unwrap();
-
-        let approvals = orchestrator.get_activity_feed("tenant-ops", None, 10).await;
-        let approval = approvals
-            .iter()
-            .find(|approval| approval.description.contains("Prepare subscription fulfillment batch"))
-            .expect("fulfillment batch should create an operations action");
-
-        assert_eq!(approval.status, ApprovalStatus::Approved);
-        assert_eq!(approval.department, DepartmentType::Operations);
-        assert_eq!(
-            approval.payload.as_ref().unwrap()["batch_id"],
-            serde_json::json!("batch-123")
-        );
-        assert_eq!(
-            approval.payload.as_ref().unwrap()["subscriber_count"],
-            serde_json::json!(2)
-        );
     }
 }

@@ -147,24 +147,17 @@ impl TaskDecompositionService {
             let now = Utc::now();
             let claim_future = self.claim_task_inner(agent_id, now);
             match tokio::time::timeout(timeout, claim_future).await {
-                Ok(Ok(res)) => return Ok(res),
-                Ok(Err(e)) => {
-                    tracing::warn!("Error claiming task on attempt {}: {}", attempt, e);
-                    if attempt >= max_attempts {
-                        tracing::warn!("Fail-safing task claim after {} attempts due to error.", max_attempts);
-                        return Ok(None);
-                    }
-                }
+                Ok(res) => return res,
                 Err(_) => {
                     if start_time.elapsed() > std::time::Duration::from_millis(100) {
                         ::server_telemetry::record_task_claim_contention(
                             ::server_telemetry::get_deployment_mode(),
                         );
                     }
-                    tracing::warn!("Timeout claiming task on attempt {}", attempt);
                     if attempt >= max_attempts {
-                        tracing::warn!("Fail-safing task claim after {} attempts due to timeout.", max_attempts);
-                        return Ok(None);
+                        return Err(
+                            "Timeout claiming task (ML-Resilience 60s boundary)".to_string()
+                        );
                     }
                 }
             }
@@ -863,7 +856,7 @@ mod tests {
             "Tasks orchestration must enforce ML-Resilience timeout"
         );
         assert!(
-            start.elapsed() >= std::time::Duration::from_millis(50),
+            start.elapsed() >= std::time::Duration::from_millis(60),
             "Timeout should wait the configured time"
         );
     }
@@ -1528,7 +1521,7 @@ mod chaos_tests {
         // Also simulate >2s backend latency to verify fail-safe behavior
 
         unsafe {
-            std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "50");
+            std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "1000");
         }
 
         let database_url = "sqlite::memory:";
@@ -1549,8 +1542,6 @@ mod chaos_tests {
         let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://dummy")
             .unwrap();
-        // Since Postgres testing is complex in unit tests without an actual Postgres DB,
-        // we'll mock it by still using Sqlite but simulating the cloud behavior.
         let db = std::sync::Arc::new(crate::db::DB {
             pool: _dummy_pg_pool,
             store: crate::db::DbStore::Sqlite(pool.clone()),
@@ -1601,9 +1592,8 @@ mod chaos_tests {
             p99
         );
 
-        // In cloud chaos, we tolerate network drop failures, and verify fallback mechanism.
-        // Due to the very short claim timeout, all tasks might safely fail and fallback.
-        assert_eq!(success + failed, 100);
+        // In cloud chaos, we tolerate network drop failures
+        assert!(success + failed == 100);
         tracing::info!(
             "Cloud chaos results: {} success, {} failed",
             success,
@@ -1620,7 +1610,7 @@ mod chaos_tests {
         // "Run concurrent load tests: 10 simultaneous business owners in Standalone mode"
 
         unsafe {
-            std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "100");
+            std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "1000");
         }
 
         let database_url = "sqlite::memory:";

@@ -1,5 +1,4 @@
 use sqlx::{PgPool, Row};
-use tracing::{error, warn};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct DailyCost {
@@ -22,17 +21,16 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
 
     // Fill in last 7 days with zeros
     for i in 0..7 {
-        if let Some(d) = chrono::Utc::now().checked_sub_signed(chrono::Duration::days(i)) {
-            let d_str = d.format("%Y-%m-%d").to_string();
-            trends.insert(d_str.clone(), DailyCost {
-                date: d_str,
-                total_cost: 0,
-                llm_cost: 0,
-                storage_cost: 0,
-                network_cost: 0,
-                compute_cost: 0,
-            });
-        }
+        let d = chrono::Utc::now().checked_sub_signed(chrono::Duration::days(i)).unwrap();
+        let d_str = d.format("%Y-%m-%d").to_string();
+        trends.insert(d_str.clone(), DailyCost {
+            date: d_str,
+            total_cost: 0,
+            llm_cost: 0,
+            storage_cost: 0,
+            network_cost: 0,
+            compute_cost: 0,
+        });
     }
 
     for row in rows {
@@ -42,17 +40,13 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                 let val = row.total.unwrap_or(0.0) as i64;
                 match row.metric_name.as_str() {
                     "ohc_mission_cost_cents" => daily.llm_cost += val,
-                    "ohc_storage_rw_cost" => daily.storage_cost += (row.total.unwrap_or(0.0) * 0.00000001).round() as i64,
+                    "ohc_storage_rw_cost" => daily.storage_cost += (val as f64 * 0.00000001).round() as i64,
                     "ohc_network_cost_cents" => daily.network_cost += val,
                     "ohc_compute_cost_cents" => daily.compute_cost += val,
-                    _ => {
-                        warn!("Unknown metric encountered during aggregation: {}", row.metric_name);
-                    }
+                    _ => {}
                 }
                 daily.total_cost = daily.llm_cost + daily.storage_cost + daily.network_cost + daily.compute_cost;
             }
-        } else {
-            warn!("TelemetryRow missing date for metric: {}", row.metric_name);
         }
     }
 
@@ -62,17 +56,14 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
 }
 
 pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyCost> {
-    // Optimized Query: Cast labels_json to jsonb explicitly if it isn't already,
-    // and use the ->> operator for faster execution than json_extract_path_text.
-    // Ensure we handle potential errors robustly instead of silently failing.
-    let raw_rows_result = sqlx::query(
+    let raw_rows = sqlx::query(
         r#"
         SELECT
             DATE(timestamp) as date,
             metric_name,
             SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
-        WHERE (labels_json::jsonb)->>'tenant_id' = $1
+        WHERE json_extract_path_text(labels_json::json, 'tenant_id') = $1
           AND metric_name IN ('ohc_mission_cost_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents')
           AND timestamp >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(timestamp), metric_name
@@ -81,29 +72,13 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
     )
     .bind(tenant_id)
     .fetch_all(pool)
-    .await;
+    .await
+    .unwrap_or_else(|_| vec![]);
 
-    let raw_rows = match raw_rows_result {
-        Ok(rows) => rows,
-        Err(e) => {
-            error!("Failed to fetch daily costs from database for tenant {}: {}", tenant_id, e);
-            return process_telemetry_rows(vec![]); // Return empty zero-filled 7 days on error
-        }
-    };
-
-    let rows: Vec<TelemetryRow> = raw_rows.into_iter().map(|r| TelemetryRow {
-        date: r.try_get::<Option<chrono::NaiveDate>, _>("date").unwrap_or_else(|e| {
-            warn!("Failed to parse date from query result: {}", e);
-            None
-        }),
-        metric_name: r.try_get::<String, _>("metric_name").unwrap_or_else(|e| {
-            warn!("Failed to parse metric_name from query result: {}", e);
-            String::new()
-        }),
-        total: r.try_get::<Option<f64>, _>("total").unwrap_or_else(|e| {
-            warn!("Failed to parse total from query result: {}", e);
-            None
-        }),
+    let rows = raw_rows.into_iter().map(|r| TelemetryRow {
+        date: r.try_get::<Option<chrono::NaiveDate>, _>("date").unwrap_or(None),
+        metric_name: r.try_get::<String, _>("metric_name").unwrap_or_default(),
+        total: r.try_get::<Option<f64>, _>("total").unwrap_or(None),
     }).collect();
 
     process_telemetry_rows(rows)

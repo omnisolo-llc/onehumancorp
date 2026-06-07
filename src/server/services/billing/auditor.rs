@@ -39,7 +39,7 @@ pub struct CostAuditor {
     agent_revenues: Mutex<HashMap<String, f64>>,
     tenant_revenues: Mutex<HashMap<String, f64>>,
     tenant_payment_fees: Mutex<HashMap<String, f64>>,
-    agent_tokens: Mutex<HashMap<String, i64>>,
+    agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
     tenant_cached_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
@@ -75,7 +75,7 @@ impl CostAuditor {
             agent_revenues: Mutex::new(HashMap::new()),
             tenant_revenues: Mutex::new(HashMap::new()),
             tenant_payment_fees: Mutex::new(HashMap::new()),
-            agent_tokens: Mutex::new(HashMap::new()),
+            agent_output_tokens: Mutex::new(HashMap::new()),
             tenant_tokens: Mutex::new(HashMap::new()),
             tenant_cached_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
@@ -120,9 +120,9 @@ impl CostAuditor {
         }
         *total_cost += cost;
 
-        let mut agent_tokens = self.agent_tokens.lock().unwrap();
-        let current_tokens = agent_tokens.entry(event.agent_id.clone()).or_insert(0);
-        *current_tokens += event.output_tokens + event.input_tokens;
+        let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
+        *current_tokens += event.output_tokens;
 
         let mut tenant_tokens = self.tenant_tokens.lock().unwrap();
         let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
@@ -235,16 +235,16 @@ impl CostAuditor {
     pub fn get_agent_costs_snapshot(&self) -> Vec<(String, f64, i64, f64, f64, i64)> {
         let agent_costs = self.agent_costs.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
-        let agent_tokens = self.agent_tokens.lock().unwrap();
+        let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
         let mut result = Vec::new();
         for (agent_id, cost) in agent_costs.iter() {
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
-            let tokens = agent_tokens.get(agent_id).unwrap_or(&0);
+            let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
             let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
-            let efficiency = self.calculate_efficiency(*cost, *tokens);
-            result.push((agent_id.clone(), *cost, *tokens, roi, efficiency, *storage_bytes));
+            let efficiency = self.calculate_efficiency(*cost, *output_tokens);
+            result.push((agent_id.clone(), *cost, *output_tokens, roi, efficiency, *storage_bytes));
         }
         result
     }
@@ -257,8 +257,8 @@ impl CostAuditor {
     }
 
     pub fn get_total_tokens(&self) -> i64 {
-        let agent_tokens = self.agent_tokens.lock().unwrap();
-        agent_tokens.values().sum()
+        let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
+        agent_output_tokens.values().sum()
     }
 
     pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
@@ -344,7 +344,7 @@ impl CostAuditor {
 
             let fee = match method {
                 PaymentMethod::Ach => (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP),
-                PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago | PaymentMethod::Alipay => {
+                PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago => {
                     (amount * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED
                 }
             };
@@ -396,7 +396,7 @@ impl CostAuditor {
         let total_compute_cost = self.total_compute_cost.lock().unwrap();
         let total_network_cost = self.total_network_cost.lock().unwrap();
         let agent_revenues = self.agent_revenues.lock().unwrap();
-        let agent_tokens = self.agent_tokens.lock().unwrap();
+        let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
 
         let mut report = format!("Total Cost: ${:.4}\n", *total_cost);
         report += &format!("Total Savings via Caching: ${:.4}\n", *caching_savings);
@@ -409,10 +409,10 @@ impl CostAuditor {
         for (agent_id, cost) in agent_costs.iter() {
 
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
-            let tokens = agent_tokens.get(agent_id).unwrap_or(&0);
+            let output_tokens = agent_output_tokens.get(agent_id).unwrap_or(&0);
 
             let roi = self.calculate_roi(*cost, *revenue);
-            let efficiency = self.calculate_efficiency(*cost, *tokens);
+            let efficiency = self.calculate_efficiency(*cost, *output_tokens);
 
             let metrics_str = format!(" [ROI: {:.2}%, Efficiency: {:.2} tok/$]", roi, efficiency);
 
