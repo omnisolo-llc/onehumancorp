@@ -51,6 +51,7 @@ tree-sitter-bash = "0.25.1"
 tower = "0.4"
 urlencoding = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
+dirs = "6.0.0"
 
 [lib]
 path = "lib.rs"

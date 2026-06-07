@@ -164,6 +164,7 @@ pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
+use crate::ToolExecutor;
     use std::io::Write;
 
     #[tokio::test]
@@ -191,7 +192,7 @@ mod tests {
             "path": ".",
         });
 
-        let result = super::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = ToolExecutor::execute(&executor, args).await.unwrap();
         let _expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
         // The display string might be just the name if we strip it
         assert!(result.contains("critical failure found here!"));
