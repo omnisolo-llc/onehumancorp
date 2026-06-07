@@ -350,6 +350,7 @@ use ::server_ohc::app::{
 
 pub struct NativeBookingService {
     pub redis_client: Option<redis::Client>,
+    pub integrations_registry: std::sync::Arc<crate::integrations::registry::IntegrationsRegistry>,
 }
 
 #[tonic::async_trait]
@@ -396,7 +397,7 @@ impl BookingEngineService for NativeBookingService {
 
         let _ = tx.commit().await;
 
-        let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows.into_iter().filter_map(|row| {
+        let mut existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows.into_iter().filter_map(|row| {
             let st: Option<DateTime<Utc>> = row.get("start_time");
             let et: Option<DateTime<Utc>> = row.get("end_time");
             if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
@@ -405,6 +406,32 @@ impl BookingEngineService for NativeBookingService {
         // Let's generate slots from 9 AM to 5 PM
         let date_parsed = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
             .map_err(|_e| Status::invalid_argument("Invalid date format, use YYYY-MM-DD"))?;
+
+        // Fetch external Google Calendar availability
+        let time_min = date_parsed.and_hms_opt(0, 0, 0).unwrap();
+        let time_min_utc = DateTime::<Utc>::from_naive_utc_and_offset(time_min, Utc);
+        let time_max = date_parsed.and_hms_opt(23, 59, 59).unwrap();
+        let time_max_utc = DateTime::<Utc>::from_naive_utc_and_offset(time_max, Utc);
+
+        if let Ok(free_busy_str) = self.integrations_registry.get_free_busy("google_calendar", &time_min_utc.to_rfc3339(), &time_max_utc.to_rfc3339()).await {
+            if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&free_busy_str) {
+                if let Some(busy_blocks) = json_val.pointer("/calendars/primary/busy").and_then(|v| v.as_array()) {
+                    for block in busy_blocks {
+                        if let (Some(start_str), Some(end_str)) = (
+                            block.get("start").and_then(|v| v.as_str()),
+                            block.get("end").and_then(|v| v.as_str())
+                        ) {
+                            if let (Ok(start_dt), Ok(end_dt)) = (
+                                DateTime::parse_from_rfc3339(start_str),
+                                DateTime::parse_from_rfc3339(end_str)
+                            ) {
+                                existing_slots.push((start_dt.with_timezone(&Utc), end_dt.with_timezone(&Utc)));
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         let mut available_slots = vec![];
         for hour in 9..17 {
@@ -596,7 +623,7 @@ mod native_booking_tests {
 
     #[tokio::test]
     async fn test_native_booking_invalid_timeslot_format() {
-        let svc = NativeBookingService { redis_client: None };
+        let svc = NativeBookingService { redis_client: None, integrations_registry: std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new()) };
         let mut req = Request::new(ReserveTimeSlotRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
@@ -617,7 +644,7 @@ mod native_booking_tests {
 
     #[tokio::test]
     async fn test_native_check_availability_invalid_date() {
-        let svc = NativeBookingService { redis_client: None };
+        let svc = NativeBookingService { redis_client: None, integrations_registry: std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new()) };
         let mut req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
             tenant_id: "t1".to_string(),
             product_id: "p1".to_string(),
@@ -634,8 +661,42 @@ mod native_booking_tests {
     }
 
     #[tokio::test]
+    async fn test_native_check_availability_valid_date_no_panic() {
+        let registry = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+        // Add a mock credential so it connects and uses the real client which returns "{}"
+        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+            integration_id: "google_calendar".to_string(),
+            bot_token: "".to_string(),
+            chat_id: "".to_string(),
+            webhook_url: "".to_string(),
+            base_url: "".to_string(),
+            api_token: "dummy_token".to_string(),
+            from_phone: "".to_string(),
+        };
+        let _ = registry.connect("google_calendar", "", creds);
+
+        let svc = NativeBookingService { redis_client: None, integrations_registry: registry };
+        let mut req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
+            tenant_id: "t1".to_string(),
+            product_id: "p1".to_string(),
+            date: "2023-10-27".to_string(),
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t1".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = svc.check_availability(req).await;
+        assert!(res.is_ok());
+        let available_slots = res.unwrap().into_inner().available_slots;
+        // Since DB is empty and Google Calendar mock returns "{}", we should have exactly 8 slots (9AM to 5PM)
+        assert_eq!(available_slots.len(), 8);
+    }
+
+    #[tokio::test]
     async fn test_native_create_conversational_checkout() {
-        let svc = NativeBookingService { redis_client: None };
+        let svc = NativeBookingService { redis_client: None, integrations_registry: std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new()) };
         let mut req = Request::new(CreateConversationalCheckoutRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),

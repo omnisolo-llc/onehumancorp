@@ -41,7 +41,10 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("{}".to_string()) // In a real app we'd return parsed free/busy data
+                    match resp.text().await {
+                        Ok(text) => Ok(text),
+                        Err(e) => Err(format!("Failed to read response body: {}", e)),
+                    }
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }

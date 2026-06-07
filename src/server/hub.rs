@@ -41,6 +41,7 @@ pub struct Hub {
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub pool: sqlx::PgPool,
     pub redis_client: Option<redis::Client>,
+    pub integrations_registry: Arc<crate::integrations::registry::IntegrationsRegistry>,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
     referral_tracker: Arc<crate::services::growth::referrals::ReferralTracker>,
@@ -120,6 +121,7 @@ impl Hub {
             auto_cor_track: RwLock::new(std::collections::HashSet::new()),
             event_log_tx,
             redis_client,
+            integrations_registry: Arc::new(crate::integrations::registry::IntegrationsRegistry::new()),
             referral_tracker: Arc::new(crate::services::growth::referrals::ReferralTracker::new()),
         }
     }
