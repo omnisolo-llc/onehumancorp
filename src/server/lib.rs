@@ -3632,7 +3632,7 @@ async fn create_ui_bom_item_handler(
         ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
+            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started-1" },
             { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
             { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
@@ -3640,6 +3640,40 @@ async fn create_ui_bom_item_handler(
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
             { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
+        .route("/api/help/:article_id", axum::routing::get(|axum::extract::Path(article_id): axum::extract::Path<String>| async move {
+            let json_opt = match article_id.as_str() {
+                "getting-started-1" => Some(serde_json::json!({
+                    "title": "Getting Started with Your Store",
+                    "contentHtml": "<p class=\"text-gray-700 mb-4 leading-relaxed text-lg\">Welcome to OneHumanCorp! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Step 1: Tell us about your business</h2><p class=\"text-gray-700 mb-4\">Start by telling us what you sell and who your customers are. Keep it simple! Just describe what makes your shop special.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Step 2: Let AI build your store</h2><p class=\"text-gray-700 mb-4\">Once you tell us about your business, click the \"Generate\" button. Our AI will build your store for you. It will pick a design and write some text to get you started.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Step 3: Launch to the world</h2><p class=\"text-gray-700 mb-4\">When you are happy with how your store looks, click the \"Launch\" button. This makes your store live on the internet so customers can visit and buy from you!</p><div class=\"mt-8 bg-blue-50 p-4 rounded-lg border border-blue-100\"><p class=\"text-blue-800 font-medium\">Need more help? Click the chat button to ask our AI assistant any questions you have.</p></div>"
+                })),
+                "my-store" => Some(serde_json::json!({
+                    "title": "Managing My Store",
+                    "contentHtml": "<p class=\"text-gray-700 mb-4 leading-relaxed text-lg\">Your store is where you show off what you sell. You can easily add new items, keep track of what you have in stock, and change how your store looks.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Adding Products</h2><p class=\"text-gray-700 mb-4\">To add a new item, go to the products page and click \"Add Product\". You can upload a picture, type in a name and description, and set the price. Our AI can even help you write a catchy description!</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Tracking Your Stock</h2><p class=\"text-gray-700 mb-4\">When you add a product, you can tell the app how many you have to sell. When someone buys it, the number goes down on its own. This helps you know when you need to make or buy more.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Changing How Your Store Looks</h2><p class=\"text-gray-700 mb-4\">You can pick different colors, fonts, and layouts to make your store match your brand. Just go to the Storefront Builder to try out different styles.</p>"
+                })),
+                "marketing" => Some(serde_json::json!({
+                    "title": "Finding Customers",
+                    "contentHtml": "<p class=\"text-gray-700 mb-4 leading-relaxed text-lg\">To grow your business, you need people to know about it. We have tools to help you find and talk to customers.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Sending Emails</h2><p class=\"text-gray-700 mb-4\">You can send emails to people who have bought from you before or signed up on your store. You can use this to tell them about new products or special sales. Our AI can even help you write the emails!</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Running Promos and Sales</h2><p class=\"text-gray-700 mb-4\">Everyone loves a good deal. You can easily set up a weekend sale or a holiday promotion. You can choose to give a percentage off or a set amount of money off.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Sharing Your Store</h2><p class=\"text-gray-700 mb-4\">Don\'t forget to share your store link on social media or with your friends and family. You can find your store\'s link on your Dashboard.</p>"
+                })),
+                "account-billing" => Some(serde_json::json!({
+                    "title": "Account & Billing",
+                    "contentHtml": "<p class=\"text-gray-700 mb-4 leading-relaxed text-lg\">Manage your monthly plan, view your past bills, and invite people to help run your business.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Managing Your Plan</h2><p class=\"text-gray-700 mb-4\">You can check what plan you are on by going to the Billing page. If your business is growing and you need more features, you can upgrade your plan at any time.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Viewing Your Bills</h2><p class=\"text-gray-700 mb-4\">You can see a history of all the payments you have made to OneHumanCorp. This makes it easy to keep track of your expenses for your own records.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Inviting Team Members</h2><p class=\"text-gray-700 mb-4\">If you have business partners or staff who need to access your store settings, you can invite them to your team. Just enter their email address and they will get an invite to join.</p>"
+                })),
+                "payments" => Some(serde_json::json!({
+                    "title": "Getting Paid",
+                    "contentHtml": "<p class=\"text-gray-700 mb-4 leading-relaxed text-lg\">Getting paid is the most exciting part! We make it secure and easy for your customers to pay you.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Connecting Your Bank Account</h2><p class=\"text-gray-700 mb-4\">To start taking money, you need to connect a bank account. We use Stripe, a safe and trusted system. Just click the \"Connect Stripe\" button in your setup to securely link your bank.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Viewing Your Deposits</h2><p class=\"text-gray-700 mb-4\">When a customer buys something, the money goes into your connected bank account. You can check the Dashboard to see your recent sales and see when the money will arrive in your bank.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Taxes and Fees</h2><p class=\"text-gray-700 mb-4\">We help handle simple taxes for you at checkout. A small fee is taken out of each sale to cover the cost of securely moving the money from the customer\'s card to your bank.</p>"
+                })),
+                "ai-agents" => Some(serde_json::json!({
+                    "title": "Your AI Helpers",
+                    "contentHtml": "<p class=\"text-gray-700 mb-4 leading-relaxed text-lg\">Running a business takes a lot of work. That\'s why we give you AI helpers—smart computer programs that can do tasks for you, like a real team!</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Hiring AI Helpers</h2><p class=\"text-gray-700 mb-4\">Go to the AI Departments page to see all the helpers you can hire. Some helpers are good at marketing, some are good at writing, and others are good at keeping track of numbers.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Giving Them Tasks</h2><p class=\"text-gray-700 mb-4\">Once you hire a helper, you can tell them what to do. You just type what you need in plain English. For example, \"Write an email to my customers about a summer sale.\" The helper will do the work and show it to you.</p><h2 class=\"text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4\">Approving Their Work</h2><p class=\"text-gray-700 mb-4\">Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.</p>"
+                })),
+                _ => None,
+            };
+            if let Some(article) = json_opt {
+                Ok(axum::Json(article.clone()))
+            } else {
+                Err((axum::http::StatusCode::NOT_FOUND, axum::Json(serde_json::json!({"error": "Article not found"}))))
+            }
+        }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
             let m = registry.read().unwrap();
@@ -3678,11 +3712,11 @@ async fn create_ui_bom_item_handler(
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let mut link_url = "/help/getting-started-1";
 
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
+                link_url = "/help/getting-started-1";
             } else if query.contains("store") {
                 reply = format!("Based on our help center: {}", help_articles[1].1);
                 link_url = "/help/my-store";
