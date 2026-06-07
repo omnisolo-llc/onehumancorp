@@ -4011,6 +4011,7 @@ async fn create_ui_bom_item_handler(
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::app::terminal_session_service_server::TerminalSessionServiceServer::with_interceptor(crate::services::pos::terminal_session::MyTerminalSessionService::new(db.clone()), spiffe_interceptor))
         .serve(addr)
         .await?;
 

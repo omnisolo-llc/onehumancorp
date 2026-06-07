@@ -9,6 +9,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   const [status, setStatus] = useState<string>('Initializing...');
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
   const [connectedReader, setConnectedReader] = useState<any>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [reserving, setReserving] = useState<boolean>(false);
 
   useEffect(() => {
@@ -28,6 +29,14 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
         onUnexpectedReaderDisconnect: () => {
           setStatus('Reader disconnected unexpectedly.');
           setConnectedReader(null);
+          if (sessionId) {
+            fetch('/api/terminal/session/end', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: sessionId })
+            });
+            setSessionId(null);
+          }
         }
       });
       setTerminal(term);
@@ -57,6 +66,17 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     } else {
       setConnectedReader(result.reader);
       setStatus('Connected to reader: ' + result.reader.label);
+
+      // Start terminal session
+      fetch('/api/terminal/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hardware_id: result.reader.id || 'simulated-reader' })
+      }).then(res => res.json()).then(data => {
+        if (data.session_id) {
+          setSessionId(data.session_id);
+        }
+      });
     }
   };
 
@@ -77,6 +97,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
              amount: amount,
              quantity: 1,
              idempotency_key: `idemp_${transactionId}`,
+             session_id: sessionId,
              currency: 'usd'
           });
           setStatus('Payment saved offline. Will sync when network is restored.');

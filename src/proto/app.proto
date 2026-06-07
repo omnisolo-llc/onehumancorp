@@ -283,3 +283,35 @@ message SyncCalendarRequest {
 message SyncCalendarResponse {
   string status = 1;
 }
+
+service TerminalSessionService {
+  rpc StartTerminalSession(StartTerminalSessionRequest) returns (StartTerminalSessionResponse);
+  rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (UpdateTerminalSessionStatusResponse);
+  rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
+}
+
+message StartTerminalSessionRequest {
+  string hardware_id = 1;
+}
+
+message StartTerminalSessionResponse {
+  string session_id = 1;
+  string status = 2;
+}
+
+message UpdateTerminalSessionStatusRequest {
+  string session_id = 1;
+  string status = 2;
+}
+
+message UpdateTerminalSessionStatusResponse {
+  bool success = 1;
+}
+
+message EndTerminalSessionRequest {
+  string session_id = 1;
+}
+
+message EndTerminalSessionResponse {
+  bool success = 1;
+}

@@ -27,9 +27,6 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
-        .route("/session/start", axum::routing::post(start_terminal_session_handler))
-        .route("/session/update", axum::routing::post(update_terminal_session_handler))
-        .route("/session/end", axum::routing::post(end_terminal_session_handler))
         .with_state(hub)
 }
 
@@ -275,7 +272,6 @@ pub struct PosOfflineTransaction {
     pub amount_cents: i64,
     pub currency: String,
     pub payload: String,
-    pub session_id: Option<String>,
     pub timestamp: Option<String>,
 }
 
@@ -329,28 +325,18 @@ pub async fn sync_offline_transactions_handler(
     let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
 
     // Update terminal_sessions
-    if let Some(session_id) = req_data.transactions.first().and_then(|tx| tx.session_id.clone()) {
-        let _ = sqlx::query(
-            "UPDATE pos_terminal_sessions SET last_synced_at = CURRENT_TIMESTAMP WHERE session_id = $1 AND tenant_id = $2"
-        )
-        .bind(&session_id)
-        .bind(&tenant_id)
-        .execute(&pool)
-        .await;
-    } else {
-        let session_id = uuid::Uuid::new_v4().to_string();
-        let _ = sqlx::query(
-            "INSERT INTO terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-             ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = terminal_sessions.offline_changes_count + $4"
-        )
-        .bind(&session_id)
-        .bind(&tenant_id)
-        .bind(&client_id)
-        .bind(req_data.transactions.len() as i32)
-        .execute(&pool)
-        .await;
-    }
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        "INSERT INTO terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+         ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = terminal_sessions.offline_changes_count + $4"
+    )
+    .bind(&session_id)
+    .bind(&tenant_id)
+    .bind(&client_id)
+    .bind(req_data.transactions.len() as i32)
+    .execute(&pool)
+    .await;
 
     for tx in &req_data.transactions {
 
@@ -491,125 +477,4 @@ pub async fn create_payment_intent_handler(
         },
         Err(e) => Json(Err(e)),
     }
-}
-
-#[derive(serde::Deserialize)]
-pub struct StartTerminalSessionRequestRest {
-    pub hardware_id: String,
-}
-
-#[derive(serde::Serialize)]
-pub struct StartTerminalSessionResponseRest {
-    pub session_id: String,
-    pub status: String,
-}
-
-pub async fn start_terminal_session_handler(
-    _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
-    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-    req_data: axum::extract::Json<StartTerminalSessionRequestRest>,
-) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response();
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
-    };
-
-    let session_id = uuid::Uuid::new_v4().to_string();
-    let pool = crate::db::get_pool();
-
-    let res = sqlx::query(
-        "INSERT INTO pos_terminal_sessions (session_id, tenant_id, hardware_id, status, last_synced_at)
-         VALUES ($1, $2, $3, 'active', CURRENT_TIMESTAMP)
-         ON CONFLICT (tenant_id, hardware_id) DO UPDATE SET session_id = $1, status = 'active', last_synced_at = CURRENT_TIMESTAMP"
-    )
-    .bind(&session_id)
-    .bind(&tenant_id)
-    .bind(&req_data.hardware_id)
-    .execute(&pool)
-    .await;
-
-    if res.is_err() {
-        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "DB error" }))).into_response();
-    }
-
-    (axum::http::StatusCode::OK, Json(StartTerminalSessionResponseRest {
-        session_id,
-        status: "active".to_string(),
-    })).into_response()
-}
-
-#[derive(serde::Deserialize)]
-pub struct UpdateTerminalSessionStatusRequestRest {
-    pub session_id: String,
-    pub status: String,
-}
-
-pub async fn update_terminal_session_handler(
-    _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
-    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-    req_data: axum::extract::Json<UpdateTerminalSessionStatusRequestRest>,
-) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response();
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
-    };
-
-    let pool = crate::db::get_pool();
-    let res = sqlx::query(
-        "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE session_id = $2 AND tenant_id = $3"
-    )
-    .bind(&req_data.status)
-    .bind(&req_data.session_id)
-    .bind(&tenant_id)
-    .execute(&pool)
-    .await;
-
-    if res.is_err() {
-        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "DB error" }))).into_response();
-    }
-
-    (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
-}
-
-#[derive(serde::Deserialize)]
-pub struct EndTerminalSessionRequestRest {
-    pub session_id: String,
-}
-
-pub async fn end_terminal_session_handler(
-    _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
-    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-    req_data: axum::extract::Json<EndTerminalSessionRequestRest>,
-) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response();
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
-    };
-
-    let pool = crate::db::get_pool();
-    let _res = sqlx::query("UPDATE pos_terminal_sessions SET status = 'offline', last_synced_at = CURRENT_TIMESTAMP WHERE session_id = $1 AND tenant_id = $2")
-        .bind(&req_data.session_id).bind(&tenant_id).execute(&pool).await;
-
-    (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
 }

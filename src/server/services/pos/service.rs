@@ -169,7 +169,7 @@ mod tests {
                     payload: "{}".to_string(),
                     status: "PENDING".to_string(),
                     created_at_unix: 0,
-                }
+                    }
             ],
         };
 
