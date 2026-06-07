@@ -5454,8 +5454,8 @@ mod tests {
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
         let res = agent1.run(&cfg, "Run transient", &mut on_event).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Unexpected tool error"));
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "stop");
 
         // 2. LLM Recoverable
         struct LlmRecoverableMockClient {
@@ -6778,9 +6778,9 @@ mod tests {
         let agent3 = Agent::new(client3, vec![tool_transient.clone()]);
         let mut events3 = vec![];
         let res3 = agent3.run(&cfg, "Start", &mut |e| events3.push(e)).await;
-        // Should return Err because transient error exhausted max retries
-        assert!(res3.is_err());
-        assert!(res3.unwrap_err().to_string().contains("Unexpected tool error: Transient error"));
+        // Should return Ok because LLM can recover
+        assert!(res3.is_ok());
+        assert_eq!(res3.unwrap(), "Final answer after transient");
 
         let agent2 = Agent::new(client2, vec![tool_fatal]);
         let mut events2 = vec![];
