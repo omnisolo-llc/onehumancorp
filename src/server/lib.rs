@@ -2245,6 +2245,31 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
     Ok(())
 }
 
+
+struct OrchestratorEventDispatcher {
+    orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
+}
+
+#[async_trait::async_trait]
+impl crate::cart_recovery::CartRecoveryEventDispatcher for OrchestratorEventDispatcher {
+    async fn emit_abandoned_cart_event(&self, session: &crate::cart_recovery::AbandonedCheckoutSession) -> Result<(), String> {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: session.tenant_id.clone(),
+            event_type: "tenant.cart.abandoned".to_string(),
+            payload: serde_json::json!({
+                "checkout_session_id": session.session_id,
+                "customer_id": session.customer_id,
+                "amount_cents": session.amount_cents,
+                "customer_email": session.customer_email,
+                "customer_phone": session.customer_phone,
+                "customer_name": session.customer_email.as_ref().map(|e| e.split('@').next().unwrap_or("")).unwrap_or("Friend"),
+            }),
+        };
+        self.orchestrator.dispatch_event(event).await
+    }
+}
+
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
@@ -2298,9 +2323,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
     pos_sync_worker.start();
 
-    if matches!(&db.store, crate::db::DbStore::Postgres) {
-        crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
-    }
+
 
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
@@ -2403,6 +2426,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
+
+    if matches!(&db.store, crate::db::DbStore::Postgres) {
+        let ed = std::sync::Arc::new(OrchestratorEventDispatcher { orchestrator: dept_orchestrator.clone() });
+        crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()), ed);
+    }
 
     tokio::join!(
         dept_orchestrator.register_department(ops_agent),

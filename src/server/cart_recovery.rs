@@ -9,6 +9,11 @@ use uuid::Uuid;
 
 pub const CART_RECOVERY_JOB_TYPE: &str = "cart_recovery";
 
+#[async_trait]
+pub trait CartRecoveryEventDispatcher: Send + Sync {
+    async fn emit_abandoned_cart_event(&self, session: &AbandonedCheckoutSession) -> Result<(), String>;
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AbandonedCheckoutSession {
     pub session_id: String,
@@ -616,11 +621,45 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
 pub async fn run_cart_recovery_scan_once(
     pool: Arc<PgPool>,
     config: CartRecoveryConfig,
+    event_dispatcher: Arc<dyn CartRecoveryEventDispatcher>,
 ) -> Result<CartRecoverySummary, CartRecoveryError> {
     let store = Arc::new(PostgresCartRecoveryStore::new(pool.clone()));
     let dispatcher = Arc::new(PostgresQueueRecoveryDispatcher::from_env(pool));
-    let service = CartRecoveryService::new(store, dispatcher, config);
-    service.run_once(Utc::now()).await
+
+    // Instead of directly using the dispatcher, we intercept and emit an event
+    let abandoned_before = Utc::now() - config.abandoned_after;
+    let sessions = store
+        .abandoned_checkout_sessions(abandoned_before, config.batch_limit)
+        .await?;
+
+    let mut summary = CartRecoverySummary {
+        scanned: sessions.len(),
+        ..CartRecoverySummary::default()
+    };
+
+    for session in sessions {
+        if !is_recoverable_checkout(&session) {
+            summary.skipped_not_recoverable += 1;
+            continue;
+        }
+
+        if let Err(e) = event_dispatcher.emit_abandoned_cart_event(&session).await {
+            tracing::error!("Failed to dispatch abandoned cart event: {}", e);
+            summary.failed_closed += 1;
+        } else {
+            summary.dispatched += 1;
+            // Record the recovery action so it isn't processed again
+            let receipt = RecoveryDispatchReceipt {
+                channel: RecoveryChannel::AgentQueue,
+                provider_message_id: Some(session.session_id.clone()),
+            };
+            if let Err(e) = store.record_recovery_action(&session, &receipt).await {
+                 tracing::error!("Failed to record recovery action: {}", e);
+            }
+        }
+    }
+
+    Ok(summary)
 }
 
 pub async fn run_cart_recovery_dispatch_job_once<D>(
@@ -710,7 +749,7 @@ where
     }
 }
 
-pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
+pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>, event_dispatcher: Arc<dyn CartRecoveryEventDispatcher>) {
     let scan_pool = pool.clone();
     tokio::spawn(async move {
         let interval_seconds = std::env::var("OHC_CART_RECOVERY_SCAN_INTERVAL_SECONDS")
@@ -719,7 +758,7 @@ pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
             .unwrap_or(300)
             .max(30);
         loop {
-            match run_cart_recovery_scan_once(scan_pool.clone(), CartRecoveryConfig::default()).await {
+            match run_cart_recovery_scan_once(scan_pool.clone(), CartRecoveryConfig::default(), event_dispatcher.clone()).await {
                 Ok(summary) => {
                     if summary.scanned > 0 || summary.dispatched > 0 || summary.failed_closed > 0 {
                         tracing::info!(

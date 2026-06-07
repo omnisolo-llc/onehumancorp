@@ -218,6 +218,7 @@ impl Department for SalesAgent {
         vec![
             "tenant.quote.requested".to_string(),
             "tenant.message.received".to_string(),
+            "tenant.cart.abandoned".to_string(),
         ]
     }
 
@@ -282,6 +283,59 @@ impl Department for SalesAgent {
 
             return Ok(());
         }
+
+
+        if event.event_type == "tenant.cart.abandoned" {
+            let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+            // Format amount safely for UI
+            let amount_dollars = amount_cents as f64 / 100.0;
+            let formatted_amount = format!("${:.2}", amount_dollars);
+
+            // Fetch generic config risk level or enforce DraftForReview to let owner verify margin
+            let risk = ActionRisk::DraftForReview;
+
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("there");
+
+            let prompt = format!(
+                "Draft a short, friendly SMS/Email to a customer named {} who abandoned a cart worth {}. Offer them a 10% discount code 'COMEBACK10' to finish checkout. Be polite.",
+                customer_name, formatted_amount
+            );
+
+            let generated_response = match crate::minimax::LocalLLMClient::new().reason(&prompt).await {
+                Ok(response) => response.trim().to_string(),
+                Err(err) => {
+                    tracing::error!("LLM drafting failed for abandoned cart: {}", err);
+                    format!("Hi {}, we noticed you left {} in your cart! Use COMEBACK10 for 10% off if you want to finish your order.", customer_name, formatted_amount)
+                }
+            };
+
+            let action_payload = serde_json::json!({
+                "feature_type": "abandoned_cart",
+                "context": {
+                    "abandoned_carts_count": 1,
+                    "potential_revenue": amount_dollars,
+                    "customer_id": customer_id
+                },
+                "generated_response": generated_response,
+                "amount": formatted_amount
+            });
+
+            self.orchestrator
+                .execute_action(
+                    DepartmentType::Sales,
+                    format!("Abandoned cart recovery: 10% discount for {}", customer_name),
+                    event.tenant_id.clone(),
+                    risk,
+                    action_payload,
+                )
+                .await
+                .map(|_| ())?;
+
+            return Ok(());
+        }
+
 
         // Query memory context
         let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
