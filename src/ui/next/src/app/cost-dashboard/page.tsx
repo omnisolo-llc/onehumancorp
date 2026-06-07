@@ -218,6 +218,15 @@ export default function CostDashboardPage() {
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-gray-900">Compute Usage</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
+                    </div>
+                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.compute_cost || 0)}</span>
+                </div>
+
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Network & Bandwidth</span>
