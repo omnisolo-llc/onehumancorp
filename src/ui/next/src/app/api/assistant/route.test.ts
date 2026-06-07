@@ -1,13 +1,25 @@
 import { describe, expect, test, beforeEach } from 'vitest';
 import { GET as getTasks, POST as postTask } from './tasks/route';
-import { POST as postRemote } from './remote/route';
-import { POST as postAutomation } from './automations/route';
+import { POST as postRemote, GET as getRemote } from './remote/route';
+import { POST as postAutomation, GET as getAutomations } from './automations/route';
 import { GET as getMemory, PATCH as patchMemory } from './memory/route';
+import { PATCH as patchTaskAction } from './tasks/[id]/route';
+import { GET as getSkills, PATCH as patchSkills } from './skills/route';
+import { GET as getConnectors, PATCH as patchConnectors } from './connectors/route';
+import { GET as getData, PATCH as patchData } from './data/route';
 import { resetAssistantStore } from './store';
 
 function jsonRequest(url: string, body: unknown) {
   return new Request(url, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+function patchRequest(url: string, body: unknown) {
+  return new Request(url, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
@@ -183,6 +195,13 @@ describe('assistant API contract', () => {
       notificationChannel: 'Discord',
     });
     expect(body.automation.nextRunLabel).toContain('Every Monday');
+
+    const listed = await (await getAutomations()).json();
+    expect(listed.automations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Weekly research brief', status: 'active' }),
+      ]),
+    );
   });
 
   test('edits, imports, and forgets visible assistant memory', async () => {
@@ -220,5 +239,81 @@ describe('assistant API contract', () => {
     }));
     const forgotten = await forgetResponse.json();
     expect(forgotten.memories.some((item: any) => item.id === importedId)).toBe(false);
+  });
+
+  test('manages task stop resume archive and approval actions', async () => {
+    await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'approve_changes' }),
+      { params: { id: 'task-weekly-brief' } },
+    );
+    let body = await (await getTasks()).json();
+    expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').changes[0].approvalStatus).toBe('approved');
+
+    await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'stop' }),
+      { params: { id: 'task-weekly-brief' } },
+    );
+    body = await (await getTasks()).json();
+    expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('blocked');
+
+    await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'resume' }),
+      { params: { id: 'task-weekly-brief' } },
+    );
+    body = await (await getTasks()).json();
+    expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('running');
+
+    await patchTaskAction(
+      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
+      { params: { id: 'task-weekly-brief' } },
+    );
+    body = await (await getTasks()).json();
+    expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('archived');
+  });
+
+  test('manages skills connector status and data cleanup queues', async () => {
+    let skills = await (await getSkills()).json();
+    expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Web Research', status: 'installed' })]));
+
+    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
+      action: 'install',
+      name: 'PDF Exporter',
+      category: 'Artifacts',
+    }))).json();
+    expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'PDF Exporter', status: 'installed' })]));
+
+    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
+      action: 'disable',
+      name: 'PDF Exporter',
+    }))).json();
+    expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'PDF Exporter', status: 'disabled' })]));
+
+    let connectors = await (await getConnectors()).json();
+    expect(connectors.connectors).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'MCP Endpoint' })]));
+
+    connectors = await (await patchConnectors(patchRequest('http://localhost/api/assistant/connectors', {
+      action: 'connect',
+      name: 'Notion',
+      kind: 'knowledge',
+    }))).json();
+    expect(connectors.connectors).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Notion', status: 'connected' })]));
+
+    let data = await (await getData()).json();
+    expect(data.sharedFiles.length).toBeGreaterThan(0);
+    data = await (await patchData(patchRequest('http://localhost/api/assistant/data', {
+      action: 'unshare',
+      id: data.sharedFiles[0].id,
+    }))).json();
+    expect(data.unshareQueue.length).toBeGreaterThan(0);
+  });
+
+  test('lists remote platform connection status', async () => {
+    const body = await (await getRemote()).json();
+    expect(body.platforms).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Slack', status: 'available' }),
+        expect.objectContaining({ name: 'WeChat ClawBot', status: 'available' }),
+      ]),
+    );
   });
 });

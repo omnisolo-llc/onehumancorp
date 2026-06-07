@@ -89,6 +89,27 @@ export type MemoryItem = {
   editable: boolean;
 };
 
+export type SkillRecord = {
+  id: string;
+  name: string;
+  category: string;
+  status: 'installed' | 'disabled' | 'available';
+};
+
+export type ConnectorRecord = {
+  id: string;
+  name: string;
+  kind: string;
+  status: 'connected' | 'available' | 'needs_setup';
+};
+
+export type SharedFileRecord = {
+  id: string;
+  filename: string;
+  workspace: string;
+  access: 'shared' | 'queued_for_unshare';
+};
+
 export const assistantCapabilities = {
   resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
   remotePlatforms: [
@@ -143,6 +164,10 @@ let tasks: AssistantTask[] = [];
 let remotes: RemoteTask[] = [];
 let automations: Automation[] = [];
 let memories: MemoryItem[] = [];
+let skills: SkillRecord[] = [];
+let connectors: ConnectorRecord[] = [];
+let sharedFiles: SharedFileRecord[] = [];
+let unshareQueue: SharedFileRecord[] = [];
 
 function now() {
   return new Date().toISOString();
@@ -352,6 +377,28 @@ export function getAssistantCapabilities() {
   return assistantCapabilities;
 }
 
+export function mutateTask(taskId: string, action: string) {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task) throw new Error('task not found');
+  if (action === 'approve_changes') {
+    task.changes = task.changes.map((change) => ({ ...change, approvalStatus: 'approved' }));
+    task.messages.push({ id: id('msg'), role: 'assistant', content: 'Changes approved and ready to apply.', createdAt: now() });
+  } else if (action === 'stop') {
+    task.status = 'blocked';
+    task.currentStep = 'Stopped by user';
+  } else if (action === 'resume') {
+    task.status = 'running';
+    task.currentStep = 'Resumed and preparing next step';
+  } else if (action === 'archive') {
+    task.status = 'archived';
+    task.currentStep = 'Archived';
+  } else {
+    throw new Error('unsupported task action');
+  }
+  task.updatedAt = now();
+  return task;
+}
+
 export function createRemoteTask(payload: {
   platform?: string;
   userId?: string;
@@ -384,6 +431,17 @@ export function createRemoteTask(payload: {
   return { remote, task, reply: `Jarvis started "${task.title}" from ${remote.platform}.` };
 }
 
+export function listRemotePlatforms() {
+  return {
+    platforms: assistantCapabilities.remotePlatforms.map((name) => ({
+      name,
+      status: 'available',
+      command: `/jarvis ${name.toLowerCase().replace(/\s+/g, '-')}`,
+    })),
+    remotes,
+  };
+}
+
 export function createAutomation(payload: {
   name?: string;
   schedule?: string;
@@ -407,6 +465,10 @@ export function createAutomation(payload: {
   };
   automations.unshift(automation);
   return automation;
+}
+
+export function listAutomations() {
+  return automations;
 }
 
 export function listMemories() {
@@ -440,6 +502,93 @@ export function mutateMemory(payload: {
     throw new Error('unsupported memory action');
   }
   return memories;
+}
+
+export function listSkills() {
+  return skills;
+}
+
+export function mutateSkill(payload: {
+  action?: 'install' | 'disable' | 'uninstall';
+  name?: string;
+  category?: string;
+}) {
+  if (!payload.name?.trim()) throw new Error('skill name is required');
+  const name = payload.name.trim();
+  if (payload.action === 'install') {
+    const existing = skills.find((skill) => skill.name === name);
+    if (existing) {
+      existing.status = 'installed';
+      existing.category = payload.category || existing.category;
+    } else {
+      skills.unshift({ id: id('skill'), name, category: payload.category || 'General', status: 'installed' });
+    }
+  } else if (payload.action === 'disable') {
+    const existing = skills.find((skill) => skill.name === name);
+    if (!existing) throw new Error('skill not found');
+    existing.status = 'disabled';
+  } else if (payload.action === 'uninstall') {
+    skills = skills.filter((skill) => skill.name !== name);
+  } else {
+    throw new Error('unsupported skill action');
+  }
+  return skills;
+}
+
+export function listConnectors() {
+  return connectors;
+}
+
+export function mutateConnector(payload: {
+  action?: 'connect' | 'disconnect';
+  name?: string;
+  kind?: string;
+}) {
+  if (!payload.name?.trim()) throw new Error('connector name is required');
+  const name = payload.name.trim();
+  if (payload.action === 'connect') {
+    const existing = connectors.find((connector) => connector.name === name);
+    if (existing) {
+      existing.status = 'connected';
+      existing.kind = payload.kind || existing.kind;
+    } else {
+      connectors.unshift({ id: id('connector'), name, kind: payload.kind || 'custom', status: 'connected' });
+    }
+  } else if (payload.action === 'disconnect') {
+    const existing = connectors.find((connector) => connector.name === name);
+    if (!existing) throw new Error('connector not found');
+    existing.status = 'available';
+  } else {
+    throw new Error('unsupported connector action');
+  }
+  return connectors;
+}
+
+export function getDataManagement() {
+  return {
+    sharedFiles,
+    archivedTasks: tasks.filter((task) => task.status === 'archived'),
+    unshareQueue,
+  };
+}
+
+export function mutateDataManagement(payload: {
+  action?: 'unshare' | 'archive_cleanup';
+  id?: string;
+}) {
+  if (payload.action === 'unshare') {
+    const file = sharedFiles.find((item) => item.id === payload.id);
+    if (!file) throw new Error('shared file not found');
+    file.access = 'queued_for_unshare';
+    if (!unshareQueue.some((item) => item.id === file.id)) {
+      unshareQueue.unshift(file);
+    }
+  } else if (payload.action === 'archive_cleanup') {
+    tasks = tasks.filter((task) => task.status !== 'archived');
+  } else {
+    throw new Error('unsupported data action');
+  }
+  return getDataManagement();
 }
 
 export function resetAssistantStore() {
@@ -557,6 +706,21 @@ export function resetAssistantStore() {
       editable: true,
     },
   ];
+  skills = [
+    { id: 'skill-web-research', name: 'Web Research', category: 'Research', status: 'installed' },
+    { id: 'skill-document-writer', name: 'Document Writer', category: 'Artifacts', status: 'installed' },
+    { id: 'skill-chart-builder', name: 'Chart Builder', category: 'Data', status: 'installed' },
+  ];
+  connectors = [
+    { id: 'connector-google-drive', name: 'Google Drive', kind: 'files', status: 'connected' },
+    { id: 'connector-slack', name: 'Slack', kind: 'remote', status: 'available' },
+    { id: 'connector-mcp', name: 'MCP Endpoint', kind: 'tools', status: 'available' },
+  ];
+  sharedFiles = [
+    { id: 'shared-weekly-brief', filename: 'weekly-brief.md', workspace: 'Personal OS', access: 'shared' },
+    { id: 'shared-chart', filename: 'assistant-chart.png', workspace: 'Personal OS', access: 'shared' },
+  ];
+  unshareQueue = [];
 }
 
 resetAssistantStore();
