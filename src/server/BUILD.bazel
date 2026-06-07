@@ -289,6 +289,22 @@ SERVER_RS_SRCS = [
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
+    name = "minimax",
+    srcs = ["minimax.rs"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/pricing:server_pricing",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tokio-stream",
+        "@crates//:tracing",
+    ],
+)
+
+rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
     data = ["//src/server/migrations"],
@@ -299,6 +315,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":minimax",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",
