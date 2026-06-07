@@ -252,11 +252,11 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(result) = run_direct_workflow_if_requested(&t).await {
             match result {
                 Ok(report) => {
-                    println!("{}", report);
+                    tracing::info!("{}", report);
                     return Ok(());
                 }
                 Err(err) => {
-                    eprintln!("{}", err);
+                    tracing::error!("{}", err);
                     std::process::exit(1);
                 }
             }

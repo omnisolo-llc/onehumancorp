@@ -285,7 +285,7 @@ mod additional_tests {
 
         assert_eq!(arr.len(), 11); // 10 original elements + 1 masked summary
         let last_element = arr.last().unwrap().as_str().unwrap();
-        println!("MASKED CONTENT: {}", masked_content);
+        tracing::debug!("MASKED CONTENT: {}", masked_content);
         assert!(last_element.contains("[Masked array:"));
         assert!(last_element.contains("elements truncated]"));
     }

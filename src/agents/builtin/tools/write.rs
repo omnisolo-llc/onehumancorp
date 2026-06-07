@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 #[derive(Deserialize)]
 struct WriteArgs {

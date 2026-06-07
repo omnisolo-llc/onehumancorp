@@ -166,7 +166,7 @@ mod tests {
         let pool = match sqlx::PgPool::connect(&db_url).await {
             Ok(pool) => pool,
             Err(_) => {
-                println!("Skipping test due to no postgres");
+                tracing::info!("Skipping test due to no postgres");
                 return;
             }
         };
