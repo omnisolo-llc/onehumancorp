@@ -172,7 +172,7 @@ async fn test_single_agent_flow() {
     let result = state_manager
         .transition_state(
             &task_id,
-            "test_org",
+            "default_tenant",
             "PENDING",
             "IN_PROGRESS",
             Some("agent_1"),
@@ -228,7 +228,7 @@ async fn test_dag_workflow() {
     state_manager
         .transition_state(
             &parent_id,
-            "test_org",
+            "default_tenant",
             "IN_PROGRESS",
             "COMPLETED",
             Some("agent_1"),

@@ -58,6 +58,10 @@ impl CloudStateManager {
 
         let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
+        if _tenant_id != tenant_id_db && _tenant_id != "system" {
+            return Err("Unauthorized: task belongs to a different tenant".to_string());
+        }
+
         // DAG validation
         if to_state == "IN_PROGRESS" {
             let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));

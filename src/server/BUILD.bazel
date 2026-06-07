@@ -399,6 +399,7 @@ rust_library(
         "@crates//:tower",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
+        "@crates//:urlencoding",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
