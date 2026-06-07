@@ -287,15 +287,15 @@ export default function TerminalPage() {
       <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-b border-white/40 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
-            <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
-            {isOffline && <span className="inline-block mt-1 text-red-500 font-bold text-xs bg-red-100 px-2 py-1 rounded">{t('Offline Mode')}</span>}
+            <p className="text-[#0071E3] font-medium text-sm mt-1">{t(activeStaff.role)}</p>
+            {isOffline && <span className="inline-block mt-1 text-[#DE1B1B] font-bold text-xs bg-red-100 px-2 py-1 rounded">{t('Offline Mode')}</span>}
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
-            <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
+            <button onClick={handleLock} className="min-w-[44px] min-h-[44px] text-sm font-semibold text-gray-500 hover:text-gray-900 flex items-center justify-center">
               {t('Lock')}
             </button>
           </div>
@@ -304,8 +304,8 @@ export default function TerminalPage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50">
 
-           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
-             <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+           <div className="bg-white/65 backdrop-blur-[30px] saturate-[210%] rounded-[16px] p-6 shadow-sm border border-white/40 mb-6 text-center">
+             <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-[#34C759]' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -320,14 +320,14 @@ export default function TerminalPage() {
              {clockedIn ? (
                <button
                  onClick={() => handleClockAction('CLOCK_OUT')}
-                 className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
+                 className="w-full py-4 min-h-[44px] rounded-[8px] bg-red-50 text-[#FF3B30] font-bold hover:bg-red-100 transition-colors"
                >
                  {t('Clock Out')}
                </button>
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
-                 className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
+                 className="w-full py-4 min-h-[44px] rounded-[8px] bg-[#0071E3] text-white font-bold shadow-md shadow-[#0071E3]/20 hover:bg-[#0066FF] transition-colors"
                >
                  {t('Clock In')}
                </button>
@@ -341,16 +341,16 @@ export default function TerminalPage() {
              <button
                 onClick={handleNewOrder}
                 disabled={reserving}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`bg-white/65 backdrop-blur-[30px] saturate-[210%] p-4 min-h-[44px] rounded-[16px] shadow-sm border border-white/40 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
-               <div className="text-blue-500 mb-2">
+               <div className="text-[#0071E3] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                </div>
                <span className="font-medium text-gray-900">{t('New Order')}</span>
              </button>
 
              {activeStaff.role === 'Manager' && (
-               <button className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
+               <button className="bg-white/65 backdrop-blur-[30px] saturate-[210%] p-4 min-h-[44px] rounded-[16px] shadow-sm border border-white/40 text-left active:scale-[0.98]">
                  <div className="text-purple-500 mb-2">
                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                  </div>
@@ -358,8 +358,8 @@ export default function TerminalPage() {
                </button>
              )}
 
-             <button className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
-               <div className="text-orange-500 mb-2">
+             <button className="bg-white/65 backdrop-blur-[30px] saturate-[210%] p-4 min-h-[44px] rounded-[16px] shadow-sm border border-white/40 text-left active:scale-[0.98]">
+               <div className="text-[#FF9500] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </div>
                <span className="font-medium text-gray-900">{t('Refunds')}</span>

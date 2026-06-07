@@ -89,20 +89,20 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
   };
 
   return (
-    <div className="p-4 border rounded shadow bg-white/80 backdrop-blur-xl">
-      <h2 className="text-xl font-bold mb-4">Stripe Terminal</h2>
-      <p className="mb-4 text-gray-700">Status: {status}</p>
+    <div className="p-4 border border-white/40 rounded-[16px] shadow-sm bg-white/65 backdrop-blur-[30px] saturate-[210%]">
+      <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Stripe Terminal</h2>
+      <p className="mb-4 text-gray-700 text-sm">Status: {status}</p>
 
       {!connectedReader && (
         <div className="mb-4">
-          <button onClick={discoverReaders} className="bg-blue-600 text-white px-4 py-2 rounded">
+          <button onClick={discoverReaders} className="w-full bg-[#0071E3] hover:bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-[8px] font-bold shadow-md shadow-[#0071E3]/20 transition-colors">
             Discover Readers
           </button>
-          <ul className="mt-2">
+          <ul className="mt-4 flex flex-col gap-2">
             {discoveredReaders.map(reader => (
-              <li key={reader.id} className="flex justify-between items-center my-2 p-2 border rounded">
-                <span>{reader.label || reader.id}</span>
-                <button onClick={() => connectReader(reader)} className="bg-green-600 text-white px-3 py-1 rounded">
+              <li key={reader.id} className="flex justify-between items-center bg-white p-3 border border-gray-100 rounded-[8px] shadow-sm">
+                <span className="font-medium text-gray-800">{reader.label || reader.id}</span>
+                <button onClick={() => connectReader(reader)} className="bg-green-100 hover:bg-green-200 text-[#34C759] font-bold px-4 py-2 min-h-[44px] rounded-[8px] transition-colors">
                   Connect
                 </button>
               </li>
@@ -113,7 +113,7 @@ export default function StripeTerminalClient({ amount }: { amount: number }) {
 
       {connectedReader && (
         <div>
-          <button onClick={processPayment} className="bg-indigo-600 text-white px-4 py-2 rounded w-full">
+          <button onClick={processPayment} className="w-full bg-[#0071E3] hover:bg-[#0066FF] text-white px-4 py-4 min-h-[44px] rounded-[8px] font-bold text-lg shadow-md shadow-[#0071E3]/20 transition-colors">
             Charge ${(amount / 100).toFixed(2)}
           </button>
         </div>
