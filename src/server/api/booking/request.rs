@@ -39,11 +39,10 @@ async fn handle_booking_request(
     headers: axum::http::HeaderMap,
     Json(payload): Json<BookingRequestPayload>,
 ) -> impl IntoResponse {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("test_tenant")
-        .to_string();
+    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
+        Some(t) if !t.trim().is_empty() => t.to_string(),
+        _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
 
     let event = DepartmentEvent {
         id: uuid::Uuid::new_v4().to_string(),

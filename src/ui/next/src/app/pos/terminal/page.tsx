@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
+import StripeTerminalClient from './StripeTerminalClient';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -198,7 +199,7 @@ export default function TerminalPage() {
         const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
         });
 
         const reserveData = await reserveRes.json();
@@ -214,7 +215,7 @@ export default function TerminalPage() {
         await fetch('/api/v1/payments/terminal/commit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
         });
         setOrderStatus(`${t('Payment Completed')}`);
       } catch (err) {
@@ -365,6 +366,8 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
+
+           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 

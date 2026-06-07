@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useOnboardingStore } from './store';
 type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
 
@@ -55,6 +55,7 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const initialStateLoaded = useRef(false);
 
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -182,15 +183,19 @@ export default function OnboardingWizard() {
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        initialStateLoaded.current = true;
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err))
-    .finally(() => setIsLoaded(true));
+    .finally(() => {
+      initialStateLoaded.current = true;
+      setIsLoaded(true);
+    });
   }, []);
 
   // Sync state to backend
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !initialStateLoaded.current) return;
 
     // Only save if we are past the initial state
     if (step === 1 && !businessName && !whatYouSell && !location && !targetAudience) return;
@@ -263,9 +268,20 @@ export default function OnboardingWizard() {
       setBusinessName(intakeData.business_name || 'My Business');
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-      setCategories(intakeData.categories || ['physical']);
+      const mappedCategories = intakeData.categories || ['physical'];
+      setCategories(mappedCategories);
 
-      setStep(2); await syncStateToBackend({ step: 2 }); // Go to review step
+      // Auto-configure AI Departments based on inferred business context
+      const newAgents = ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'];
+      if (mappedCategories.includes('physical') || mappedCategories.includes('digital') || mappedCategories.includes('subscriptions')) {
+        newAgents.push('Sales');
+      }
+      if (mappedCategories.includes('services') || mappedCategories.includes('food') || mappedCategories.includes('physical')) {
+        newAgents.push('Customer Success');
+      }
+      setAiAgents(newAgents);
+
+      setStep(2); await syncStateToBackend({ step: 2, aiAgents: newAgents }); // Go to review step
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -352,7 +368,8 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant', result.organization_id);
       }
       setStep(5);
-        syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
+      syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
+      fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
 
     } catch (err: any) {
       console.error(err);
@@ -370,11 +387,11 @@ export default function OnboardingWizard() {
   const getProgress = () => {
     // There are 5 steps, let's make it a more gradual fill
     if (step === 1) {
-      if (chatStep === 0) return 10;
       if (chatStep === 1) return 20;
       if (chatStep === 2) return 30;
       if (chatStep === 3) return 40;
-      if (chatStep === 4) return 50;
+      if (chatStep === 4) return 45;
+      if (chatStep === 5) return 50;
     }
     if (step === 2) return 60;
     if (step === 3) return 80;
@@ -412,31 +429,6 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-
-              {chatStep === 0 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in text-center">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome</h2>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                    Let's get your business online in under 10 minutes.
-                  </p>
-                  <button
-                    role="link"
-                    onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }}
-                    className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-                  >
-                    Start Onboarding
-                  </button>
-                </div>
-              )}
-
-              {chatStep > 0 && (
-                <>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-                  </p>
-                </>
-              )}
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
@@ -476,7 +468,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -541,7 +533,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -607,7 +599,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -621,9 +613,75 @@ export default function OnboardingWizard() {
                           return;
                         }
                         setValidationError('');
+                        setChatStep(4); syncStateToBackend({ chatStep: 4 });
+                      }}
+                      disabled={!location.trim()}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <IconLabel icon="next">Next</IconLabel>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 4 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                  <button onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                      This helps our AI generate the perfect storefront copy and select the best tools for your business.
+                    </p>
+                    <button
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                    >
+                      <IconLabel icon="save">Save Draft</IconLabel>
+                    </button>
+                  </div>
+
+                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <input
+                        type="text"
+                        autoFocus
+                        enterKeyHint="next"
+                        autoCapitalize="words"
+                        value={targetAudience}
+                        onChange={(e) => setTargetAudience(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (!targetAudience.trim()) {
+                              setValidationError('Please tell us your target audience.');
+                              return;
+                            }
+                            setValidationError('');
+                            handleIntake();
+                          }
+                        }}
+                        placeholder="e.g. Local families, Tech startups"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+                  <div className="mt-auto pt-6">
+                    <button
+                      onClick={() => {
+                        if (!targetAudience.trim()) {
+                          setValidationError('Please tell us your target audience.');
+                          return;
+                        }
+                        setValidationError('');
                         handleIntake();
                       }}
-                      disabled={!location.trim() || isLoading}
+                      disabled={!targetAudience.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
@@ -903,29 +961,20 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
-                  <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
-                       return (
-                         <div
-                           key={agent}
-                           onClick={() => {
-                             if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
-                             } else {
-                               setAiAgents([...aiAgents, agent]);
-                             }
-                           }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white'}`}
-                         >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
-                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                           </div>
-                         </div>
-                       );
-                    })}
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Auto-Configured AI Departments</label>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
+                    Here are the AI departments we've configured for you.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {aiAgents.map(agent => (
+                      <div
+                        key={agent}
+                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        {agent}
+                      </div>
+                    ))}
                   </div>
                 </div>
 

@@ -77,6 +77,72 @@ pub async fn reserve_inventory_handler(
                     "error_message": "Item is currently being checked out by another customer"
                 }))).into_response();
             }
+
+            // Verify capacity AFTER acquiring the lock within a transaction
+            let pool = crate::db::get_pool();
+            if let Ok(mut tx) = pool.begin().await {
+                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                        .bind(&req_data.product_id)
+                        .bind(&tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .unwrap_or(None);
+
+                    if let Some(stock) = current_stock {
+                        if stock < req_data.quantity {
+                            let _ = tx.rollback().await;
+                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                                "success": false,
+                                "lock_id": "",
+                                "error_message": format!("Insufficient inventory. Available: {}", stock)
+                            }))).into_response();
+                        }
+                    } else {
+                        let _ = tx.rollback().await;
+                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                        return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                            "success": false,
+                            "lock_id": "",
+                            "error_message": "Product not found"
+                        }))).into_response();
+                    }
+                }
+                let _ = tx.commit().await;
+            }
+        }
+    } else {
+        // Fallback if no redis
+        let pool = crate::db::get_pool();
+        if let Ok(mut tx) = pool.begin().await {
+            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                    .bind(&req_data.product_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None);
+
+                if let Some(stock) = current_stock {
+                    if stock < req_data.quantity {
+                        let _ = tx.rollback().await;
+                        return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                            "success": false,
+                            "lock_id": "",
+                            "error_message": format!("Insufficient inventory. Available: {}", stock)
+                        }))).into_response();
+                    }
+                } else {
+                    let _ = tx.rollback().await;
+                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                        "success": false,
+                        "lock_id": "",
+                        "error_message": "Product not found"
+                    }))).into_response();
+                }
+            }
+            let _ = tx.commit().await;
         }
     }
 
@@ -191,8 +257,11 @@ pub async fn get_terminal_connection_token_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.create_terminal_connection_token(&tenant_id).await {
-        Ok(token) => Json(Ok(TerminalTokenResponse { token })),
+    match client.require_api_key() {
+        Ok(_) => match client.create_terminal_connection_token(&tenant_id).await {
+            Ok(token) => Json(Ok(TerminalTokenResponse { token })),
+            Err(e) => Json(Err(e)),
+        },
         Err(e) => Json(Err(e)),
     }
 }
@@ -305,7 +374,7 @@ pub async fn sync_offline_transactions_handler(
 
             let job_res = sqlx::query(
                 "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                 VALUES ($1, $2, 'pos_offline_sync', $3::jsonb)"
+                 VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
             )
             .bind(&job_id)
             .bind(&tenant_id_clone)
@@ -383,8 +452,11 @@ pub async fn create_payment_intent_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
-        Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
+    match client.require_api_key() {
+        Ok(_) => match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
+            Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
+            Err(e) => Json(Err(e)),
+        },
         Err(e) => Json(Err(e)),
     }
 }

@@ -23,7 +23,7 @@ export function currentAppSmoke(label: string) {
     await expect(card).toHaveCSS('border-radius', '16px');
 
     await page.goto('/agents');
-    await expect(page.locator('h1', { hasText: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/website-builder');
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible({ timeout: 5000 });
@@ -57,6 +57,7 @@ export function currentAppSmoke(label: string) {
     expect(await bandwidthSavings.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Agent & Feature Costs' })).toBeVisible();
 
     const llmCost = page.locator('#cost-dashboard-llm');
     await expect(llmCost).toBeVisible();
