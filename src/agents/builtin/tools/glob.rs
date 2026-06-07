@@ -45,10 +45,8 @@ impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
             .filter_map(|r| r.ok())
             .map(|p| {
                 let mut p_str = p.display().to_string();
-                if let Some(wd) = &self.working_dir {
-                    if let Ok(rel) = p.strip_prefix(wd) {
-                        p_str = rel.display().to_string();
-                    }
+                if let Some(wd) = &self.working_dir && let Ok(rel) = p.strip_prefix(wd) {
+                    p_str = rel.display().to_string();
                 }
                 p_str
             })

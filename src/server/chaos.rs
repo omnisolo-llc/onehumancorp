@@ -115,7 +115,7 @@ mod tests {
 
         let _state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
 
-        let start = std::time::Instant::now();
+        let _start = std::time::Instant::now();
 
         // Spawn a thread that actually consumes CPU instead of yielding or sleeping.
         // It spins up a heavy computation to block an executor thread to simulate true CPU starvation.

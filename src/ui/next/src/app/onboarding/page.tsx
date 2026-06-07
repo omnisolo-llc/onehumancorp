@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useOnboardingStore } from './store';
 type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
 
@@ -55,6 +55,7 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const initialStateLoaded = useRef(false);
 
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -182,15 +183,19 @@ export default function OnboardingWizard() {
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        initialStateLoaded.current = true;
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err))
-    .finally(() => setIsLoaded(true));
+    .finally(() => {
+      initialStateLoaded.current = true;
+      setIsLoaded(true);
+    });
   }, []);
 
   // Sync state to backend
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !initialStateLoaded.current) return;
 
     // Only save if we are past the initial state
     if (step === 1 && !businessName && !whatYouSell && !location && !targetAudience) return;
@@ -263,9 +268,20 @@ export default function OnboardingWizard() {
       setBusinessName(intakeData.business_name || 'My Business');
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-      setCategories(intakeData.categories || ['physical']);
+      const mappedCategories = intakeData.categories || ['physical'];
+      setCategories(mappedCategories);
 
-      setStep(2); await syncStateToBackend({ step: 2 }); // Go to review step
+      // Auto-configure AI Departments based on inferred business context
+      const newAgents = ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'];
+      if (mappedCategories.includes('physical') || mappedCategories.includes('digital') || mappedCategories.includes('subscriptions')) {
+        newAgents.push('Sales');
+      }
+      if (mappedCategories.includes('services') || mappedCategories.includes('food') || mappedCategories.includes('physical')) {
+        newAgents.push('Customer Success');
+      }
+      setAiAgents(newAgents);
+
+      setStep(2); await syncStateToBackend({ step: 2, aiAgents: newAgents }); // Go to review step
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -452,7 +468,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -517,7 +533,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -583,7 +599,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -945,29 +961,20 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
-                  <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
-                       return (
-                         <div
-                           key={agent}
-                           onClick={() => {
-                             if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
-                             } else {
-                               setAiAgents([...aiAgents, agent]);
-                             }
-                           }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white'}`}
-                         >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
-                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                           </div>
-                         </div>
-                       );
-                    })}
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Auto-Configured AI Departments</label>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
+                    Here are the AI departments we've configured for you.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {aiAgents.map(agent => (
+                      <div
+                        key={agent}
+                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        {agent}
+                      </div>
+                    ))}
                   </div>
                 </div>
 

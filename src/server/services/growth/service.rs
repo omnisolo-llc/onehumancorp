@@ -615,8 +615,10 @@ impl GrowthService for MyGrowthService {
 
     async fn get_onboarding_metrics(
         &self,
-        _request: Request<EmptyRequest>,
+        request: Request<GetOnboardingMetricsRequest>,
     ) -> Result<Response<OnboardingMetricsResponse>, Status> {
+        let req = request.into_inner();
+        let mobile_optimized = req.mobile_optimized;
         let funnels = self.onboarding_funnels.read().unwrap();
         let mut counts = HashMap::new();
         for f in funnels.iter() {
@@ -625,7 +627,18 @@ impl GrowthService for MyGrowthService {
         
         let mut metrics = Vec::new();
         for (step, count) in counts {
-            metrics.push(OnboardingMetric { step, count });
+            let optimized_step = if mobile_optimized {
+                let char_count = step.chars().count();
+                if char_count > 10 {
+                    let truncated: String = step.chars().take(10).collect();
+                    format!("{}...", truncated)
+                } else {
+                    step
+                }
+            } else {
+                step
+            };
+            metrics.push(OnboardingMetric { step: optimized_step, count });
         }
         
         Ok(Response::new(OnboardingMetricsResponse { metrics }))
@@ -637,8 +650,9 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<QuotaMetrics>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
+        let mobile_optimized = req.mobile_optimized;
 
-        let cache_key = format!("quota_{}_{}", org_id, req.user_id);
+        let cache_key = format!("quota_{}_{}_{}", org_id, req.user_id, mobile_optimized);
 
         if let Some(cached_response) = self.quota_cache.get(&cache_key).await {
             return Ok(Response::new(cached_response));
@@ -694,7 +708,9 @@ impl GrowthService for MyGrowthService {
         let tier = tier_res;
         let product_limit = tier.max_products().map(|limit| limit as i32).unwrap_or(0);
         let soft_limit_reached = tier.max_products().map(|limit| product_count >= limit as i64).unwrap_or(false);
-        let upgrade_message = if soft_limit_reached {
+        let upgrade_message = if mobile_optimized {
+            String::new()
+        } else if soft_limit_reached {
             format!(
                 "You've reached your {} tier limit of {} products. Upgrade your plan to add more products.",
                 match tier {
@@ -839,12 +855,12 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
 
-        let mut req1 = Request::new(GetQuotaRequest { user_id: "user1".to_string() });
+        let mut req1 = Request::new(GetQuotaRequest { user_id: "user1".to_string(), mobile_optimized: false });
         req1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
         let res1 = service.get_quota(req1).await;
         assert!(res1.is_ok(), "First quota request should succeed and cache the result");
 
-        let mut req2 = Request::new(GetQuotaRequest { user_id: "user1".to_string() });
+        let mut req2 = Request::new(GetQuotaRequest { user_id: "user1".to_string(), mobile_optimized: false });
         req2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
         let res2 = service.get_quota(req2).await;
         assert!(res2.is_ok(), "Second quota request should succeed by returning cached value");
@@ -908,6 +924,7 @@ mod tests {
 
         let req = GetQuotaRequest {
             user_id: "".to_string(),
+            mobile_optimized: false,
         };
 
         let mut request = Request::new(req);
@@ -924,5 +941,80 @@ mod tests {
 
         // Assert that the optimization keeps latency under an acceptable threshold (e.g. 500ms)
         assert!(elapsed.as_millis() < 500, "get_quota fetch took too long: {}ms", elapsed.as_millis());
+    }
+
+    #[tokio::test]
+    async fn test_get_quota_mobile_payload_optimization() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+
+        let service = MyGrowthService::new(pool.clone(), hub);
+
+        let req = GetQuotaRequest {
+            user_id: "".to_string(),
+            mobile_optimized: true,
+        };
+
+        let mut request = Request::new(req);
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = service.get_quota(request).await.unwrap().into_inner();
+
+        // When mobile optimized, upgrade_message should be empty
+        assert_eq!(res.upgrade_message, "", "Mobile payload should omit the upgrade message");
+    }
+
+    #[tokio::test]
+    async fn test_get_onboarding_metrics_mobile_payload_optimization() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+
+        let service = MyGrowthService::new(pool.clone(), hub);
+
+        {
+            let mut funnels = service.onboarding_funnels.write().unwrap();
+            funnels.push(OnboardingFunnel {
+                id: "test_1".to_string(),
+                user_id: "user_1".to_string(),
+                step: "very_long_step_name_that_should_be_truncated".to_string(),
+                created_at_unix: 0,
+            });
+        }
+
+        let req = GetOnboardingMetricsRequest {
+            mobile_optimized: true,
+        };
+
+        let mut request = Request::new(req);
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = service.get_onboarding_metrics(request).await.unwrap().into_inner();
+
+        assert!(!res.metrics.is_empty(), "Metrics should not be empty");
+        for metric in res.metrics {
+            assert!(metric.step.len() <= 13, "Mobile payload should truncate step name. Found length: {}", metric.step.len());
+        }
     }
 }
