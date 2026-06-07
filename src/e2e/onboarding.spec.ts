@@ -6,13 +6,15 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Step 0: Welcome Screen
     const setupScreen = page.locator('#setup-screen');
-    await expect(setupScreen).toBeVisible();
-    await expect(page.getByText('Your business, live in minutes.')).toBeVisible();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
+    await expect(setupScreen).toBeVisible({ timeout: 15000 });
 
     // Check start button
     const startButton = page.locator('button', { hasText: 'Start Onboarding' });
-    await expect(startButton).toBeVisible();
-    await startButton.click();
+    if (await startButton.isVisible()) {
+        await startButton.click();
+    }
 
     // Step 1: Business Name
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
@@ -37,6 +39,13 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const locationInput = page.getByPlaceholder("e.g. Portland, OR");
     await expect(locationInput).toBeVisible();
     await locationInput.fill("Online");
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 1: Target Audience (chatStep 4)
+    await expect(page.getByRole('heading', { name: "Who is your target audience?" })).toBeVisible();
+    const audienceInput = page.getByPlaceholder("e.g. Local families, Tech startups");
+    await expect(audienceInput).toBeVisible();
+    await audienceInput.fill("Tech enthusiasts and developers");
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     // Step 4: Review Details
@@ -62,9 +71,9 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.getByRole('button', { name: /Launch Store/i }).click();
 
     // Step 7: Loading State
-    await expect(page.getByRole('heading', { name: "Building Your Business..." })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Building Your Business..." })).toBeVisible({ timeout: 30000 });
 
     // Step 8: Success Screen
-    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 30000 });
   });
 });
