@@ -645,27 +645,32 @@ pub async fn bench_advisory_insights_latency() {
     bench_get_analytics().await;
 }
 
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
     #[tokio::test]
-async fn test_hybrid_cache_hit_rate() {
-    let redis_client = None;
-    let cache = ::server_utils::cache::HybridCache::<String>::with_capacity(redis_client, 1000);
+    async fn test_hybrid_cache_hit_rate() {
+        let redis_client = None;
+        let cache = ::server_utils::cache::HybridCache::<String>::with_capacity(redis_client, 1000);
 
-    let mut hits = 0;
-    let mut misses = 0;
+        let mut hits = 0;
+        let mut misses = 0;
 
-    for i in 0..100 {
-        if cache.get(&format!("key_{}", i)).await.is_none() {
-            misses += 1;
-            cache.set(&format!("key_{}", i), "value".to_string(), std::time::Duration::from_secs(60)).await;
+        for i in 0..100 {
+            if cache.get(&format!("key_{}", i)).await.is_none() {
+                misses += 1;
+                cache.set(&format!("key_{}", i), "value".to_string(), std::time::Duration::from_secs(60)).await;
+            }
         }
-    }
 
-    for i in 0..100 {
-        if cache.get(&format!("key_{}", i)).await.is_some() {
-            hits += 1;
+        for i in 0..100 {
+            if cache.get(&format!("key_{}", i)).await.is_some() {
+                hits += 1;
+            }
         }
-    }
 
-    let hit_rate = hits as f64 / (hits + misses) as f64;
-    println!("HybridCache Hit Rate: {:.2}%", hit_rate * 100.0);
+        let hit_rate = hits as f64 / (hits + misses) as f64;
+        println!("HybridCache Hit Rate: {:.2}%", hit_rate * 100.0);
+    }
 }

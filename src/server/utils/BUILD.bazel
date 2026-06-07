@@ -34,6 +34,7 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:tracing",
+        "@crates//:dashmap",
     ],
 )
 
