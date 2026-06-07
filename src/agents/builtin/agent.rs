@@ -3155,7 +3155,7 @@ impl Agent {
 mod tests {
     #[tokio::test]
     async fn test_llm_recoverable_tool_messages_agent_loop() {
-
+        use crate::tools::ToolExecutor;
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLlmRecoverable {
@@ -3257,7 +3257,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_to_end_pydantic_self_correction_loop() {
 
-        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role};
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role, };
         use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
@@ -4817,7 +4817,7 @@ mod tests {
 
 
     use ohc_builtin_agent_core::types::{ChatRequest};
-
+    use crate::tools::ToolExecutor;
     use serde_json::Value;
 
     struct MockLlmClient {
@@ -6868,7 +6868,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
-
+        use crate::tools::ToolExecutor;
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
 
         struct MockCheckpointerRewind {
@@ -7084,7 +7084,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
-
+        use crate::tools::ToolExecutor;
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {

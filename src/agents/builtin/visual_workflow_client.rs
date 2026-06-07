@@ -68,6 +68,7 @@ pub fn create_router(state: Arc<VisualWorkflowState>) -> Router {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::llm::LlmClient;
     use axum::{
         body::Body,
         http::{Request, StatusCode},
