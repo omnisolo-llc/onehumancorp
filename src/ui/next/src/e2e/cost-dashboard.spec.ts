@@ -27,6 +27,10 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('span', { hasText: 'Storage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();
 
+    // Check that Department Tier Usage is present
+    await expect(page.locator('h2', { hasText: 'Department Tier Usage' })).toBeVisible();
+    await expect(page.locator('#department-tier-usage-list, #department-tier-usage-empty')).toBeVisible();
+
     // Check navigation works
     await page.locator('button', { hasText: 'Back to My Plan' }).click();
     await expect(page).toHaveURL('/plan');

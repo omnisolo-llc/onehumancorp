@@ -71,5 +71,8 @@ export function currentAppSmoke(label: string) {
     const networkCost = page.locator('#cost-dashboard-network');
     await expect(networkCost).toBeVisible();
     expect(await networkCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
+
+    await expect(page.locator('h2', { hasText: 'Department Tier Usage' })).toBeVisible();
+    await expect(page.locator('#department-tier-usage-list, #department-tier-usage-empty')).toBeVisible();
   });
 }
