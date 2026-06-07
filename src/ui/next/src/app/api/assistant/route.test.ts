@@ -10,6 +10,14 @@ import { GET as getData, PATCH as patchData } from './data/route';
 import { POST as postArtifact } from './artifacts/route';
 import { GET as getPermissions, PATCH as patchPermissions } from './permissions/route';
 import { POST as postFileOperation } from './files/route';
+import { GET as getModels, PATCH as patchModels } from './models/route';
+import { GET as getMcp, PATCH as patchMcp, POST as postMcp } from './mcp/route';
+import { GET as getExperts, PATCH as patchExperts, POST as postExperts } from './experts/route';
+import { GET as getCommands, POST as postCommand } from './commands/route';
+import { GET as getWorkspaces, PATCH as patchWorkspaces } from './workspaces/route';
+import { GET as getShares, POST as postShare } from './share/route';
+import { GET as getUploads, POST as postUpload } from './uploads/route';
+import { GET as getPreviews, PATCH as patchPreviews } from './previews/route';
 import { resetAssistantStore } from './store';
 
 function jsonRequest(url: string, body: unknown) {
@@ -411,5 +419,235 @@ describe('assistant API contract', () => {
         expect.stringContaining('Write converted files'),
       ]),
     );
+  });
+
+  test('manages custom model UI settings and runtime detection', async () => {
+    let body = await (await getModels()).json();
+    expect(body.runtime).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Node.js', status: 'detected' }),
+      expect.objectContaining({ name: 'Python', status: 'needs_setup' }),
+    ]));
+    expect(body.models).toEqual(expect.arrayContaining([
+      expect.objectContaining({ provider: 'Auto', enabled: true }),
+      expect.objectContaining({ provider: 'Local Ollama' }),
+    ]));
+
+    body = await (await patchModels(patchRequest('http://localhost/api/assistant/models', {
+      action: 'upsert',
+      provider: 'Custom OpenAI Compatible',
+      modelId: 'jarvis-custom',
+      endpoint: 'https://models.example.test/v1',
+      headers: { 'X-Team': 'ops' },
+      parameters: { temperature: 0.2, reasoningEffort: 'medium' },
+      skipChatCompletions: true,
+    }))).json();
+    expect(body.models).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        provider: 'Custom OpenAI Compatible',
+        modelId: 'jarvis-custom',
+        endpoint: 'https://models.example.test/v1',
+        skipChatCompletions: true,
+      }),
+    ]));
+  });
+
+  test('manages MCP connectors, trust, oauth, resources, and tool progress', async () => {
+    let body = await (await getMcp()).json();
+    expect(body.servers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'MCP Endpoint', trusted: false }),
+    ]));
+
+    body = await (await postMcp(jsonRequest('http://localhost/api/assistant/mcp', {
+      name: 'Linear MCP',
+      url: 'https://mcp.example.test/sse',
+      headers: { Authorization: 'Bearer token' },
+      oauth: true,
+    }))).json();
+    expect(body.server).toMatchObject({
+      name: 'Linear MCP',
+      status: 'needs_trust',
+      trusted: false,
+      oauth: true,
+    });
+    expect(body.server.features).toEqual(expect.arrayContaining(['Static Headers', 'Tool Progress']));
+
+    body = await (await patchMcp(patchRequest('http://localhost/api/assistant/mcp', {
+      action: 'trust',
+      id: body.server.id,
+    }))).json();
+    expect(body.servers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Linear MCP', trusted: true, status: 'connected' }),
+    ]));
+
+    body = await (await patchMcp(patchRequest('http://localhost/api/assistant/mcp', {
+      action: 'try_tool',
+      name: 'Linear MCP',
+      tool: 'search_issues',
+    }))).json();
+    expect(body.progress).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stage: 'queued' }),
+      expect.objectContaining({ stage: 'completed', tool: 'search_issues' }),
+    ]));
+    expect(body.resources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ uri: 'mcp://linear-mcp/resources/search_issues' }),
+    ]));
+  });
+
+  test('supports Expert Center search ranking custom experts and summon prompts', async () => {
+    let body = await (await getExperts()).json();
+    expect(body.experts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Research Strategist', ranking: 1, visibility: 'public' }),
+    ]));
+    expect(body.recommendedPrompts).toEqual(expect.arrayContaining([
+      expect.stringContaining('Research Strategist'),
+    ]));
+
+    body = await (await postExperts(jsonRequest('http://localhost/api/assistant/experts', {
+      name: 'Sales Ops Analyst',
+      domain: 'Revenue',
+      description: 'Pipeline hygiene and forecast inspection.',
+      visibility: 'private',
+    }))).json();
+    expect(body.expert).toMatchObject({
+      name: 'Sales Ops Analyst',
+      domain: 'Revenue',
+      visibility: 'private',
+    });
+
+    body = await (await patchExperts(patchRequest('http://localhost/api/assistant/experts', {
+      action: 'summon',
+      id: body.expert.id,
+      taskId: 'task-weekly-brief',
+    }))).json();
+    expect(body.task.messages.at(-1)).toMatchObject({
+      role: 'assistant',
+      content: expect.stringContaining('Sales Ops Analyst'),
+    });
+  });
+
+  test('runs default slash commands against task context', async () => {
+    let body = await (await getCommands()).json();
+    expect(body.commands).toEqual(expect.arrayContaining([
+      expect.objectContaining({ command: '/skill' }),
+      expect.objectContaining({ command: '/compact' }),
+      expect.objectContaining({ command: '/summarize' }),
+      expect.objectContaining({ command: '/clear' }),
+    ]));
+
+    body = await (await postCommand(jsonRequest('http://localhost/api/assistant/commands', {
+      command: '/summarize',
+      taskId: 'task-weekly-brief',
+    }))).json();
+    expect(body.result).toMatchObject({
+      command: '/summarize',
+      status: 'completed',
+    });
+    expect(body.task.messages.at(-1).content).toContain('Summary');
+
+    body = await (await postCommand(jsonRequest('http://localhost/api/assistant/commands', {
+      command: '/clear',
+      taskId: 'task-weekly-brief',
+    }))).json();
+    expect(body.task.messages).toHaveLength(1);
+    expect(body.task.messages[0].content).toContain('Context cleared');
+  });
+
+  test('manages workspaces collapse pin archive filter sort and hard delete', async () => {
+    let body = await (await getWorkspaces()).json();
+    expect(body.workspaces).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Personal OS', memoryFile: 'MEMORY.md' }),
+    ]));
+
+    body = await (await patchWorkspaces(patchRequest('http://localhost/api/assistant/workspaces', {
+      action: 'collapse_all',
+    }))).json();
+    expect(body.workspaces.every((workspace: any) => workspace.collapsed)).toBe(true);
+
+    body = await (await patchWorkspaces(patchRequest('http://localhost/api/assistant/workspaces', {
+      action: 'pin',
+      name: 'Files',
+    }))).json();
+    expect(body.workspaces).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Files', pinned: true }),
+    ]));
+
+    body = await (await patchWorkspaces(patchRequest('http://localhost/api/assistant/workspaces', {
+      action: 'hard_delete',
+      name: 'Files',
+      confirm: 'DELETE',
+    }))).json();
+    expect(body.workspaces.some((workspace: any) => workspace.name === 'Files')).toBe(false);
+    expect(body.deleted).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Files' }),
+    ]));
+  });
+
+  test('shares artifacts with online previews and channel audit state', async () => {
+    let body = await (await getShares()).json();
+    expect(body.shares).toEqual([]);
+
+    body = await (await postShare(jsonRequest('http://localhost/api/assistant/share', {
+      taskId: 'task-weekly-brief',
+      artifactId: 'artifact-weekly-brief',
+      target: 'WeChat',
+    }))).json();
+    expect(body.share).toMatchObject({
+      taskId: 'task-weekly-brief',
+      artifactId: 'artifact-weekly-brief',
+      target: 'WeChat',
+      status: 'pending_review',
+    });
+    expect(body.share.previewUrl).toContain('/assistant/preview/');
+    expect(body.share.audit).toEqual(expect.arrayContaining([
+      expect.stringContaining('sharing review'),
+    ]));
+  });
+
+  test('tracks remote uploaded files and attaches them to follow-up tasks', async () => {
+    let body = await (await postUpload(jsonRequest('http://localhost/api/assistant/uploads', {
+      platform: 'WeChat ClawBot',
+      userId: 'wechat-user',
+      filename: 'receipt.png',
+      mimeType: 'image/png',
+      sizeBytes: 4567,
+      previewText: 'receipt image',
+    }))).json();
+    expect(body.upload).toMatchObject({
+      platform: 'WeChat ClawBot',
+      filename: 'receipt.png',
+      status: 'available',
+    });
+
+    const uploads = await (await getUploads()).json();
+    expect(uploads.uploads).toEqual(expect.arrayContaining([
+      expect.objectContaining({ filename: 'receipt.png', previewUrl: expect.stringContaining('/assistant/uploads/') }),
+    ]));
+
+    const remote = await (await postRemote(jsonRequest('http://localhost/api/assistant/remote', {
+      platform: 'WeChat ClawBot',
+      userId: 'wechat-user',
+      threadId: 'wechat-thread',
+      message: 'Extract totals from the uploaded receipt',
+      uploadIds: [body.upload.id],
+    }))).json();
+    expect(remote.task.attachments).toEqual(expect.arrayContaining(['receipt.png']));
+  });
+
+  test('refreshes artifact previews and supports fullscreen external open state', async () => {
+    let body = await (await getPreviews()).json();
+    expect(body.previews).toEqual(expect.arrayContaining([
+      expect.objectContaining({ artifactId: 'artifact-weekly-brief', autoRefresh: true }),
+    ]));
+
+    body = await (await patchPreviews(patchRequest('http://localhost/api/assistant/previews', {
+      action: 'open_external',
+      artifactId: 'artifact-weekly-brief',
+    }))).json();
+    expect(body.preview).toMatchObject({
+      artifactId: 'artifact-weekly-brief',
+      displayMode: 'external',
+      autoRefresh: true,
+    });
+    expect(body.preview.renderedAt).toEqual(expect.any(String));
   });
 });

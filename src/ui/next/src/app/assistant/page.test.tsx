@@ -100,6 +100,30 @@ beforeEach(() => {
         },
       }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
+    if (urlString.includes('/api/assistant/share')) {
+      return new Response(JSON.stringify({ share: { id: 'share-1', target: 'WeChat', status: 'pending_review' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/previews')) {
+      return new Response(JSON.stringify({ preview: { artifactId: 'artifact-weekly', displayMode: 'external' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/uploads')) {
+      return new Response(JSON.stringify({ upload: { id: 'upload-1', filename: 'remote-upload.png', status: 'available' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/experts')) {
+      return new Response(JSON.stringify({ task: { id: 'task-weekly-brief' } }), { status: 202, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/mcp')) {
+      return new Response(JSON.stringify({ progress: [{ stage: 'completed', tool: 'search_issues' }] }), { status: 202, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/workspaces')) {
+      return new Response(JSON.stringify({ workspaces: [{ name: 'Personal OS', collapsed: true }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/commands')) {
+      return new Response(JSON.stringify({ result: { command: '/summarize', status: 'completed' } }), { status: 202, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (urlString.includes('/api/assistant/models')) {
+      return new Response(JSON.stringify({ models: [{ provider: 'Custom OpenAI Compatible' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     if (urlString.includes('/api/assistant/tasks')) {
       return new Response(JSON.stringify(tasksPayload), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
@@ -265,4 +289,48 @@ test('supports WorkBuddy-style mode and artifact options including Coding and Co
   expect(screen.getByDisplayValue('Code App')).toBeDefined();
   expect(screen.getByText('Open Preview')).toBeDefined();
   expect(screen.getByText('Run Locally')).toBeDefined();
+});
+
+test('backs parity controls with assistant API actions', async () => {
+  render(<AssistantPage />);
+
+  await screen.findByRole('heading', { name: 'Jarvis Assistant' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Share to WeChat' }));
+  await waitFor(() => {
+    expect(global.fetch).toHaveBeenCalledWith('/api/assistant/share', expect.objectContaining({ method: 'POST' }));
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open External Preview' }));
+  await waitFor(() => {
+    expect(global.fetch).toHaveBeenCalledWith('/api/assistant/previews', expect.objectContaining({ method: 'PATCH' }));
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remote Control' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Upload Remote File' }));
+  await waitFor(() => {
+    expect(global.fetch).toHaveBeenCalledWith('/api/assistant/uploads', expect.objectContaining({ method: 'POST' }));
+  });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Skills' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Summon Expert' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Run /summarize' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Connectors' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Try MCP Tool' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Data Management' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Collapse All Workspaces' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Models & Runtime' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save Custom Model' }));
+
+  await waitFor(() => {
+    expect(screen.getByText('Custom model saved')).toBeDefined();
+  });
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/experts', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/commands', expect.objectContaining({ method: 'POST' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/mcp', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/workspaces', expect.objectContaining({ method: 'PATCH' }));
+  expect(global.fetch).toHaveBeenCalledWith('/api/assistant/models', expect.objectContaining({ method: 'PATCH' }));
 });

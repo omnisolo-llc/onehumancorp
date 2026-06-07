@@ -111,6 +111,86 @@ export type SharedFileRecord = {
   access: 'shared' | 'queued_for_unshare';
 };
 
+export type ModelRecord = {
+  id: string;
+  provider: string;
+  modelId: string;
+  endpoint: string;
+  enabled: boolean;
+  headers: Record<string, string>;
+  parameters: Record<string, string | number | boolean>;
+  skipChatCompletions: boolean;
+};
+
+export type RuntimeRecord = {
+  name: 'Node.js' | 'Python';
+  status: 'detected' | 'needs_setup';
+  installAction: string;
+};
+
+export type McpServerRecord = {
+  id: string;
+  name: string;
+  url: string;
+  status: 'connected' | 'needs_trust' | 'disabled';
+  trusted: boolean;
+  oauth: boolean;
+  headers: Record<string, string>;
+  features: string[];
+  tools: { name: string; enabled: boolean }[];
+};
+
+export type ExpertRecord = {
+  id: string;
+  name: string;
+  domain: string;
+  description: string;
+  ranking: number;
+  visibility: 'public' | 'private' | 'internal';
+};
+
+export type WorkspaceRecord = {
+  id: string;
+  name: string;
+  collapsed: boolean;
+  pinned: boolean;
+  archived: boolean;
+  sortOrder: number;
+  memoryFile: 'MEMORY.md';
+};
+
+export type ShareRecord = {
+  id: string;
+  taskId: string;
+  artifactId: string;
+  target: string;
+  status: 'pending_review' | 'shared';
+  previewUrl: string;
+  audit: string[];
+};
+
+export type UploadRecord = {
+  id: string;
+  platform: string;
+  userId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  previewText: string;
+  status: 'available' | 'attached';
+  previewUrl: string;
+};
+
+export type PreviewRecord = {
+  id: string;
+  taskId: string;
+  artifactId: string;
+  filename: string;
+  autoRefresh: boolean;
+  displayMode: 'inline' | 'fullscreen' | 'external';
+  renderedAt: string;
+};
+
 export const assistantCapabilities = {
   resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
   remotePlatforms: [
@@ -175,6 +255,16 @@ let connectors: ConnectorRecord[] = [];
 let sharedFiles: SharedFileRecord[] = [];
 let unshareQueue: SharedFileRecord[] = [];
 let authorizedFolders: string[] = [];
+let models: ModelRecord[] = [];
+let runtimes: RuntimeRecord[] = [];
+let mcpServers: McpServerRecord[] = [];
+let mcpProgress: { id: string; serverId: string; tool: string; stage: 'queued' | 'running' | 'completed'; message: string }[] = [];
+let experts: ExpertRecord[] = [];
+let workspaces: WorkspaceRecord[] = [];
+let deletedWorkspaces: WorkspaceRecord[] = [];
+let shares: ShareRecord[] = [];
+let uploads: UploadRecord[] = [];
+let previews: PreviewRecord[] = [];
 
 function now() {
   return new Date().toISOString();
@@ -182,6 +272,10 @@ function now() {
 
 function id(prefix: string) {
   return `${prefix}-${randomUUID()}`;
+}
+
+function slug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item';
 }
 
 function normalizeAttachments(raw: CreateTaskPayload['attachments']): string[] {
@@ -459,16 +553,24 @@ export function createRemoteTask(payload: {
   threadId?: string;
   message?: string;
   attachments?: string[];
+  uploadIds?: string[];
 }) {
   if (!payload.message?.trim()) {
     throw new Error('message is required');
   }
+  const uploadedAttachments = (payload.uploadIds || [])
+    .map((uploadId) => uploads.find((upload) => upload.id === uploadId))
+    .filter((upload): upload is UploadRecord => Boolean(upload))
+    .map((upload) => {
+      upload.status = 'attached';
+      return upload.filename;
+    });
   const task = createAssistantTask({
     prompt: payload.message,
     workspace: 'Remote Control',
     mode: 'Plan',
     outputFormat: 'Document',
-    attachments: payload.attachments || [],
+    attachments: [...(payload.attachments || []), ...uploadedAttachments],
     connectors: [payload.platform || 'Remote'],
     permissionProfile: 'Guarded',
   });
@@ -712,6 +814,324 @@ export function planFileOperation(payload: {
   };
 }
 
+export function getModelSettings() {
+  return { models, runtime: runtimes };
+}
+
+export function mutateModelSettings(payload: {
+  action?: 'upsert' | 'disable' | 'delete';
+  provider?: string;
+  modelId?: string;
+  endpoint?: string;
+  headers?: Record<string, string>;
+  parameters?: Record<string, string | number | boolean>;
+  skipChatCompletions?: boolean;
+}) {
+  if (!payload.provider?.trim()) throw new Error('provider is required');
+  const provider = payload.provider.trim();
+  if (payload.action === 'upsert') {
+    const existing = models.find((model) => model.provider === provider && model.modelId === (payload.modelId || provider));
+    const nextModel: ModelRecord = {
+      id: existing?.id || id('model'),
+      provider,
+      modelId: payload.modelId || provider,
+      endpoint: payload.endpoint || existing?.endpoint || '',
+      enabled: true,
+      headers: payload.headers || existing?.headers || {},
+      parameters: payload.parameters || existing?.parameters || {},
+      skipChatCompletions: Boolean(payload.skipChatCompletions ?? existing?.skipChatCompletions),
+    };
+    if (existing) {
+      Object.assign(existing, nextModel);
+    } else {
+      models.unshift(nextModel);
+    }
+  } else if (payload.action === 'disable') {
+    const existing = models.find((model) => model.provider === provider);
+    if (!existing) throw new Error('model not found');
+    existing.enabled = false;
+  } else if (payload.action === 'delete') {
+    models = models.filter((model) => model.provider !== provider);
+  } else {
+    throw new Error('unsupported model action');
+  }
+  return getModelSettings();
+}
+
+export function listMcpServers() {
+  return {
+    servers: mcpServers,
+    progress: mcpProgress,
+    resources: mcpServers.flatMap((server) =>
+      server.tools.map((tool) => ({ uri: `mcp://${slug(server.name)}/resources/${tool.name}`, serverId: server.id, name: tool.name })),
+    ),
+  };
+}
+
+export function createMcpServer(payload: {
+  name?: string;
+  url?: string;
+  headers?: Record<string, string>;
+  oauth?: boolean;
+}) {
+  if (!payload.name?.trim()) throw new Error('name is required');
+  if (!payload.url?.trim()) throw new Error('url is required');
+  const server: McpServerRecord = {
+    id: id('mcp'),
+    name: payload.name.trim(),
+    url: payload.url.trim(),
+    status: 'needs_trust',
+    trusted: false,
+    oauth: Boolean(payload.oauth),
+    headers: payload.headers || {},
+    features: [...assistantCapabilities.mcpFeatures],
+    tools: [
+      { name: 'search_issues', enabled: true },
+      { name: 'read_resource', enabled: true },
+    ],
+  };
+  mcpServers.unshift(server);
+  return server;
+}
+
+export function mutateMcpServer(payload: {
+  action?: 'trust' | 'disable_tool' | 'try_tool' | 'disconnect';
+  id?: string;
+  name?: string;
+  tool?: string;
+}) {
+  const server = mcpServers.find((item) => item.id === payload.id || item.name === payload.name);
+  if (!server) throw new Error('mcp server not found');
+  if (payload.action === 'trust') {
+    server.trusted = true;
+    server.status = 'connected';
+  } else if (payload.action === 'disable_tool') {
+    const tool = server.tools.find((item) => item.name === payload.tool);
+    if (!tool) throw new Error('tool not found');
+    tool.enabled = false;
+  } else if (payload.action === 'disconnect') {
+    server.status = 'disabled';
+  } else if (payload.action === 'try_tool') {
+    const toolName = payload.tool || server.tools[0]?.name || 'tool';
+    mcpProgress = [
+      { id: id('mcpprogress'), serverId: server.id, tool: toolName, stage: 'queued', message: 'Tool call queued.' },
+      { id: id('mcpprogress'), serverId: server.id, tool: toolName, stage: 'running', message: 'Tool call running.' },
+      { id: id('mcpprogress'), serverId: server.id, tool: toolName, stage: 'completed', message: 'Tool call completed.' },
+    ];
+  } else {
+    throw new Error('unsupported mcp action');
+  }
+  return listMcpServers();
+}
+
+export function listExperts() {
+  return {
+    experts: [...experts].sort((left, right) => left.ranking - right.ranking),
+    recommendedPrompts: experts.slice(0, 3).map((expert) => `Ask ${expert.name} to review this task.`),
+  };
+}
+
+export function createExpert(payload: {
+  name?: string;
+  domain?: string;
+  description?: string;
+  visibility?: ExpertRecord['visibility'];
+}) {
+  if (!payload.name?.trim()) throw new Error('expert name is required');
+  const expert: ExpertRecord = {
+    id: id('expert'),
+    name: payload.name.trim(),
+    domain: payload.domain || 'General',
+    description: payload.description || 'Custom Jarvis expert.',
+    ranking: experts.length + 1,
+    visibility: payload.visibility || 'private',
+  };
+  experts.push(expert);
+  return expert;
+}
+
+export function mutateExpert(payload: {
+  action?: 'summon' | 'visibility';
+  id?: string;
+  taskId?: string;
+  visibility?: ExpertRecord['visibility'];
+}) {
+  const expert = experts.find((item) => item.id === payload.id);
+  if (!expert) throw new Error('expert not found');
+  if (payload.action === 'summon') {
+    const task = tasks.find((item) => item.id === payload.taskId);
+    if (!task) throw new Error('task not found');
+    task.messages.push({
+      id: id('msg'),
+      role: 'assistant',
+      content: `${expert.name} joined the task with ${expert.domain} guidance.`,
+      createdAt: now(),
+    });
+    return { expert, task, experts: listExperts().experts };
+  }
+  if (payload.action === 'visibility') {
+    expert.visibility = payload.visibility || expert.visibility;
+    return { expert, experts: listExperts().experts };
+  }
+  throw new Error('unsupported expert action');
+}
+
+export function listCommands() {
+  return {
+    commands: [
+      { command: '/skill', description: 'Open the skill list and select a skill.' },
+      { command: '/compact', description: 'Compress long context while preserving key decisions.' },
+      { command: '/summarize', description: 'Summarize the current task.' },
+      { command: '/clear', description: 'Clear task context after confirmation.' },
+    ],
+  };
+}
+
+export function runCommand(payload: {
+  command?: string;
+  taskId?: string;
+}) {
+  const command = payload.command?.trim();
+  if (!command) throw new Error('command is required');
+  const task = tasks.find((item) => item.id === payload.taskId);
+  if (!task) throw new Error('task not found');
+  if (command === '/clear') {
+    task.messages = [{ id: id('msg'), role: 'assistant', content: 'Context cleared for this task.', createdAt: now() }];
+  } else if (command === '/summarize') {
+    task.messages.push({ id: id('msg'), role: 'assistant', content: `Summary: ${task.title} is ${task.status} at "${task.currentStep}".`, createdAt: now() });
+  } else if (command === '/compact') {
+    task.messages.push({ id: id('msg'), role: 'assistant', content: 'Context compacted while preserving decisions, files, and approvals.', createdAt: now() });
+  } else if (command === '/skill') {
+    task.messages.push({ id: id('msg'), role: 'assistant', content: `Skill list opened with ${skills.length} available skills.`, createdAt: now() });
+  } else {
+    throw new Error('unsupported command');
+  }
+  task.updatedAt = now();
+  return { result: { command, status: 'completed' }, task };
+}
+
+export function listWorkspaces() {
+  return { workspaces: [...workspaces].sort((left, right) => Number(right.pinned) - Number(left.pinned) || left.sortOrder - right.sortOrder), deleted: deletedWorkspaces };
+}
+
+export function mutateWorkspace(payload: {
+  action?: 'collapse_all' | 'expand_all' | 'pin' | 'archive' | 'hard_delete' | 'sort';
+  name?: string;
+  confirm?: string;
+  order?: string[];
+}) {
+  if (payload.action === 'collapse_all') {
+    workspaces.forEach((workspace) => { workspace.collapsed = true; });
+  } else if (payload.action === 'expand_all') {
+    workspaces.forEach((workspace) => { workspace.collapsed = false; });
+  } else if (payload.action === 'pin') {
+    const workspace = workspaces.find((item) => item.name === payload.name);
+    if (!workspace) throw new Error('workspace not found');
+    workspace.pinned = true;
+  } else if (payload.action === 'archive') {
+    const workspace = workspaces.find((item) => item.name === payload.name);
+    if (!workspace) throw new Error('workspace not found');
+    workspace.archived = true;
+  } else if (payload.action === 'hard_delete') {
+    if (payload.confirm !== 'DELETE') throw new Error('hard delete requires confirmation');
+    const workspace = workspaces.find((item) => item.name === payload.name);
+    if (!workspace) throw new Error('workspace not found');
+    deletedWorkspaces.unshift(workspace);
+    workspaces = workspaces.filter((item) => item.id !== workspace.id);
+    tasks = tasks.filter((task) => task.workspace !== workspace.name);
+  } else if (payload.action === 'sort') {
+    (payload.order || []).forEach((name, index) => {
+      const workspace = workspaces.find((item) => item.name === name);
+      if (workspace) workspace.sortOrder = index;
+    });
+  } else {
+    throw new Error('unsupported workspace action');
+  }
+  return listWorkspaces();
+}
+
+export function listShares() {
+  return { shares };
+}
+
+export function createShare(payload: {
+  taskId?: string;
+  artifactId?: string;
+  target?: string;
+}) {
+  const task = tasks.find((item) => item.id === payload.taskId);
+  if (!task) throw new Error('task not found');
+  const artifact = task.artifacts.find((item) => item.id === payload.artifactId);
+  if (!artifact) throw new Error('artifact not found');
+  const target = payload.target || 'Share Link';
+  const share: ShareRecord = {
+    id: id('share'),
+    taskId: task.id,
+    artifactId: artifact.id,
+    target,
+    status: target === 'Download' || target === 'Copy' ? 'shared' : 'pending_review',
+    previewUrl: `/assistant/preview/${artifact.id}`,
+    audit: [
+      `Created ${target} sharing review for ${artifact.filename}.`,
+      'External sends require guarded confirmation.',
+    ],
+  };
+  shares.unshift(share);
+  return share;
+}
+
+export function listUploads() {
+  return { uploads };
+}
+
+export function createUpload(payload: {
+  platform?: string;
+  userId?: string;
+  filename?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  previewText?: string;
+}) {
+  if (!payload.filename?.trim()) throw new Error('filename is required');
+  const upload: UploadRecord = {
+    id: id('upload'),
+    platform: payload.platform || 'Remote',
+    userId: payload.userId || 'unknown',
+    filename: payload.filename.trim(),
+    mimeType: payload.mimeType || 'application/octet-stream',
+    sizeBytes: payload.sizeBytes || 0,
+    previewText: payload.previewText || '',
+    status: 'available',
+    previewUrl: `/assistant/uploads/${slug(payload.filename)}`,
+  };
+  uploads.unshift(upload);
+  return upload;
+}
+
+export function listPreviews() {
+  return { previews };
+}
+
+export function mutatePreview(payload: {
+  action?: 'refresh' | 'fullscreen' | 'open_external';
+  artifactId?: string;
+}) {
+  const preview = previews.find((item) => item.artifactId === payload.artifactId);
+  if (!preview) throw new Error('preview not found');
+  if (payload.action === 'refresh') {
+    preview.renderedAt = now();
+  } else if (payload.action === 'fullscreen') {
+    preview.displayMode = 'fullscreen';
+    preview.renderedAt = now();
+  } else if (payload.action === 'open_external') {
+    preview.displayMode = 'external';
+    preview.renderedAt = now();
+  } else {
+    throw new Error('unsupported preview action');
+  }
+  return preview;
+}
+
 export function resetAssistantStore() {
   tasks = [
     {
@@ -850,6 +1270,104 @@ export function resetAssistantStore() {
   ];
   unshareQueue = [];
   authorizedFolders = ['/workspace/assistant', '/workspace/reports'];
+  models = [
+    {
+      id: 'model-auto',
+      provider: 'Auto',
+      modelId: 'auto',
+      endpoint: 'jarvis://auto',
+      enabled: true,
+      headers: {},
+      parameters: {},
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-openai',
+      provider: 'OpenAI',
+      modelId: 'gpt-4.1',
+      endpoint: 'https://api.openai.com/v1',
+      enabled: true,
+      headers: {},
+      parameters: { temperature: 0.3 },
+      skipChatCompletions: false,
+    },
+    {
+      id: 'model-local-ollama',
+      provider: 'Local Ollama',
+      modelId: 'llama3.1',
+      endpoint: 'http://localhost:11434',
+      enabled: false,
+      headers: {},
+      parameters: {},
+      skipChatCompletions: true,
+    },
+  ];
+  runtimes = [
+    { name: 'Node.js', status: 'detected', installAction: 'Use current runtime' },
+    { name: 'Python', status: 'needs_setup', installAction: 'Install Python tool runtime' },
+  ];
+  mcpServers = [
+    {
+      id: 'mcp-default',
+      name: 'MCP Endpoint',
+      url: 'mcp://default',
+      status: 'needs_trust',
+      trusted: false,
+      oauth: false,
+      headers: { 'User-Agent': 'Jarvis-Assistant' },
+      features: [...assistantCapabilities.mcpFeatures],
+      tools: [
+        { name: 'read_resource', enabled: true },
+        { name: 'run_tool', enabled: true },
+      ],
+    },
+  ];
+  mcpProgress = [];
+  experts = [
+    {
+      id: 'expert-research-strategist',
+      name: 'Research Strategist',
+      domain: 'Research',
+      description: 'Frames research plans, source quality, and synthesis.',
+      ranking: 1,
+      visibility: 'public',
+    },
+    {
+      id: 'expert-operations-analyst',
+      name: 'Operations Analyst',
+      domain: 'Operations',
+      description: 'Turns messy process context into operating plans.',
+      ranking: 2,
+      visibility: 'public',
+    },
+    {
+      id: 'expert-document-editor',
+      name: 'Document Editor',
+      domain: 'Writing',
+      description: 'Improves business documents and executive summaries.',
+      ranking: 3,
+      visibility: 'internal',
+    },
+  ];
+  workspaces = [
+    { id: 'workspace-personal-os', name: 'Personal OS', collapsed: false, pinned: true, archived: false, sortOrder: 0, memoryFile: 'MEMORY.md' },
+    { id: 'workspace-files', name: 'Files', collapsed: false, pinned: false, archived: false, sortOrder: 1, memoryFile: 'MEMORY.md' },
+    { id: 'workspace-remote-control', name: 'Remote Control', collapsed: false, pinned: false, archived: false, sortOrder: 2, memoryFile: 'MEMORY.md' },
+  ];
+  deletedWorkspaces = [];
+  shares = [];
+  uploads = [];
+  previews = [
+    {
+      id: 'preview-weekly-brief',
+      taskId: 'task-weekly-brief',
+      artifactId: 'artifact-weekly-brief',
+      filename: 'weekly-brief.md',
+      autoRefresh: true,
+      displayMode: 'inline',
+      renderedAt: '2026-06-07T00:01:00.000Z',
+    },
+  ];
 }
 
 resetAssistantStore();
