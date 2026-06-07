@@ -234,16 +234,24 @@ export default function OnboardingWizard() {
     adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
-  const handleIntake = async () => {
+  const handleZeroClickOnboarding = async () => {
+    if (!businessDescription.trim()) {
+      setValidationError('Please describe your business.');
+      return;
+    }
+    setValidationError('');
     setIsLoading(true);
     setError('');
+    setStep(4);
+    syncStateToBackend({ step: 4 }); // Go to loading screen
+
+
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
-
+      // 1. Intake
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
         headers: {
@@ -251,7 +259,7 @@ export default function OnboardingWizard() {
           'X-Tenant-ID': tenantId,
           'X-User-ID': userId,
         },
-        body: JSON.stringify({ description: combinedDescription })
+        body: JSON.stringify({ description: businessDescription })
       });
 
       const intakeData = await intakeRes.json();
@@ -259,59 +267,7 @@ export default function OnboardingWizard() {
         throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
       }
 
-      setBusinessType(intakeData.business_type || 'Online Store');
-      setBusinessName(intakeData.business_name || 'My Business');
-      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
-      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-      setCategories(intakeData.categories || ['physical']);
-
-      setStep(2); await syncStateToBackend({ step: 2 }); // Go to review step
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'An error occurred processing details');
-      setStep(1); syncStateToBackend({ step: 1 });
-      setChatStep(3); syncStateToBackend({ chatStep: 3 });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleStartOnboarding = async () => {
-    const errors: Record<string, string> = {};
-    if (!adminName.trim()) {
-      errors.adminName = 'Admin Name is required';
-    }
-    if (!adminEmail.trim()) {
-      errors.adminEmail = 'Admin Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
-      errors.adminEmail = 'Please enter a valid email address';
-    }
-    if (!adminPassword.trim()) {
-      errors.adminPassword = 'Password is required';
-    } else if (adminPassword.length < 8 || !/\d/.test(adminPassword)) {
-      errors.adminPassword = 'Password must be at least 8 characters and contain a number';
-    }
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors({});
-    setIsLoading(true);
-    setError('');
-    setStep(4); syncStateToBackend({ step: 4 }); // Go to loading screen
-    const safetyTimeout = setTimeout(() => {
-      // Fallback if API fails to respond in time
-      setStartResult({ message: 'Fallback: Your business has been successfully launched.' });
-      setStep(5);
-        syncStateToBackend({ step: 5 });
-      setIsLoading(false);
-    }, 3000);
-
-
-    try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
+      // 2. Start Onboarding using extracted data and defaults
       const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
         headers: {
@@ -320,45 +276,45 @@ export default function OnboardingWizard() {
           'X-User-ID': userId,
         },
         body: JSON.stringify({
-          business_type: businessType,
-          company_name: businessName,
-          company_description: businessDescription || whatYouSell,
-          selling_categories: categories,
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: businessDescription,
+          selling_categories: intakeData.categories || ['physical'],
           payment_pref: 'online',
-          admin_email: adminEmail || 'admin@ohc.app',
-          admin_name: adminName || businessName + ' Admin',
-          admin_password: adminPassword || 'password123',
-          website_template: websiteTemplate,
-          first_product_name: firstProductName,
-          first_product_price: firstProductPrice,
-          domain_choice: domainChoice || 'subdomain',
+          admin_email: 'admin@ohc.app',
+          admin_name: (intakeData.business_name || 'My Business') + ' Admin',
+          admin_password: 'password123',
+          website_template: 'Modern',
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '10.00',
+          domain_choice: 'subdomain',
           price_type: 'fixed',
-          location: location || '',
-          target_audience: targetAudience || ''
+          location: intakeData.location || '',
+          target_audience: intakeData.target_audience || ''
         })
       });
 
-      const result = await startRes.json().catch(() => ({}));
+      const startResult = await startRes.json().catch(() => ({}));
       if (!startRes.ok) {
-        clearTimeout(safetyTimeout);
-        throw new Error(result.error || result.message || 'Failed to start onboarding');
+        throw new Error(startResult.error || startResult.message || 'Failed to start onboarding');
       }
 
-      clearTimeout(safetyTimeout);
-      setStartResult(result);
-      localStorage.setItem('has_onboarded', 'true');
-      if (result.organization_id) {
-        localStorage.setItem('tenant_id', result.organization_id);
-        localStorage.setItem('tenant', result.organization_id);
+      setStartResult(startResult);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_onboarded', 'true');
+        if (startResult.organization_id) {
+          localStorage.setItem('tenant_id', startResult.organization_id);
+          localStorage.setItem('tenant', startResult.organization_id);
+        }
       }
       setStep(5);
-        syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
-
+      syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      clearTimeout(safetyTimeout);
-      setStep(3); syncStateToBackend({ step: 3 }); // Go back to last input screen on error
+      setStep(1);
+      setChatStep(1);
+      syncStateToBackend({ step: 1, chatStep: 1 });
     } finally {
       setIsLoading(false);
     }
@@ -439,191 +395,31 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 1 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in w-full max-w-lg mx-auto">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Describe your business in one sentence.</h2>
+                  <div className="flex items-center justify-between mb-6 w-full text-center">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm w-full">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
                   </div>
 
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        enterKeyHint="next"
-                        autoCapitalize="words"
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (businessName.trim().length < 3) {
-                              setValidationError('Business Name must be at least 3 characters.');
-                              return;
-                            }
-                            setValidationError('');
-                            setChatStep(2); syncStateToBackend({ chatStep: 2 });
-                          }
-                        }}
-                        placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
-                          return;
-                        }
-                        setValidationError('');
-                        setChatStep(2); syncStateToBackend({ chatStep: 2 });
-                      }}
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 2 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Tell us a bit about your products or services.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
+                  <div className="space-y-4 flex-1 w-full">
                     <div>
                       <textarea
                         autoFocus
-                        enterKeyHint="next"
-                        autoCapitalize="sentences"
-                        value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            if (!whatYouSell.trim()) {
-                              setValidationError('Please tell us what you sell.');
-                              return;
-                            }
-                            setValidationError('');
-                            setChatStep(3); syncStateToBackend({ chatStep: 3 });
-                          }
-                        }}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
+                        placeholder="e.g. I sell vegan cakes in Austin."
                         className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
 
                   {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
+                  <div className="mt-auto pt-6 w-full">
                     <button
-                      onClick={() => {
-                        if (!whatYouSell.trim()) {
-                          setValidationError('Please tell us what you sell.');
-                          return;
-                        }
-                        setValidationError('');
-                        setChatStep(3); syncStateToBackend({ chatStep: 3 });
-                      }}
-                      disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 3 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      This helps us set up your shipping and tax settings.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        enterKeyHint="next"
-                        autoCapitalize="words"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (!location.trim()) {
-                              setValidationError('Please tell us your location.');
-                              return;
-                            }
-                            setValidationError('');
-                            handleIntake();
-                          }
-                        }}
-                        placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (!location.trim()) {
-                          setValidationError('Please tell us your location.');
-                          return;
-                        }
-                        setValidationError('');
-                        handleIntake();
-                      }}
-                      disabled={!location.trim() || isLoading}
+                      onClick={handleZeroClickOnboarding}
+                      disabled={!businessDescription.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
@@ -634,334 +430,11 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
+                      ) : <IconLabel icon="launch">Generate My Storefront</IconLabel>}
                     </button>
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Here's what our AI figured out. Feel free to tweak these.
-                </p>
-                <button
-                  onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-              </div>
-
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    enterKeyHint="next"
-                    autoCapitalize="words"
-                    value={businessName}
-                    onChange={(e) => {
-                      setBusinessName(e.target.value);
-                      setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                  />
-                  {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
-                    enterKeyHint="next"
-                    autoCapitalize="words"
-                    value={businessType}
-                    onChange={(e) => {
-                      setBusinessType(e.target.value);
-                      setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
-                    }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                  />
-                  {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
-                    type="text"
-                    enterKeyHint="next"
-                    autoCapitalize="words"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
-                      <input
-                        type="text"
-                        enterKeyHint="next"
-                        autoCapitalize="words"
-                        value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={firstProductPrice}
-                        onChange={(e) => {
-                           setFirstProductPrice(e.target.value);
-                           if (e.target.value.trim().length > 0 && !/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
-                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
-                           } else {
-                              setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
-                           }
-                        }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                      />
-                      {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
-                   </div>
-                </div>
-              </div>
-
-              {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-              <div className="mt-auto pt-6">
-                <button
-                  onClick={() => {
-                    let hasError = false;
-                    const newErrors: Record<string, string> = { ...validationErrors };
-                    if (businessName.trim().length < 3) {
-                      newErrors.businessName = 'Must be at least 3 characters.';
-                      hasError = true;
-                    }
-                    if (businessType.trim().length === 0) {
-                      newErrors.businessType = 'Business Type is required to configure your agents.';
-                      hasError = true;
-                    }
-                    if (firstProductPrice.trim().length === 0) {
-                      newErrors.firstProductPrice = 'A price is needed to set up your Stripe catalog.';
-                      hasError = true;
-                    }
-
-                    if (hasError || Object.keys(newErrors).length > 0) {
-                      setValidationErrors(newErrors);
-                      setValidationError('Please fix the errors before continuing.');
-                      return;
-                    }
-
-                    setValidationError('');
-                    setStep(3); syncStateToBackend({ step: 3 });
-                  }}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <IconLabel icon="next">Continue</IconLabel>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(2); syncStateToBackend({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
-                </p>
-                <button
-                  onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-              </div>
-
-              {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
-                      <div
-                        key={template}
-                        onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
-                      >
-                        <div className="font-semibold text-sm">{template}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Web Address</label>
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                    <div
-                      onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Free Subdomain</span>
-                      <span className="text-[10px] opacity-70">your-name.ohc.app</span>
-                    </div>
-                    <div
-                      onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
-                    >
-                      <span className="font-semibold text-sm mb-1">Custom Domain</span>
-                      <span className="text-[10px] opacity-70">your-name.com</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Account Setup</label>
-                  <div className="space-y-3 mb-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
-                      <input
-                        type="text"
-                        enterKeyHint="next"
-                        autoCapitalize="words"
-                        value={adminName}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAdminName(val);
-                          if (!val.trim()) {
-                            setValidationErrors(prev => ({ ...prev, adminName: 'Admin Name is required' }));
-                          } else {
-                            setValidationErrors(prev => { const { adminName, ...rest } = prev; return rest; });
-                          }
-                        }}
-                        placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                      />
-                      {validationErrors.adminName && <p className="text-red-500 text-xs mt-1">{validationErrors.adminName}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
-                      <input
-                        type="email"
-                        enterKeyHint="next"
-                        autoCapitalize="none"
-                        value={adminEmail}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAdminEmail(val);
-                          if (!val.trim()) {
-                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
-                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
-                          } else {
-                            setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
-                          }
-                        }}
-                        placeholder="you@example.com"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                      />
-                      {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
-                      <input
-                        type="password"
-                        enterKeyHint="done"
-                        value={adminPassword}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAdminPassword(val);
-                          if (!val.trim()) {
-                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password is required' }));
-                          } else if (val.length < 8 || !/\d/.test(val)) {
-                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password must be at least 8 characters and contain a number' }));
-                          } else {
-                            setValidationErrors(prev => { const { adminPassword, ...rest } = prev; return rest; });
-                          }
-                        }}
-                        placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
-                      />
-                      {validationErrors.adminPassword && <p className="text-red-500 text-xs mt-1">{validationErrors.adminPassword}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
-                  <div className="space-y-2">
-                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
-                       const isSelected = aiAgents.includes(agent);
-                       return (
-                         <div
-                           key={agent}
-                           onClick={() => {
-                             if (isSelected) {
-                               setAiAgents(aiAgents.filter(a => a !== agent));
-                             } else {
-                               setAiAgents([...aiAgents, agent]);
-                             }
-                           }}
-                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white'}`}
-                         >
-                           <span className="font-semibold text-sm">{agent}</span>
-                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
-                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                           </div>
-                         </div>
-                       );
-                    })}
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] glassmorphism text-[#1D1D1F] dark:text-white">
-                    <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={aiAutoRespond}
-                      onChange={(e) => setAiAutoRespond(e.target.checked)}
-                    />
-                    <div className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? 'bg-[#34C759]' : 'bg-gray-300 dark:bg-gray-600'} relative`}>
-                       <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${aiAutoRespond ? 'translate-x-5' : 'translate-x-1'}`}></div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-6">
-                <button
-                  onClick={handleStartOnboarding}
-                  disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Launching...
-                    </span>
-                  ) : <IconLabel icon="launch">Launch Store</IconLabel>}
-                </button>
-              </div>
             </div>
           )}
 
@@ -971,7 +444,7 @@ export default function OnboardingWizard() {
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
                </div>
-               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
+               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">The Promoter is designing your storefront...</h2>
                <div className="space-y-2">
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
