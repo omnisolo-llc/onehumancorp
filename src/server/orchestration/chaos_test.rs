@@ -249,7 +249,7 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_pubsub_high_message_loss_degradation() {
         let transport = Arc::new(DroppingMockTransport::new(90));
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(transport, std::time::Duration::from_millis(5000)));
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let received_clone = received.clone();
 
@@ -279,7 +279,7 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_partition_tolerance() {
         let transport = Arc::new(DroppingMockTransport::new(100));
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(transport, std::time::Duration::from_millis(5000)));
 
         let _ = mesh.subscribe("mesh:test:partition", Box::new(move |_msg| {
         })).await.unwrap();
@@ -435,7 +435,7 @@ mod chaos_tests {
     async fn test_pubsub_message_loss() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let transport = Arc::new(DroppingMockTransport::new(50)); // 50% drop rate
-        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new_with_timeout(transport, std::time::Duration::from_millis(5000)));
         let received = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let received_clone = received.clone();
 

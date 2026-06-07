@@ -75,6 +75,7 @@ impl MeshTransport for LocalTeammateMesh {
 }
 
 pub struct CentrifugeNode {
+    timeout: std::time::Duration,
     transport: Arc<dyn MeshTransport>,
     publish_counter: Counter<u64>,
     receive_counter: Counter<u64>,
@@ -82,10 +83,14 @@ pub struct CentrifugeNode {
 
 impl CentrifugeNode {
     pub fn new(transport: Arc<dyn MeshTransport>) -> Self {
+        Self::new_with_timeout(transport, std::time::Duration::from_millis(5000))
+    }
+
+    pub fn new_with_timeout(transport: Arc<dyn MeshTransport>, timeout: std::time::Duration) -> Self {
         let meter = global::meter("ohc.orchestration.mesh");
         let publish_counter = meter.u64_counter("mesh.messages.published").build();
         let receive_counter = meter.u64_counter("mesh.messages.received").build();
-        Self { transport, publish_counter, receive_counter }
+        Self { transport, publish_counter, receive_counter, timeout }
     }
 }
 
@@ -126,6 +131,7 @@ impl TeammateMesh for CentrifugeNode {
 
     async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
+        let start_time = std::time::Instant::now();
         let job_id = uuid::Uuid::new_v4().to_string();
         let ack_topic = format!("system:job_ack:{}", job_id);
 
@@ -152,7 +158,7 @@ impl TeammateMesh for CentrifugeNode {
         let mut backoff = 200;
 
         loop {
-            if retries > 10 {
+            if start_time.elapsed() > self.timeout || retries > 10 {
                 cancel();
                 return Err("Failed to receive ack after retries".to_string());
             }
