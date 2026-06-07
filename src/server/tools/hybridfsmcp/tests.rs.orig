@@ -12,7 +12,7 @@ async fn test_local_fs_provider() {
     // Test write and read
     provider.write_file("test.txt", b"hello world").await.unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
-    assert_eq!(content, b"hello world".to_vec());
+    assert_eq!(content, b"hello world");
 
     // Test list dir
     provider.write_file("dir/file1.txt", b"1").await.unwrap();
@@ -37,7 +37,6 @@ async fn test_cloud_fs_provider() {
     assert_eq!(content, b"cloud content".to_vec());
 
     // Verify it was written to tenant dir
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     let tenant_file = dir.path().join(&tenant_id).join("test.txt");
     assert!(tenant_file.exists());
 
