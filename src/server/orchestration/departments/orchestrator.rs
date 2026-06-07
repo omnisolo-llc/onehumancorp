@@ -807,6 +807,59 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
+
+    pub async fn get_inventory_summary(&self, tenant_id: &str) -> Result<String, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT title, name, inventory_count FROM products WHERE tenant_id = $1 AND inventory_count IS NOT NULL")
+                    .bind(tenant_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if rows.is_empty() {
+                    return Ok("No inventory data available.".to_string());
+                }
+
+                use sqlx::Row;
+                let mut summary = String::from("Current Inventory:\n");
+                for row in rows {
+                    let title: Option<String> = row.try_get("title").unwrap_or(None);
+                    let name: Option<String> = row.try_get("name").unwrap_or(None);
+                    let display_name = title.or(name).unwrap_or_else(|| "Unknown Product".to_string());
+                    let count: i32 = row.try_get("inventory_count").unwrap_or(0);
+                    summary.push_str(&format!("- {} ({} in stock)\n", display_name, count));
+                }
+
+                Ok(summary)
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT title, name, inventory_count FROM products WHERE tenant_id = $1 AND inventory_count IS NOT NULL")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if rows.is_empty() {
+                    return Ok("No inventory data available.".to_string());
+                }
+
+                use sqlx::Row;
+                let mut summary = String::from("Current Inventory:\n");
+                for row in rows {
+                    let title: Option<String> = row.try_get("title").unwrap_or(None);
+                    let name: Option<String> = row.try_get("name").unwrap_or(None);
+                    let display_name = title.or(name).unwrap_or_else(|| "Unknown Product".to_string());
+                    let count: i32 = row.try_get("inventory_count").unwrap_or(0);
+                    summary.push_str(&format!("- {} ({} in stock)\n", display_name, count));
+                }
+
+                Ok(summary)
+            }
+        }
+    }
+
+
     pub async fn query_long_term_memory(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<String>, String> {
         let records = self.memory_repo.cross_department_search(tenant_id, query_embedding, limit).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
