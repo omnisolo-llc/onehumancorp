@@ -15,6 +15,7 @@ import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -93,6 +94,7 @@ export default function Dashboard() {
   const [actionMessage, setActionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
+  const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
 
   useEffect(() => {
     try {
@@ -157,23 +159,32 @@ export default function Dashboard() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
+        const userId = localStorage.getItem("user_id") || "default";
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
+          fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
+          onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
         ]);
+
+        if (onboardingData?.wizardState?.aiAgents) {
+          setActiveDepartments(onboardingData.wizardState.aiAgents);
+        } else {
+          setActiveDepartments([]);
+        }
 
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -302,10 +313,7 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
-      <div className="mb-6">
-        <GrowthReferralWidget />
-      </div>
-
+      <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
 
       <div className="mb-6">
@@ -374,6 +382,23 @@ export default function Dashboard() {
       )}
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+        {activeDepartments.length > 0 && (
+          <section className="mb-6 w-full col-span-full">
+            <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {activeDepartments.map(dept => (
+                <div key={dept} className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">{dept}</span>
+                    <span className="w-2 h-2 rounded-full bg-[#34C759]"></span>
+                  </div>
+                  <span className="text-xs text-gray-500 dark:text-[#A1A1A6]">Active & Monitoring</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <UnifiedAgentFeed />
 
         <section>
