@@ -19,6 +19,7 @@ interface CostDashboardData {
   storage_cost: number;
   payment_fees: number;
   network_cost: number;
+  compute_cost?: number;
   bandwidth_savings: number;
   cache_hit_rate: number;
   cost_per_1k_tokens: number;

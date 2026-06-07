@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
@@ -213,7 +212,7 @@ export function HelpWidget() {
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
+            className="w-14 h-14 bg-white/30 backdrop-blur-md border border-white/20 text-blue-600 rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
             aria-label="Help"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -224,7 +223,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/70 backdrop-blur-[30px] saturate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all font-inter">
+        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/30 backdrop-blur-md border-white/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all font-inter">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md overflow-x-auto scrollbar-hide">
             {helpTabs.map((t) => (
               <button
@@ -247,7 +246,7 @@ export function HelpWidget() {
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
                 <div className="space-y-3 mb-8">
                   {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white/70 backdrop-blur-[20px] saturate-200 p-5 rounded-2xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
+                  <div key={idx} className="bg-white/30 backdrop-blur-md border border-white/20 p-5 rounded-2xl shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
                       {a.link ? (
                         <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
                       ) : (
