@@ -685,6 +685,51 @@ impl DepartmentOrchestrator {
             ]);
 
             if approved {
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                        let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let deposit_amount = (price * 0.20) as i64 * 100;
+                        let total_amount_cents = (price * 100.0) as i64;
+                        let now = Utc::now();
+                        let expires_at = now + chrono::Duration::days(2);
+                        let quote_id = uuid::Uuid::new_v4().to_string();
+
+                        let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+                        let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
+                        let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20).await.unwrap_or_default();
+
+                        if let DbStore::Postgres = &self.db.store {
+                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                                .bind(&quote_id)
+                                .bind(tenant_id)
+                                .bind("Approved")
+                                .bind(total_amount_cents)
+                                .bind(deposit_amount)
+                                .bind(expires_at)
+                                .bind(&stripe_link)
+                                .execute(&self.db.pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert quote: {}", e);
+                            }
+                        } else if let DbStore::Sqlite(pool) = &self.db.store {
+                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                                .bind(&quote_id)
+                                .bind(tenant_id)
+                                .bind("Approved")
+                                .bind(total_amount_cents)
+                                .bind(deposit_amount)
+                                .bind(expires_at)
+                                .bind(&stripe_link)
+                                .execute(pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert quote: {}", e);
+                            }
+                        }
+                    }
+                }
+
                 // If this is a Smart Pricing approval, execute the price change in the database directly.
                 if let Some(payload) = &original_payload {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {

@@ -8,6 +8,9 @@ export type ActionCard = {
   department: string;
   description: string;
   status: 'pending' | 'approved';
+  feature_type?: string;
+  suggested_price?: number;
+  scope?: string;
 };
 
 type ChatMessage = {
@@ -26,7 +29,7 @@ export default function TeamChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const router = useRouter();
 
-  const handleApprove = (msgId: string) => {
+  const handleApprove = async (msgId: string) => {
     setMessages(prev => prev.map(msg => {
       if (msg.id === msgId && msg.card) {
         return {
@@ -39,6 +42,23 @@ export default function TeamChatPage() {
       }
       return msg;
     }));
+
+    const msg = messages.find(m => m.id === msgId);
+    if (msg && msg.card && !msg.card.id.endsWith('-card')) {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+        await fetch(`/api/agents/approvals/${msg.card.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ approved: true })
+        });
+      } catch (e) {
+        console.error("Failed to approve action", e);
+      }
+    }
   };
 
   const handleEdit = (description: string) => {
@@ -173,8 +193,19 @@ export default function TeamChatPage() {
                         <span className="text-xs font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full uppercase tracking-wide">Approved</span>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 mb-1">{msg.card.department}</p>
-                    <p className="text-xs text-gray-600 mb-4">{msg.card.description}</p>
+
+                    {msg.card.feature_type === 'quote_draft' ? (
+                      <div data-testid="draft-quote-card">
+                        <p className="text-sm font-semibold text-gray-900 mb-1">Draft Quote: {msg.card.department} for Customer</p>
+                        <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
+                        <p className="text-sm font-bold text-gray-900 mb-4">Calculated Total: ${msg.card.suggested_price || 0}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-gray-900 mb-1">{msg.card.department}</p>
+                        <p className="text-xs text-gray-600 mb-4">{msg.card.description}</p>
+                      </>
+                    )}
 
                     {msg.card.status === 'pending' && (
                       <div className="flex gap-2">
@@ -183,15 +214,24 @@ export default function TeamChatPage() {
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
                           data-testid="approve-action-btn"
                         >
-                          Approve & Execute
+                          {msg.card.feature_type === 'quote_draft' ? 'Approve & Send' : 'Approve & Execute'}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleEdit(msg.card?.description || '')}
                           className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
                         >
-                          Edit
+                          Edit Details
                         </button>
+                        {msg.card.feature_type === 'quote_draft' && (
+                           <button
+                             type="button"
+                             onClick={() => setMessages(prev => prev.filter(m => m.id !== msg.id))}
+                             className="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+                           >
+                             Discard
+                           </button>
+                        )}
                       </div>
                     )}
                   </div>
