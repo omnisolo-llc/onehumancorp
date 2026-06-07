@@ -91,6 +91,7 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
+    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
     RwLock::new(m)
     })
 }
@@ -3745,7 +3746,7 @@ async fn create_ui_bom_item_handler(
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let link_title = "Read the full article →";
+            let mut link_title = "Read the full article →";
             let mut link_url = "/help/getting-started";
 
             if query.contains("getting started") {
@@ -3769,6 +3770,10 @@ async fn create_ui_bom_item_handler(
             } else if query.contains("api") || query.contains("advanced") {
                 reply = format!("Based on our help center: {}", help_articles[6].1);
                 link_url = "/api-docs";
+            } else if query.contains("operations") {
+                reply = "I have routed your request to the Operations department.".to_string();
+                link_url = "/inbox";
+                link_title = "Check your inbox for updates →";
             }
 
             axum::Json(serde_json::json!({
