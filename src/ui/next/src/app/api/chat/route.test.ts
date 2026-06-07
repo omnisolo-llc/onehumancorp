@@ -1,7 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 
 describe('chat API', () => {
+  let originalFetch: typeof global.fetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    // Mock fetch to avoid ECONNREFUSED in tests when backend is not running
+    global.fetch = vi.fn().mockImplementation(() =>
+      Promise.reject(new Error('Network error'))
+    );
+    // Suppress console.error output during tests
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
   it('rejects malformed JSON', async () => {
     const response = await POST(new Request('http://localhost/api/chat', {
       method: 'POST',
