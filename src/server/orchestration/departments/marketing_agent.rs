@@ -83,9 +83,26 @@ impl Department for MarketingAgent {
         }
 
         if event.event_type == "tenant.product.created" || event.event_type == "tenant.inventory.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());
+
+            // 1. Kick off translation task if product_id is valid
+            if !product_id.is_empty() {
+                if let Ok(uuid) = uuid::Uuid::parse_str(product_id) {
+                    if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
+                        let pool_clone = self.orchestrator.get_pool();
+                        let name_clone = product_name.to_string();
+                        let desc_clone = description.to_string();
+                        tokio::spawn(async move {
+                            let llm_client = std::sync::Arc::new(crate::minimax::LocalLLMClient::new());
+                            let _ = crate::workers::marketing_translator::translate_content_job(std::sync::Arc::new(pool_clone.clone()), llm_client.clone(), tenant_uuid, uuid, "product".to_string(), "name".to_string(), name_clone).await;
+                            let _ = crate::workers::marketing_translator::translate_content_job(std::sync::Arc::new(pool_clone.clone()), llm_client.clone(), tenant_uuid, uuid, "product".to_string(), "description".to_string(), desc_clone).await;
+                        });
+                    }
+                }
+            }
 
             let image_url = if let Some(imgs) = images {
                 if !imgs.is_empty() {

@@ -6,3 +6,4 @@ pub mod jobs;
 mod builder_test;
 
 pub mod edge;
+pub mod localizable_content;

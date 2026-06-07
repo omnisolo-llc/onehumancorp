@@ -91,7 +91,7 @@ pub async fn handle_edge_request_impl(
                 let pool_clone = state.pool.clone();
                 let cache_key_clone = cache_key.clone();
                 tokio::spawn(async move {
-                    let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone.clone(), cache).await;
+                    let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone.clone(), cache, "en-US").await;
                     let ongoing = get_ongoing_generation();
                     ongoing.lock().await.remove(&cache_key_clone);
                 });
@@ -130,7 +130,9 @@ pub async fn handle_edge_request_impl(
         }
     }
 
-    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache).await;
+    let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US");
+
+    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache, locale).await;
 
     {
         let ongoing = get_ongoing_generation();
@@ -158,6 +160,7 @@ async fn regenerate_cache(
     site_id: Uuid,
     cache_key: String,
     cache: Arc<HybridCache<String>>,
+    locale: &str,
 ) -> Result<(String, Vec<String>), axum::http::StatusCode> {
     let site = match super::db::list_sites(&pool, tenant_id).await {
         Ok(sites) => sites.into_iter().find(|s| s.id == site_id),
@@ -183,8 +186,9 @@ async fn regenerate_cache(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut tags = vec![format!("tenant-id:{}", tenant_id)];
+    let dir = if locale.starts_with("ar") { "rtl" } else { "ltr" };
     let mut html = String::new();
-    html.push_str("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
+    html.push_str(&format!("<!DOCTYPE html>\n<html lang=\"{}\" dir=\"{}\">\n<head>\n", locale, dir));
     html.push_str("<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
 
     html.push_str(&format!("<title>{}</title>\n", escape_html(&page.title)));
@@ -233,25 +237,50 @@ async fn regenerate_cache(
         html.push_str("<div class=\"block\">\n");
         match block.block_type.as_str() {
             "HeroBlock" | "Hero" => {
-                let title = block.content.get("headline").and_then(|v| v.as_str()).unwrap_or("Welcome");
-                let subtitle = block.content.get("subtitle").and_then(|v| v.as_str()).unwrap_or("");
-                html.push_str(&format!("<h1 class=\"hero-title font-outfit\">{}</h1>\n", escape_html(title)));
-                html.push_str(&format!("<p class=\"hero-subtitle\">{}</p>\n", escape_html(subtitle)));
+                let mut title = block.content.get("headline").and_then(|v| v.as_str()).unwrap_or("Welcome").to_string();
+                let mut subtitle = block.content.get("subtitle").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+                if let Ok(Some(loc)) = crate::builder::localizable_content::get_localizable_content(&pool, tenant_id, block.id, "block", "headline", locale).await {
+                    title = loc.content;
+                }
+                if let Ok(Some(loc)) = crate::builder::localizable_content::get_localizable_content(&pool, tenant_id, block.id, "block", "subtitle", locale).await {
+                    subtitle = loc.content;
+                }
+
+                html.push_str(&format!("<h1 class=\"hero-title font-outfit\">{}</h1>\n", escape_html(&title)));
+                html.push_str(&format!("<p class=\"hero-subtitle\">{}</p>\n", escape_html(&subtitle)));
             }
             "ProductGridBlock" | "Catalog" => {
                 html.push_str("<h2 class=\"font-outfit\">Our Products</h2>\n");
                 html.push_str("<div class=\"product-grid\">\n");
                 if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
                     for item in items {
-                        let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
-                        let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
-                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                        let mut name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product").to_string();
+                        let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00").to_string();
+                        let mut desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let image_url = item.get("image_url").and_then(|v| v.as_str()).unwrap_or("");
+
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
+                            if let Ok(uuid) = uuid::Uuid::parse_str(pid) {
+                                if let Ok(Some(loc)) = crate::builder::localizable_content::get_localizable_content(&pool, tenant_id, uuid, "product", "name", locale).await {
+                                    name = loc.content;
+                                }
+                                if let Ok(Some(loc)) = crate::builder::localizable_content::get_localizable_content(&pool, tenant_id, uuid, "product", "description", locale).await {
+                                    desc = loc.content;
+                                }
+                            }
                         }
+
+                        let img_html = if !image_url.is_empty() {
+                            format!("<img src=\"{}\" alt=\"{}\" loading=\"lazy\" style=\"max-width: 80px; border-radius: 8px; margin-right: 16px; margin-left: 16px;\">", escape_html(image_url), escape_html(&name))
+                        } else {
+                            "".to_string()
+                        };
+
                         html.push_str(&format!(
-                            "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
-                            escape_html(name), escape_html(desc), escape_html(price)
+                            "<div class=\"product-card\">\n{}<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
+                            img_html, escape_html(&name), escape_html(&desc), escape_html(&price)
                         ));
                     }
                 }

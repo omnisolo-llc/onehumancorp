@@ -4,6 +4,7 @@ exports_files(
     [
         "api.rs",
         "edge.rs",
+        "localizable_content.rs",
         "builder_test.rs",
         "db.rs",
         "jobs.rs",
@@ -18,6 +19,7 @@ rust_library(
         "bazel_lib.rs",
         "api.rs",
         "edge.rs",
+        "localizable_content.rs",
         "builder_test.rs",
         "db.rs",
         "jobs.rs",
