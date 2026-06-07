@@ -462,7 +462,7 @@ export default function OnboardingWizard() {
                           if (e.key === 'Enter') {
                             e.preventDefault();
                             if (businessName.trim().length < 3) {
-                              setValidationError('Business Name must be at least 3 characters.');
+                              setValidationError('Business name must be at least 3 characters.');
                               return;
                             }
                             setValidationError('');
@@ -480,7 +480,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={() => {
                         if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
+                          setValidationError('Business name must be at least 3 characters.');
                           return;
                         }
                         setValidationError('');
@@ -670,7 +670,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => {
                       setBusinessName(e.target.value);
                       if (e.target.value.trim().length < 3) {
-                        setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                        setValidationErrors(prev => ({ ...prev, businessName: 'Business name must be at least 3 characters.' }));
                       } else {
                         setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
                       }
@@ -749,7 +749,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => {
                     if (businessName.trim().length < 3) {
-                      setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                      setValidationErrors(prev => ({ ...prev, businessName: 'Business name must be at least 3 characters.' }));
                       setValidationError('Please fix the errors before continuing.');
                       return;
                     }
