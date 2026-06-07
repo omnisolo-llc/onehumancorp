@@ -379,4 +379,27 @@ mod tests {
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 10_000, "gpt-4o"), 0.0);
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"), 0.0);
     }
+
+    #[test]
+    fn test_get_pricing_exhaustive() {
+        let models = vec![
+            "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
+            "claude-3.5-sonnet", "claude-3.5-haiku", "claude-3.7-sonnet",
+            "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
+            "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+            "o1", "o1-mini", "o3-mini",
+            "gemini-1.5-pro", "gemini-1.5-flash",
+            "gemini-2.0-flash", "gemini-2.0-flash-lite",
+            "gemini-2.5-pro", "gemini-2.5-flash",
+            "minimax-m2.7", "minimax-m2.7-turbo",
+            "ollama-llama3", "local-phi3",
+            "random-unknown-model"
+        ];
+        for m in models {
+            let p = get_pricing(m);
+            assert!(p.input_cost >= 0.0);
+            assert!(p.output_cost >= 0.0);
+            assert!(p.cached_cost >= 0.0);
+        }
+    }
 }

@@ -8,7 +8,7 @@ pub struct LocalLLMProvider {
     endpoint: String,
     embed_endpoint: String,
     model: String,
-    cache: PromptCache,
+    cache: Arc<PromptCache>,
     client: reqwest::Client,
 }
 
@@ -18,7 +18,7 @@ impl LocalLLMProvider {
             endpoint,
             embed_endpoint,
             model,
-            cache: PromptCache::new(Duration::from_secs(600)), // 10 minute TTL
+            cache: Arc::new(PromptCache::new(Duration::from_secs(600))), // 10 minute TTL
             client: reqwest::Client::new(),
         }
     }

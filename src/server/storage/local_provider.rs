@@ -109,16 +109,18 @@ impl Provider for LocalProvider {
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
         let mut key_str = key.to_string();
         let mut final_data = data.to_vec();
+        let original_size = data.len();
 
         // Auto-optimization for images: Resize and convert to WebP
         let extension = Path::new(key).extension().and_then(|e| e.to_str()).unwrap_or("");
-        let reported_size = if ::server_pricing::compression::is_image_extension(extension) && data.len() > 1024 {
-            let original_size = data.len();
+        let mut compressed_size = original_size;
+
+        if ::server_pricing::compression::is_image_extension(extension) && original_size > 1024 {
             match ::server_pricing::compression::optimize_image(data, 1024) {
                 Ok((optimized_data, _)) => {
                     final_data = optimized_data;
                     key_str = ::server_pricing::compression::get_optimized_key(key);
-                    let compressed_size = final_data.len();
+                    compressed_size = final_data.len();
                     tracing::info!(
                         key = %key_str,
                         original = original_size,
@@ -128,26 +130,27 @@ impl Provider for LocalProvider {
                     );
                     let t_id = key_str.split('/').next().unwrap_or("default");
                     self.tracker.record_bandwidth_compression(t_id, original_size as i64, compressed_size as i64);
-                    compressed_size
                 }
                 Err(e) => {
                     tracing::warn!("Image optimization failed for {}: {}. Saving original.", key, e);
-                    original_size
                 }
             }
-        } else {
-            data.len()
-        };
+        }
 
         let path = self.get_local_path(&key_str)?;
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        // Quota Enforcement
+        // Quota Enforcement - Always bill based on the FINAL size stored
         let t_id = key_str.split('/').next().unwrap_or("default");
         let agent_id = key_str.split('/').nth(1);
-        if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
+
+        // Robust ID extraction: if key is "tenant/agent/file", splitting by / works.
+        // If it's just "file", t_id might be "file" which is wrong if we expect tenant first.
+        // OHC standard is tenant-scoped storage.
+
+        if let Ok(status) = self.tracker.track_storage_usage(t_id, compressed_size as i64, agent_id).await {
             if status.soft_limit_reached {
                 if let Some(msg) = status.user_message {
                     tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
@@ -178,7 +181,7 @@ impl Provider for LocalProvider {
                 &crate::db::get_pool(),
                 t_id,
                 "write",
-                reported_size as i64
+                compressed_size as i64
             ).await;
         }
         res

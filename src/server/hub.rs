@@ -276,8 +276,10 @@ impl Hub {
         let hub_clone = self.clone();
 
         if msg.from_agent != "system-scheduler" && msg.r#type != "warning" {
+            let tracker_clone = tracker.clone();
+            let tenant_id_clone = tenant_id.clone();
             tokio::spawn(async move {
-                if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
+                if let Ok(limit_status) = tracker_clone.check_rate_limit(&tenant_id_clone, &agent_id).await {
                     if limit_status.soft_limit_reached {
                         tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
                         if let Some(user_msg) = limit_status.user_message {
@@ -313,6 +315,8 @@ impl Hub {
                     let m_id = msg.meeting_id.clone();
                     let transcript = meeting.transcript.clone();
                     let hub = self.clone();
+                    let tracker_clone = tracker.clone();
+                    let tenant_id_clone = tenant_id.clone();
                     
                     tokio::spawn(async move {
                         let client = crate::minimax::MinimaxClient::new(api_key);
@@ -322,7 +326,10 @@ impl Hub {
                             prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
                         }
                         
-                        match client.reason(&prompt).await {
+                        let tier = tracker_clone.get_tenant_tier(&tenant_id_clone).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+                        let ttl = tier.get_prompt_cache_ttl();
+
+                        match client.reason_with_options(&prompt, Some(ttl)).await {
                             Ok(summary) => {
                                 let mut meetings = hub.meetings.write().unwrap();
                                 if let Some(mtg) = meetings.get_mut(&m_id) {

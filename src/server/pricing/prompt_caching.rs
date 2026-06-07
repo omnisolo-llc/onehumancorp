@@ -39,7 +39,12 @@ impl PromptCache {
     pub fn get_with_cost_cents(&self, prompt: &str) -> (Option<CachedResponse>, i64) {
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
-            tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
+            tracing::info!(
+                "💰 Miser cost optimization: Prompt cache hit saved {} tokens (created {:?} ago, ttl {:?})",
+                r.token_count,
+                r.created_at.elapsed(),
+                r.ttl
+            );
             // Use heuristic token efficiency logic directly to accurately estimate savings.
             let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string());
             let ratio = super::calculator::calculate_heuristic_token_efficiency(r.token_count as i64, 0, &model);

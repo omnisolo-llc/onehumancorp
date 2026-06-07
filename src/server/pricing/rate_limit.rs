@@ -412,6 +412,22 @@ mod tests {
         assert_eq!(PlanTier::Starter.base_price(), 29.0);
         assert_eq!(PlanTier::Pro.base_price(), 79.0);
         assert_eq!(PlanTier::Business.base_price(), 299.0);
+
+        assert!(PlanTier::Free.get_prompt_cache_ttl().as_secs() > 0);
+    }
+
+    #[test]
+    fn test_plan_tier_env_overrides() {
+        unsafe {
+            std::env::set_var("OHC_FREE_TIER_ACTIONS", "500");
+            std::env::set_var("OHC_FREE_TIER_STORAGE_MB", "1000");
+        }
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(500));
+        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(1000));
+        unsafe {
+            std::env::remove_var("OHC_FREE_TIER_ACTIONS");
+            std::env::remove_var("OHC_FREE_TIER_STORAGE_MB");
+        }
     }
 
     #[test]

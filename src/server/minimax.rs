@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -57,10 +58,11 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(120)))
 }
 
+#[derive(Clone)]
 pub struct MinimaxClient {
     api_key: String,
     url: String,
-    cache: PromptCache,
+    cache: Arc<PromptCache>,
 }
 
 #[derive(Debug, Serialize)]
@@ -97,11 +99,15 @@ impl MinimaxClient {
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
-            cache: PromptCache::new(Duration::from_secs(300)), // 5 minute TTL
+            cache: Arc::new(PromptCache::new(Duration::from_secs(300))), // 5 minute TTL
         }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        self.reason_with_options(prompt, None).await
+    }
+
+    pub async fn reason_with_options(&self, prompt: &str, ttl: Option<Duration>) -> Result<String, String> {
         // 1. Check Cache
         if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
@@ -186,7 +192,12 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            let token_estimate = prompt.len() / 4;
+                            if let Some(custom_ttl) = ttl {
+                                self.cache.set_with_ttl(prompt, &content, token_estimate, custom_ttl);
+                            } else {
+                                self.cache.set(prompt, &content, token_estimate);
+                            }
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
@@ -221,6 +232,10 @@ impl MinimaxClient {
     }
 
     pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
+        self.reason_stream_with_options(prompt, None).await
+    }
+
+    pub async fn reason_stream_with_options(&self, prompt: &str, ttl: Option<Duration>) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
         let optimized_prompt = truncate_by_word_count(prompt, 2000);
@@ -252,6 +267,8 @@ impl MinimaxClient {
             return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
         }
 
+        let cache_clone = self.cache.clone();
+        let prompt_clone = prompt.to_string();
         tokio::spawn(async move {
             let client = reqwest::Client::new();
             let request_body = MinimaxRequest {
@@ -276,6 +293,8 @@ impl MinimaxClient {
                     if resp.status().is_success() {
                         let mut stream = resp.bytes_stream();
                         use tokio_stream::StreamExt;
+                        let mut full_content = String::new();
+                        let mut stream_interrupted = false;
                         while let Some(chunk_res) = stream.next().await {
                             match chunk_res {
                                 Ok(chunk) => {
@@ -286,16 +305,34 @@ impl MinimaxClient {
                                     for line in text.lines() {
                                         if line.starts_with("data: ") {
                                             let json_str = &line[6..];
-                                            if json_str == "[DONE]" { break; }
+                                            if json_str == "[DONE]" {
+                                                // Standard end of stream
+                                                break;
+                                            }
                                             if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
                                                 if let Some(content) = val["choices"][0]["delta"]["content"].as_str() {
+                                                    full_content.push_str(content);
                                                     let _ = tx.send(Ok(content.to_string())).await;
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                Err(e) => { let _ = tx.send(Err(e.to_string())).await; }
+                                Err(e) => {
+                                    let _ = tx.send(Err(e.to_string())).await;
+                                    stream_interrupted = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // After stream completion, update cache ONLY if it completed successfully
+                        if !full_content.is_empty() && !stream_interrupted {
+                            let token_estimate = prompt_clone.len() / 4;
+                            if let Some(custom_ttl) = ttl {
+                                cache_clone.set_with_ttl(&prompt_clone, &full_content, token_estimate, custom_ttl);
+                            } else {
+                                cache_clone.set(&prompt_clone, &full_content, token_estimate);
                             }
                         }
                     } else {
@@ -393,7 +430,7 @@ pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
     model: String,
-    cache: PromptCache,
+    cache: Arc<PromptCache>,
 }
 
 impl LocalLLMClient {
@@ -405,7 +442,7 @@ impl LocalLLMClient {
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
             
-        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)) }
+        LocalLLMClient { endpoint, embed_endpoint, model, cache: Arc::new(PromptCache::new(Duration::from_secs(300))) }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {

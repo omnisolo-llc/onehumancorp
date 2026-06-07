@@ -779,6 +779,7 @@ async fn http_login_handler(
 }
 
 pub async fn advisory_insights_handler(
+    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
@@ -907,8 +908,12 @@ pub async fn advisory_insights_handler(
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let tracker = hub.tracker();
+    let tier = tracker.get_tenant_tier(&tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let ttl = tier.get_prompt_cache_ttl();
+
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&compressed_prompt).await {
+    match client.reason_with_options(&compressed_prompt, Some(ttl)).await {
         Ok(output) => {
             insight_cache.set(&insight_cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
             (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
@@ -926,6 +931,7 @@ pub async fn advisory_insights_handler(
 }
 
 async fn draft_reply_handler(
+    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
@@ -991,8 +997,12 @@ async fn draft_reply_handler(
     );
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let tracker = hub.tracker();
+    let tier = tracker.get_tenant_tier(&tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let ttl = tier.get_prompt_cache_ttl();
+
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&compressed_prompt).await {
+    match client.reason_with_options(&compressed_prompt, Some(ttl)).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
             ::server_telemetry::record_error_signal("MiniMax draft reply failed");
@@ -1077,8 +1087,13 @@ impl HubService for MyHubService {
             return Ok(Response::new(ReasonResponse { content: cached_output }));
         }
 
+        let tracker = self.hub.tracker();
+        let tenant_id = req.from_agent_id.split('-').next().unwrap_or("default");
+        let tier = tracker.get_tenant_tier(tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+        let ttl = tier.get_prompt_cache_ttl();
+
         let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&compressed_prompt).await {
+        match client.reason_with_options(&compressed_prompt, Some(ttl)).await {
             Ok(content) => {
                 ai_cache.set(&ai_cache_key, content.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok(Response::new(ReasonResponse { content }))
@@ -3667,10 +3682,10 @@ async fn create_ui_bom_item_handler(
             axum::routing::post({
                 let db = db.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
-                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
-                    draft_reply_handler(db, store, headers, payload).await
+                move |state, headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
+                    draft_reply_handler(state, db, store, headers, payload).await
                 }
-            }),
+            }).with_state(hub.clone()),
         )
 
         .route(
@@ -3694,8 +3709,8 @@ async fn create_ui_bom_item_handler(
             axum::routing::get({
                 let db = db.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
-                move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
-            }),
+                move |state, headers: axum::http::HeaderMap| async move { advisory_insights_handler(state, db, store, headers).await }
+            }).with_state(hub.clone()),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))

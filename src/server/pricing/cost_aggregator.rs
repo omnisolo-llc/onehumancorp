@@ -65,6 +65,7 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
     // Optimized Query: Cast labels_json to jsonb explicitly if it isn't already,
     // and use the ->> operator for faster execution than json_extract_path_text.
     // Ensure we handle potential errors robustly instead of silently failing.
+    // Standardize metric naming and ensure efficient indexing via tenant_id extraction.
     let raw_rows_result = sqlx::query(
         r#"
         SELECT

@@ -108,10 +108,14 @@ impl Department for MarketingAgent {
 
             let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
 
+            let tracker = crate::billing::Tracker::new_with_redis(&std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string()));
+            let tier = tracker.get_tenant_tier(&event.tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+            let ttl = tier.get_prompt_cache_ttl();
+
             let draft_copy = if let Ok(provider) = std::env::var("OHC_LLM_PROVIDER") {
                 if provider == "minimax" {
                     let minimax_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(minimax_key).reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
+                    crate::minimax::MinimaxClient::new(minimax_key).reason_with_options(&prompt, Some(ttl)).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
                 } else {
                     crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| format!("Check out our new {}!", product_name))
                 }
