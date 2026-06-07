@@ -70,6 +70,17 @@ test.describe('Help Center', () => {
         const chatInput = page.locator('input[placeholder="Ask me anything..."]');
         await expect(chatInput).toBeVisible();
 
+        // Type a message and send it
+        const testMessage = 'How do I add a product?';
+        await chatInput.fill(testMessage);
+        const sendButton = page.locator('button[aria-label="Send message"]');
+        await expect(sendButton).toBeVisible();
+        await sendButton.click();
+
+        // Assert that the message appears in the chat
+        const sentMessage = page.locator('div', { hasText: testMessage }).last();
+        await expect(sentMessage).toBeVisible();
+
         // Close the chat
         const closeButton = page.locator('button[aria-label="Close help chat"]');
         await closeButton.click();

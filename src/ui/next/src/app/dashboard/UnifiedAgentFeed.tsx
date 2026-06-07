@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import GrowthReferralWidget from "../components/GrowthReferralWidget";
 
 type ApprovalRequest = {
   id: string;
@@ -33,64 +34,58 @@ export function UnifiedAgentFeed() {
   useEffect(() => {
     let mounted = true;
 
-    async function fetchFeed() {
+    async function fetchAll() {
       try {
+        setLoading(true);
+        setActivityLoading(true);
         const tenant = tenantId();
-        // Fetch proposals
-        const res = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
 
-        if (!res.ok) {
+        const [feedRes, activityRes] = await Promise.all([
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          }),
+          fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          })
+        ]);
+
+        if (!feedRes.ok) {
           throw new Error("Failed to load agent feed");
         }
 
-        const data: ApprovalsResponse = await res.json();
-        if (mounted && data.pending_approvals) {
-          setApprovals(data.pending_approvals);
+        const [feedData, activityData] = await Promise.all([
+          feedRes.json(),
+          activityRes.ok ? activityRes.json() : Promise.resolve({ pending_approvals: [] })
+        ]);
+
+        if (mounted) {
+          if (feedData.pending_approvals) {
+            setApprovals(feedData.pending_approvals);
+          }
+          if (activityData.pending_approvals) {
+            setActivities(activityData.pending_approvals);
+          }
         }
       } catch (err: any) {
         if (mounted) {
           setError(err.message || "Failed to load feed");
         }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    async function fetchActivity() {
-      try {
-        setActivityLoading(true);
-        const tenant = tenantId();
-        const res = await fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
-
-        if (res.ok) {
-          const data: ApprovalsResponse = await res.json();
-          if (mounted && data.pending_approvals) {
-            setActivities(data.pending_approvals);
-          }
-        }
-      } catch (err: any) {
         console.error("Failed to load activity", err);
       } finally {
         if (mounted) {
+          setLoading(false);
           setActivityLoading(false);
         }
       }
     }
 
-    fetchFeed();
-    fetchActivity();
+    fetchAll();
     return () => { mounted = false; };
   }, []);
 
@@ -170,12 +165,15 @@ export function UnifiedAgentFeed() {
               </div>
             )}
             {!loading && approvals.length === 0 && (
-              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
+              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Your agents are currently monitoring the business.
+                  Your agents are currently monitoring the business. While you're here, why not help us grow?
                 </p>
+                <div className="w-full max-w-md text-left">
+                   <GrowthReferralWidget />
+                </div>
               </div>
             )}
             {approvals.map((approval) => (
