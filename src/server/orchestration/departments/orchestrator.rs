@@ -180,7 +180,7 @@ impl DepartmentOrchestrator {
                         let mut last_err = String::new();
                         for _ in 0..3 {
                             let fut = dep.read().await;
-                            let res = tokio::time::timeout(std::time::Duration::from_secs(60), fut.handle_event(&event)).await;
+                            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), fut.handle_event(&event)).await;
                             match res {
                                 Ok(Ok(_)) => {
                                     success = true;
