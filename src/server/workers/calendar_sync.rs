@@ -1,10 +1,8 @@
-use crate::integrations::google_calendar::client::GoogleCalendarClientWrapper;
 use crate::integrations::google_calendar::provider::GoogleCalendarProvider;
 use ::server_common::auth_utils;
 use sqlx::Row;
 use std::time::Duration;
 use chrono::{DateTime, Utc};
-use serde_json::Value;
 
 pub async fn run_calendar_sync_worker(redis_client: redis::Client) {
     loop {
@@ -31,7 +29,7 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
     tx.commit().await.map_err(|e| e.to_string())?;
 
     for row in rows {
-        let integration_id: String = row.get("id");
+        let _integration_id: String = row.get("id");
         let tenant_id: String = row.get("tenant_id");
         let provider: String = row.get("provider");
         let access_token: String = row.get("access_token");
