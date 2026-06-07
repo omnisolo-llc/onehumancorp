@@ -1,3 +1,4 @@
+/// Master Catalog B.6. Output Parsing
 use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
