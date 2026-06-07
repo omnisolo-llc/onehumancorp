@@ -22,6 +22,7 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.pricing.discount_approved".to_string(),
         ]
     }
 
@@ -36,6 +37,30 @@ impl Department for OperationsAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "tenant.pricing.discount_approved" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let new_price = event.payload.get("new_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Product");
+
+            // Normally we'd do an actual DB update here:
+            // "UPDATE products SET price = $1 WHERE id = $2 AND tenant_id = $3"
+            // And insert into active_discounts.
+
+            // Dispatch event to clear Redis Cache implicitly by propagating state
+            // and tell Marketing to broadcast the flash sale.
+            let marketing_event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.pricing.discount_applied".to_string(),
+                payload: serde_json::json!({
+                    "product_id": product_id,
+                    "product_name": product_name,
+                    "new_price": new_price
+                }),
+            };
+            return self.orchestrator.dispatch_event(marketing_event).await;
+        }
 
         let action_description = if event.event_type == "tenant.order.created" {
             "Process Order & Update Inventory".to_string()

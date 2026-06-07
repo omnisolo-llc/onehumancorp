@@ -19,7 +19,10 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string()]
+        vec![
+            "tenant.report.weekly_health".to_string(),
+            "system.inventory.check_stagnant".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -33,6 +36,36 @@ impl Department for BusinessAdvisoryAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "system.inventory.check_stagnant" {
+            let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Product");
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let suggested_discount = event.payload.get("suggested_discount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let margin = event.payload.get("margin").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let original_price = event.payload.get("original_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let new_price = original_price * (1.0 - suggested_discount / 100.0);
+
+            let action_desc = format!("Smart Price Suggestion: {}", product_name);
+            let payload = serde_json::json!({
+                "product_id": product_id,
+                "product_name": product_name,
+                "suggested_discount": suggested_discount,
+                "margin": margin,
+                "original_price": original_price,
+                "new_price": new_price,
+                "message": format!("Your '{}' hasn't sold recently. Would you like to apply a {}% discount this weekend to clear space? Your profit margin will remain safe at {}%.", product_name, suggested_discount, margin)
+            });
+
+            self.orchestrator.execute_action(
+                DepartmentType::BusinessAdvisory,
+                action_desc,
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview, // Always ask for approval for pricing
+                payload,
+            ).await?;
+
+            return Ok(());
+        }
 
         // Scheduled background worker triggers tenant.report.weekly_health to generate brief.
         self.orchestrator.execute_action(

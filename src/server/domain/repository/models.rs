@@ -267,3 +267,26 @@ pub struct LeadGenCampaign {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SmartPricingPolicy {
+    pub id: String,
+    pub tenant_id: String,
+    pub product_id: String,
+    pub min_margin_percent: f64,
+    pub auto_discount_trigger_days_stagnant: i32,
+    pub max_discount_percent: f64,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ActiveDiscount {
+    pub id: String,
+    pub tenant_id: String,
+    pub policy_id: String,
+    pub product_id: String,
+    pub discount_amount: f64,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+}

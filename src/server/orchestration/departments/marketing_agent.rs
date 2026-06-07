@@ -23,8 +23,8 @@ impl Department for MarketingAgent {
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.pricing.discount_applied".to_string(),
         ]
     }
 
@@ -128,6 +128,27 @@ impl Department for MarketingAgent {
 
             let action_desc = format!("Draft Instagram post for {}", product_name);
             return self.orchestrator.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
+        }
+
+        if event.event_type == "tenant.pricing.discount_applied" {
+            let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Product");
+            let new_price = event.payload.get("new_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+            let draft_copy = format!("🚨 FLASH SALE! 🚨 Grab our {} for just ${:.2} while supplies last! Link in bio. 🛍️✨ #Sale #FlashSale", product_name, new_price);
+            let payload = serde_json::json!({
+                "feature_type": "social_post",
+                "product_name": product_name,
+                "draft_copy": draft_copy
+            });
+            let description = format!("Draft Flash Sale Post: {}", product_name);
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                payload,
+            ).await.map(|_| ());
         }
 
         self.orchestrator.execute_action(
