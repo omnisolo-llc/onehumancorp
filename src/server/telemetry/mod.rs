@@ -1655,3 +1655,5 @@ mod harness_security_divergence_tests {
         counter.add(0, &[]);
     }
 }
+#[cfg(test)]
+mod dashboard_test;

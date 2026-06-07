@@ -34,12 +34,12 @@ After the first 50, the next 300 open issues were scanned for code-resolvable fe
 - #22300: SIP database retry loops now share PostgreSQL-aware retry classification for lock, deadlock, and serialization failures.
 - #22508: Integration connect buttons now request backend-generated OAuth URLs through `/api/integrations/{id}/connect`.
 - #22479: Added the missing PostgreSQL `sub_agent_queue` schema migration with indexes and tenant RLS for legacy onboarding/hybrid-sync queue paths.
-- #22279: Stripe Terminal backend infrastructure now fails closed without credentials and uses real Stripe Terminal/PaymentIntent API calls instead of mock secrets.
+- #22279: Fixed - Stripe Terminal backend fails closed without credentials instead of mock secrets.
 - #22353: The Stripe Terminal POS flow now has Next.js proxy routes that normalize real backend token and card-present PaymentIntent responses for Terminal JS.
 - #22844: In-person Terminal payment infrastructure now routes through the backend `/api/v1/payments/terminal` contract instead of missing mock-shaped frontend endpoints.
 - #22946: The POS Terminal architecture now has backend-backed connection-token and payment-intent routes wired to the frontend Terminal client boundary.
 - #22181: Added an AutoDream sync-duration metric recorder and a dashboard-backed test for `ohc_autodream_sync_duration_seconds`.
-- #22180: Added a test to prevent `hybrid-telemetry.json` drift and synchronized deploy dashboard mirrors to the canonical dashboard.
+- #22180: Fixed - Added test to prevent `hybrid-telemetry.json` drift and synced dashboards.
 - #23937: The dashboard metrics endpoint now reads campaign-sent counts from `agent_actions` instead of hard-coding placeholder values.
 - #23520: Dashboard, order, inbox, and supply UI requests now have Next.js backend proxy routes for the Rust database-backed `/api/ui/*` endpoints.
 - #23651: Billing tier usage now reports department-level usage from persisted usage keys rather than static placeholder values.
