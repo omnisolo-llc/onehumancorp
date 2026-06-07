@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde_json::json;
 use sqlx::PgPool;
 
-use super::ast::ASTParser;
+use super::bash_security::ParsedCommand;
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
 use crate::telemetry::ViolationStore;
@@ -50,6 +50,10 @@ impl SandboxManager {
         self.policy.clone()
     }
 
+    pub fn should_use_sandbox(&self, _cmd: &str) -> bool {
+        true
+    }
+
     pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         SandboxManager {
@@ -64,8 +68,8 @@ impl SandboxManager {
 #[async_trait]
 impl SandboxAdapter for SandboxManager {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
-        let mut ast_parser = ASTParser::new();
-        if let Err(reason) = ast_parser.parse_for_security(cmd) {
+        let cmd_parser = ParsedCommand::new(cmd);
+        if let Err(reason) = cmd_parser.parse() {
             let details = json!({ "command": cmd, "reason": reason });
             let _ = self.violation_store.record_violation(
                 "system",
