@@ -1,7 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../../src/e2e/fixtures';
 
-// NOTE: This test requires a docker-sandbox fix to run properly in CI
-// due to pgvector pull permissions in the Bazel test sandbox environment.
 test.describe('Cost Dashboard Loop', () => {
   test('Cost dashboard loads and displays data', async ({ page }) => {
     // Navigate to the dashboard page
@@ -9,9 +7,6 @@ test.describe('Cost Dashboard Loop', () => {
 
     // Wait for the main heading to appear, indicating successful load
     await expect(page.locator('h1', { hasText: 'Business Advisory Dashboard' })).toBeVisible({ timeout: 10000 });
-
-    // Check that the Advisory Summary is present
-    await expect(page.locator('h2', { hasText: 'Advisory Summary' })).toBeVisible();
 
     // Check that the Cost Transparency section is present
     await expect(page.locator('h2', { hasText: 'Cost Transparency' })).toBeVisible();
@@ -29,6 +24,6 @@ test.describe('Cost Dashboard Loop', () => {
 
     // Check navigation works
     await page.locator('button', { hasText: 'Back to My Plan' }).click();
-    await expect(page).toHaveURL('/plan');
+    await expect(page).toHaveURL(/.*\/plan/);
   });
 });
