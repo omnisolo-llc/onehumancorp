@@ -235,6 +235,8 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.cart.recovery.needed".to_string(),
+            "agent:marketing:approved".to_string(),
         ]
     }
 
@@ -272,7 +274,54 @@ impl Department for MarketingAgent {
             }
         }
 
-        if event.event_type == "tenant.product.created" || event.event_type == "tenant.inventory.updated" {
+
+
+        if event.event_type == "agent:marketing:approved" {
+            // Unpack payload to check if it's cart recovery
+            if let Some(original_payload) = event.payload.get("original_payload") {
+                if let Some(context) = original_payload.get("context") {
+                    if let Some(session_id) = context.get("checkout_session_id").and_then(|v| v.as_str()) {
+                        // Publish delivery event into the queue or directly process
+                        // Using the mesh or the db depending on architecture.
+                        // Let's emit tenant.cart.recovery.approved
+                        let delivery_event = DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: event.tenant_id.clone(),
+                            event_type: "tenant.cart.recovery.approved".to_string(),
+                            payload: serde_json::json!({
+                                "checkout_session_id": session_id,
+                                "context": context
+                            }),
+                        };
+                        return self.orchestrator()?.dispatch_event(delivery_event).await;
+                    }
+                }
+            }
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.cart.recovery.needed"  {
+            let session_id = event.payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("");
+            let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let payload = serde_json::json!({
+                "context": {
+                    "abandoned_carts_count": 1,
+                    "potential_revenue": (amount_cents as f64) / 100.0,
+                    "checkout_session_id": session_id,
+                }
+            });
+
+            return self.orchestrator()?.execute_action(
+                DepartmentType::Marketing,
+                "Send 1-Click Recovery".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                payload,
+            ).await.map(|_| ());
+        }
+
+        if event.event_type == "tenant.product.created"  || event.event_type == "tenant.inventory.updated" {
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());

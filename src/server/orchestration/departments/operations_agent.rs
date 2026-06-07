@@ -23,6 +23,7 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+
         ]
     }
 
@@ -56,10 +57,27 @@ impl Department for OperationsAgent {
                     batch_id, subscriber_count
                 )
             }
+            "checkout.abandoned" => "Emit cart recovery needed".to_string(),
             _ => "Create order and booking".to_string(),
         };
 
+
+        if event.event_type == "checkout.abandoned" {
+            // Re-emit as tenant.cart.recovery.needed
+            let mut payload = event.payload.clone();
+            payload["checkout_session_id"] = event.payload.get("session_id").unwrap_or(&serde_json::Value::Null).clone();
+
+            let recovery_event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.cart.recovery.needed".to_string(),
+                payload,
+            };
+            return self.orchestrator.dispatch_event(recovery_event).await;
+        }
+
         self.orchestrator.execute_action(
+
             DepartmentType::Operations,
             action_description,
             event.tenant_id.clone(),
@@ -194,6 +212,7 @@ mod tests {
             id: "evt-batch".to_string(),
             tenant_id: "tenant-ops".to_string(),
             event_type: "tenant.subscription.fulfillment_batch.created".to_string(),
+
             payload: serde_json::json!({
                 "batch_id": "batch-123",
                 "subscription_plan_id": "plan-123",
