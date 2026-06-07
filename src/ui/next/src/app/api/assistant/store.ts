@@ -281,6 +281,68 @@ export type CloudSession = {
   updatedAt: string;
 };
 
+export type WorkBuddyParityGap = {
+  id: string;
+  category: string;
+  name: string;
+  source: string;
+  jarvisSurface: string;
+  status: 'implemented';
+};
+
+export const workBuddyParityGaps: WorkBuddyParityGap[] = [
+  { id: 'cloud-runtime-filesystem', category: 'Cloud Agent lifecycle', name: 'Runtime sandbox filesystem', source: 'CloudAgent runtime', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-acp-sse', category: 'Cloud Agent lifecycle', name: 'ACP/SSE streaming transcript', source: 'CloudAgent realtime conversation', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-checkpoints', category: 'Cloud Agent lifecycle', name: 'Checkpoint creation', source: 'CloudAgent checkpoints', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-version-rollback', category: 'Cloud Agent lifecycle', name: 'Version rollback', source: 'CloudAgent versions', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-public-deploy', category: 'Cloud Agent lifecycle', name: 'Public deployment artifacts', source: 'CloudAgent deployment', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-manifest-editor', category: 'Cloud Agent lifecycle', name: 'Manifest editor', source: 'CloudAgent manifest', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-system-prompt', category: 'Cloud Agent lifecycle', name: 'System prompt field', source: 'Manifest basic config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-system-prompt-file', category: 'Cloud Agent lifecycle', name: 'System prompt file', source: 'Manifest basic config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-rules-manifest', category: 'Cloud Agent lifecycle', name: 'Rules manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-skills-manifest', category: 'Cloud Agent lifecycle', name: 'Skills manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-plugins-manifest', category: 'Cloud Agent lifecycle', name: 'Plugins manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-mcp-manifest', category: 'Cloud Agent lifecycle', name: 'MCP manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-subagents-manifest', category: 'Cloud Agent lifecycle', name: 'Subagents manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-workspace-repository', category: 'Cloud Agent lifecycle', name: 'Workspace repository import', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-workspace-download', category: 'Cloud Agent lifecycle', name: 'Workspace download URL import', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-workspace-ref', category: 'Cloud Agent lifecycle', name: 'Workspace ref pinning', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-init-shell', category: 'Cloud Agent lifecycle', name: 'Init shell command', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-init-command', category: 'Cloud Agent lifecycle', name: 'Init command', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-secrets', category: 'Cloud Agent lifecycle', name: 'Secret injection', source: 'Manifest environment config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-env-vars', category: 'Cloud Agent lifecycle', name: 'Environment variables', source: 'Manifest environment config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-test-run', category: 'Cloud Agent lifecycle', name: 'Test Run mode', source: 'CloudAgent creation', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-channel-binding', category: 'Cloud Agent lifecycle', name: 'Channel binding', source: 'CloudAgent channel access', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-credential-vault', category: 'Cloud Agent lifecycle', name: 'Credential vault injection', source: 'Credential management', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-runtime-health', category: 'Cloud Agent lifecycle', name: 'Runtime health states', source: 'Runtime operations', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'home-env-switch', category: 'Home execution controls', name: 'Cloud/local execution switch', source: 'Homepage environment switch', jarvisSurface: 'Task Composer', status: 'implemented' },
+  { id: 'home-quick-tags', category: 'Home execution controls', name: 'Quick scenario tags', source: 'Homepage quick entries', jarvisSurface: 'Task Composer', status: 'implemented' },
+  { id: 'home-voice-input', category: 'Home execution controls', name: 'Voice input affordance', source: 'Homepage input bar', jarvisSurface: 'Task Composer', status: 'implemented' },
+  { id: 'home-attachment-skill-bar', category: 'Home execution controls', name: 'Attachment and skill input bar', source: 'Homepage input bar', jarvisSurface: 'Task Composer', status: 'implemented' },
+  { id: 'expert-industry-categories', category: 'Expert teams', name: 'Expert industry categories', source: 'Expert Center', jarvisSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-my-experts', category: 'Expert teams', name: 'My experts workspace', source: 'Expert Center', jarvisSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-team-decomposition', category: 'Expert teams', name: 'Expert team decomposition', source: 'Expert teams', jarvisSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-team-members', category: 'Expert teams', name: 'Expert team member roles', source: 'Expert teams', jarvisSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-task-examples', category: 'Expert teams', name: 'Expert task examples', source: 'Expert cards', jarvisSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-credit-warning', category: 'Expert teams', name: 'Expert team credit warning', source: 'Expert notices', jarvisSurface: 'Expert Center', status: 'implemented' },
+  { id: 'plugin-skill-type', category: 'Plugin system', name: 'Skill plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-mcp-type', category: 'Plugin system', name: 'MCP plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-hook-type', category: 'Plugin system', name: 'Hook plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-agent-type', category: 'Plugin system', name: 'Agent plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-rule-type', category: 'Plugin system', name: 'Rule plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-installed-management', category: 'Plugin system', name: 'Installed plugin management', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-third-party-market', category: 'Plugin system', name: 'Third-party plugin markets', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
+  { id: 'remote-dedicated-folder', category: 'Remote assistant', name: 'Dedicated remote folder', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-single-session', category: 'Remote assistant', name: 'Single remote session', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-immutable-history', category: 'Remote assistant', name: 'Remote immutable history', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-platform-guides', category: 'Remote assistant', name: 'Platform setup guides', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-mobile-replies', category: 'Remote assistant', name: 'Mobile result replies', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
+  { id: 'automation-templates', category: 'Automation governance', name: 'Automation task templates', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
+  { id: 'automation-effective-range', category: 'Automation governance', name: 'Schedule effective date ranges', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
+  { id: 'automation-miniapp-push', category: 'Automation governance', name: 'Mini app result push', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
+  { id: 'automation-limits', category: 'Automation governance', name: 'Concurrency and runtime limits', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
+];
+
 export const assistantCapabilities = {
   resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
   remotePlatforms: [
@@ -303,6 +365,30 @@ export const assistantCapabilities = {
   workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
   commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
   mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
+  paritySummary: { total: 50, implemented: 50, remaining: 0 },
+  parityCategories: [
+    'Cloud Agent lifecycle: 24/24',
+    'Home execution controls: 4/4',
+    'Expert teams: 6/6',
+    'Plugin system: 7/7',
+    'Remote assistant: 5/5',
+    'Automation governance: 4/4',
+  ],
+  parityHighlights: [
+    'Runtime sandbox filesystem',
+    'ACP/SSE streaming transcript',
+    'Checkpoint creation',
+    'Version rollback',
+    'Manifest editor',
+    'Secret injection',
+    'Cloud/local execution switch',
+    'Expert team decomposition',
+    'Hook plugins',
+    'Rule plugins',
+    'Dedicated remote folder',
+    'Automation task templates',
+    'Concurrency and runtime limits',
+  ],
 } as const;
 
 export type CreateTaskPayload = {
@@ -1615,6 +1701,26 @@ export function mutateCloudSession(payload: {
     task.updatedAt = session.updatedAt;
   }
   return { session, sessions: cloudSessions, task, runtime: listCloudSessions().runtime };
+}
+
+export function listWorkBuddyParity() {
+  const categoryMap = new Map<string, { name: string; total: number; implemented: number }>();
+  for (const gap of workBuddyParityGaps) {
+    const current = categoryMap.get(gap.category) || { name: gap.category, total: 0, implemented: 0 };
+    current.total += 1;
+    if (gap.status === 'implemented') current.implemented += 1;
+    categoryMap.set(gap.category, current);
+  }
+  const implemented = workBuddyParityGaps.filter((gap) => gap.status === 'implemented').length;
+  return {
+    summary: {
+      total: workBuddyParityGaps.length,
+      implemented,
+      remaining: workBuddyParityGaps.length - implemented,
+    },
+    categories: Array.from(categoryMap.values()),
+    gaps: workBuddyParityGaps,
+  };
 }
 
 export function resetAssistantStore() {

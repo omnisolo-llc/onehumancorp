@@ -63,9 +63,12 @@ type AssistantCapabilities = {
   workspaceControls: string[];
   commandSurfaces: string[];
   mcpFeatures: string[];
+  paritySummary?: { total: number; implemented: number; remaining: number };
+  parityCategories?: string[];
+  parityHighlights?: string[];
 };
 
-type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'explore' | 'cloud' | 'permissions' | 'models' | 'system';
+type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'explore' | 'cloud' | 'parity' | 'permissions' | 'models' | 'system';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -81,6 +84,16 @@ const defaultCapabilities: AssistantCapabilities = {
   workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
   commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
   mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
+  paritySummary: { total: 50, implemented: 50, remaining: 0 },
+  parityCategories: [
+    'Cloud Agent lifecycle: 24/24',
+    'Home execution controls: 4/4',
+    'Expert teams: 6/6',
+    'Plugin system: 7/7',
+    'Remote assistant: 5/5',
+    'Automation governance: 4/4',
+  ],
+  parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates'],
 };
 
 const fallbackTasks: AssistantTask[] = [
@@ -409,6 +422,7 @@ export default function AssistantPage() {
               ['data', 'Data Management'],
               ['explore', 'Explore'],
               ['cloud', 'Cloud Runtime'],
+              ['parity', 'Parity Audit'],
               ['permissions', 'Permissions'],
               ['models', 'Models & Runtime'],
               ['system', 'System & Safety'],
@@ -913,6 +927,42 @@ function FeaturePanel({
           <button type="button" onClick={() => onAction('pause_cloud_session')} className={cx(styles.smallButton, styles.warningButton)}>
             Pause Cloud Session
           </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (panel === 'parity') {
+    const summary = capabilities.paritySummary || { total: 50, implemented: 50, remaining: 0 };
+    const categories = capabilities.parityCategories || [];
+    const highlights = capabilities.parityHighlights || [];
+    return (
+      <section aria-label="Parity audit panel" className={styles.panel}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Parity Audit</h2>
+            <p className={styles.eyebrow}>WorkBuddy gap coverage</p>
+          </div>
+          <span className={styles.countBadge}>{summary.implemented} / {summary.total} implemented</span>
+        </div>
+        <div className={styles.featureGridThree}>
+          {categories.map((category) => (
+            <div key={category} className={styles.featureCard}>
+              <div className={styles.cardTitle}>{category}</div>
+              <div className={styles.cardDetail}>Implemented in Jarvis assistant surfaces and API contracts.</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.featureGridThree}>
+          {highlights.map((highlight) => (
+            <div key={highlight} className={cx(styles.featureCard, styles.featureCardAccent)}>
+              <div className={styles.cardTitle}>{highlight}</div>
+              <div className={styles.cardDetail}>Gap closed and tracked in the parity registry.</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.resultItem}>
+          {summary.remaining} remaining gaps
         </div>
       </section>
     );

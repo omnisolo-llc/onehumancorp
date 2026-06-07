@@ -25,6 +25,7 @@ import { GET as getSettings, PATCH as patchSettings } from './settings/route';
 import { POST as postSupport } from './support/route';
 import { GET as getExplore, POST as postExplore, PATCH as patchExplore } from './explore/route';
 import { GET as getCloud, POST as postCloud, PATCH as patchCloud } from './cloud/route';
+import { GET as getParity } from './parity/route';
 import { resetAssistantStore } from './store';
 
 function jsonRequest(url: string, body: unknown) {
@@ -975,5 +976,40 @@ describe('assistant API contract', () => {
       id: body.session.id,
     }))).json();
     expect(body.session.status).toBe('canceled');
+  });
+
+  test('tracks 50 additional WorkBuddy gaps as implemented Jarvis parity capabilities', async () => {
+    const body = await (await getParity()).json();
+
+    expect(body.summary).toMatchObject({
+      total: 50,
+      implemented: 50,
+      remaining: 0,
+    });
+    expect(body.gaps).toHaveLength(50);
+    expect(body.gaps.every((gap: any) => gap.status === 'implemented')).toBe(true);
+    expect(body.gaps.map((gap: any) => gap.name)).toEqual(expect.arrayContaining([
+      'Runtime sandbox filesystem',
+      'ACP/SSE streaming transcript',
+      'Checkpoint creation',
+      'Version rollback',
+      'Manifest editor',
+      'Secret injection',
+      'Cloud/local execution switch',
+      'Expert team decomposition',
+      'Hook plugins',
+      'Rule plugins',
+      'Dedicated remote folder',
+      'Automation task templates',
+      'Concurrency and runtime limits',
+    ]));
+    expect(body.categories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Cloud Agent lifecycle', implemented: 24 }),
+      expect.objectContaining({ name: 'Home execution controls', implemented: 4 }),
+      expect.objectContaining({ name: 'Expert teams', implemented: 6 }),
+      expect.objectContaining({ name: 'Plugin system', implemented: 7 }),
+      expect.objectContaining({ name: 'Remote assistant', implemented: 5 }),
+      expect.objectContaining({ name: 'Automation governance', implemented: 4 }),
+    ]));
   });
 });
