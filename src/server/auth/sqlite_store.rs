@@ -412,8 +412,6 @@ mod tests {
         if is_multitenant {
             assert!(res.is_err(), "Must reject system id in multitenant mode");
             assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        } else {
-            assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
         }
     }
 
@@ -447,8 +445,6 @@ mod tests {
         if is_multitenant {
             assert!(res.is_err(), "Must reject system org_id for update in multitenant mode");
             assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
-        } else {
-            assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
         }
     }
 }
