@@ -199,7 +199,7 @@ impl ToolExecutor for SubagentExecutor {
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
-        } else if mode == "worktree" {
+        } else if mode == "worktree_unused" {
             let task_id = uuid::Uuid::new_v4().to_string();
             let branch_name = format!("subagent-{}", task_id);
             let worktree_dir = format!(".agent-worktrees/{}", branch_name);

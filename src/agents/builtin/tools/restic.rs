@@ -21,8 +21,7 @@ impl ToolExecutor for ResticExecutor {
 
         let timeout = Duration::from_secs(300);
 
-        let mut env_vars = vec![];
-        env_vars.push(("RESTIC_PASSWORD".to_string(), password.clone()));
+        let env_vars = vec![("RESTIC_PASSWORD".to_string(), password.clone())];
 
         let mode = std::env::var("OHC_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
         if mode == "cloud" {

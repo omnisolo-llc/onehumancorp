@@ -21,7 +21,7 @@ impl PydanticToolExecutor<SleepArgs> for SleepExecutor {
         &self,
         args: SleepArgs,
     ) -> Result<String, ToolError> {
-        let secs = args.seconds.max(0.0).min(60.0); // cap at 60s
+        let secs = args.seconds.clamp(0.0, 60.0); // cap at 60s
         tokio::time::sleep(std::time::Duration::from_secs_f64(secs)).await;
         Ok(format!("Slept for {}s.", secs))
     }
