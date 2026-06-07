@@ -89,8 +89,19 @@ impl Department for CustomerSuccessAgent {
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
-            // Dummy query embedding for simulation
-            let query_embedding = vec![0.5; 1536];
+            let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                .as_deref()
+            {
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key).generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
+                }
+                _ => {
+                    crate::minimax::LocalLLMClient::new().generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
+                }
+            };
+
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
             let context_summary = if !memories.is_empty() {
@@ -99,10 +110,23 @@ impl Department for CustomerSuccessAgent {
                 "No relevant memory found.".to_string()
             };
 
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
-                "Yes, we do vegan cakes!"
-            } else {
-                "Thank you for your message. We will get back to you shortly."
+            let prompt = format!(
+                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                event.tenant_id, message, context_summary
+            );
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                .as_deref()
+            {
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                }
+                _ => {
+                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                }
             };
 
             let description = if risk == ActionRisk::AutoExecute {
@@ -113,7 +137,7 @@ impl Department for CustomerSuccessAgent {
 
             let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
-                let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, generated_response).await;
+                let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
             }
 
             let action_payload = serde_json::json!({
