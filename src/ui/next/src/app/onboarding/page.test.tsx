@@ -220,7 +220,7 @@ describe('OnboardingWizard', () => {
     // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+      expect(screen.getByText("my-business.ohc.app")).toBeInTheDocument();
     });
 
     // Check that start API was called with the correct credentials
@@ -567,5 +567,59 @@ describe('OnboardingWizard', () => {
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({
       method: 'POST'
     }));
+  });
+
+  it('Step 3: Shows inline validation errors for admin fields', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 3, aiAgents: [], aiAutoRespond: true, domainChoice: 'subdomain' });
+    });
+
+    await renderOnboardingWizard();
+
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya Smith/i);
+    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
+    const passwordInput = screen.getByPlaceholderText(/••••••••/i);
+    // Test Admin Name Validation
+    await user.clear(nameInput);
+    await user.type(nameInput, 'a');
+    await user.clear(nameInput);
+    expect(await screen.findByText('Admin Name is required')).toBeInTheDocument();
+
+    await user.type(nameInput, 'Maya Smith');
+    await waitFor(() => {
+        expect(screen.queryByText('Admin Name is required')).not.toBeInTheDocument();
+    });
+
+    // Test Admin Email Validation
+    await user.clear(emailInput);
+    await user.type(emailInput, 'invalidemail');
+    expect(await screen.findByText('Please enter a valid email address')).toBeInTheDocument();
+
+    await user.clear(emailInput);
+    expect(await screen.findByText('Admin Email is required')).toBeInTheDocument();
+
+    await user.type(emailInput, 'maya@example.com');
+    await waitFor(() => {
+        expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument();
+        expect(screen.queryByText('Admin Email is required')).not.toBeInTheDocument();
+    });
+
+    // Test Admin Password Validation
+    await user.clear(passwordInput);
+    await user.type(passwordInput, 'weak');
+    expect(await screen.findByText('Password must be at least 8 characters and contain a number')).toBeInTheDocument();
+
+    await user.clear(passwordInput);
+    expect(await screen.findByText('Password is required')).toBeInTheDocument();
+
+    await user.type(passwordInput, 'mypassword123');
+    await waitFor(() => {
+        expect(screen.queryByText('Password must be at least 8 characters and contain a number')).not.toBeInTheDocument();
+        expect(screen.queryByText('Password is required')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText('Password must be at least 8 characters and contain a number')).not.toBeInTheDocument();
+    expect(screen.queryByText('Password is required')).not.toBeInTheDocument();
   });
 });

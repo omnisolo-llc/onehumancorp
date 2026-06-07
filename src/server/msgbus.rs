@@ -708,9 +708,18 @@ mod tests {
         assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
         assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
 
-        // Allow lock to expire
-        tokio::time::sleep(tokio::time::Duration::from_millis(2100)).await;
-        assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
+        // Allow lock to expire. Poll because SQLite's second-granularity clock can
+        // land on the boundary under loaded test runs.
+        let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
+        let mut acquired_after_expiration = false;
+        while tokio::time::Instant::now() < deadline {
+            if bus.acquire_lock(resource, owner2, 1).await.unwrap() {
+                acquired_after_expiration = true;
+                break;
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
+        assert!(acquired_after_expiration);
 
         bus.release_lock(resource, owner2).await.unwrap();
         assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
