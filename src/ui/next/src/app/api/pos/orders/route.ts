@@ -1,44 +1,83 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
-let orders: any[] = [];
+export async function GET(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8081';
+  const tenantId = request.headers.get('x-tenant-id') || 'default';
+  const userId = request.headers.get('x-user-id') || 'default';
 
-const resetOrders = () => {
-  orders = [
-    { id: '1', customer_name: 'Ahmed', items: ['2x Chicken Over Rice'], status: 'Received', created_at: new Date().toISOString() },
-    { id: '2', customer_name: 'Sarah', items: ['1x Lamb Combo', '1x Soda'], status: 'Preparing', created_at: new Date().toISOString() }
-  ];
-};
-resetOrders();
+  const authHeader = request.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'x-tenant-id': tenantId,
+    'x-user-id': userId
+  };
+  if (authHeader) {
+    headers['authorization'] = authHeader;
+  }
 
-export async function GET() {
-  return NextResponse.json(orders);
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/pos_kds/orders`, {
+      headers
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
+    }
+
+    return NextResponse.json([], { status: res.status });
+  } catch (e) {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8081';
+  const tenantId = request.headers.get('x-tenant-id') || 'default';
+  const userId = request.headers.get('x-user-id') || 'default';
+
+  const authHeader = request.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'x-tenant-id': tenantId,
+    'x-user-id': userId,
+    'Content-Type': 'application/json'
+  };
+  if (authHeader) {
+    headers['authorization'] = authHeader;
+  }
+
+  try {
+    const body = await request.json();
+    const events = Array.isArray(body) ? body : [body];
+
+    // Transform events to what backend expects
+    const updateRequests = events
+      .filter((e: any) => e.type === 'UPDATE_ORDER_STATUS')
+      .map((e: any) => ({
+        order_id: e.payload.order_id,
+        status: e.payload.status
+      }));
+
+    if (updateRequests.length > 0) {
+        const res = await fetch(`${backendUrl}/api/v1/pos_kds/orders`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(updateRequests)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          return NextResponse.json(data, { status: 201 });
+        }
+        return NextResponse.json({}, { status: res.status });
+    }
+
+    return NextResponse.json({ success: true }, { status: 201 });
+
+  } catch (e) {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
 }
 
 export async function DELETE() {
-  resetOrders();
   return NextResponse.json({ success: true });
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  const events = Array.isArray(body) ? body : [body];
-
-  const processedEvents = events.map((event) => {
-    if (event.type === 'UPDATE_ORDER_STATUS') {
-      const order = orders.find(o => o.id === event.payload.order_id);
-      if (order) {
-        order.status = event.payload.status;
-      }
-    } else if (event.type === 'NEW_ORDER') {
-      orders.push(event.payload);
-    }
-    return {
-      id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...event,
-      sync_status: 'SYNCED',
-      synced_at: new Date().toISOString()
-    };
-  });
-
-  return NextResponse.json(processedEvents, { status: 201 });
 }

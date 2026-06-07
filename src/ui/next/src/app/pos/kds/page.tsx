@@ -179,6 +179,12 @@ export default function KDSPage() {
                 <ul className="mb-4 text-gray-700 font-medium">
                   {order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
                 </ul>
+                {(order.notes || order.notes_ar) && (
+                  <div className="bg-orange-50 border border-orange-100 p-2 rounded-lg mb-4 text-sm text-orange-800">
+                    <span className="font-bold">{language === 'en' ? 'Notes:' : 'ملاحظات:'} </span>
+                    {language === 'ar' && order.notes_ar ? order.notes_ar : order.notes}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                    {order.status === 'Received' && (
                       <button

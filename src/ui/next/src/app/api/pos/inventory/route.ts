@@ -1,42 +1,83 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
-let inventoryItems: any[] = [];
+export async function GET(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8081';
+  const tenantId = request.headers.get('x-tenant-id') || 'default';
+  const userId = request.headers.get('x-user-id') || 'default';
 
-const resetInventory = () => {
-  inventoryItems = [
-    { id: 'inv_1', name_en: 'Chicken Over Rice', name_ar: 'دجاج فوق الرز', is_sold_out: false },
-    { id: 'inv_2', name_en: 'Lamb Combo', name_ar: 'كومبو لحم ضأن', is_sold_out: false }
-  ];
-};
-resetInventory();
+  const authHeader = request.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'x-tenant-id': tenantId,
+    'x-user-id': userId
+  };
+  if (authHeader) {
+    headers['authorization'] = authHeader;
+  }
 
-export async function GET() {
-  return NextResponse.json(inventoryItems);
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/pos_kds/inventory`, {
+      headers
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
+    }
+
+    return NextResponse.json([], { status: res.status });
+  } catch (e) {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8081';
+  const tenantId = request.headers.get('x-tenant-id') || 'default';
+  const userId = request.headers.get('x-user-id') || 'default';
+
+  const authHeader = request.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'x-tenant-id': tenantId,
+    'x-user-id': userId,
+    'Content-Type': 'application/json'
+  };
+  if (authHeader) {
+    headers['authorization'] = authHeader;
+  }
+
+  try {
+    const body = await request.json();
+    const events = Array.isArray(body) ? body : [body];
+
+    // Transform events to what backend expects
+    const updateRequests = events
+      .filter((e: any) => e.type === 'TOGGLE_SOLD_OUT')
+      .map((e: any) => ({
+        item_id: e.payload.item_id,
+        is_sold_out: e.payload.is_sold_out
+      }));
+
+    if (updateRequests.length > 0) {
+        const res = await fetch(`${backendUrl}/api/v1/pos_kds/inventory`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(updateRequests)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          return NextResponse.json(data, { status: 201 });
+        }
+        return NextResponse.json({}, { status: res.status });
+    }
+
+    return NextResponse.json({ success: true }, { status: 201 });
+
+  } catch (e) {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  }
 }
 
 export async function DELETE() {
-  resetInventory();
   return NextResponse.json({ success: true });
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  const events = Array.isArray(body) ? body : [body];
-
-  const processedEvents = events.map((event) => {
-    if (event.type === 'TOGGLE_SOLD_OUT') {
-      const item = inventoryItems.find(i => i.id === event.payload.item_id);
-      if (item) {
-        item.is_sold_out = event.payload.is_sold_out;
-      }
-    }
-    return {
-      id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...event,
-      sync_status: 'SYNCED',
-      synced_at: new Date().toISOString()
-    };
-  });
-
-  return NextResponse.json(processedEvents, { status: 201 });
 }

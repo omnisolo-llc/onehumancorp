@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS orders (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
+    total_amount DECIMAL DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
