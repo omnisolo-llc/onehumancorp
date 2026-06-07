@@ -1,4 +1,24 @@
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShippoRate {
+    pub id: String,
+    pub carrier: String,
+    pub service: String,
+    pub amount: String,
+    pub days: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PurchaseLabelResponse {
+    pub success: bool,
+    #[serde(rename = "labelUrl")]
+    pub label_url: String,
+    #[serde(rename = "trackingNumber")]
+    pub tracking_number: String,
+    pub carrier: String,
+}
 
 pub struct ShippoClient {
     pub api_key: String,
@@ -39,7 +59,7 @@ impl ShippoClient {
             .map_err(|e| format!("{var_name} must be valid Shippo address JSON: {e}"))
     }
 
-    pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
+    pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<ShippoRate>, String> {
         self.validate_credentials()?;
         if weight <= 0.0 {
             return Err("shipment weight must be positive".to_string());
@@ -84,19 +104,32 @@ impl ShippoClient {
             .ok_or_else(|| "Shippo rates response missing rates".to_string())?;
 
         Ok(rates.iter().filter_map(|rate| {
-            let provider = rate.get("provider").and_then(|v| v.as_str())?;
+            let id = rate.get("object_id")
+                .or_else(|| rate.get("id"))
+                .and_then(|v| v.as_str())?;
+            let carrier = rate.get("provider")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Shippo");
             let service = rate.get("servicelevel")
                 .and_then(|v| v.get("name"))
                 .and_then(|v| v.as_str())
                 .or_else(|| rate.get("service").and_then(|v| v.as_str()))
                 .unwrap_or("Service");
-            let amount = rate.get("amount").and_then(|v| v.as_str())?;
-            let currency = rate.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
-            Some(format!("{provider} {service} - {amount} {currency}"))
+            let amount = rate.get("amount").and_then(|v| v.as_str()).unwrap_or_default();
+            let days = rate.get("estimated_days")
+                .and_then(|v| v.as_u64())
+                .unwrap_or_default() as u32;
+            Some(ShippoRate {
+                id: id.to_string(),
+                carrier: carrier.to_string(),
+                service: service.to_string(),
+                amount: amount.to_string(),
+                days,
+            })
         }).collect())
     }
 
-    pub async fn purchase_label(&self, rate_id: &str) -> Result<String, String> {
+    pub async fn purchase_label(&self, rate_id: &str) -> Result<PurchaseLabelResponse, String> {
         self.validate_credentials()?;
         if rate_id.trim().is_empty() {
             return Err("Shippo rate id is required".to_string());
@@ -123,10 +156,23 @@ impl ShippoClient {
             return Err(format!("Shippo label API error {status}: {body}"));
         }
 
-        body.get("label_url")
+        let label_url = body.get("label_url")
             .and_then(|v| v.as_str())
-            .map(|url| url.to_string())
-            .ok_or_else(|| "Shippo label response missing label_url".to_string())
+            .ok_or_else(|| "Shippo label response missing label_url".to_string())?;
+        let tracking_number = body.get("tracking_number")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let carrier = body.get("tracking_carrier")
+            .or_else(|| body.get("carrier"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("Shippo");
+
+        Ok(PurchaseLabelResponse {
+            success: true,
+            label_url: label_url.to_string(),
+            tracking_number: tracking_number.to_string(),
+            carrier: carrier.to_string(),
+        })
     }
 }
 

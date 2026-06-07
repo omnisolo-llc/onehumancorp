@@ -1,4 +1,4 @@
-use crate::domain::repository::models::{Campaign, CampaignAsset};
+use crate::domain::repository::models::{Campaign, CampaignAsset, LeadGenCampaign};
 use sqlx::{PgPool, Error};
 use uuid::Uuid;
 
@@ -112,5 +112,38 @@ impl CampaignRepository {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn create_lead_gen_campaign(&self, campaign: &LeadGenCampaign) -> Result<(), Error> {
+        sqlx::query(
+            r#"
+            INSERT INTO lead_gen_campaigns (id, tenant_id, budget, radius_miles, zip_code, status, created_at, updated_at)
+            VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8)
+            "#,
+        )
+        .bind(uuid::Uuid::parse_str(&campaign.id).unwrap_or_default())
+        .bind(uuid::Uuid::parse_str(&campaign.tenant_id).unwrap_or_default())
+        .bind(&campaign.budget)
+        .bind(campaign.radius_miles)
+        .bind(&campaign.zip_code)
+        .bind(&campaign.status)
+        .bind(&campaign.created_at)
+        .bind(&campaign.updated_at)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_lead_gen_campaign(&self, tenant_id: &str, id: &str) -> Result<LeadGenCampaign, Error> {
+        sqlx::query_as::<_, LeadGenCampaign>(
+            r#"
+            SELECT * FROM lead_gen_campaigns WHERE tenant_id = $1::uuid AND id = $2::uuid
+            "#,
+        )
+        .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or_default())
+        .bind(uuid::Uuid::parse_str(id).unwrap_or_default())
+        .fetch_one(&self.pool)
+        .await
     }
 }

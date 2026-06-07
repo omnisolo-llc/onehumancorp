@@ -113,6 +113,18 @@ function NavLink({ item }: { item: NavItem }) {
     );
   }
 
+  if (item.href === "/dashboard") {
+    return <WithTooltip id="dashboard-tooltip" defaultText="View your daily sales and overall business health.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/inventory") {
+    return <WithTooltip id="inventory-tooltip" defaultText="Manage your inventory, prices, and stock levels.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/orders") {
+    return <WithTooltip id="orders-tooltip" defaultText="See what customers bought and track order fulfillment.">{link}</WithTooltip>;
+  }
+
   return link;
 }
 

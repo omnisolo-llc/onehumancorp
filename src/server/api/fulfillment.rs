@@ -174,7 +174,7 @@ async fn fetch_rates(
         }
     };
     let client = crate::integrations::shippo::provider::ShippoProvider::new(api_key);
-    let rate_summaries = match client.fetch_rates(weight, &payload.dimensions).await {
+    let rates = match client.fetch_rates(weight, &payload.dimensions).await {
         Ok(rates) => rates,
         Err(err) => {
             return (
@@ -184,15 +184,14 @@ async fn fetch_rates(
                 .into_response();
         }
     };
-    let rates = rate_summaries
+    let rates = rates
         .into_iter()
-        .enumerate()
-        .map(|(idx, summary)| Rate {
-            id: format!("shippo-rate-{idx}"),
-            carrier: "Shippo".to_string(),
-            service: summary,
-            amount: String::new(),
-            days: 0,
+        .map(|rate| Rate {
+            id: rate.id,
+            carrier: rate.carrier,
+            service: rate.service,
+            amount: rate.amount,
+            days: rate.days,
         })
         .collect();
 
@@ -220,8 +219,8 @@ async fn purchase_label(
         }
     };
     let client = crate::integrations::shippo::provider::ShippoProvider::new(api_key);
-    let label_url = match client.purchase_label(&payload.rate_id).await {
-        Ok(label_url) => label_url,
+    let label = match client.purchase_label(&payload.rate_id).await {
+        Ok(label) => label,
         Err(err) => {
             return (
                 StatusCode::BAD_GATEWAY,
@@ -243,9 +242,9 @@ async fn purchase_label(
 
     (StatusCode::OK, Json(PurchaseLabelResponse {
         success: true,
-        label_url,
-        tracking_number: String::new(),
-        carrier: "Shippo".to_string(),
+        label_url: label.label_url,
+        tracking_number: label.tracking_number,
+        carrier: label.carrier,
     })).into_response()
 }
 

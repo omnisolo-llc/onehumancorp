@@ -259,3 +259,15 @@ pub struct InventoryPrediction {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LeadGenCampaign {
+    pub id: String,
+    pub tenant_id: String,
+    pub budget: f64,
+    pub radius_miles: i32,
+    pub zip_code: String,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

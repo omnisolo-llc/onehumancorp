@@ -63,7 +63,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
@@ -123,7 +123,7 @@ impl SipDB {
         let mut backoff = std::time::Duration::from_millis(50);
 
         loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
@@ -284,7 +284,7 @@ impl SipDB {
     pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
-        let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+        let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
             self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
         }).await;
 
@@ -303,7 +303,7 @@ impl SipDB {
         let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
 
         loop {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
                 let _permit = if is_standalone {
                     match get_sqlite_limiter().try_acquire() {
                         Ok(p) => Some(p),

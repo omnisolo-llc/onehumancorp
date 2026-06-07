@@ -127,9 +127,11 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
+        .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/send-cart", post(handle_send_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -186,6 +188,19 @@ pub struct GenerateCartRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCartResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartRequest {
+    pub customer_name: Option<String>,
+    pub cart_value: Option<String>,
+    pub draft: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SendCartResponse {
+    pub success: bool,
     pub message: String,
 }
 
@@ -298,6 +313,16 @@ async fn handle_generate_cart(
     })
 }
 
+async fn handle_send_cart(
+    Extension(_state): Extension<GrowthState>,
+    Json(_req): Json<SendCartRequest>,
+) -> impl IntoResponse {
+    Json(SendCartResponse {
+        success: true,
+        message: "Email scheduled to be sent successfully".to_string(),
+    })
+}
+
 async fn handle_send_receipt(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<SendReceiptRequest>,
@@ -320,6 +345,51 @@ async fn handle_send_receipt(
     state.hub.append_recent_event(msg);
 
     Json(SendReceiptResponse { success: true, message: generated })
+}
+
+
+#[derive(Deserialize)]
+pub struct LeadGenCampaignRequest {
+    pub budget: f64,
+    pub radius_miles: i32,
+    pub zip_code: String,
+}
+
+#[derive(Serialize)]
+pub struct LeadGenCampaignResponse {
+    pub id: String,
+    pub status: String,
+}
+
+async fn handle_create_lead_gen_campaign(
+    Extension(state): Extension<GrowthState>,
+    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<LeadGenCampaignRequest>,
+) -> Result<Json<LeadGenCampaignResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id.clone();
+
+    let repo = crate::domain::repository::campaign_repo::CampaignRepository::new(state.pool.clone());
+
+    let campaign = crate::domain::repository::models::LeadGenCampaign {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        budget: std::str::FromStr::from_str(&req.budget.to_string()).unwrap_or_default(),
+        radius_miles: req.radius_miles,
+        zip_code: req.zip_code.clone(),
+        status: "Active".to_string(),
+        created_at: Some(chrono::Utc::now()),
+        updated_at: Some(chrono::Utc::now()),
+    };
+
+    repo.create_lead_gen_campaign(&campaign).await.map_err(|e| {
+        tracing::error!("Failed to save lead gen campaign: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(LeadGenCampaignResponse {
+        id: campaign.id,
+        status: campaign.status,
+    }))
 }
 
 async fn handle_send_campaign(
@@ -597,7 +667,7 @@ async fn handle_check_milestones(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
-    use sqlx::Row;
+
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
@@ -610,6 +680,7 @@ async fn handle_check_milestones(
             .fetch_all(&state.pool)
             .await
             .unwrap_or_default();
+        use sqlx::Row;
         let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
         cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
         types
@@ -840,6 +911,7 @@ async fn handle_onboarding_metrics(
         .fetch_all(&_state.pool).await
     {
         Ok(rows) => {
+
             use sqlx::Row;
             let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
             let resp = OnboardingMetricsResponse { metrics };

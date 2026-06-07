@@ -347,6 +347,7 @@ mod tests {
 use tonic::{Request, Response, Status};
 use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
 use ::server_ohc::app::{
+    SyncCalendarRequest, SyncCalendarResponse,
     CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
     ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
     ConversationalCheckoutSession,
@@ -767,13 +768,36 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let _ = tx.commit().await;
-
         let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows.into_iter().filter_map(|row| {
             let st: Option<DateTime<Utc>> = row.get("start_time");
             let et: Option<DateTime<Utc>> = row.get("end_time");
             if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
         }).collect();
+
+        // Fetch exceptions / business hours from availability_schedules (if any)
+        let schedule_rows = sqlx::query(
+            "SELECT business_hours, exceptions FROM availability_schedules WHERE tenant_id = $1"
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut blocked_slots = Vec::new();
+        for row in schedule_rows {
+             let exceptions_json: serde_json::Value = row.try_get("exceptions").unwrap_or(serde_json::json!([]));
+             if let Some(arr) = exceptions_json.as_array() {
+                 for ex in arr {
+                      let st_str = ex.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                      let et_str = ex.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+                      if let (Ok(st), Ok(et)) = (DateTime::parse_from_rfc3339(st_str), DateTime::parse_from_rfc3339(et_str)) {
+                          blocked_slots.push((st.with_timezone(&Utc), et.with_timezone(&Utc)));
+                      }
+                 }
+             }
+        }
+
+        let _ = tx.commit().await;
 
         let soft_locks = self.soft_lock_store();
         let mut available_slots = vec![];
@@ -784,7 +808,8 @@ impl BookingEngineService for NativeBookingService {
             let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
 
             let mut overlap = false;
-            for (est, eet) in &existing_slots {
+            let all_busy = existing_slots.iter().chain(blocked_slots.iter());
+            for (est, eet) in all_busy {
                 if st < *eet && et > *est {
                     overlap = true;
                     break;
@@ -898,9 +923,11 @@ impl BookingEngineService for NativeBookingService {
             return Err(Status::already_exists("Time slot already booked"));
         }
 
+        let initial_status = if req.requires_deposit { "pending_payment" } else { "pending" };
+
         if let Err(e) = sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
-             VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(&booking_id)
         .bind(&tenant_id)
@@ -908,6 +935,7 @@ impl BookingEngineService for NativeBookingService {
         .bind(&product_id)
         .bind(start_time)
         .bind(end_time)
+        .bind(initial_status)
         .execute(&mut *tx)
         .await
         {
@@ -988,6 +1016,15 @@ impl BookingEngineService for NativeBookingService {
             expires_at_unix: expires_at.timestamp(),
         }))
     }
+
+    async fn sync_calendar(
+        &self,
+        request: Request<SyncCalendarRequest>,
+    ) -> Result<Response<SyncCalendarResponse>, Status> {
+        Ok(Response::new(SyncCalendarResponse {
+            status: "Sync queued".to_string(),
+        }))
+    }
 }
 
 
@@ -996,7 +1033,8 @@ mod native_booking_tests {
     use super::*;
     use tonic::Request;
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
-    use ::server_ohc::app::{ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
+    use ::server_ohc::app::{
+    SyncCalendarRequest, SyncCalendarResponse,ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
 
     #[tokio::test]
     async fn local_capacity_lock_blocks_and_releases_timeslot() {
@@ -1113,6 +1151,8 @@ mod native_booking_tests {
             product_id: "p1".to_string(),
             start_time: "invalid_time".to_string(),
             end_time: "invalid_time".to_string(),
+            requires_deposit: false,
+            timezone: "UTC".to_string(),
         });
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1167,5 +1207,28 @@ mod native_booking_tests {
         assert_eq!(session.amount_cents, 1000);
         assert!(session.checkout_url.starts_with("https://checkout.stripe.com/pay/cs_test_"));
         assert_eq!(session.status, "pending");
+    }
+
+    #[tokio::test]
+    async fn test_native_reserve_time_slot_with_deposit() {
+        let svc = NativeBookingService { redis_client: None };
+        let mut req = Request::new(ReserveTimeSlotRequest {
+            tenant_id: "t1".to_string(),
+            customer_id: "c1".to_string(),
+            product_id: "p1".to_string(),
+            start_time: "invalid_time".to_string(),
+            end_time: "invalid_time".to_string(),
+            requires_deposit: true,
+            timezone: "UTC".to_string(),
+        });
+        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "t1".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = svc.reserve_time_slot(req).await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }
