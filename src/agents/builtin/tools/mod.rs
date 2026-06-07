@@ -107,6 +107,11 @@ pub fn all_tools(
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
+
+    let marketplace_url = std::env::var("OHC_MARKETPLACE_URL").unwrap_or_else(|_| "".to_string());
+    let marketplace_provider = Box::new(marketplace::HttpMarketplaceProvider::new(&marketplace_url));
+    let marketplace_client = Arc::new(marketplace::MarketplaceClient::new(marketplace_provider));
+
     let mut tools = vec![
         repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
         bash::bash_tool(working_dir.clone(), runner.clone()),
@@ -149,6 +154,7 @@ pub fn all_tools(
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
+        marketplace_tool::marketplace_tool(marketplace_client),
     ];
 
     if let Some(env) = native_env {
@@ -164,3 +170,27 @@ pub fn all_tools(
 }
 
 pub mod native_state;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[tokio::test]
+    async fn test_all_tools_includes_marketplace() {
+        let todos = Arc::new(RwLock::new(vec![]));
+        let task_store = Arc::new(RwLock::new(task::TaskStore::default()));
+        let mailbox = Arc::new(RwLock::new(sendmessage::Mailbox::default()));
+        let observation_store = Arc::new(dashmap::DashMap::new());
+
+        let tools = all_tools(None, todos, task_store, mailbox, None, None, observation_store);
+
+        let marketplace_tool = tools.iter().find(|t| t.name == "agent_marketplace");
+        assert!(marketplace_tool.is_some(), "agent_marketplace tool not found in all_tools");
+
+        let marketplace_tool = marketplace_tool.unwrap();
+        assert_eq!(marketplace_tool.name, "agent_marketplace");
+        assert!(marketplace_tool.is_read_only);
+    }
+}
