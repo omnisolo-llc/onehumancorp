@@ -352,7 +352,8 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant', result.organization_id);
       }
       setStep(5);
-        syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
+      syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
+      fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
 
     } catch (err: any) {
       console.error(err);
