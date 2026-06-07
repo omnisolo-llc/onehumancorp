@@ -9,7 +9,10 @@ import { InteractiveWalkthrough } from './Walkthrough';
 // --- Walkthrough System ---
 type Step = {
   targetId: string;
-  message: string;
+  message?: string;
+  title?: string;
+  content?: string;
+  position?: "top" | "bottom" | "left" | "right";
 };
 
 type HelpArticle = { title: string; desc: string; link?: string };
