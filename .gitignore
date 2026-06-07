@@ -130,3 +130,5 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+.next/
+node_modules/
