@@ -9,6 +9,8 @@ pub static ONBOARDING_STATE_AGENT_CACHE: OnceLock<HybridCache<serde_json::Value>
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntakeData {
+    pub location: Option<String>,
+    pub target_audience: Option<String>,
     pub business_name: String,
     pub business_type: String,
     pub categories: Vec<String>,
@@ -42,7 +44,7 @@ impl OnboardingAgent {
         let prompt = format!(
             "You are the OHC Onboarding Expert. Extract structured business information from the following user description.
             If the input is an Instagram/social link, infer the business details from the context of a small business.
-            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string).
+            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string), location (string), target_audience (string).
 
             Valid categories are: physical, digital, services, food, subscriptions.
             Business type should be a friendly name like 'Home Bakery', 'Freelance Handyman', 'Boutique', etc.
@@ -54,6 +56,8 @@ impl OnboardingAgent {
               \"business_name\": \"Maya's Cakes\",
               \"business_type\": \"Home Bakery\",
               \"categories\": [\"food\", \"physical\"],
+              \"location\": \"Austin, TX\",
+              \"target_audience\": \"Vegans and people looking for custom cakes\",
               \"initial_products\": [
                 {{\"name\": \"Custom Chocolate Cake\", \"price\": \"45.00\"}},
                 {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\"}}
