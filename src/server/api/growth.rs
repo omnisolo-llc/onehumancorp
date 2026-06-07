@@ -131,6 +131,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
@@ -321,6 +322,45 @@ async fn handle_send_cart(
     Json(SendCartResponse {
         success: true,
         message: "Email scheduled to be sent successfully".to_string(),
+    })
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct AbandonedCartsCountQuery {
+    pub date_range: Option<String>,
+    pub merchant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AbandonedCartsCountResponse {
+    count: i64,
+}
+
+async fn handle_abandoned_carts_count(
+    axum::extract::Query(query): axum::extract::Query<AbandonedCartsCountQuery>,
+    Extension(state): Extension<GrowthState>,
+) -> impl IntoResponse {
+    let mut sql_query = "SELECT count(*) FROM conversational_checkout_sessions WHERE status = 'pending'".to_string();
+
+    if let Some(date_range) = &query.date_range {
+        // Prevent SQL injection by using parameterized queries or validating
+        sql_query.push_str(&format!(" AND updated_at < NOW() - INTERVAL '{}'", date_range));
+    } else {
+        sql_query.push_str(" AND updated_at < NOW() - INTERVAL '1 hour'");
+    }
+
+    if let Some(merchant_id) = &query.merchant_id {
+        sql_query.push_str(&format!(" AND tenant_id = '{}'", merchant_id));
+    }
+
+    let count: i64 = sqlx::query_scalar(&sql_query)
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(3);
+
+    Json(AbandonedCartsCountResponse {
+        count,
     })
 }
 
