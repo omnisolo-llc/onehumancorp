@@ -255,7 +255,7 @@ export function UnifiedAgentFeed() {
 
                 <div className="flex flex-col gap-3 w-full mt-2">
                   {approval.payload?.context?.smart_pricing === true ? (
-                    <div className="flex gap-3 w-full">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
@@ -274,7 +274,7 @@ export function UnifiedAgentFeed() {
                       </button>
                     </div>
                   ) : approval.payload?.context?.weekly_health_report === true ? (
-                    <div className="flex gap-3 w-full">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-colors shadow-md flex items-center justify-center"
@@ -301,7 +301,7 @@ export function UnifiedAgentFeed() {
                       >
                         Approve
                       </button>
-                      <div className="flex gap-3 w-full">
+                      <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <button
                           onClick={() => {}}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
