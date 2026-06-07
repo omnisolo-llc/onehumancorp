@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 
 const promotions = [
-  "Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/{tenant}",
-  "🚀 Just dropped! Check out our latest arrivals and get a special 15% discount on your first order. Use code NEW15 at checkout! https://ohc.store/shop/{tenant}",
-  "✨ Special offer just for you! Buy one, get one 50% off on all accessories this week. Don't miss out! Shop now: https://ohc.store/shop/{tenant}",
-  "🔥 Limited time offer: Free shipping on all orders over $50! Stock up on your essentials today. https://ohc.store/shop/{tenant}",
-  "🎁 Treat yourself! Use code TREAT20 for 20% off your entire purchase today. Shop the collection: https://ohc.store/shop/{tenant}",
+  "Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: /bio/{tenant}",
+  "🚀 Just dropped! Check out our latest arrivals and get a special 15% discount on your first order. Use code NEW15 at checkout! /bio/{tenant}",
+  "✨ Special offer just for you! Buy one, get one 50% off on all accessories this week. Don't miss out! Shop now: /bio/{tenant}",
+  "🔥 Limited time offer: Free shipping on all orders over $50! Stock up on your essentials today. /bio/{tenant}",
+  "🎁 Treat yourself! Use code TREAT20 for 20% off your entire purchase today. Shop the collection: /bio/{tenant}",
 ];
 
 export async function POST(request: Request) {
