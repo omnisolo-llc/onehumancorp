@@ -158,6 +158,29 @@ async fn handle_create_product(
             .into_response();
     }
 
+    // Queue translation job
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let job_payload = serde_json::json!({
+        "product_id": product_id,
+        "name": payload.name,
+        "description": payload.description
+    });
+    let insert_job = sqlx::query(
+        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, $3, $4)"
+    )
+    .bind(&job_id)
+    .bind(&tenant_id)
+    .bind("translate_product")
+    .bind(job_payload)
+    .execute(&mut *conn)
+    .await;
+
+    if let Err(e) = insert_job {
+        ::server_telemetry::record_error_signal("Failed to insert translation job");
+        tracing::error!("Failed to insert translation job: {}", e);
+        // We log the error but don't fail the product creation
+    }
+
     // Invalidate cache
     let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
     cache.invalidate(&tenant_id).await;
