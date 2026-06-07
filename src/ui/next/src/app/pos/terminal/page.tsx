@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import StripeTerminalClient from './StripeTerminalClient';
+import { InteractiveWalkthrough, Step, WalkthroughTarget } from "../../../components/Walkthrough";
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -32,6 +33,10 @@ export default function TerminalPage() {
   const { t } = useTranslation();
   const { currency, convert } = useCurrency();
   const [pin, setPin] = useState('');
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const walkthroughSteps: Step[] = [
+    { targetId: "pos-new-order", title: "Accept your first payment", content: "Click here to start a new order and accept a payment.", position: "bottom" }
+  ];
   const [activeStaff, setActiveStaff] = useState<any | null>(null);
   const [clockedIn, setClockedIn] = useState(false);
   const [error, setError] = useState('');
@@ -286,6 +291,7 @@ export default function TerminalPage() {
   return (
      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
       <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+        <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
@@ -295,6 +301,9 @@ export default function TerminalPage() {
             {isOffline && <span className="inline-block mt-1 text-red-500 font-bold text-xs bg-red-100 px-2 py-1 rounded">{t('Offline Mode')}</span>}
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => setIsWalkthroughOpen(true)} className="text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded-full transition-colors">
+              Tour
+            </button>
             <LocalizationToggle />
             <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
               {t('Lock')}
@@ -339,16 +348,18 @@ export default function TerminalPage() {
            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Quick Actions')}</h3>
 
            <div className="grid grid-cols-2 gap-4">
-             <button
-                onClick={handleNewOrder}
-                disabled={reserving}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
-             >
-               <div className="text-blue-500 mb-2">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-               </div>
-               <span className="font-medium text-gray-900">{t('New Order')}</span>
-             </button>
+             <WalkthroughTarget id="pos-new-order">
+               <button
+                  onClick={handleNewOrder}
+                  disabled={reserving}
+                  className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left w-full h-full flex flex-col justify-center ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+               >
+                 <div className="text-blue-500 mb-2">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                 </div>
+                 <span className="font-medium text-gray-900">{t('New Order')}</span>
+               </button>
+             </WalkthroughTarget>
 
              {activeStaff.role === 'Manager' && (
                <button className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">

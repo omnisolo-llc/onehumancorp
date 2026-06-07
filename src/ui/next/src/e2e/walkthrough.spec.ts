@@ -1,6 +1,39 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Interactive Walkthroughs', () => {
+  test('renders onboarding walkthrough', async ({ page }) => {
+    await page.goto('/onboarding');
+    const tourButton = page.locator('button', { hasText: 'Tour' });
+    await expect(tourButton).toBeVisible();
+    await tourButton.click();
+
+    const speechBubble = page.locator('div[role="dialog"]');
+    await expect(speechBubble).toBeVisible();
+    await expect(page.getByText('Enter your business name here.')).toBeVisible();
+  });
+
+  test('renders POS terminal walkthrough', async ({ page }) => {
+    await page.goto('/pos/terminal');
+    const tourButton = page.locator('button', { hasText: 'Tour' });
+    await expect(tourButton).toBeVisible();
+    await tourButton.click();
+
+    const speechBubble = page.locator('div[role="dialog"]');
+    await expect(speechBubble).toBeVisible();
+    await expect(page.getByText('Click here to start a new order and accept a payment.')).toBeVisible();
+  });
+
+  test('renders agents walkthrough', async ({ page }) => {
+    await page.goto('/agents');
+    const tourButton = page.locator('button', { hasText: 'Tour' });
+    await expect(tourButton).toBeVisible();
+    await tourButton.click();
+
+    const speechBubble = page.locator('div[role="dialog"]');
+    await expect(speechBubble).toBeVisible();
+    await expect(page.getByText('Activate your AI Support Agent')).toBeVisible();
+  });
+
   test('renders help widget and completes the store setup walkthrough', async ({ page }) => {
     // Navigate to a page with the walkthrough target and the help widget
     await page.goto('/dashboard'); // or /storefront-builder which has bio-input

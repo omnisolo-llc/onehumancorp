@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { InteractiveWalkthrough, Step, WalkthroughTarget } from "../../components/Walkthrough";
 import {
   automations,
   connectors,
@@ -85,6 +86,10 @@ function StatusPill({ children }: { children: React.ReactNode }) {
 }
 export default function AgentsPage() {
   const [panel, setPanel] = useState<Panel>('browse');
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const walkthroughSteps: Step[] = [
+    { targetId: "agents-start-task", title: "Activate your AI Support Agent", content: "Fill the task details and click Start task to activate your AI Support Agent.", position: "bottom" }
+  ];
   const [selected, setSelected] = useState<ExpertCatalogItem>(experts[0]);
   const [mode, setMode] = useState<Mode>('Ask');
   const [model, setModel] = useState('MiniMax-M3');
@@ -239,6 +244,7 @@ export default function AgentsPage() {
   }
   return (
     <div className="min-h-screen bg-stone-50 text-zinc-950">
+      <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -254,6 +260,9 @@ export default function AgentsPage() {
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-end gap-2">
+                <button onClick={() => setIsWalkthroughOpen(true)} className="text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded-full transition-colors mr-2">
+                  Tour
+                </button>
                 <span className="text-xs font-semibold uppercase text-zinc-500">Pro Mode</span>
                 <button
                   type="button"
@@ -767,14 +776,16 @@ function ComposerPanel({
       </div>
       {runError && <p className="mt-3 text-sm font-semibold text-red-700">{runError}</p>}
       {runMessage && <p className="mt-3 text-sm font-semibold text-emerald-700">{runMessage}</p>}
-      <button
-        type="button"
-        onClick={startTask}
-        disabled={running || !taskPrompt.trim()}
-        className="mt-4 h-11 w-full rounded-md bg-zinc-950 px-4 text-sm font-bold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-      >
-        {running ? 'Starting...' : 'Start task'}
-      </button>
+      <WalkthroughTarget id="agents-start-task">
+        <button
+          type="button"
+          onClick={startTask}
+          disabled={running || !taskPrompt.trim()}
+          className="mt-4 h-11 w-full rounded-md bg-zinc-950 px-4 text-sm font-bold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+        >
+          {running ? 'Starting...' : 'Start task'}
+        </button>
+      </WalkthroughTarget>
     </section>
   );
 }
