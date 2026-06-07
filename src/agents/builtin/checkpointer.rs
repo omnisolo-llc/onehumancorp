@@ -748,3 +748,60 @@ mod tests {
         assert_eq!(retrieved.unwrap().checkpoint_id, "cp-tag-1");
     }
 }
+
+#[cfg(test)]
+mod restore_tests {
+    use super::*;
+    use tokio;
+
+    #[tokio::test]
+    async fn test_git_checkpointer_restore_round_trip() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-git-roundtrip".to_string(),
+            checkpoint_id: "cp-rt-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: chrono::Utc::now(),
+        };
+
+        // Write a test file
+        let file_path = temp_dir.path().join("test_file.txt");
+        std::fs::write(&file_path, "state 1").unwrap();
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        // Write new content to file
+        std::fs::write(&file_path, "state 2").unwrap();
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-git-roundtrip".to_string(),
+            checkpoint_id: "cp-rt-2".to_string(),
+            parent_id: Some("cp-rt-1".to_string()),
+            data: serde_json::json!({"state": "2"}),
+            metadata: serde_json::json!({}),
+            created_at: chrono::Utc::now(),
+        };
+
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+
+        // Check if the file is indeed state 2
+        let file_content_2 = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(file_content_2, "state 2");
+
+        // Restore to first checkpoint
+        saver.restore_checkpoint("cp-rt-1").await.unwrap();
+
+        // Verify the checkpoint file was restored
+        let progress_path = temp_dir.path().join(format!(".agent_progress_{}.json", "thread-git-roundtrip"));
+        let content = std::fs::read_to_string(&progress_path).unwrap();
+        assert!(content.contains(r#""state": "1""#));
+
+        // Verify the tracked file was restored to state 1
+        let file_content_1 = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(file_content_1, "state 1");
+    }
+}
