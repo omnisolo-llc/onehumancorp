@@ -104,7 +104,7 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="app-panel glassmorphism">
+        <section className="app-panel">
             <div className="app-panel-header">
                 <h2 className="app-panel-title">Advisory Summary</h2>
             </div>
@@ -117,7 +117,7 @@ export default function CostDashboardPage() {
 
         {/* My Plan Section */}
         {myPlanData && (
-          <section id="my-plan-section" className="app-panel glassmorphism">
+          <section id="my-plan-section" className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-bold font-outfit text-gray-900">My Plan</h2>
                <button
@@ -148,7 +148,7 @@ export default function CostDashboardPage() {
         )}
 
         {/* Overview Section */}
-        <section className="app-panel glassmorphism">
+        <section className="app-panel">
             <div className="app-panel-header">
                <h2 className="app-panel-title">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
@@ -156,15 +156,15 @@ export default function CostDashboardPage() {
 
             <div className="app-panel-body">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="app-card glassmorphism">
+                    <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                         <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
                     </div>
-                    <div className="app-card glassmorphism">
+                    <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
                         <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
                     </div>
-                    <div className="app-card glassmorphism">
+                    <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
                         <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
                         <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
@@ -174,13 +174,13 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Breakdown Section */}
-        <section className="app-panel glassmorphism">
+        <section className="app-panel">
             <div className="app-panel-header">
                 <h2 className="app-panel-title">Cost Breakdown</h2>
             </div>
 
             <div className="app-panel-body space-y-4">
-                <div className="flex flex-col app-card glassmorphism">
+                <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
                     <ul id="cost-dashboard-trend" className="space-y-2">
                         {(data?.trend?.length ? data.trend : [{ date: 'No trend data yet', total_cost: 0 } as DailyCost]).map((daily, index) => (
@@ -192,7 +192,7 @@ export default function CostDashboardPage() {
                     </ul>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card glassmorphism">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">LLM Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
@@ -203,7 +203,7 @@ export default function CostDashboardPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card glassmorphism">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Storage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
@@ -211,14 +211,23 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-storage" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card glassmorphism">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Payment Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card glassmorphism">
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-gray-900">Compute Usage</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
+                    </div>
+                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.compute_cost || 0)}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Network & Bandwidth</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
@@ -226,7 +235,7 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.network_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card glassmorphism">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-green-700">Bandwidth Savings</span>
                         <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>
@@ -236,7 +245,7 @@ export default function CostDashboardPage() {
             </div>
         </section>
 
-        <section className="app-panel glassmorphism">
+        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                 <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">
