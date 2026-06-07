@@ -119,7 +119,7 @@ If you encounter a `You have reached your unauthenticated pull rate limit` error
 
 1.  Build and load the local images into your Docker daemon:
     ```bash
-    npx @bazel/bazelisk run //deploy:server_load
+    npx @bazel/bazelisk run //deploy:load_all_images
     ```
 2.  Use the provided override file to tell Docker Compose to use your local images instead of pulling from the registry:
     ```bash
