@@ -33,64 +33,58 @@ export function UnifiedAgentFeed() {
   useEffect(() => {
     let mounted = true;
 
-    async function fetchFeed() {
+    async function fetchAll() {
       try {
+        setLoading(true);
+        setActivityLoading(true);
         const tenant = tenantId();
-        // Fetch proposals
-        const res = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
 
-        if (!res.ok) {
+        const [feedRes, activityRes] = await Promise.all([
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          }),
+          fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          })
+        ]);
+
+        if (!feedRes.ok) {
           throw new Error("Failed to load agent feed");
         }
 
-        const data: ApprovalsResponse = await res.json();
-        if (mounted && data.pending_approvals) {
-          setApprovals(data.pending_approvals);
+        const [feedData, activityData] = await Promise.all([
+          feedRes.json(),
+          activityRes.ok ? activityRes.json() : Promise.resolve({ pending_approvals: [] })
+        ]);
+
+        if (mounted) {
+          if (feedData.pending_approvals) {
+            setApprovals(feedData.pending_approvals);
+          }
+          if (activityData.pending_approvals) {
+            setActivities(activityData.pending_approvals);
+          }
         }
       } catch (err: any) {
         if (mounted) {
           setError(err.message || "Failed to load feed");
         }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    async function fetchActivity() {
-      try {
-        setActivityLoading(true);
-        const tenant = tenantId();
-        const res = await fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
-
-        if (res.ok) {
-          const data: ApprovalsResponse = await res.json();
-          if (mounted && data.pending_approvals) {
-            setActivities(data.pending_approvals);
-          }
-        }
-      } catch (err: any) {
         console.error("Failed to load activity", err);
       } finally {
         if (mounted) {
+          setLoading(false);
           setActivityLoading(false);
         }
       }
     }
 
-    fetchFeed();
-    fetchActivity();
+    fetchAll();
     return () => { mounted = false; };
   }, []);
 

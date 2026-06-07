@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -13,7 +12,6 @@ import {
   skillMarket,
   type ExpertCatalogItem,
 } from './catalog';
-
 type Panel =
   | 'browse'
   | 'teams'
@@ -29,9 +27,7 @@ type Panel =
   | 'explore'
   | 'remote'
   | 'data';
-
 type Mode = 'Ask' | 'Craft' | 'Plan';
-
 type WorkflowRecord = {
   id: string;
   name: string;
@@ -42,14 +38,12 @@ type WorkflowRecord = {
   output?: string;
   error?: string;
 };
-
 type ApprovalItem = {
   id: string;
   department: string;
   description: string;
   status: string;
 };
-
 const departments = [
   { id: 'operations', name: 'The Manager', role: 'Operations', description: 'Inventory, orders, fulfillment, and handoffs.', status: 'Active' },
   { id: 'customer_success', name: 'The Ambassador', role: 'Customer Success', description: 'Customer replies, loyalty, review recovery, and escalations.', status: 'Active' },
@@ -58,15 +52,12 @@ const departments = [
   { id: 'finance', name: 'The Accountant', role: 'Finance', description: 'Invoices, margins, budgets, and cash-flow checks.', status: 'Guarded' },
   { id: 'legal', name: 'The Counsel', role: 'Legal', description: 'Contracts, compliance, and approval-only risk review.', status: 'Approval only' },
 ];
-
 const modelOptions = ['MiniMax-M3', 'Auto', 'OpenAI GPT-4.1', 'Claude Sonnet', 'Local Ollama'];
 const workspaces = ['Current business', 'Marketing sprint', 'Finance review', 'Customer support'];
 const resultTabs = ['Artifacts', 'All files', 'Diffs', 'Preview'];
-
 function slugTestId(id: string) {
   return `expert-card-${id}`;
 }
-
 function itemInitials(name: string) {
   return name
     .split(' ')
@@ -75,7 +66,6 @@ function itemInitials(name: string) {
     .slice(0, 2)
     .toUpperCase();
 }
-
 function SectionHeader({ title, detail }: { title: string; detail?: string }) {
   return (
     <div className="mb-4 flex items-end justify-between gap-3">
@@ -86,7 +76,6 @@ function SectionHeader({ title, detail }: { title: string; detail?: string }) {
     </div>
   );
 }
-
 function StatusPill({ children }: { children: React.ReactNode }) {
   return (
     <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
@@ -94,7 +83,6 @@ function StatusPill({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
-
 export default function AgentsPage() {
   const [panel, setPanel] = useState<Panel>('browse');
   const [selected, setSelected] = useState<ExpertCatalogItem>(experts[0]);
@@ -121,7 +109,6 @@ export default function AgentsPage() {
   const [workDirectory, setWorkDirectory] = useState('');
   const [outputFormat, setOutputFormat] = useState('Brief');
   const [taskConstraints, setTaskConstraints] = useState('');
-
   const allCatalog = useMemo(() => [...experts, ...expertTeams], []);
   const visibleExperts = useMemo(() => {
     const source = panel === 'teams' ? expertTeams : experts;
@@ -131,18 +118,34 @@ export default function AgentsPage() {
       [item.name, item.role, item.category, item.summary, ...item.strengths].join(' ').toLowerCase().includes(normalized),
     );
   }, [panel, query]);
-
   const mostUsed = useMemo(
     () => [...allCatalog].sort((a, b) => b.usageCount - a.usageCount).slice(0, 3),
     [allCatalog],
   );
-
   useEffect(() => {
-    fetchApprovals();
-    fetchFeed();
-    fetchWorkflows();
-  }, []);
+    async function fetchAll() {
+      try {
+        const [approvalsRes, feedRes, workflowsRes] = await Promise.all([
+          fetch('/api/agents/approvals'),
+          fetch('/api/agents/approvals/activity'),
+          fetch('/api/agents/workflows'),
+        ]);
 
+        const [approvalsData, feedData, workflowsData] = await Promise.all([
+          approvalsRes.ok ? approvalsRes.json() : Promise.resolve({ pending_approvals: [] }),
+          feedRes.ok ? feedRes.json() : Promise.resolve({ pending_approvals: [] }),
+          workflowsRes.ok ? workflowsRes.json() : Promise.resolve({ workflows: [] })
+        ]);
+
+        setApprovals(approvalsData.pending_approvals || []);
+        setFeed(feedData.pending_approvals || []);
+        setWorkflows(workflowsData.workflows || []);
+      } catch (err) {
+        console.error('Failed to fetch initial agent data concurrently:', err);
+      }
+    }
+    fetchAll();
+  }, []);
   useEffect(() => {
     if (typeof EventSource === 'undefined') return;
     const events = new EventSource('/api/agents/events');
@@ -161,40 +164,6 @@ export default function AgentsPage() {
     events.onerror = () => events.close();
     return () => events.close();
   }, []);
-
-  async function fetchApprovals() {
-    try {
-      const res = await fetch('/api/agents/approvals');
-      if (!res.ok) return;
-      const data = await res.json();
-      setApprovals(data.pending_approvals || []);
-    } catch (err) {
-      console.error('Failed to fetch approvals:', err);
-    }
-  }
-
-  async function fetchFeed() {
-    try {
-      const res = await fetch('/api/agents/approvals/activity');
-      if (!res.ok) return;
-      const data = await res.json();
-      setFeed(data.pending_approvals || []);
-    } catch (err) {
-      console.error('Failed to fetch activity:', err);
-    }
-  }
-
-  async function fetchWorkflows() {
-    try {
-      const res = await fetch('/api/agents/workflows');
-      if (!res.ok) return;
-      const data = await res.json();
-      setWorkflows(data.workflows || []);
-    } catch (err) {
-      console.error('Failed to fetch workflows:', err);
-    }
-  }
-
   function summon(item: ExpertCatalogItem) {
     setSelected(item);
     setModel(item.model);
@@ -203,7 +172,6 @@ export default function AgentsPage() {
     setTaskPrompt(item.examples[0]);
     setSummonMessage(`${item.name} is ready`);
   }
-
   async function startTask() {
     setRunning(true);
     setRunError('');
@@ -255,7 +223,6 @@ export default function AgentsPage() {
       setRunning(false);
     }
   }
-
   async function decideApproval(id: string, approved: boolean) {
     try {
       const res = await fetch(`/api/agents/approvals/${id}`, {
@@ -270,7 +237,6 @@ export default function AgentsPage() {
       console.error('Failed to process approval:', err);
     }
   }
-
   return (
     <div className="min-h-screen bg-stone-50 text-zinc-950">
       <header className="border-b border-zinc-200 bg-white">
@@ -359,7 +325,6 @@ export default function AgentsPage() {
           </div>
         </div>
       </header>
-
       {showPaywall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4">
           <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-2xl">
@@ -387,7 +352,6 @@ export default function AgentsPage() {
           </div>
         </div>
       )}
-
       <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
         <section className="space-y-5">
           {(panel === 'browse' || panel === 'teams') && (
@@ -400,15 +364,12 @@ export default function AgentsPage() {
               summon={summon}
             />
           )}
-
           {panel === 'skills' && (
             <SkillsPanel enabledSkills={enabledSkills} setEnabledSkills={setEnabledSkills} />
           )}
-
           {panel === 'connectors' && (
             <ConnectorsPanel enabledConnectors={enabledConnectors} setEnabledConnectors={setEnabledConnectors} />
           )}
-
           {panel === 'automations' && <AutomationsPanel />}
           {panel === 'memory' && <MemoryPanel />}
           {panel === 'results' && (
@@ -427,7 +388,6 @@ export default function AgentsPage() {
           {panel === 'feed' && <FeedPanel feed={feed} />}
           {panel === 'approvals' && <ApprovalsPanel approvals={approvals} decideApproval={decideApproval} />}
         </section>
-
         <aside className="space-y-5">
           <ComposerPanel
             selected={selected}
@@ -472,7 +432,6 @@ export default function AgentsPage() {
     </div>
   );
 }
-
 function CatalogPanel({
   panel,
   query,
@@ -503,7 +462,6 @@ function CatalogPanel({
           placeholder="Search experts, roles, skills, connectors"
         />
       </div>
-
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
         <h3 className="text-sm font-bold text-amber-950">Most used</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -520,7 +478,6 @@ function CatalogPanel({
           ))}
         </div>
       </div>
-
       <div className="grid gap-4 md:grid-cols-2">
         {visibleExperts.map((item) => (
           <ExpertCard key={item.id} item={item} summon={summon} />
@@ -529,10 +486,8 @@ function CatalogPanel({
     </>
   );
 }
-
 function ExpertCard({ item, summon }: { item: ExpertCatalogItem; summon: (item: ExpertCatalogItem) => void }) {
   const [showDetail, setShowDetail] = useState(false);
-
   return (
     <article data-testid={slugTestId(item.id)} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-start gap-3">
@@ -602,7 +557,6 @@ function ExpertCard({ item, summon }: { item: ExpertCatalogItem; summon: (item: 
     </article>
   );
 }
-
 function ComposerPanel({
   selected,
   mode,
@@ -671,7 +625,6 @@ function ComposerPanel({
         </div>
         <StatusPill>{selected.model}</StatusPill>
       </div>
-
       <div className="mt-4 grid grid-cols-3 gap-2">
         {(['Ask', 'Craft', 'Plan'] as Mode[]).map((item) => (
           <button
@@ -687,7 +640,6 @@ function ComposerPanel({
           </button>
         ))}
       </div>
-
       <div className="mt-4 grid gap-3">
         <label className="text-sm font-bold text-zinc-700">
           Model
@@ -800,7 +752,6 @@ function ComposerPanel({
           </label>
         </div>
       </div>
-
       <div className="mt-4 grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
         <div>
           <div className="text-xs font-bold uppercase text-zinc-500">Skills</div>
@@ -814,7 +765,6 @@ function ComposerPanel({
           Cost warning: Craft and Plan can call tools and may consume more agent actions. High-risk actions still route to approval.
         </p>
       </div>
-
       {runError && <p className="mt-3 text-sm font-semibold text-red-700">{runError}</p>}
       {runMessage && <p className="mt-3 text-sm font-semibold text-emerald-700">{runMessage}</p>}
       <button
@@ -828,7 +778,6 @@ function ComposerPanel({
     </section>
   );
 }
-
 function ResultsPanel({
   selected,
   workflowId,
@@ -881,7 +830,6 @@ function ResultsPanel({
     </section>
   );
 }
-
 function ExtensionShortcuts({ setPanel }: { setPanel: (panel: Panel) => void }) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
@@ -906,7 +854,6 @@ function ExtensionShortcuts({ setPanel }: { setPanel: (panel: Panel) => void }) 
     </section>
   );
 }
-
 function SkillsPanel({
   enabledSkills,
   setEnabledSkills,
@@ -953,7 +900,6 @@ function SkillsPanel({
     </section>
   );
 }
-
 function ConnectorsPanel({
   enabledConnectors,
   setEnabledConnectors,
@@ -1001,7 +947,6 @@ function ConnectorsPanel({
     </section>
   );
 }
-
 function AutomationsPanel() {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1032,7 +977,6 @@ function AutomationsPanel() {
     </section>
   );
 }
-
 function MemoryPanel() {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1054,7 +998,6 @@ function MemoryPanel() {
     </section>
   );
 }
-
 function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void }) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1075,7 +1018,6 @@ function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void })
     </section>
   );
 }
-
 function RemotePanel() {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1094,7 +1036,6 @@ function RemotePanel() {
     </section>
   );
 }
-
 function DataPanel() {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1109,7 +1050,6 @@ function DataPanel() {
     </section>
   );
 }
-
 function OperationsPanel() {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1129,7 +1069,6 @@ function OperationsPanel() {
     </section>
   );
 }
-
 function WorkflowsPanel({ workflows }: { workflows: WorkflowRecord[] }) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1154,7 +1093,6 @@ function WorkflowsPanel({ workflows }: { workflows: WorkflowRecord[] }) {
     </section>
   );
 }
-
 function FeedPanel({ feed }: { feed: ApprovalItem[] }) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -1174,7 +1112,6 @@ function FeedPanel({ feed }: { feed: ApprovalItem[] }) {
     </section>
   );
 }
-
 function ApprovalsPanel({
   approvals,
   decideApproval,
