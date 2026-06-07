@@ -124,6 +124,8 @@ pub fn all_tools(
         booking::booking_upsert_service_tool(booking_store.clone()),
         booking::booking_list_appointments_tool(booking_store.clone()),
         booking::booking_create_appointment_tool(booking_store.clone()),
+        booking::booking_reschedule_appointment_tool(booking_store.clone()),
+        booking::booking_cancel_appointment_tool(booking_store.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),

@@ -7,21 +7,99 @@ export default function Booking() {
   const [file, setFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  const [availableSlots, setAvailableSlots] = useState<{ start_time: string; end_time: string }[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // In a real scenario, product_id and tenant_id would likely be fetched from props or context.
+  const getParam = (key: string, defaultValue: string) => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(key) || defaultValue;
+    }
+    return defaultValue;
+  };
+
+  const productId = getParam("product_id", "e2e-product-class");
+  const tenantId = getParam("tenant_id", "e2e-tenant");
+  const customerId = getParam("customer_id", "e2e-customer-ava");
+
+  // Fetch available slots for the next day as an example
+  const checkAvailability = async () => {
+    setLoadingSlots(true);
+    try {
+      const date = new Date();
+      date.setDate(date.getDate() + 1); // Tomorrow
+      const dateString = date.toISOString().split("T")[0]; // YYYY-MM-DD
+
+      const res = await fetch("/api/v1/booking/check_availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId,
+        },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          product_id: productId,
+          date: dateString,
+        }),
+      });
+      const data = await res.json();
+      if (data.available_slots) {
+        setAvailableSlots(data.available_slots);
+      }
+    } catch (e) {
+      console.error("Error fetching availability:", e);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  React.useEffect(() => {
+    checkAvailability();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Simulating form submission
-    await fetch("/api/v1/booking/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        description,
-        fileName: file?.name,
-        timestamp: new Date().toISOString()
-      }),
-    });
+    if (selectedSlot) {
+      try {
+        const checkoutRes = await fetch("/api/v1/booking/conversational_checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-id": tenantId,
+          },
+          body: JSON.stringify({
+            tenant_id: tenantId,
+            customer_id: customerId,
+            amount_cents: 15000, // Example deposit amount
+            product_id: productId,
+          }),
+        });
 
-    setSubmitted(true);
+        const checkoutData = await checkoutRes.json();
+
+        if (checkoutData.checkout_url) {
+           window.location.href = checkoutData.checkout_url;
+           return;
+        }
+      } catch (e) {
+        console.error("Error creating checkout session:", e);
+      }
+    } else {
+       await fetch("/api/v1/booking/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description,
+          fileName: file?.name,
+          timestamp: new Date().toISOString()
+        }),
+      });
+
+      setSubmitted(true);
+    }
   };
 
   if (submitted) {
@@ -58,9 +136,40 @@ export default function Booking() {
         <form onSubmit={handleSubmit} className="flex-1 px-6 py-6 overflow-y-auto hide-scrollbar space-y-6">
 
           <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Select a Date & Time</label>
+            {loadingSlots ? (
+              <p className="text-sm text-gray-500">Loading available times...</p>
+            ) : availableSlots.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {availableSlots.map((slot, index) => {
+                  const startTime = new Date(slot.start_time);
+                  const timeString = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      aria-label={`Select time ${timeString}`}
+                      className={`py-3 px-4 rounded-xl border text-sm font-medium transition-colors ${
+                        selectedSlot === slot.start_time
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-200 hover:border-blue-500 hover:text-blue-600"
+                      }`}
+                      onClick={() => setSelectedSlot(slot.start_time)}
+                    >
+                      {timeString}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No timeslots available. Please describe your request below.</p>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">What do you need help with?</label>
             <textarea
-              required
+              required={!selectedSlot}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. I have a leaky faucet in the kitchen that needs fixing."
@@ -92,7 +201,7 @@ export default function Booking() {
               type="submit"
               className="w-full py-4 px-4 rounded-xl font-bold text-[15px] bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
             >
-              Get a Quote
+              {selectedSlot ? 'Book and Pay Deposit' : 'Get a Quote'}
             </button>
           </div>
         </form>

@@ -2,6 +2,17 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Agentic Service Booking & Quoting CUJ', () => {
   test('Customer requests a service and Owner approves AI quote draft', async ({ page }) => {
+    // Intercept check availability call
+    await page.route('/api/v1/booking/check_availability', async route => {
+      await route.fulfill({
+        json: {
+          available_slots: [
+            { start_time: "2026-06-07T09:00:00Z", end_time: "2026-06-07T10:00:00Z" }
+          ]
+        }
+      });
+    });
+
     // 1. Customer Flow
     // Navigate to booking form
     await page.goto('/booking');
@@ -9,15 +20,37 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     // Check elements
     await expect(page.getByRole('heading', { name: 'Request a Service' })).toBeVisible();
 
+    // Wait for timeslots to load
+    await expect(page.getByText('Select a Date & Time')).toBeVisible();
+
+    // Click a timeslot (using regex for flexibility in timezone rendering)
+    const slotButton = page.getByRole('button', { name: /Select time/ }).first();
+    await slotButton.waitFor();
+    await slotButton.click();
+
     // Fill form
     await page.getByPlaceholder('e.g. I have a leaky faucet in the kitchen that needs fixing.').fill('I need help fixing a leaky pipe in my kitchen sink.');
 
-    // Submit form
-    await page.getByRole('button', { name: 'Get a Quote' }).click();
+    // Intercept checkout session creation
+    await page.route('/api/v1/booking/conversational_checkout', async route => {
+      await route.fulfill({
+        json: {
+          checkout_url: "https://checkout.stripe.com/pay/cs_test_mock123"
+        }
+      });
+    });
 
-    // Verify submission success
-    await expect(page.getByRole('heading', { name: 'Request Sent!' })).toBeVisible();
-    await expect(page.getByText("We've received your inquiry.")).toBeVisible();
+    // We can't actually navigate to stripe, so we mock window.location behavior in the test
+    // or intercept the stripe domain. Intercepting the Stripe domain is better.
+    await page.route('https://checkout.stripe.com/pay/*', async route => {
+      await route.fulfill({ body: 'Stripe Mock' });
+    });
+
+    // Submit form
+    await page.getByRole('button', { name: 'Book and Pay Deposit' }).click();
+
+    // Verify it tried to navigate to stripe
+    await page.waitForURL('https://checkout.stripe.com/pay/cs_test_mock123');
 
 
     // 2. Owner Flow

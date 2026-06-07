@@ -236,3 +236,108 @@ pub fn booking_create_appointment_tool(store: SharedBookingStore) -> Tool {
         execute: Arc::new(PydanticAdapter::new(BookingCreateAppointmentExecutor { store })),
     }
 }
+
+#[derive(Deserialize)]
+pub struct BookingRescheduleAppointmentArgs {
+    pub tenant_id: String,
+    pub booking_id: String,
+    pub new_start_time: String,
+    pub new_end_time: Option<String>,
+}
+
+pub struct BookingRescheduleAppointmentExecutor {
+    pub store: SharedBookingStore,
+}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<BookingRescheduleAppointmentArgs> for BookingRescheduleAppointmentExecutor {
+    async fn execute_typed(&self, args: BookingRescheduleAppointmentArgs) -> Result<String, ToolError> {
+        let tenant_id = args.tenant_id;
+        let booking_id = args.booking_id;
+        let start_time_str = args.new_start_time;
+        let end_time_str = args.new_end_time;
+
+        let start_time = DateTime::parse_from_rfc3339(&start_time_str)
+            .map_err(|e| ToolError::LlmRecoverable(format!("invalid new_start_time format: {}", e)))?
+            .with_timezone(&Utc);
+
+        let end_time = if let Some(et) = end_time_str {
+            Some(DateTime::parse_from_rfc3339(&et)
+                .map_err(|e| ToolError::LlmRecoverable(format!("invalid new_end_time format: {}", e)))?
+                .with_timezone(&Utc))
+        } else {
+            None
+        };
+
+        let mut store = self.store.write().await;
+        if let Some(booking) = store.bookings.iter_mut().find(|b| b.id == booking_id && b.tenant_id == tenant_id) {
+            booking.start_time = start_time;
+            booking.end_time = end_time;
+            Ok(json!({"status": "success", "message": "Appointment rescheduled successfully"}).to_string())
+        } else {
+            Err(ToolError::LlmRecoverable("Booking not found".to_string()))
+        }
+    }
+}
+
+pub fn booking_reschedule_appointment_tool(store: SharedBookingStore) -> Tool {
+    Tool {
+        name: "booking_reschedule_appointment".to_string(),
+        description: "Reschedule an existing appointment to a new time.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "tenant_id": { "type": "string" },
+                "booking_id": { "type": "string", "description": "The ID of the booking to reschedule." },
+                "new_start_time": { "type": "string", "description": "New start time in RFC3339 format." },
+                "new_end_time": { "type": "string", "description": "Optional new end time in RFC3339 format." }
+            },
+            "required": ["tenant_id", "booking_id", "new_start_time"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(BookingRescheduleAppointmentExecutor { store })),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct BookingCancelAppointmentArgs {
+    pub tenant_id: String,
+    pub booking_id: String,
+}
+
+pub struct BookingCancelAppointmentExecutor {
+    pub store: SharedBookingStore,
+}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<BookingCancelAppointmentArgs> for BookingCancelAppointmentExecutor {
+    async fn execute_typed(&self, args: BookingCancelAppointmentArgs) -> Result<String, ToolError> {
+        let tenant_id = args.tenant_id;
+        let booking_id = args.booking_id;
+
+        let mut store = self.store.write().await;
+        if let Some(booking) = store.bookings.iter_mut().find(|b| b.id == booking_id && b.tenant_id == tenant_id) {
+            booking.status = "cancelled".to_string();
+            Ok(json!({"status": "success", "message": "Appointment cancelled successfully"}).to_string())
+        } else {
+            Err(ToolError::LlmRecoverable("Booking not found".to_string()))
+        }
+    }
+}
+
+pub fn booking_cancel_appointment_tool(store: SharedBookingStore) -> Tool {
+    Tool {
+        name: "booking_cancel_appointment".to_string(),
+        description: "Cancel an existing appointment.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "tenant_id": { "type": "string" },
+                "booking_id": { "type": "string", "description": "The ID of the booking to cancel." }
+            },
+            "required": ["tenant_id", "booking_id"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(BookingCancelAppointmentExecutor { store })),
+    }
+}
