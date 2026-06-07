@@ -260,7 +260,7 @@ struct GrowthState {
 }
 
 async fn handle_social_post(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<SocialPostRequest>,
 ) -> impl IntoResponse {
     Json(SocialPostResponse {
@@ -270,7 +270,7 @@ async fn handle_social_post(
 }
 
 async fn handle_generate_review(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would call an AI provider here.
@@ -286,7 +286,7 @@ async fn handle_generate_review(
 }
 
 async fn handle_generate_customer_referral(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateCustomerReferralRequest>,
 ) -> impl IntoResponse {
     let store = req.store_name.unwrap_or_else(|| "our store".to_string());
@@ -300,7 +300,7 @@ async fn handle_generate_customer_referral(
 }
 
 async fn handle_generate_cart(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateCartRequest>,
 ) -> impl IntoResponse {
     let name = req.customer_name.unwrap_or_else(|| "there".to_string());
@@ -315,7 +315,7 @@ async fn handle_generate_cart(
 }
 
 async fn handle_send_cart(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<SendCartRequest>,
 ) -> impl IntoResponse {
     Json(SendCartResponse {
@@ -421,7 +421,7 @@ async fn handle_send_campaign(
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
@@ -460,7 +460,7 @@ async fn handle_affiliate_generate_link(
 }
 
 async fn handle_affiliate_track(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<TrackAffiliateRequest>,
 ) -> impl IntoResponse {
     use axum::http::header::SET_COOKIE;
@@ -974,7 +974,7 @@ pub struct DiscountShareResponse {
 }
 
 async fn handle_generate_discount_share(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
@@ -1033,7 +1033,7 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     let cache_key = "onboarding_metrics";
     let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
@@ -1042,7 +1042,7 @@ async fn handle_onboarding_metrics(
     }
 
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&_state.pool).await
+        .fetch_all(&state.pool).await
     {
         Ok(rows) => {
 
