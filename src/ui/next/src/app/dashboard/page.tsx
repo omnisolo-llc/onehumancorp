@@ -1,3 +1,4 @@
+import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -85,6 +86,8 @@ export default function Dashboard() {
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
   const [actionMessage, setActionMessage] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncErrorCount, setSyncErrorCount] = useState(0);
 
   useEffect(() => {
     try {
@@ -112,6 +115,9 @@ export default function Dashboard() {
         const queue = JSON.parse(queueStr);
         if (!Array.isArray(queue) || queue.length === 0) return;
 
+        setIsSyncing(true);
+        setSyncErrorCount(0);
+
         const res = await fetch("/api/v1/sync/offline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -119,6 +125,11 @@ export default function Dashboard() {
         });
 
         if (res.ok) {
+          const data = await res.json();
+          if (data && data.failed_count && data.failed_count > 0) {
+            setSyncErrorCount(data.failed_count);
+          }
+
           // Re-fetch queue in case new items were added during the sync
           const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
           const currentQueue = JSON.parse(currentQueueStr);
@@ -130,6 +141,8 @@ export default function Dashboard() {
         }
       } catch (e) {
         console.error("Sync failed", e);
+      } finally {
+        setIsSyncing(false);
       }
     };
 
@@ -264,6 +277,20 @@ export default function Dashboard() {
         <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
           Offline - changes saved locally
         </div>
+        {isSyncing && (
+          <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
+            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Syncing {offlineQueueCount} offline payments...
+          </div>
+        )}
+        {syncErrorCount > 0 && (
+          <div className="app-badge bad" role="alert">
+            {syncErrorCount} payment{syncErrorCount > 1 ? 's' : ''} failed to sync. Tap to resolve.
+          </div>
+        )}
         {error && <div className="app-badge bad">{error}</div>}
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
@@ -271,6 +298,8 @@ export default function Dashboard() {
       <div className="mb-6">
         <GrowthReferralWidget />
       </div>
+
+      <ViralLoopPerformanceWidget />
 
       <section className="app-panel mb-6">
         <div className="app-panel-header">
@@ -616,6 +645,15 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link href="/upgrade-roi" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Pro Plan ROI Calculator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
+            </Link>
+
             <Link href="/referrals" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
