@@ -14,7 +14,7 @@ function SetupIcon({ name }: { name: SetupIconName }) {
   };
 
   return (
-    <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
+    <svg width="16" height="16" className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
       {paths[name].map((d) => <path key={d} d={d} />)}
     </svg>
   );
@@ -428,13 +428,13 @@ export default function OnboardingWizard() {
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 sm:ml-4 flex items-center gap-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -463,7 +463,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner block"
                       />
                     </div>
                   </div>
@@ -494,13 +494,13 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Tell us a bit about your products or services.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 sm:ml-4 flex items-center gap-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -559,13 +559,13 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       This helps us set up your shipping and tax settings.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 sm:ml-4 flex items-center gap-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -594,7 +594,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner block"
                       />
                     </div>
                   </div>
@@ -625,13 +625,13 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 mb-6">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                       This helps our AI generate the perfect storefront copy and select the best tools for your business.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 sm:ml-4 flex items-center gap-2"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -660,7 +660,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner block"
                       />
                     </div>
                   </div>
@@ -701,13 +701,13 @@ export default function OnboardingWizard() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 mb-6">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 sm:ml-4 flex items-center gap-2"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -728,7 +728,7 @@ export default function OnboardingWizard() {
                       setBusinessName(e.target.value);
                       setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block`}
                   />
                   {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
@@ -743,7 +743,7 @@ export default function OnboardingWizard() {
                       setBusinessType(e.target.value);
                       setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block`}
                   />
                   {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
@@ -755,7 +755,7 @@ export default function OnboardingWizard() {
                     autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -767,7 +767,7 @@ export default function OnboardingWizard() {
                         autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block"
                       />
                    </div>
                    <div>
@@ -784,7 +784,7 @@ export default function OnboardingWizard() {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
                         }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block`}
                       />
                       {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
@@ -833,13 +833,13 @@ export default function OnboardingWizard() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 mb-6">
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 sm:ml-4 flex items-center gap-2"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -903,7 +903,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block`}
                       />
                       {validationErrors.adminName && <p className="text-red-500 text-xs mt-1">{validationErrors.adminName}</p>}
                     </div>
@@ -926,7 +926,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="you@example.com"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block`}
                       />
                       {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
@@ -948,7 +948,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] block`}
                       />
                       {validationErrors.adminPassword && <p className="text-red-500 text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>
@@ -974,7 +974,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] glassmorphism text-[#1D1D1F] dark:text-white">
+                  <label className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 cursor-pointer p-3 rounded-[8px] glassmorphism text-[#1D1D1F] dark:text-white">
                     <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
                     <input
                       type="checkbox"
