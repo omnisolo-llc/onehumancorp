@@ -20,6 +20,16 @@ pub async fn tier_middleware(
     // For this example, we just simulate a 1-action check for protected paths
     let mut warning_msg = None;
     if req.uri().path().starts_with("/api/v1/protected") || req.uri().path().starts_with("/api/v1/autodream") {
+        if tenant_id.is_empty() {
+            return axum::response::IntoResponse::into_response((
+                axum::http::StatusCode::UNAUTHORIZED,
+                axum::Json(serde_json::json!({
+                    "error": "UNAUTHORIZED",
+                    "message": "Missing or invalid tenant ID."
+                }))
+            ));
+        }
+
         match rate_limiter.record_action(&tenant_id, "default_agent").await {
             Ok(status) => {
                 if status.soft_limit_reached {
