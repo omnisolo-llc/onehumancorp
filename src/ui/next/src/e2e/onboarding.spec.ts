@@ -185,3 +185,56 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText("You're Live!")).toBeHidden();
   });
 });
+
+  test('Alex the Agency Owner can go back to previous step to change answers', async ({ page }) => {
+    await page.goto('/onboarding');
+    await page.getByText('Start Onboarding').click();
+
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Alex Agency');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Go back and verify
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('input[value="Alex Agency"]')).toBeVisible();
+
+    // Fill again
+    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Design and Development');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Go back and verify
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('textarea')).toHaveValue('Design and Development');
+  });
+
+  test('User experiences loading UI fallback on slow network', async ({ page }) => {
+    // Route interception to delay the start API call
+    await page.route('/api/onboarding/start', async (route) => {
+      await new Promise((f) => setTimeout(f, 3500)); // Delay longer than the 3000ms safetyTimeout
+      await route.continue();
+    });
+
+    await page.goto('/onboarding');
+    await page.getByText('Start Onboarding').click();
+
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Slow Start Business');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Network testing');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Portland, OR/i).fill('Remote');
+    await page.getByRole('button', { name: 'Generate My Business' }).click();
+
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    await page.getByText('Bold').click();
+    await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Slow Tester');
+    await page.getByPlaceholder(/you@example.com/i).fill('slow@example.com');
+    await page.getByPlaceholder(/••••••••/i).fill('pass1234');
+
+    await page.getByRole('button', { name: 'Launch Store' }).click();
+
+    // Fallback should trigger
+    await expect(page.getByText('Fallback: Your business has been successfully launched.')).toBeVisible({ timeout: 5000 });
+});
