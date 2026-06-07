@@ -1221,6 +1221,76 @@ impl AdvisorWorker {
                     }
                 };
 
+                // Smart Pricing Logic: Find stagnant stock
+                let thirty_days_ago = chrono::Utc::now() - chrono::Duration::days(30);
+
+                let stagnant_products: Vec<(String, String, String, i32, i64)> = match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_as("SELECT id, tenant_id, title, inventory_count, price_cents FROM products WHERE inventory_count > 0 AND updated_at < $1")
+                            .bind(thirty_days_ago)
+                            .fetch_all(&mut *transaction)
+                            .await
+                            .unwrap_or_default()
+                    },
+                    crate::db::DbStore::Sqlite(_) => {
+                        // SQLite timestamps can be tricky, we'll fetch products and filter in memory for simplicity in this worker context
+                        let rows: Vec<(String, String, String, i32, i64, String)> = sqlx::query_as("SELECT id, tenant_id, title, inventory_count, price_cents, updated_at FROM products WHERE inventory_count > 0")
+                            .fetch_all(&mut *transaction)
+                            .await
+                            .unwrap_or_default();
+
+                        rows.into_iter().filter(|r| {
+                            if let Ok(updated_at) = chrono::DateTime::parse_from_rfc3339(&r.5) {
+                                updated_at.with_timezone(&chrono::Utc) < thirty_days_ago
+                            } else {
+                                false
+                            }
+                        }).map(|r| (r.0, r.1, r.2, r.3, r.4)).collect()
+                    }
+                };
+
+                for (prod_id, tenant_id, title, inventory, price_cents) in stagnant_products {
+                    let price_float = price_cents as f64 / 100.0;
+                    let suggested_price = price_float * 0.85; // 15% discount
+                    let description = format!("Smart Price Suggestion: {}", title);
+                    let payload = serde_json::json!({
+                        "action_type": "smart_pricing",
+                        "product_id": prod_id,
+                        "suggested_discount": 15.0,
+                        "context": {
+                            "product_name": title,
+                            "current_price": price_float,
+                            "suggested_price": suggested_price,
+                            "inventory_count": inventory
+                        }
+                    });
+
+                    // Avoid duplicate pending approvals
+                    let existing_count: (i64,) = sqlx::query_as(
+                        "SELECT COUNT(*) FROM agent_approvals WHERE tenant_id = $1 AND department = 'business_advisory' AND status = 'PENDING' AND payload->>'action_type' = 'smart_pricing' AND payload->>'product_id' = $2"
+                    )
+                    .bind(&tenant_id)
+                    .bind(&prod_id)
+                    .fetch_one(&mut *transaction)
+                    .await
+                    .unwrap_or((0,));
+
+                    if existing_count.0 == 0 {
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind("business_advisory")
+                        .bind(&description)
+                        .bind("PENDING")
+                        .bind("HIGH")
+                        .bind(payload)
+                        .execute(&mut *transaction)
+                        .await;
+                    }
+                }
+
                 for (report_id, tenant_id) in reports {
                     let prompt = format!("You are The Advisor. The user had 8 orders this week. Tuesday was the busiest day. Most people bought Lemon Pound Cake. 3 people asked about vegan options in DMs. Generate a radically simple, plain-language business health report. Do not use jargon like 'conversion rate'. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.");
                     let mut drafted_msg = r#"{"summary": "Great job this week! You made $450 from 8 orders.", "actionable_suggestion": "We noticed 3 people asked about vegan options in DMs. Want me to draft a new 'Vegan Options' menu section for your website?"}"#.to_string();

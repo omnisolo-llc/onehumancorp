@@ -181,3 +181,18 @@ ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Seed an old product for Smart Pricing
+INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata, updated_at)
+VALUES ('prod-stagnant-1', 'e2e-tenant', 'Vintage Sweater', 'Old stock', 'physical', 40.0, 4000, 'USD', 20, '{}', CURRENT_TIMESTAMP - INTERVAL '40 days')
+ON CONFLICT (id) DO NOTHING;
+
+
+-- Seed an old product for Smart Pricing
+INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata, updated_at)
+VALUES ('prod-stagnant-1', 'e2e-tenant', 'Vintage Sweater', 'Old stock', 'physical', 40.0, 4000, 'USD', 20, '{}', CURRENT_TIMESTAMP - INTERVAL '40 days')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload)
+VALUES ('appr-stagnant-1', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vintage Sweater', 'PENDING', 'HIGH', '{"action_type": "smart_pricing", "product_id": "prod-stagnant-1", "suggested_discount": 15.0, "context": {"current_price": 40.0, "suggested_price": 34.0, "inventory_count": 20}}')
+ON CONFLICT (id) DO NOTHING;

@@ -199,6 +199,14 @@ export function UnifiedAgentFeed() {
                   </h3>
                   {approval.payload?.context && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                            {approval.payload.action_type === 'smart_pricing' && approval.payload.context && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500 dark:text-gray-400">Current Price: <span className="line-through">${approval.payload.context.current_price}</span></span>
+                          <span className="font-semibold text-green-600 dark:text-green-400">
+                            Suggested: ${Number(approval.payload.context.suggested_price).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
                       {approval.payload.context.abandoned_carts_count !== undefined && (
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
@@ -223,7 +231,7 @@ export function UnifiedAgentFeed() {
                     className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
                     aria-label="Approve proposal"
                   >
-                    Approve
+                    {approval.payload?.action_type === 'smart_pricing' ? 'Approve & Run Sale' : 'Approve'}
                   </button>
                   <div className="flex gap-3 w-full">
                     <button

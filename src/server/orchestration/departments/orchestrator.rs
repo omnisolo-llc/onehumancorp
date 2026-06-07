@@ -601,6 +601,9 @@ impl DepartmentOrchestrator {
         let now = Utc::now();
 
         let mut error_response = None;
+        let mut parsed_dep = String::new();
+        let mut parsed_payload = serde_json::json!({});
+
         let opt_dept_payload = match &self.db.store {
             DbStore::Postgres => {
                 let row = if let Ok(mut tx) = self.db.pool.begin().await {
@@ -610,73 +613,109 @@ impl DepartmentOrchestrator {
                             .bind(now)
                             .bind(request_id)
                             .bind(tenant_id)
-                            .fetch_optional(&mut *tx)
-                            .await;
+                            .fetch_optional(&mut *tx).await;
                         let _ = tx.commit().await;
                         updated
                     } else {
-                        Err(sqlx::Error::Configuration("failed to set tenant context".into()))
+                        Ok(None)
                     }
                 } else {
-                    Err(sqlx::Error::Configuration("failed to begin tenant update".into()))
+                    Ok(None)
                 };
-                match row {
-                    Ok(Some(r)) => {
-                        use sqlx::Row;
-                        let dep = r.get::<String, _>("department");
-                        let payload_val: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
-                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
-                            Err(_) => match r.try_get::<serde_json::Value, _>("payload") {
-                                Ok(p) => Some(p),
-                                Err(_) => None,
-                            }
-                        };
-                        Some((dep, payload_val))
-                    }
-                    Ok(None) => {
-                        error_response = Some("Unauthorized".to_string());
-                        None
-                    }
-                    Err(e) => {
-                        error_response = Some(e.to_string());
-                        None
-                    }
-                }
-            }
-            DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
-                    .bind(new_status)
-                    .bind(now)
+                row.unwrap_or(None)
+            },
+            DbStore::Sqlite(_) => {
+                let current_row = sqlx::query("SELECT department, payload FROM agent_approvals WHERE id = ? AND tenant_id = ?")
                     .bind(request_id)
                     .bind(tenant_id)
-                    .fetch_optional(pool)
-                    .await;
-                match row {
-                    Ok(Some(r)) => {
-                        use sqlx::Row;
-                        let dep = r.get::<String, _>("department");
-                        let payload_str: Option<String> = r.try_get("payload").unwrap_or(None);
-                        let payload_val = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
-                        Some((dep, payload_val))
-                    }
-                    Ok(None) => {
-                        error_response = Some("Unauthorized".to_string());
-                        None
-                    }
-                    Err(e) => {
-                        error_response = Some(e.to_string());
-                        None
-                    }
-                }
+                    .fetch_optional(&self.db.pool).await.unwrap_or(None);
+
+                let _ = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(new_status)
+                    .bind(now.to_rfc3339())
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .execute(&self.db.pool).await;
+
+                current_row
             }
         };
+
+        if approved {
+            if let Some(row) = opt_dept_payload {
+                use sqlx::Row;
+                let payload: serde_json::Value = match &self.db.store {
+                    DbStore::Postgres => row.try_get("payload").unwrap_or(serde_json::json!({})),
+                    DbStore::Sqlite(_) => {
+                        let payload_str: String = row.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                        serde_json::from_str(&payload_str).unwrap_or(serde_json::json!({}))
+                    }
+                };
+
+                parsed_dep = match &self.db.store {
+                    DbStore::Postgres => row.try_get("department").unwrap_or_default(),
+                    DbStore::Sqlite(_) => row.try_get("department").unwrap_or_default()
+                };
+                parsed_payload = payload.clone();
+                if payload.get("action_type").and_then(|v| v.as_str()) == Some("smart_pricing") {
+                    let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+                    let discount_percent = payload.get("suggested_discount").and_then(|v| v.as_f64()).unwrap_or(15.0);
+                    let discount_ratio = 1.0 - (discount_percent / 100.0);
+
+                    let mut tx = self.db.pool.begin().await.unwrap();
+                    let _ = sqlx::query("UPDATE products SET price_cents = CAST(price_cents * $1 AS BIGINT), price = price * $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(discount_ratio)
+                        .bind(product_id)
+                        .bind(tenant_id)
+                        .execute(&mut *tx).await;
+
+                    let policy_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO smart_pricing_policies (id, tenant_id, product_id, min_margin_percent, auto_discount_trigger_days_stagnant, max_discount_percent) VALUES ($1, $2, $3, 20.0, 30, 50.0) ON CONFLICT DO NOTHING")
+                        .bind(&policy_id)
+                        .bind(tenant_id)
+                        .bind(product_id)
+                        .execute(&mut *tx).await;
+
+                    let _ = sqlx::query("INSERT INTO active_discounts (id, tenant_id, policy_id, discount_amount, expires_at) VALUES ($1, $2, (SELECT id FROM smart_pricing_policies WHERE product_id = $3 AND tenant_id = $2 LIMIT 1), $4, $5)")
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(tenant_id)
+                        .bind(product_id)
+                        .bind(discount_percent)
+                        .bind(now + chrono::Duration::days(3))
+                        .execute(&mut *tx).await;
+
+                    let _ = tx.commit().await;
+
+                    let event_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "discount_percent": discount_percent
+                    });
+
+                    let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+                        msg_id: Uuid::new_v4().to_string(),
+                        agent_id: "orchestrator".to_string(),
+                        action: "tenant.discount.activated".to_string(),
+                        status: "completed".to_string(),
+                        payload: serde_json::to_string(&event_payload).unwrap_or_default().into_bytes(),
+                    };
+
+                    let _ = self.mesh.publish("marketing_agent_events", prost::Message::encode_to_vec(&msg)).await;
+                    let _ = self.mesh.publish("tenant.discount.activated", prost::Message::encode_to_vec(&msg)).await;
+                }
+            }
+        }
+
+
 
         if let Some(err) = error_response {
             let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
             return Err(err);
         }
 
-        if let Some((dep, original_payload)) = opt_dept_payload {
+        if opt_dept_payload.is_some() {
+let dep = parsed_dep;
+let original_payload = parsed_payload;
+
             let decision_str = if approved { "approved" } else { "rejected" };
             self.approval_counter.add(1, &[
                 KeyValue::new("tenant_id", tenant_id.to_string()),

@@ -23,8 +23,8 @@ impl Department for MarketingAgent {
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.discount.activated".to_string(),
         ]
     }
 
@@ -32,7 +32,31 @@ impl Department for MarketingAgent {
         let risk = ActionRisk::DraftForReview;
 
 
+
+        if event.event_type == "tenant.discount.activated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("product");
+            let discount_percent = event.payload.get("discount_percent").and_then(|v| v.as_f64()).unwrap_or(15.0);
+
+            let draft_copy = format!("Flash Sale! Get {}% off on our featured product. Grab it before it's gone! 🚀 #sale #discount", discount_percent);
+
+            let payload = serde_json::json!({
+                "feature_type": "social_post",
+                "product_id": product_id,
+                "draft_copy": draft_copy
+            });
+            let description = format!("Draft social media post for flash sale on {}", product_id);
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
+
         if event.event_type == "tenant.product.created" {
+
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("a new product");
 
             let draft_copy = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);

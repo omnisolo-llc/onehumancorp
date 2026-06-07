@@ -9,7 +9,9 @@ import { InteractiveWalkthrough } from './Walkthrough';
 // --- Walkthrough System ---
 type Step = {
   targetId: string;
-  message: string;
+  title: string;
+  content: string;
+  position?: 'top' | 'bottom' | 'left' | 'right';
 };
 
 type HelpArticle = { title: string; desc: string; link?: string };
@@ -18,10 +20,10 @@ type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
 
 const helpTabs = [
-  { id: "center", label: "Help" },
-  { id: "chat", label: "Ask AI" },
-  { id: "videos", label: "Videos" },
-  { id: "whatsnew", label: "New" }
+  { id: "center" as const, label: "Help" },
+  { id: "chat" as const, label: "Ask AI" },
+  { id: "videos" as const, label: "Videos" },
+  { id: "whatsnew" as const, label: "New" }
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -125,7 +127,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
+          steps={steps.map(s => ({ targetId: s.targetId, title: s.title, content: s.content, position: "top" }))}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
@@ -148,7 +150,7 @@ export function HelpWidget() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<HelpTab>("center");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+    { id: "1", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,17 +262,17 @@ export function HelpWidget() {
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input", title: "Set up your store", content: "Enter your business description." }, { targetId: "generate-btn", title: "Set up your store", content: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input", title: "Enter your business description.", content: "Enter your business description." }, { targetId: "generate-btn", title: "Click to generate!", content: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "stripe-setup-btn", title: "Accept your first payment", content: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "stripe-setup-btn", title: "Click here to connect Stripe and start accepting payments.", content: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "generate-btn", title: "Activate your AI Support Agent", content: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "generate-btn", title: "Activate your AI agent.", content: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Agents join the Virtual Meeting Room to debate and plan before executing tasks.", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol).", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                   <button
