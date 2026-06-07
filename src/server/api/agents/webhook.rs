@@ -139,6 +139,9 @@ async fn handle_webhook(
         payload.tenant_id,
         risk,
         serde_json::json!({
+            "feature_type": "ambassador_reply",
+            "original_message": payload.message,
+            "generated_response": draft_reply,
             "source": payload.source,
             "message": payload.message,
             "draft_reply": draft_reply,

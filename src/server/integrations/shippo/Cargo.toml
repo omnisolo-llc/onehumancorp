@@ -16,3 +16,4 @@ tokio = { workspace = true }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
+rand = "0.10.1"
