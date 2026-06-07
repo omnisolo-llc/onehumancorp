@@ -155,7 +155,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
                 let _lock_guard = match tokio::time::timeout(crate::orchestration::state::state_manager_timeout(), acquire_future).await {
             Ok(Ok(guard)) => guard,
             Ok(Err(e)) => {
-                if e.contains("is currently locked") || e.contains("Timeout") {
+                if e.contains("is currently locked") || e.contains("Timeout") || e.contains("database is locked") {
                     tracing::warn!("Lock timeout or unavailable in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                     return Ok(vec![]);
                 }

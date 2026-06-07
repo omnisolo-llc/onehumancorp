@@ -165,13 +165,13 @@ mod tests {
 
         assert_eq!(summary.organization_id, "org_y");
         assert_eq!(summary.total_cost_usd, 2.0);
-        assert_eq!(summary.total_tokens, 500); // 500 completion tokens
+        assert_eq!(summary.total_tokens, 1500); // 1000 prompt + 500 completion tokens
         assert_eq!(summary.agents.len(), 1);
 
         let agent_summary = &summary.agents[0];
         assert_eq!(agent_summary.agent_id, "agent_x");
         assert_eq!(agent_summary.cost_usd, 2.0);
-        assert_eq!(agent_summary.token_used, 500);
+        assert_eq!(agent_summary.token_used, 1500);
         assert_eq!(agent_summary.pct, 1.0);
     }
 }

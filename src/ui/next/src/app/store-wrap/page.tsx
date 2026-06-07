@@ -33,7 +33,7 @@ export default function StoreWrapPage() {
     }
   }, []);
 
-  const referralLink = `https://ohc.store/join?ref=${tenant}`;
+  const referralLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/onboarding?ref=${tenant}`;
   const shareText = `My business just generated $${metrics.sales.toLocaleString()} in revenue this year! 🚀 Built and scaled on OHC. Start your own business today and get a $50 credit: ${referralLink}`;
 
   const slides = [
@@ -108,6 +108,7 @@ export default function StoreWrapPage() {
         {slides.map((slide, i) => (
           <div
             key={i}
+            aria-hidden={i !== currentSlide}
             className={`absolute inset-0 flex flex-col items-center justify-center p-8 transition-opacity duration-500 ease-in-out ${i === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
             style={{ background: slide.bg }}
           >
@@ -168,8 +169,22 @@ export default function StoreWrapPage() {
         ))}
 
         {/* Navigation Overlays */}
-        <div className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer" onClick={prevSlide} />
-        <div className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer" onClick={nextSlide} />
+        <button
+          type="button"
+          aria-label="Previous wrap slide"
+          data-ui-overlay="true"
+          onClick={prevSlide}
+          disabled={currentSlide === 0}
+          className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer disabled:cursor-default disabled:pointer-events-none"
+        />
+        <button
+          type="button"
+          aria-label="Next wrap slide"
+          data-ui-overlay="true"
+          onClick={nextSlide}
+          disabled={currentSlide === slides.length - 1}
+          className="absolute inset-y-0 right-0 w-2/3 z-20 cursor-pointer disabled:cursor-default disabled:pointer-events-none"
+        />
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

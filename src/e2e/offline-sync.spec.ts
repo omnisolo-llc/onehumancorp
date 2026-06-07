@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Offline-First Tap-to-Pay Omnichannel Inventory Sync Mesh', () => {
   // We use the existing auth and structure seen in other e2e tests

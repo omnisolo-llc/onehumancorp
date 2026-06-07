@@ -15,7 +15,16 @@ const OfflineStore = {
     events.push(event);
     localStorage.setItem('ohc_offline_events', JSON.stringify(events));
   },
-  clearEvents: () => localStorage.setItem('ohc_offline_events', '[]')
+  clearEvents: () => localStorage.setItem('ohc_offline_events', '[]'),
+
+  getPosTransactions: () => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'),
+  setPosTransactions: (transactions: any[]) => localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions)),
+  addPosTransaction: (tx: any) => {
+    const transactions = OfflineStore.getPosTransactions();
+    transactions.push(tx);
+    localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions));
+  },
+  clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
 };
 
 export default function TerminalPage() {
@@ -27,26 +36,68 @@ export default function TerminalPage() {
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
+  const [orderStatus, setOrderStatus] = useState('');
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Network listener
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    // Set initial state safely
+    setIsOffline(!navigator.onLine);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Background sync
   useEffect(() => {
     const syncInterval = setInterval(async () => {
-      const events = OfflineStore.getEvents();
-      if (events.length > 0 && navigator.onLine) {
-        setSyncing(true);
-        try {
-          const res = await fetch('/api/staff/timecard', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(events)
-          });
-          if (res.ok) {
-            OfflineStore.clearEvents();
+      if (navigator.onLine) {
+        const events = OfflineStore.getEvents();
+        const posTransactions = OfflineStore.getPosTransactions();
+
+        if (events.length > 0 || posTransactions.length > 0) {
+          setSyncing(true);
+          try {
+            if (events.length > 0) {
+              const res = await fetch('/api/staff/timecard', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(events)
+              });
+              if (res.ok) {
+                OfflineStore.clearEvents();
+              }
+            }
+
+            if (posTransactions.length > 0) {
+              const res = await fetch('/api/pos/transactions/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(posTransactions)
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
+                  const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
+                  OfflineStore.setPosTransactions(failedTxs);
+                } else {
+                  OfflineStore.clearPosTransactions();
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Sync failed", e);
+          } finally {
+            setSyncing(false);
           }
-        } catch (e) {
-          console.error("Sync failed", e);
-        } finally {
-          setSyncing(false);
         }
       }
     }, 10000); // Try syncing every 10 seconds
@@ -109,14 +160,29 @@ export default function TerminalPage() {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);
     }
-    alert(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+    setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+
+    if (isOffline) {
+      // Bypass Stripe Terminal and save offline
+      const tx = {
+        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        amount_cents: converted.amount,
+        currency: currency,
+        payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
+        client_id: 'terminal_1',
+        timestamp: new Date().toISOString()
+      };
+      OfflineStore.addPosTransaction(tx);
+      setOrderStatus(`${t('Payment Saved Offline')} - ${converted.amount / 100} ${currency}`);
+    }
   };
 
   if (!activeStaff) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 font-inter">
         <div className="w-[375px] h-[812px] bg-black text-white p-8 flex flex-col items-center relative overflow-hidden">
-           <div className="absolute top-8 right-8">
+           <div className="absolute top-8 right-8 flex items-center gap-4">
+              {isOffline && <span className="text-red-500 font-bold text-xs bg-red-100/10 px-2 py-1 rounded">{t('Offline Mode')}</span>}
               <LocalizationToggle />
            </div>
 
@@ -152,7 +218,13 @@ export default function TerminalPage() {
                </button>
              </div>
              <div className="col-start-3 flex items-center justify-center">
-               <button onClick={handleClear} className="text-gray-400 hover:text-white">{t('Clear')}</button>
+               <button
+                 onClick={handleClear}
+                 disabled={!pin}
+                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400"
+               >
+                 {t('Clear')}
+               </button>
              </div>
            </div>
 
@@ -171,6 +243,7 @@ export default function TerminalPage() {
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
+            {isOffline && <span className="inline-block mt-1 text-red-500 font-bold text-xs bg-red-100 px-2 py-1 rounded">{t('Offline Mode')}</span>}
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
@@ -243,6 +316,7 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
+           {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
         {syncing && <div className="bg-blue-50 text-blue-600 text-xs text-center py-2 border-t border-blue-100">{t('Syncing offline events...')}</div>}

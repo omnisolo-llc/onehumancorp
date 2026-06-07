@@ -38,7 +38,7 @@ export default function CalendarPage() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+          <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </Link>
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Calendar & Bookings</h1>
@@ -46,6 +46,8 @@ export default function CalendarPage() {
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">AI Scheduling (Zero-Setup)</span>
           <button
+            aria-label="Toggle AI Scheduling"
+            aria-pressed={aiEnabled}
             onClick={() => setAiEnabled(!aiEnabled)}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${aiEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
           >
