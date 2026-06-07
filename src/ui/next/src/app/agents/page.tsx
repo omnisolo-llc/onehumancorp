@@ -420,36 +420,77 @@ export default function AgentsPage() {
  </div>
  ) : (
  <div className="space-y-4 pb-8">
- {approvals.map((req) => (
- <div key={req.id} className="rounded-[16px] shadow-sm p-5 font-inter bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
- <div className="flex justify-between items-start mb-3">
- <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
- {req.department}
- </span>
- <span className="text-xs text-gray-400 font-medium">Draft For Review</span>
- </div>
- <p className="text-gray-800 text-sm font-medium mb-5 leading-relaxed">
- {req.description}
- </p>
+ {approvals.map((req) => {
+   if (req.department === 'BusinessAdvisory' || req.department === 'business_advisory') {
+     return (
+       <div key={req.id} className="rounded-[16px] shadow-sm p-5 font-inter bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-indigo-100">
+         <div className="flex justify-between items-start mb-3">
+           <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
+             The Advisor
+           </span>
+           <span className="text-xs text-gray-400 font-medium">Draft For Review</span>
+         </div>
+         <p className="text-gray-800 text-sm font-medium mb-4 leading-relaxed">
+           {req.description}
+         </p>
+         <div className="rounded-xl bg-purple-50 border border-purple-100 p-4 mb-5">
+           <p className="text-xs font-bold text-purple-800 uppercase tracking-wide mb-2">Suggestion</p>
+           <p className="text-sm text-purple-900 leading-relaxed font-medium">
+             {req.payload?.actionable_suggestion || 'No action suggested.'}
+           </p>
+         </div>
 
- <div className="flex gap-3 mt-auto">
- <button
- onClick={() => handleDecision(req.id, false)}
- disabled={actionLoading === req.id}
- className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
->
- {actionLoading === req.id ? '...' : 'Edit Draft'}
- </button>
- <button
- onClick={() => handleDecision(req.id, true)}
- disabled={actionLoading === req.id}
- className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
->
- {actionLoading === req.id ? '...' : 'Approve & Send'}
- </button>
- </div>
- </div>
- ))}
+         <div className="flex gap-3 mt-auto">
+           <button
+             onClick={() => handleDecision(req.id, false)}
+             disabled={actionLoading === req.id}
+             className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+           >
+             {actionLoading === req.id ? '...' : 'Dismiss'}
+           </button>
+           <button
+             onClick={() => handleDecision(req.id, true)}
+             disabled={actionLoading === req.id}
+             className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-purple-400 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+           >
+             {actionLoading === req.id ? '...' : 'Approve Action'}
+           </button>
+         </div>
+       </div>
+     );
+   }
+
+   return (
+     <div key={req.id} className="rounded-[16px] shadow-sm p-5 font-inter bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+       <div className="flex justify-between items-start mb-3">
+         <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
+           {req.department}
+         </span>
+         <span className="text-xs text-gray-400 font-medium">Draft For Review</span>
+       </div>
+       <p className="text-gray-800 text-sm font-medium mb-5 leading-relaxed">
+         {req.description}
+       </p>
+
+       <div className="flex gap-3 mt-auto">
+         <button
+           onClick={() => handleDecision(req.id, false)}
+           disabled={actionLoading === req.id}
+           className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+         >
+           {actionLoading === req.id ? '...' : 'Edit Draft'}
+         </button>
+         <button
+           onClick={() => handleDecision(req.id, true)}
+           disabled={actionLoading === req.id}
+           className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+         >
+           {actionLoading === req.id ? '...' : 'Approve & Send'}
+         </button>
+       </div>
+     </div>
+   );
+ })}
  </div>
  )}
  </div>

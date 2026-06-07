@@ -1271,14 +1271,26 @@ impl AdvisorWorker {
                         "actionable_suggestion": "Consider adding a new vegan option."
                     }));
 
+                    let summary = parsed.get("summary").and_then(|v| v.as_str()).unwrap_or("Weekly Business Health Report").to_string();
+
                     match &db.store {
                         crate::db::DbStore::Postgres => {
                             let _ = sqlx::query("UPDATE advisory_reports SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                                 .bind(final_status)
-                                .bind(parsed)
+                                .bind(&parsed)
                                 .bind(&report_id)
                                 .execute(&mut *transaction)
                                 .await;
+
+                            let _ = sqlx::query(
+                                "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES ($1, $2, 'business_advisory', $3, 'DRAFT', 'LOW', $4)"
+                            )
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .bind(&summary)
+                            .bind(&parsed)
+                            .execute(&mut *transaction)
+                            .await;
                         },
                         crate::db::DbStore::Sqlite(_) => {
                              let _ = sqlx::query("UPDATE advisory_reports SET status = ?, payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -1287,6 +1299,16 @@ impl AdvisorWorker {
                                 .bind(&report_id)
                                 .execute(&mut *transaction)
                                 .await;
+
+                            let _ = sqlx::query(
+                                "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload) VALUES (?, ?, 'business_advisory', ?, 'DRAFT', 'LOW', ?)"
+                            )
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .bind(&summary)
+                            .bind(parsed.to_string())
+                            .execute(&mut *transaction)
+                            .await;
                         }
                     }
                 }

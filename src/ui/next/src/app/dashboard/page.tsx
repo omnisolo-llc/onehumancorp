@@ -1,5 +1,8 @@
-import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 "use client";
+
+
+import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";

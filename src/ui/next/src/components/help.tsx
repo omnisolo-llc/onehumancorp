@@ -15,7 +15,7 @@ type Step = {
 type HelpArticle = { title: string; desc: string; link?: string };
 type HelpVideo = { id: number; title: string; duration: string };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
-type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
+type ChatMessage = { id: string; role: "bot" | "user"; message: string; linkUrl?: string; linkTitle?: string };
 
 const helpTabs = [
   { id: "center", label: "Help" },
@@ -55,7 +55,7 @@ function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
 
   const link = isRecord(data.link) ? data.link : undefined;
   return {
-    text: data.reply,
+    message: data.reply,
     linkUrl: isSafeLink(link?.url) ? link.url : undefined,
     linkTitle: typeof link?.title === "string" && link.title.trim() ? link.title : undefined
   };
@@ -125,7 +125,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
+          steps={steps.map(s => ({ targetId: s.targetId, title: "Step", content: s.message, position: "top" }))}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
@@ -148,7 +148,7 @@ export function HelpWidget() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<HelpTab>("center");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+    { id: "welcome", role: "bot", message: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -193,7 +193,7 @@ export function HelpWidget() {
     if (!val) return;
 
     setChatInput("");
-    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
+    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", message: val }]);
 
     try {
       const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
@@ -202,7 +202,7 @@ export function HelpWidget() {
       const reply = normalizeChatReply(data);
       setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
     } catch (err) {
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
+      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", message: "Sorry, I'm having trouble connecting right now." }]);
     }
   };
 
@@ -260,17 +260,17 @@ export function HelpWidget() {
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input", title: "Set up your store", content: "Enter your business description." }, { targetId: "generate-btn", title: "Set up your store", content: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "stripe-setup-btn", title: "Accept your first payment", content: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "generate-btn", title: "Activate your AI Support Agent", content: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "Virtual Meeting Room & UltraPlan", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                   <button
@@ -298,7 +298,7 @@ export function HelpWidget() {
                     }`;
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>
-                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
+                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.message) }} />
                         {msg.linkUrl && msg.linkTitle && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
                             <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">{msg.linkTitle}</a>
@@ -306,7 +306,7 @@ export function HelpWidget() {
                         )}
                       </div>
                     ) : (
-                      <div key={msg.id} className={className}>{msg.text}</div>
+                      <div key={msg.id} className={className}>{msg.message}</div>
                     );
                   })}
                 </div>
