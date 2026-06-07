@@ -50,6 +50,10 @@ describe('CostDashboardPage', () => {
         { date: "2023-10-01", total_cost: 1000, llm_cost: 500, storage_cost: 200, network_cost: 100, compute_cost: 200 },
         { date: "2023-10-02", total_cost: 1500, llm_cost: 800, storage_cost: 200, network_cost: 200, compute_cost: 300 }
       ],
+      agent_costs: [
+        { agent_id: "marketing_agent", cost_cents: 1200 },
+        { agent_id: "sales_agent", cost_cents: 800 }
+      ],
       department_tier_usage: {
         current_plan: "Free",
         period: "2023-10",
@@ -133,6 +137,13 @@ describe('CostDashboardPage', () => {
     expect(screen.getAllByText('$50.00').length).toBeGreaterThan(0); // payment fees
     expect(screen.getByText('$160.00')).toBeDefined(); // network
     expect(screen.getAllByText('-$50.00').length).toBeGreaterThan(0); // bandwidth savings
+
+    // Agent & Feature Costs
+    expect(screen.getByText('Agent & Feature Costs')).toBeDefined();
+    expect(screen.getByText('marketing agent')).toBeDefined();
+    expect(screen.getByText('$12.00')).toBeDefined(); // 1200 cents
+    expect(screen.getByText('sales agent')).toBeDefined();
+    expect(screen.getByText('$8.00')).toBeDefined(); // 800 cents
 
     // 7-Day Trend
     expect(screen.getByText('7-Day Trend')).toBeDefined();
