@@ -1,3 +1,4 @@
+/// Master Catalog B.2. Tools
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::Value;
 use std::sync::Arc;
@@ -26,6 +27,7 @@ pub mod ollama;
 pub mod subagent;
 pub mod head;
 pub mod tail;
+pub mod find;
 pub mod hybrid_blob;
 pub mod restic;
 pub mod anthropic_memory;
@@ -115,6 +117,7 @@ pub fn all_tools(
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
+            find::find_tool(working_dir.clone()),
         write::write_tool(working_dir.clone(), runner.clone()),
         edit::edit_tool(working_dir.clone(), runner.clone()),
         glob::glob_tool(working_dir.clone()),
