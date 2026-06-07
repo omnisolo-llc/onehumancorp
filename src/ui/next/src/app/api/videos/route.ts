@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json([], { status: res.status });
   } catch (e) {
-    if (process.env.NODE_ENV !== "test") console.error("Failed to fetch videos from backend:", e);
+    console.error("Failed to fetch videos from backend:", e);
     return NextResponse.json([], { status: 500 });
   }
 }

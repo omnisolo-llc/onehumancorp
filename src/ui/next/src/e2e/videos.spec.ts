@@ -26,7 +26,7 @@ test.describe('In-App Video Tutorials', () => {
         await expect(firstVideoTitle).toBeVisible();
 
         // Verify some other videos are present
-        await expect(page.locator('p', { hasText: 'Accept your first payment' })).toBeVisible();
+        await expect(page.locator('p', { hasText: 'Adding staff to your account' })).toBeVisible();
 
         // Click on the first video to open the modal player
         // The video container is a div parent of the title

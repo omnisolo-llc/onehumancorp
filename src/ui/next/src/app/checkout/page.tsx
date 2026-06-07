@@ -12,8 +12,6 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState("my-store");
-  const [checkoutStatus, setCheckoutStatus] = useState("");
-  const [isMercadoPagoProcessing, setIsMercadoPagoProcessing] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -32,32 +30,10 @@ export default function CheckoutPage() {
     setDeliveryError(null);
 
     try {
-      const coordinates = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
-        if (typeof navigator === "undefined" || !navigator.geolocation) {
-          resolve(null);
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (position) => resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          }),
-          () => resolve(null),
-          { maximumAge: 300000, timeout: 2000 },
-        );
-      });
-      const payload: {
-        deliveryAddress: string;
-        coordinates?: { lat: number; lng: number };
-      } = { deliveryAddress };
-      if (coordinates) {
-        payload.coordinates = coordinates;
-      }
-
       const response = await fetch("/api/checkout/delivery-quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ deliveryAddress }),
       });
       const data = await response.json();
       if (data.success) {
@@ -76,46 +52,9 @@ export default function CheckoutPage() {
 
   const [isSubscription, setIsSubscription] = useState(false);
 
-  const startMercadoPagoCheckout = async () => {
-    setIsMercadoPagoProcessing(true);
-    setCheckoutStatus("Preparing Mercado Pago checkout...");
-
-    try {
-      const response = await fetch("/api/checkout/mercadopago", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenant_id: tenant,
-          amount_cents: 4500,
-          currency: "MXN",
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.checkout_url) {
-        throw new Error(data.error || "Mercado Pago checkout unavailable.");
-      }
-
-      setCheckoutStatus("Redirecting to Mercado Pago...");
-      window.location.assign(data.checkout_url);
-    } catch (e) {
-      console.error("Failed to start Mercado Pago checkout", e);
-      setCheckoutStatus("Mercado Pago checkout is temporarily unavailable.");
-    } finally {
-      setIsMercadoPagoProcessing(false);
-    }
-  };
-
   const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
     setIsSubscription(isSub);
-    const fallbackReferralLink = () => {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      return `${origin}/onboarding?ref=${tenant}`;
-    };
-    const normalizeReferralLink = (rawLink: string) => {
-      if (!rawLink || rawLink.includes('ohc.store') || rawLink.startsWith('ohc://')) return fallbackReferralLink();
-      return rawLink;
-    };
 
     // Fetch dynamic referral link
     try {
@@ -124,13 +63,13 @@ export default function CheckoutPage() {
       });
       const data = await response.json();
       if (data && data.referral_link) {
-        setReferralLink(normalizeReferralLink(data.referral_link));
+        setReferralLink(data.referral_link);
       } else {
-        setReferralLink(fallbackReferralLink());
+        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
       }
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
-      setReferralLink(fallbackReferralLink());
+      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
     }
 
     setIsProcessing(false);
@@ -213,9 +152,12 @@ export default function CheckoutPage() {
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
               onClick={() => {
+                const amount = prompt("Enter amount to charge:");
+                if (!amount) return;
+
                 if (navigator.onLine) {
-                  setCheckoutStatus('Stripe Terminal payment captured for $45.00.');
-                  handlePayment(false);
+                  alert(`Payment of ${amount} successful!`);
+                  router.push('/dashboard');
                 } else {
                   let queue = [];
                   try {
@@ -224,14 +166,14 @@ export default function CheckoutPage() {
 
                   queue.push({
                     id: 'txn_' + Date.now(),
-                    amount: 45,
+                    amount: parseFloat(amount),
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  setCheckoutStatus('Payment Saved Offline');
-                  setShowSuccessModal(true);
+                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
+                  router.push('/dashboard');
                 }
               }}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
@@ -242,15 +184,15 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
             <button
-              onClick={startMercadoPagoCheckout}
-              disabled={isMercadoPagoProcessing}
+              onClick={() => {
+                alert("Redirecting to Mercado Pago...");
+                setShowSuccessModal(true);
+              }}
               className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              {isMercadoPagoProcessing ? "Preparing Mercado Pago..." : "Pay with Mercado Pago"}
+              Pay with Mercado Pago
             </button>
           </WithTooltip>
-
-          {checkoutStatus && <p className="text-sm font-medium text-indigo-700" role="status">{checkoutStatus}</p>}
 
           <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without buying anything.">
             <button

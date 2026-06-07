@@ -1,5 +1,4 @@
 use axum::{extract::State, Json};
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::OnceLock;
 use crate::hub::Hub;
@@ -33,38 +32,12 @@ pub struct CostDashboardResponse {
     pub period_start: String,
     pub period_end: String,
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
-    pub department_tier_usage: DepartmentTierUsageResponse,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
-pub struct DepartmentTierUsageResponse {
-    pub current_plan: String,
-    pub period: String,
-    pub departments: Vec<DepartmentTierUsageRow>,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct DepartmentTierUsageRow {
-    pub id: String,
-    pub department_type: String,
-    pub agent_id: String,
-    pub actions_used: u32,
-    pub action_limit: Option<u32>,
-    pub usage_percent: Option<f64>,
-    pub soft_limit_reached: bool,
-}
-
-#[derive(Clone)]
-struct DepartmentRecord {
-    id: String,
-    department_type: String,
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
-        .route("/department-tier-usage", axum::routing::get(department_tier_usage_handler))
         .with_state(hub)
 }
 
@@ -151,7 +124,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![] })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -189,19 +162,10 @@ pub async fn cost_dashboard_handler(
         hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
     });
 
-    let trend_future = tokio::task::spawn({
-        let pool = crate::db::get_pool();
-        let t_id = tenant_id.clone();
-        async move {
-            crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &t_id).await
-        }
-    });
-
-    let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
+    let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
-    let trend = trend_res.unwrap_or_default();
 
     let cache_hit_rate = if total_tokens + cached_tokens > 0 {
         (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -209,9 +173,8 @@ pub async fn cost_dashboard_handler(
         0.0
     };
 
-    let total_tokens_incl_cached = total_tokens + cached_tokens;
-    let cost_per_1k_tokens = if total_tokens_incl_cached > 0 {
-        llm_cost_f64 / (total_tokens_incl_cached as f64 / 1000.0)
+    let cost_per_1k_tokens = if total_tokens > 0 {
+        llm_cost_f64 / (total_tokens as f64 / 1000.0)
     } else {
         0.0
     };
@@ -221,7 +184,8 @@ pub async fn cost_dashboard_handler(
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
 
-    let department_tier_usage = department_tier_usage_for_tenant(&hub, &tenant_id).await;
+    let pool = crate::db::get_pool();
+    let trend = crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &tenant_id).await;
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
@@ -236,202 +200,7 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
         trend,
-        department_tier_usage,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
-}
-
-pub async fn department_tier_usage_handler(
-    _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> Json<DepartmentTierUsageResponse> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return Json(empty_department_tier_usage_response()),
-    };
-
-    Json(department_tier_usage_for_tenant(&hub, &tenant_id).await)
-}
-
-async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
-    let tier = hub
-        .tracker()
-        .get_tenant_tier(tenant_id)
-        .await
-        .unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
-    let current_plan = plan_name(&tier).to_string();
-    let period = current_usage_period();
-    let departments = load_department_records(&hub.pool, tenant_id).await.unwrap_or_default();
-
-    let mut usage_by_key = HashMap::new();
-    for department in &departments {
-        for key in department_usage_keys(department) {
-            let used = hub
-                .tracker()
-                .get_agent_actions_used(tenant_id, &key)
-                .await
-                .unwrap_or(0);
-            usage_by_key.insert(key, used);
-        }
-    }
-
-    build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
-        usage_by_key.get(agent_id).copied().unwrap_or(0)
-    })
-}
-
-async fn load_department_records(pool: &sqlx::PgPool, tenant_id: &str) -> Result<Vec<DepartmentRecord>, sqlx::Error> {
-    use sqlx::Row;
-
-    let mut tx = pool.begin().await?;
-    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-        .bind(tenant_id)
-        .execute(&mut *tx)
-        .await?;
-
-    let rows = sqlx::query(
-        "SELECT id, department_type FROM agent_departments WHERE tenant_id = $1 ORDER BY department_type",
-    )
-    .bind(tenant_id)
-    .fetch_all(&mut *tx)
-    .await?;
-    tx.commit().await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| DepartmentRecord {
-            id: row.try_get("id").unwrap_or_default(),
-            department_type: row.try_get("department_type").unwrap_or_default(),
-        })
-        .filter(|row| !row.id.is_empty() && !row.department_type.is_empty())
-        .collect())
-}
-
-fn build_department_tier_usage_response(
-    current_plan: String,
-    tier: ::server_pricing::rate_limit::PlanTier,
-    period: String,
-    departments: Vec<DepartmentRecord>,
-    usage_lookup: impl Fn(&str) -> u32,
-) -> DepartmentTierUsageResponse {
-    let action_limit = tier.agent_action_limit();
-    let rows = departments
-        .into_iter()
-        .map(|department| {
-            let keys = department_usage_keys(&department);
-            let actions_used = keys.iter().map(|key| usage_lookup(key)).sum::<u32>();
-            let usage_percent = action_limit.map(|limit| {
-                if limit == 0 {
-                    0.0
-                } else {
-                    ((actions_used as f64 / limit as f64) * 100.0).min(100.0)
-                }
-            });
-            DepartmentTierUsageRow {
-                id: department.id,
-                agent_id: department_agent_id(&department.department_type),
-                department_type: department.department_type,
-                actions_used,
-                action_limit,
-                usage_percent: usage_percent.map(|value| (value * 100.0).round() / 100.0),
-                soft_limit_reached: action_limit.map(|limit| actions_used >= limit).unwrap_or(false),
-            }
-        })
-        .collect();
-
-    DepartmentTierUsageResponse {
-        current_plan,
-        period,
-        departments: rows,
-    }
-}
-
-fn department_usage_keys(department: &DepartmentRecord) -> Vec<String> {
-    let mut seen = HashSet::new();
-    [department.id.clone(), department.department_type.clone(), department_agent_id(&department.department_type)]
-        .into_iter()
-        .filter(|key| seen.insert(key.clone()))
-        .collect()
-}
-
-fn department_agent_id(department_type: &str) -> String {
-    format!("{}_agent", department_type.trim().to_ascii_lowercase())
-}
-
-fn current_usage_period() -> String {
-    chrono::Utc::now().format("%Y-%m").to_string()
-}
-
-fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
-    DepartmentTierUsageResponse {
-        current_plan: "Free".to_string(),
-        period: current_usage_period(),
-        departments: vec![],
-    }
-}
-
-fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
-    match tier {
-        ::server_pricing::rate_limit::PlanTier::Free => "Free",
-        ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
-        ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
-        ::server_pricing::rate_limit::PlanTier::Business => "Business",
-    }
-}
-
-#[cfg(test)]
-mod department_tier_usage_tests {
-    use super::*;
-
-    #[test]
-    fn department_tier_usage_uses_only_persisted_departments_and_real_usage_keys() {
-        let departments = vec![
-            DepartmentRecord {
-                id: "dept-marketing-1".to_string(),
-                department_type: "marketing".to_string(),
-            },
-            DepartmentRecord {
-                id: "dept-ops-1".to_string(),
-                department_type: "operations".to_string(),
-            },
-        ];
-
-        let usage = |agent_id: &str| match agent_id {
-            "marketing_agent" => 21,
-            "dept-ops-1" => 7,
-            _ => 0,
-        };
-
-        let response = build_department_tier_usage_response(
-            "Starter".to_string(),
-            ::server_pricing::rate_limit::PlanTier::Free,
-            "2026-06".to_string(),
-            departments,
-            usage,
-        );
-
-        assert_eq!(response.departments.len(), 2);
-        assert!(response.departments.iter().all(|row| row.department_type != "sales"));
-
-        let marketing = response
-            .departments
-            .iter()
-            .find(|row| row.department_type == "marketing")
-            .expect("marketing department should be present");
-        assert_eq!(marketing.agent_id, "marketing_agent");
-        assert_eq!(marketing.actions_used, 21);
-        assert_eq!(marketing.action_limit, Some(20));
-        assert!(marketing.soft_limit_reached);
-
-        let operations = response
-            .departments
-            .iter()
-            .find(|row| row.department_type == "operations")
-            .expect("operations department should be present");
-        assert_eq!(operations.actions_used, 7);
-        assert_eq!(operations.usage_percent, Some(35.0));
-    }
 }

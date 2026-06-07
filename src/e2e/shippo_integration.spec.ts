@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test('User can purchase and print shipping labels for an order', async ({ page }) => {
   // Navigate to the orders page

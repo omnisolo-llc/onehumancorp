@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error recording referral conversion:", error);
+    console.error("Error recording referral conversion:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }

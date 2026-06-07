@@ -95,5 +95,5 @@ async fn test_expert_workflow_consensus_conflict() {
 
     let result = manager.run_full_expert_workflow("Analyze the market. Chart: Required. Analysis: Deep.", &mut trace, lead_llm).await;
     assert!(result.is_ok(), "Expected consensus resolution to succeed");
-    assert!(result.expect("should succeed in test").contains("Conflicting opinions detected"));
+    assert!(result.unwrap().contains("Conflicting opinions detected"));
 }

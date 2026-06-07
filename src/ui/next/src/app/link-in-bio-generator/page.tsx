@@ -9,8 +9,8 @@ export default function LinkInBioGeneratorPage() {
   const [storeName, setStoreName] = useState('My Store');
   const [bio, setBio] = useState('Welcome to my storefront!');
   const [links, setLinks] = useState([
-    { id: '1', title: 'Visit My Store', url: '/website-builder' },
-    { id: '2', title: 'Book an Appointment', url: '/booking' },
+    { id: '1', title: 'Visit My Store', url: 'https://ohc.store' },
+    { id: '2', title: 'Book an Appointment', url: 'https://ohc.store/book' },
   ]);
   const [theme, setTheme] = useState('gradient');
   const [copied, setCopied] = useState(false);
@@ -85,7 +85,6 @@ export default function LinkInBioGeneratorPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                         <input
-                            aria-label="Business name"
                             type="text"
                             value={storeName}
                             onChange={(e) => setStoreName(e.target.value)}
@@ -95,7 +94,6 @@ export default function LinkInBioGeneratorPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Bio / Tagline</label>
                         <textarea
-                            aria-label="Bio tagline"
                             rows={2}
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
@@ -105,10 +103,10 @@ export default function LinkInBioGeneratorPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                         <div className="flex gap-2">
-                            <button aria-label="Gradient theme" aria-pressed={theme === 'gradient'} onClick={() => setTheme('gradient')} className={`w-8 h-8 rounded-full border-2 ${theme === 'gradient' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }}></button>
-                            <button aria-label="Dark theme" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: '#1D1D1F' }}></button>
-                            <button aria-label="Light theme" aria-pressed={theme === 'light'} onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-200'}`} style={{ background: '#ffffff' }}></button>
-                            <button aria-label="Purple theme" aria-pressed={theme === 'purple'} onClick={() => setTheme('purple')} className={`w-8 h-8 rounded-full border-2 ${theme === 'purple' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></button>
+                            <button onClick={() => setTheme('gradient')} className={`w-8 h-8 rounded-full border-2 ${theme === 'gradient' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }}></button>
+                            <button onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: '#1D1D1F' }}></button>
+                            <button onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-200'}`} style={{ background: '#ffffff' }}></button>
+                            <button onClick={() => setTheme('purple')} className={`w-8 h-8 rounded-full border-2 ${theme === 'purple' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></button>
                         </div>
                     </div>
                 </div>
@@ -124,7 +122,6 @@ export default function LinkInBioGeneratorPage() {
                                 <button onClick={() => removeLink(link.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Remove</button>
                             </div>
                             <input
-                                aria-label={`Link ${index + 1} title`}
                                 type="text"
                                 placeholder="Title (e.g. Visit my Shop)"
                                 value={link.title}
@@ -132,7 +129,6 @@ export default function LinkInBioGeneratorPage() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm mb-2"
                             />
                             <input
-                                aria-label={`Link ${index + 1} URL`}
                                 type="url"
                                 placeholder="URL (e.g. https://...)"
                                 value={link.url}
@@ -209,7 +205,7 @@ export default function LinkInBioGeneratorPage() {
                      </div>
 
                      <div className="mt-auto pt-10 pb-6 w-full flex justify-center">
-                         <a href={`/onboarding?ref=${tenant}`} className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
+                         <a href={`https://ohc.store/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
                              Powered by OHC
                          </a>
                      </div>

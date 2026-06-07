@@ -12,7 +12,7 @@ describe('POST /api/v1/growth/referrals/generate', () => {
     });
 
     it('should proxy the request to the backend with authorization and cookie headers', async () => {
-        const mockResponse = { referral_link: 'https://ohc.app/ref/123' };
+        const mockResponse = { referral_link: 'http://ohc.store/ref/123' };
         (global.fetch as any).mockResolvedValue({
             ok: true,
             json: () => Promise.resolve(mockResponse)

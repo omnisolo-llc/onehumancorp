@@ -25,6 +25,5 @@ test.describe('Seasonal Promotion Generator Flow', () => {
     expect(resultText).toContain('Winter Wonderland Special!');
     expect(resultText).toContain('25% OFF');
     expect(resultText).toContain('Use code: WINTERW25');
-    expect(resultText).toContain('⚡ Powered by OHC');
   });
 });

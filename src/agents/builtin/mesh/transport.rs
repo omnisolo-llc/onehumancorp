@@ -1613,17 +1613,11 @@ Content-Length: 0
         let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
         assert!(acquired);
 
-        // Second agent should be able to acquire lock after expiration. Poll to
-        // avoid scheduler jitter making loaded test runs land on the boundary.
-        let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
-        let mut acquired_after_expiration = false;
-        while tokio::time::Instant::now() < deadline {
-            if transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap() {
-                acquired_after_expiration = true;
-                break;
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        }
+        // Sleep for 2 seconds to let lock expire
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+        // Second agent should be able to acquire lock now
+        let acquired_after_expiration = transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap();
         assert!(acquired_after_expiration);
     }
 
