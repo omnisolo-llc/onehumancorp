@@ -130,3 +130,6 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+
+test-results/
+tsconfig.tsbuildinfo
