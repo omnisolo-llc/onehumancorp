@@ -561,6 +561,7 @@ impl DB {
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        payment_intent_id TEXT,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -825,6 +826,70 @@ impl DB {
                         metadata TEXT DEFAULT '{}',
                         UNIQUE(tenant_id, milestone_type)
                     );
+                    CREATE TABLE IF NOT EXISTS services (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT,
+
+                        name TEXT NOT NULL,
+
+                        description TEXT,
+
+                        price REAL,
+
+                        duration_minutes INTEGER,
+
+                        deposit_required REAL DEFAULT 0,
+
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE TABLE IF NOT EXISTS availability_schedules (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT,
+
+                        business_hours TEXT NOT NULL DEFAULT '{}',
+
+                        exceptions TEXT NOT NULL DEFAULT '[]',
+
+                        timezone TEXT NOT NULL DEFAULT 'UTC',
+
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+
+
+                    CREATE TABLE IF NOT EXISTS calendar_integrations (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT,
+
+                        provider TEXT NOT NULL,
+
+                        access_token TEXT NOT NULL,
+
+                        refresh_token TEXT,
+
+                        expires_at TIMESTAMP,
+
+                        sync_metadata TEXT DEFAULT '{}',
+
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
                     CREATE TABLE IF NOT EXISTS pos_offline_transactions (
 
                         id TEXT PRIMARY KEY,
