@@ -160,7 +160,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <AppShell>
+      <AppShell title="Settings">
         <div className="flex h-64 items-center justify-center">
           <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
@@ -169,7 +169,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell title="Workspace Settings">
       <div className="mx-auto max-w-4xl space-y-6">
         <header className="mb-8">
           <h1 className="text-2xl font-bold font-outfit text-gray-900">Workspace Settings</h1>

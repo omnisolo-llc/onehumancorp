@@ -1,5 +1,5 @@
-import { FloatingActionButton } from "./FAB";
 "use client";
+import { FloatingActionButton } from "./FAB";
 
 
 
@@ -430,7 +430,10 @@ export default function Dashboard() {
               <h2 className="app-panel-title">Business Analytics</h2>
               <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
             </div>
-            <Link href="/business-analytics" className="app-button">Business Analytics</Link>
+            <div className="flex gap-2">
+              <Link href="/business-analytics" className="app-button">Business Analytics</Link>
+              <Link href="/affiliate-program" className="px-4 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-xl text-sm font-medium hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors">Affiliate Program</Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
