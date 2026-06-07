@@ -23,10 +23,21 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "tenant.inventory.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.inventory.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str());
+            let cache = crate::builder::edge::get_edge_cache();
+            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+            if let Some(pid) = product_id {
+                cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
+            }
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

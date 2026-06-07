@@ -141,6 +141,10 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub fn db(&self) -> Arc<crate::db::DB> {
+        self.db.clone()
+    }
+
         pub async fn register_agent(&self, agent: Arc<tokio::sync::RwLock<dyn BaseAgent>>) {
         let agent_id = agent.read().await.agent_id();
         self.agents.write().await.insert(agent_id, agent.clone());

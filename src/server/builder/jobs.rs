@@ -29,6 +29,42 @@ pub async fn enqueue_publish_site_job(
     Ok(())
 }
 
+pub async fn enqueue_seo_prerender_job(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    site_id: Uuid,
+    idempotency_key: &str,
+) -> Result<(), sqlx::Error> {
+    let mut conn = super::db::acquire_tenant_conn(pool, tenant_id).await?;
+
+    // Use idempotency key in payload to avoid duplicate jobs if one already exists
+    let payload = serde_json::json!({ "site_id": site_id, "idempotency_key": idempotency_key });
+    let exists = sqlx::query("SELECT 1 FROM tasks WHERE tenant_id = $1 AND mission_type = 'seo_prerender' AND payload->>'idempotency_key' = $2 LIMIT 1")
+        .bind(tenant_id)
+        .bind(idempotency_key)
+        .fetch_optional(&mut *conn)
+        .await?;
+
+    if exists.is_none() {
+        sqlx::query("INSERT INTO tasks (tenant_id, mission_type, payload, status) VALUES ($1, 'seo_prerender', $2, 'pending') ON CONFLICT DO NOTHING")
+            .bind(tenant_id)
+            .bind(&payload)
+            .execute(&mut *conn)
+            .await
+            .ok();
+
+        let pool_clone = pool.clone();
+        tokio::spawn(async move {
+            match execute_publish_site_job(&pool_clone, tenant_id, site_id).await {
+                Ok(_) => info!("Successfully pre-rendered and published site {}", site_id),
+                Err(e) => tracing::error!("Failed to pre-render site {}: {:?}", site_id, e),
+            }
+        });
+    }
+
+    Ok(())
+}
+
 async fn execute_publish_site_job(
     pool: &PgPool,
     tenant_id: Uuid,

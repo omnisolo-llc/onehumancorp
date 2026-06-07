@@ -235,10 +235,36 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.website.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.website.updated" {
+            let site_id = event.payload.get("site_id").and_then(|v| v.as_str());
+            let idempotency_key = event.payload.get("version").and_then(|v| v.as_str()).unwrap_or("");
+            if let Some(sid) = site_id {
+                if let Ok(site_uuid) = uuid::Uuid::parse_str(sid) {
+                    if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
+                        let pool = self.orchestrator()?.db().pool.clone();
+                        match crate::builder::jobs::enqueue_seo_prerender_job(
+                            &pool,
+                            tenant_uuid,
+                            site_uuid,
+                            idempotency_key,
+                        ).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                tracing::error!("Marketing Agent failed to enqueue SEO prerender job: {}", e);
+                                return Err(e.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+            return Ok(());
+        }
+
         let risk = ActionRisk::DraftForReview;
 
 
