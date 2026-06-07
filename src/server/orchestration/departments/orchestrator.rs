@@ -739,6 +739,67 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("abandoned_cart") {
+                        if let Some(job_payload) = payload.get("context").and_then(|c| c.get("job_payload")) {
+                            let job_id = uuid::Uuid::new_v4().to_string();
+                            if let DbStore::Postgres = &self.db.store {
+                                let job_res = sqlx::query(
+                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)"
+                                )
+                                .bind(&job_id)
+                                .bind(tenant_id)
+                                .bind(crate::cart_recovery::CART_RECOVERY_JOB_TYPE)
+                                .bind(job_payload)
+                                .execute(&self.db.pool)
+                                .await;
+
+                                let ledger_id = uuid::Uuid::new_v4().to_string();
+                                let ledger_res = sqlx::query(
+                                    "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change, created_at) VALUES ($1, $2, 'Marketing', 'CART_RECOVERY_APPROVED', $3, CURRENT_TIMESTAMP)"
+                                )
+                                .bind(&ledger_id)
+                                .bind(tenant_id)
+                                .bind(job_payload)
+                                .execute(&self.db.pool)
+                                .await;
+
+                                if let Err(e) = job_res.and(ledger_res) {
+                                    eprintln!("Failed to insert job or ledger for abandoned cart: {}", e);
+                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                    return Err(format!("Failed to activate abandoned cart recovery: {}", e));
+                                }
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let job_res = sqlx::query(
+                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES (?, ?, ?, ?, 'PENDING', CURRENT_TIMESTAMP)"
+                                )
+                                .bind(&job_id)
+                                .bind(tenant_id)
+                                .bind(crate::cart_recovery::CART_RECOVERY_JOB_TYPE)
+                                .bind(job_payload)
+                                .execute(pool)
+                                .await;
+
+                                let ledger_id = uuid::Uuid::new_v4().to_string();
+                                let ledger_res = sqlx::query(
+                                    "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change, created_at) VALUES (?, ?, 'Marketing', 'CART_RECOVERY_APPROVED', ?, CURRENT_TIMESTAMP)"
+                                )
+                                .bind(&ledger_id)
+                                .bind(tenant_id)
+                                .bind(job_payload)
+                                .execute(pool)
+                                .await;
+
+                                if let Err(e) = job_res.and(ledger_res) {
+                                    eprintln!("Failed to insert job or ledger for abandoned cart: {}", e);
+                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                    return Err(format!("Failed to activate abandoned cart recovery: {}", e));
+                                }
+                            }
+                        }
+                    }
+                }
+
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id,

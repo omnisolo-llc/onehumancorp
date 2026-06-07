@@ -566,8 +566,8 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
             ));
         }
 
-        let job_id = Uuid::new_v4().to_string();
-        let payload = serde_json::json!({
+        let approval_id = Uuid::new_v4().to_string();
+        let job_payload = serde_json::json!({
             "action_type": "cart_recovery.dispatch",
             "checkout_session_id": session.session_id,
             "customer_id": session.customer_id,
@@ -578,6 +578,17 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
             "body": message.body,
             "checkout_url": message.checkout_url,
         });
+
+        let payload = serde_json::json!({
+            "feature_type": "abandoned_cart",
+            "context": {
+                "abandoned_carts_count": 1,
+                "potential_revenue": session.amount_cents as f64 / 100.0,
+                "job_payload": job_payload
+            }
+        });
+
+        let description = format!("Recover abandoned cart for {}", session.customer_email.as_deref().or(session.customer_phone.as_deref()).unwrap_or("customer"));
 
         let mut tx = self
             .pool
@@ -590,13 +601,13 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
 
         sqlx::query(
             r#"
-            INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
-            VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)
+            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+            VALUES ($1, $2, 'Marketing', $3, 'DRAFT', 'HIGH', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             "#,
         )
-        .bind(&job_id)
+        .bind(&approval_id)
         .bind(&session.tenant_id)
-        .bind(CART_RECOVERY_JOB_TYPE)
+        .bind(description)
         .bind(payload)
         .execute(&mut *tx)
         .await
@@ -608,7 +619,7 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
 
         Ok(RecoveryDispatchReceipt {
             channel: RecoveryChannel::AgentQueue,
-            provider_message_id: Some(job_id),
+            provider_message_id: Some(approval_id),
         })
     }
 }
