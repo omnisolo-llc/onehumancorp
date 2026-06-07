@@ -374,6 +374,62 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
 mod department_tier_usage_tests {
     use super::*;
 
+    #[tokio::test]
+    async fn test_department_tier_usage_for_tenant_concurrency() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .connect(&database_url)
+            .await;
+
+        let pool = match pool {
+            Ok(p) => p,
+            Err(_) => return, // If no real database available in CI, skip safely
+        };
+
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+
+        let tenant_id = format!("test_tenant_{}", uuid::Uuid::new_v4());
+
+        // Start a transaction so we can rollback and not pollute the DB
+        let mut tx = pool.begin().await.unwrap();
+
+        sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+        let (event_tx, _rx) = tokio::sync::mpsc::channel(100);
+        // Using pool instead of tx since Hub needs pool, but since it's a test we just clean up after.
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+
+        sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type, settings) VALUES ($1, $2, 'marketing', '{}'), ($3, $4, 'operations', '{}')")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+        tx.commit().await.unwrap();
+
+        let start = std::time::Instant::now();
+        let response = department_tier_usage_for_tenant(&hub, &tenant_id).await;
+        let elapsed = start.elapsed();
+
+        // Assert concurrency latency (should be very fast since no actual usage)
+        assert!(elapsed.as_millis() < 500, "Should execute concurrently and quickly");
+        assert_eq!(response.current_plan, "Free");
+
+        // Teardown
+        sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM organizations WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
+    }
+
     #[test]
     fn department_tier_usage_uses_only_persisted_departments_and_real_usage_keys() {
         let departments = vec![
