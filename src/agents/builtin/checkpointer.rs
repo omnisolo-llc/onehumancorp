@@ -119,7 +119,7 @@ impl CheckpointSaver for GitCheckpointer {
 
         // Try with checkpoint- prefix first (for actual checkpoint_ids),
         // fallback to raw checkpoint_id (which could be a git hash from list_checkpoints)
-        let mut target_ref = format!("refs/tags/checkpoint-{}", checkpoint_id);
+        let mut target_ref = format!("checkpoint-{}", checkpoint_id);
 
         let mut output = Command::new("git")
             .arg("show")
@@ -225,7 +225,7 @@ impl CheckpointSaver for GitCheckpointer {
 
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
-        let tag_name = format!("refs/tags/checkpoint-{}", checkpoint_id);
+        let tag_name = format!("checkpoint-{}", checkpoint_id);
 
         let output = Command::new("git")
             .arg("reset")
