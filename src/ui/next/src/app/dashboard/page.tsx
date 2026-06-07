@@ -1,3 +1,4 @@
+import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -271,6 +272,8 @@ export default function Dashboard() {
       <div className="mb-6">
         <GrowthReferralWidget />
       </div>
+
+      <ViralLoopPerformanceWidget />
 
       <section className="app-panel mb-6">
         <div className="app-panel-header">
