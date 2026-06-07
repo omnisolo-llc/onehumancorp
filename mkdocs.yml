@@ -62,7 +62,9 @@ nav:
       - Roadmap: business/roadmap.md
       - Execution Plan: business/execution-plan.md
   - Research:
+      - Autonomous Subscription Engine: research/[architecture]_autonomous_subscription_and_recurring_billing_engine.md
       - Research: technical/research/index.md
+      - Universal Edge-Cached Dynamic Storefront: technical/research/universal_edge_cached_dynamic_storefront_agentic_seo_pre_rendering_architecture.md
   - Reports:
       - OneHumanCorp (OHC) SMB Market Research Report: reports/ohc_smb_market_research_report.md
       - Global SMB Market Research Report: reports/ohc_global_smb_market_research_report.md
