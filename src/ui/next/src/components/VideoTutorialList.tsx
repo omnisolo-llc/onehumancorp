@@ -6,6 +6,7 @@ type VideoTutorial = {
   id: number;
   title: string;
   duration: string;
+  video_url: string;
 };
 
 export function VideoTutorialList() {
@@ -89,7 +90,7 @@ export function VideoTutorialList() {
                <video
                  controls
                  className="w-full h-full object-contain"
-                 src={`/videos/${activeVideo.id}.mp4`}
+                 src={activeVideo.video_url || ""}
                  autoPlay
                >
                  Your browser does not support the video tag.

@@ -5,9 +5,9 @@ import Link from 'next/link';
 
 export default function HelpCenterPage() {
   const [articles, setArticles] = useState<{category: string, title: string, desc: string, link: string}[]>([]);
-  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string, video_url: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string} | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string, video_url: string} | null>(null);
 
   useEffect(() => {
     const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
@@ -111,7 +111,7 @@ export default function HelpCenterPage() {
             </div>
             <div className="aspect-video w-full bg-gray-900 flex items-center justify-center relative">
               <video
-                src="/placeholder-video.mp4"
+                src={selectedVideo.video_url || ""}
                 controls
                 autoPlay
                 className="w-full h-full object-contain"
