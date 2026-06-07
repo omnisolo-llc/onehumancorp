@@ -10,7 +10,6 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
-const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get_or_init(|| {
@@ -360,28 +359,13 @@ impl DB {
 
         match &self.store {
             DbStore::Postgres => {
-                let mut migration_conn = self.pool.acquire().await?;
-
-                sqlx::query("SELECT pg_advisory_lock($1);")
-                    .bind(POSTGRES_MIGRATION_LOCK_KEY)
-                    .execute(&mut *migration_conn)
-                    .await?;
-
                 sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
-                    .execute(&mut *migration_conn)
+                    .execute(&self.pool)
                     .await?;
 
                 let migrator =
                     sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                let migration_result = migrator.run(&mut *migration_conn).await;
-
-                let unlock_result = sqlx::query("SELECT pg_advisory_unlock($1);")
-                    .bind(POSTGRES_MIGRATION_LOCK_KEY)
-                    .execute(&mut *migration_conn)
-                    .await;
-
-                migration_result?;
-                unlock_result?;
+                migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
@@ -446,9 +430,9 @@ impl DB {
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         assigned_agent_id TEXT,
-                        dependencies TEXT DEFAULT '[]',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        dependencies JSONB DEFAULT '[]',
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -462,8 +446,8 @@ impl DB {
                         content TEXT NOT NULL,
                         metadata TEXT DEFAULT '{}',
                         embedding BLOB,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -777,7 +761,6 @@ impl DB {
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        payment_intent_id TEXT,
                         tenant_id TEXT NOT NULL DEFAULT 'system',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
@@ -793,8 +776,6 @@ impl DB {
                         tenant_id TEXT,
                         source TEXT,
                         content TEXT,
-                        original_content TEXT,
-                        translated_from_language TEXT,
                         draft_reply TEXT,
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -927,8 +908,7 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        payment_intent_id TEXT
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 
                     );
 
@@ -966,8 +946,7 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        payment_intent_id TEXT
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 
                     );
 
@@ -987,8 +966,7 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        payment_intent_id TEXT
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 
                     );
 
@@ -1016,8 +994,7 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        payment_intent_id TEXT
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 
                     );
 
@@ -1053,8 +1030,7 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        payment_intent_id TEXT
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 
                     );
 

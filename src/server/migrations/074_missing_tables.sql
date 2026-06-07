@@ -77,3 +77,30 @@ BEGIN
     END LOOP;
 END
 $$;
+
+-- +goose Down
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'interactions',
+            'agent_actions',
+            'customer_timeline'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            pol_name := format('tenant_isolation_%s', t_name);
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
+            EXECUTE format('ALTER TABLE %I DISABLE ROW LEVEL SECURITY', t_name);
+        END IF;
+    END LOOP;
+END
+$$;
+
+DROP INDEX IF EXISTS idx_customer_timeline_tenant_customer;
+DROP TABLE IF EXISTS customer_timeline CASCADE;
+DROP TABLE IF EXISTS agent_actions CASCADE;
+DROP TABLE IF EXISTS interactions CASCADE;
