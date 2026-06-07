@@ -9,12 +9,13 @@ interface DailyCost {
   llm_cost: number;
   storage_cost: number;
   network_cost: number;
-  compute_cost: number;
+  compute_cost?: number;
 }
 
 interface CostDashboardData {
   total_revenue: number;
   total_costs: number;
+  compute_cost?: number;
   llm_cost: number;
   storage_cost: number;
   payment_fees: number;
