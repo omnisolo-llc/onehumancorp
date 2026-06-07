@@ -313,8 +313,14 @@ jobs:
         include:
           - name: spec coverage
             target: //src/e2e:playwright_spec_coverage
-          - name: shard 1/1
-            target: //src/e2e:playwright_shard_1_of_1
+          - name: shard 1/4
+            target: //src/e2e:playwright_shard_1_of_4
+          - name: shard 2/4
+            target: //src/e2e:playwright_shard_2_of_4
+          - name: shard 3/4
+            target: //src/e2e:playwright_shard_3_of_4
+          - name: shard 4/4
+            target: //src/e2e:playwright_shard_4_of_4
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
