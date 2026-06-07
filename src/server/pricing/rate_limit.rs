@@ -59,6 +59,18 @@ impl PlanTier {
     }
 
     pub fn max_agents(&self) -> Option<usize> {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_AGENTS",
+            PlanTier::Starter => "OHC_STARTER_TIER_AGENTS",
+            PlanTier::Pro => "OHC_PRO_TIER_AGENTS",
+            PlanTier::Business => "OHC_BUSINESS_TIER_AGENTS",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<usize>().ok()) {
+                return Some(v);
+            }
+        }
+
         match self {
             PlanTier::Free => Some(1),
             PlanTier::Starter => Some(3),
@@ -68,6 +80,18 @@ impl PlanTier {
     }
 
     pub fn max_products(&self) -> Option<usize> {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_PRODUCTS",
+            PlanTier::Starter => "OHC_STARTER_TIER_PRODUCTS",
+            PlanTier::Pro => "OHC_PRO_TIER_PRODUCTS",
+            PlanTier::Business => "OHC_BUSINESS_TIER_PRODUCTS",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<usize>().ok()) {
+                return Some(v);
+            }
+        }
+
         match self {
             PlanTier::Free => Some(10),
             PlanTier::Starter => Some(100),
@@ -76,6 +100,18 @@ impl PlanTier {
     }
 
     pub fn base_price(&self) -> f64 {
+        let env_var = match self {
+            PlanTier::Free => "OHC_FREE_TIER_PRICE",
+            PlanTier::Starter => "OHC_STARTER_TIER_PRICE",
+            PlanTier::Pro => "OHC_PRO_TIER_PRICE",
+            PlanTier::Business => "OHC_BUSINESS_TIER_PRICE",
+        };
+        if !env_var.is_empty() {
+            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<f64>().ok()) {
+                return v;
+            }
+        }
+
         match self {
             PlanTier::Free => 0.0,
             PlanTier::Starter => 29.0,
@@ -412,6 +448,24 @@ mod tests {
         assert_eq!(PlanTier::Starter.base_price(), 29.0);
         assert_eq!(PlanTier::Pro.base_price(), 79.0);
         assert_eq!(PlanTier::Business.base_price(), 299.0);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_plan_tier_limits_env_override() {
+        unsafe {
+            std::env::set_var("OHC_STARTER_TIER_AGENTS", "5");
+            assert_eq!(PlanTier::Starter.max_agents(), Some(5));
+            std::env::remove_var("OHC_STARTER_TIER_AGENTS");
+
+            std::env::set_var("OHC_FREE_TIER_PRODUCTS", "20");
+            assert_eq!(PlanTier::Free.max_products(), Some(20));
+            std::env::remove_var("OHC_FREE_TIER_PRODUCTS");
+
+            std::env::set_var("OHC_PRO_TIER_PRICE", "89.5");
+            assert_eq!(PlanTier::Pro.base_price(), 89.5);
+            std::env::remove_var("OHC_PRO_TIER_PRICE");
+        }
     }
 
     #[test]

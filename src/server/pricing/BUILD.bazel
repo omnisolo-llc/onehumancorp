@@ -48,4 +48,7 @@ rust_test(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    deps = [
+        "@crates//:serial_test",
+    ],
 )

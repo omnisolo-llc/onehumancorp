@@ -53,6 +53,7 @@ temp-env = "0.3.6"
 futures-util = "0.3.32"
 tauri-cli = "2"
 tower = "0.4"
+serial_test = "3.5.0"
 
 [dependencies.tokio]
 workspace = true
