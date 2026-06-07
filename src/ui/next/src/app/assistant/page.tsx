@@ -58,7 +58,7 @@ type AssistantCapabilities = {
   permissionProfiles: string[];
 };
 
-type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data';
+type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'permissions';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -245,6 +245,7 @@ export default function AssistantPage() {
               ['skills', 'Skills'],
               ['connectors', 'Connectors'],
               ['data', 'Data Management'],
+              ['permissions', 'Permissions'],
             ] as [Panel, string][]).map(([id, label]) => (
               <PanelButton key={id} active={panel === id} onClick={() => setPanel(id)}>
                 {label}
@@ -462,7 +463,7 @@ export default function AssistantPage() {
           </div>
           <ResultContent task={activeTask} tab={resultTab} />
           <div className="mt-4 flex flex-wrap gap-2">
-            {['Share', 'Download', 'Copy', 'Archive'].map((action) => (
+            {['Share', 'Download', 'Copy', 'Archive', 'Export DOCX', 'Export XLSX', 'Export PPTX', 'Export PDF', 'Export ZIP'].map((action) => (
               <button key={action} type="button" className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-700">
                 {action}
               </button>
@@ -610,14 +611,46 @@ function FeaturePanel({ panel, capabilities }: { panel: Panel; capabilities: Ass
     );
   }
 
+  if (panel === 'data') {
+    return (
+      <section aria-label="Data management panel" className="rounded-lg border border-zinc-200 bg-white p-4">
+        <h2 className="text-lg font-bold">Data Management</h2>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {[
+            ['Shared Files', 'Review files currently available to tasks.'],
+            ['Archived Tasks', 'Restore or permanently clean completed work.'],
+            ['Unshare Queue', 'Revoke task and remote-channel file access.'],
+          ].map(([title, detail]) => (
+            <div key={title} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+              <div className="font-bold">{title}</div>
+              <div className="mt-1 text-sm text-zinc-600">{detail}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {[
+            ['Batch Convert', 'Plan format conversion before writing files.'],
+            ['Rename Files', 'Preview filename changes before applying them.'],
+            ['Merge PDFs', 'Combine selected PDFs into a tracked artifact.'],
+          ].map(([title, detail]) => (
+            <div key={title} className="rounded-md border border-teal-200 bg-teal-50 p-3">
+              <div className="font-bold text-teal-950">{title}</div>
+              <div className="mt-1 text-sm text-teal-800">{detail}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section aria-label="Connector panel" className="rounded-lg border border-zinc-200 bg-white p-4">
-      <h2 className="text-lg font-bold">Data Management</h2>
+      <h2 className="text-lg font-bold">Permissions</h2>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         {[
-          ['Shared Files', 'Review files currently available to tasks.'],
-          ['Archived Tasks', 'Restore or permanently clean completed work.'],
-          ['Unshare Queue', 'Revoke task and remote-channel file access.'],
+          ['Permission Mode', 'Guarded'],
+          ['Grant Folder', 'Authorize a folder for task reads and writes.'],
+          ['Revoke Folder', 'Remove folder access from future tasks.'],
         ].map(([title, detail]) => (
           <div key={title} className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
             <div className="font-bold">{title}</div>
