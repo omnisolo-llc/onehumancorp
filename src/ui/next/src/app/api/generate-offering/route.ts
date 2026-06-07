@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
     const payload = await request.text();
 
     try {
-        const response = await fetch(`${backendUrl}/api/v1/catalog/product`, {
+        const response = await fetch(`${backendUrl}/api/v1/catalog/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': request.headers.get('content-type') || 'application/json',
@@ -23,10 +23,10 @@ export async function POST(request: Request) {
             }
         });
     } catch (error) {
-        console.error('Product create backend unavailable:', error);
+        console.error('Offering generation backend unavailable:', error);
         return NextResponse.json({
             error: 'BACKEND_UNAVAILABLE',
-            message: 'Product creation requires the catalog backend.'
+            message: 'Offering generation requires the catalog backend.'
         }, { status: 503 });
     }
 }

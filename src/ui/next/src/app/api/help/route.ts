@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
   try {
     const res = await fetch(`${backendUrl}/api/help`);
