@@ -705,14 +705,14 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await
                                 {
-                                    eprintln!("Failed to insert active_discount: {}", e);
+                                    tracing::error!("Failed to insert active_discount: {}", e);
                                     let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                                     return Err(format!("Failed to activate smart pricing discount: {}", e));
                                 }
 
                                 // Invalidate Redis edge cache for the product price
                                 let cache_key = format!("ohc:price:{}:{}", tenant_id, product_id);
-                                eprintln!("Mock redis invalidation for {}", cache_key);
+                                tracing::info!("Mock redis invalidation for {}", cache_key);
                                 if false {
 
                                 }
