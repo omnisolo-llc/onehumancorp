@@ -5,7 +5,7 @@ use serde_json::json;
 use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 #[derive(Deserialize)]
 struct GrepArgs {
@@ -191,7 +191,7 @@ mod tests {
             "path": ".",
         });
 
-        let result = super::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = ToolExecutor::execute(&executor, args).await.unwrap();
         let _expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
         // The display string might be just the name if we strip it
         assert!(result.contains("critical failure found here!"));

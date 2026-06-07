@@ -101,61 +101,7 @@ impl ToolExecutor for SubagentExecutor {
 
         tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, raw_task);
 
-        if mode == "worktree" {
-            let task_id = uuid::Uuid::new_v4().to_string();
-            let branch_name = format!("subagent-{}", task_id);
-            let worktree_path = format!(".agent-worktrees/{}", task_id);
-
-            // Create worktree
-
-
-            let wt_output = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_path], None, vec![]).await;
-
-            if let Err(e) = wt_output {
-                return Err(ToolError::LlmRecoverable(format!("Failed to spawn worktree: {}", e)));
-            }
-
-            let mut envs = vec![];
-            if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
-                envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
-            }
-
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--worktree", &worktree_path], None, envs).await;
-
-            let res = match output {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    if out.status.success() {
-                        Ok(SubAgentResponse {
-                            result: stdout,
-                            error: String::new(),
-                        })
-                    } else {
-                        Err(format!("Process failed: {}", stderr))
-                    }
-                }
-                Err(e) => Err(format!("Runner failed: {}", e)),
-            };
-
-            // Cleanup
-            let _ = self.runner.run("git", &["worktree", "remove", "--force", &worktree_path], None, vec![]).await;
-            let _ = self.runner.run("git", &["branch", "-D", &branch_name], None, vec![]).await;
-
-            match res {
-                Ok(inner) => {
-                    if !inner.error.is_empty() {
-                        Err(ToolError::LlmRecoverable(inner.error))
-                    } else {
-                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}
-
-{}", e, inner.result));
-                        Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", task, summary))
-                    }
-                }
-                Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
-            }
-        } else if mode == "fork" {
+        if mode == "fork" {
             let parent_context_file = args.get("parent_context_file").and_then(|v| v.as_str()).unwrap_or("");
 
             let mut envs = vec![];

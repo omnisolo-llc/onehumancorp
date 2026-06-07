@@ -9,7 +9,7 @@ use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
 use ohc_builtin_agent_llm::LlmClient;
 use crate::tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
+use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition,};
 
 pub fn agent_task_timeout() -> std::time::Duration {
     let secs = std::env::var("OHC_AGENT_TASK_TIMEOUT_SECS")
@@ -22,6 +22,7 @@ pub fn agent_task_timeout() -> std::time::Duration {
 
 /// Default computational guide using bash commands
 /// Default visual verifier using bash commands
+use ohc_builtin_agent_core::types::ToolResult;
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
@@ -7705,7 +7706,6 @@ mod tao_tests {
 }
 #[cfg(test)]
 mod guardrail_tests {
-    use crate::tools::ToolExecutor;
     use super::*;
     use crate::guardrails::{GuardrailRegistry, InputGuardrail, OutputGuardrail, ToolGuardrail};
     use crate::types::{ChatResponse, Message, Role, ToolCall, Usage};
@@ -7873,7 +7873,6 @@ mod guardrail_tests {
 
 #[cfg(test)]
 mod sona_pattern_tests {
-    use crate::tools::ToolExecutor;
     use super::*;
     use std::sync::Arc;
     use tokio::sync::Mutex;
