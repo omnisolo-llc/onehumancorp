@@ -37,6 +37,7 @@ export default function OnboardingWizard() {
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
     location, setLocation,
+    targetAudience, setTargetAudience,
     businessType, setBusinessType,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
@@ -66,6 +67,7 @@ export default function OnboardingWizard() {
       businessName,
       whatYouSell,
       location,
+      targetAudience,
       businessType,
       categories,
       websiteTemplate,
@@ -168,6 +170,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
         if (data.wizardState.location) setLocation(data.wizardState.location);
+        if (data.wizardState.targetAudience) setTargetAudience(data.wizardState.targetAudience);
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
@@ -190,7 +193,7 @@ export default function OnboardingWizard() {
     if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && !businessName && !whatYouSell && !location) return;
+    if (step === 1 && !businessName && !whatYouSell && !location && !targetAudience) return;
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -202,6 +205,7 @@ export default function OnboardingWizard() {
       businessName,
       whatYouSell,
       location,
+      targetAudience,
       businessType,
       categories,
       websiteTemplate,
@@ -226,7 +230,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
+    targetAudience, businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
     adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
@@ -238,7 +242,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -329,7 +333,8 @@ export default function OnboardingWizard() {
           first_product_price: firstProductPrice,
           domain_choice: domainChoice || 'subdomain',
           price_type: 'fixed',
-          location: location || ''
+          location: location || '',
+          target_audience: targetAudience || ''
         })
       });
 
@@ -369,6 +374,7 @@ export default function OnboardingWizard() {
       if (chatStep === 1) return 20;
       if (chatStep === 2) return 30;
       if (chatStep === 3) return 40;
+      if (chatStep === 4) return 50;
     }
     if (step === 2) return 60;
     if (step === 3) return 80;
@@ -596,10 +602,8 @@ export default function OnboardingWizard() {
                               setValidationError('Please tell us your location.');
                               return;
                             }
-                            if (!isLoading) {
-                              setValidationError('');
-                              handleIntake();
-                            }
+                            setValidationError('');
+                            setChatStep(4); syncStateToBackend({ chatStep: 4 });
                           }
                         }}
                         placeholder="e.g. Portland, OR"

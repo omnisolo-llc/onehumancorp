@@ -45,6 +45,8 @@ async fn process_intake_handler(
                 business_type: "Local Business".to_string(),
                 categories: vec!["services".to_string()],
                 initial_products: Vec::new(),
+                location: None,
+                target_audience: None,
             }))
         }
     }
