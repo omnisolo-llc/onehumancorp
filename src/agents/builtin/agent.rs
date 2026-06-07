@@ -88,6 +88,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
+    pub enable_3_stage_anthropic_tool_gating: bool,
     pub enable_actor_model_message_passing: bool,
     pub enable_tao_orchestration_loop: bool,
     pub enable_agent_curated_memory: bool,
@@ -100,6 +101,29 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+}
+
+impl AgentRunConfig {
+    pub fn apply_anthropic_gating(&mut self) {
+        if self.enable_3_stage_anthropic_tool_gating {
+            let mut registry = self.guardrails.take().unwrap_or_default();
+
+            let safe_tools = if let Some(allowed) = &self.allowed_tools {
+                allowed.clone()
+            } else {
+                vec![]
+            };
+
+            let anthropic_gater = crate::guardrails::anthropic_hooks::AnthropicToolGater::new(
+                self.project_trusted,
+                safe_tools.clone(),
+                safe_tools,
+                self.high_risk_tools.clone(),
+            );
+            registry.tool_guardrails.push(std::sync::Arc::new(anthropic_gater));
+            self.guardrails = Some(registry);
+        }
+    }
 }
 
 impl Default for AgentRunConfig {
@@ -150,6 +174,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
+            enable_3_stage_anthropic_tool_gating: false,
             enable_actor_model_message_passing: false,
             enable_tao_orchestration_loop: false,
             enable_agent_curated_memory: false,
@@ -300,6 +325,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         on_event(AgentEvent::RunStarted { iteration: 0 });
         if let Some(guardrails) = &cfg.guardrails {
             if let Err(e) = guardrails.check_input(initial_message) {
@@ -558,6 +587,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         // Guardrails & Safety: OpenAI Mechanic (Input Guardrail)
         if let Some(guardrails) = &cfg.guardrails {
             if let Err(e) = guardrails.check_input(initial_message) {
@@ -755,6 +788,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         tracing::info!("Executing via Actor-model message passing");
 
         let system = std::sync::Arc::new(crate::actor_model::ActorSystem::new());
@@ -825,6 +862,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
@@ -1297,6 +1338,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         on_event(AgentEvent::RunStarted { iteration: 0 });
         if let Some(guardrails) = &cfg.guardrails {
             if let Err(e) = guardrails.check_input(initial_message) {
@@ -1351,6 +1396,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
         let max_attempts = 3;
@@ -1770,6 +1819,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         let mut final_cfg = cfg.clone();
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
@@ -1910,6 +1963,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let mut active_cfg_cloned = cfg.clone();
+        active_cfg_cloned.apply_anthropic_gating();
+        let cfg = &active_cfg_cloned;
+
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
@@ -8000,4 +8057,59 @@ mod sona_pattern_tests {
         assert!(run2_first_msg.content.contains("[SONA Trajectory Hint: A similar past task followed this successful trajectory:"));
         assert!(run2_first_msg.content.contains("test_tool"));
     }
+
+#[tokio::test]
+async fn test_anthropic_3_stage_gating_end_to_end() {
+    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError, Message};
+
+    struct HighRiskLlmClient;
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for HighRiskLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                message: Message {
+                    role: crate::types::Role::Assistant,
+                    content: "Firing ze missiles".to_string(),
+                    tool_calls: vec![
+                        ToolCall {
+                            id: "call_123".to_string(),
+                            name: "launch_missiles".to_string(),
+                            arguments: serde_json::json!({}),
+                        }
+                    ],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: None,
+            })
+        }
+    }
+
+    let llm = std::sync::Arc::new(HighRiskLlmClient);
+    let tool = crate::tools::Tool {
+        name: "launch_missiles".to_string(),
+        description: "Dangerous tool".to_string(),
+        parameters: serde_json::json!({}),
+        is_read_only: false,
+        execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
+    };
+
+    let agent = Agent::new(llm, vec![tool]);
+    let mut cfg = AgentRunConfig::default();
+    cfg.enable_3_stage_anthropic_tool_gating = true;
+    cfg.high_risk_tools = vec!["launch_missiles".to_string()];
+    cfg.project_trusted = true;
+
+    let mut events = vec![];
+    let mut on_event = |e| { events.push(e); };
+
+    let result = agent.run(&cfg, "Launch the missiles!", &mut on_event).await;
+
+    assert!(result.is_err());
+    let err_str = result.unwrap_err().to_string();
+    assert!(err_str.contains("USER_FIXABLE") || err_str.contains("User intervention required") || err_str.contains("Confirmation") || err_str.contains("Stage 3"));
+}
 }
