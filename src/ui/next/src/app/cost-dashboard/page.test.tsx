@@ -170,4 +170,90 @@ describe('CostDashboardPage', () => {
     const zeroElements = screen.getAllByText('$0.00');
     expect(zeroElements.length).toBeGreaterThan(0);
   });
+
+  test('renders 0 limits properly', async () => {
+    const mockCostData = {
+      cost_per_1k_tokens: 0.0015,
+      trend: [],
+      department_tier_usage: {
+        departments: [],
+      },
+    };
+
+    const mockPlanData = {
+      current_plan: "Starter",
+      ai_actions_used: 0,
+      ai_actions_limit: 0,
+      storage_used_bytes: 0,
+      storage_limit_bytes: 0,
+      next_bill_estimated: 0,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCostData)
+        });
+      } else if (url.includes('my-plan')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockPlanData)
+        });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).toBeNull();
+    });
+
+    expect(screen.getAllByText(/\/ 0/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ 0 MB/)[0]).toBeDefined();
+  });
+
+  test('renders unlimited limits properly', async () => {
+    const mockCostData = {
+      cost_per_1k_tokens: 0.0015,
+      trend: [],
+      department_tier_usage: {
+        departments: [],
+      },
+    };
+
+    const mockPlanData = {
+      current_plan: "Pro",
+      ai_actions_used: 10,
+      ai_actions_limit: null,
+      storage_used_bytes: 1000,
+      storage_limit_bytes: null,
+      next_bill_estimated: 0,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCostData)
+        });
+      } else if (url.includes('my-plan')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockPlanData)
+        });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).toBeNull();
+    });
+
+    expect(screen.getAllByText(/\/ Unlimited/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ Unlimited/).length).toBe(2);
+  });
 });
