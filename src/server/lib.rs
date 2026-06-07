@@ -3390,6 +3390,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "reply": reply }))
             }
         }))
+        .nest("/api/v1/food-orders", crate::api::food_orders::router())
         .route("/api/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {

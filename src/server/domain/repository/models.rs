@@ -102,6 +102,9 @@ pub struct Product {
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Order {
+    pub pickup_time: Option<DateTime<Utc>>,
+    pub customer_notes: Option<String>,
+    pub translated_notes: Option<String>,
     pub id: String,
     pub tenant_id: String,
     pub customer_id: String,

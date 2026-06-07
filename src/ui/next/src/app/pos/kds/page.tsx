@@ -39,7 +39,7 @@ export default function KDSPage() {
 
   // Initial Data Load
   useEffect(() => {
-    fetch('/api/pos/orders').then(res => res.json()).then(setOrders).catch(console.error);
+    fetch('/api/v1/food-orders').then(res => res.json()).then(data => setOrders(data.orders || [])).catch(console.error);
     fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
   }, []);
 
@@ -54,11 +54,14 @@ export default function KDSPage() {
           const inventoryEvents = events.filter((e: any) => e.type === 'TOGGLE_SOLD_OUT');
 
           if (orderEvents.length > 0) {
-            await fetch('/api/pos/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(orderEvents)
-            });
+            // We loop and post each status update to the real backend
+            for (const event of orderEvents) {
+              await fetch('/api/v1/food-orders/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(event.payload)
+              });
+            }
           }
 
           if (inventoryEvents.length > 0) {
@@ -167,7 +170,7 @@ export default function KDSPage() {
             {orders.map(order => (
               <div key={order.id} className="bg-white/65 backdrop-blur-[30px] rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg text-gray-900">#{order.id} - {order.customer_name}</h3>
+                  <h3 className="font-bold text-lg text-gray-900">#{order.id.slice(0, 8)} - {order.customer_id}</h3>
                   <span className={`px-2 py-1 rounded text-xs font-bold ${
                     order.status === 'Ready' ? 'bg-green-100 text-green-700' :
                     order.status === 'Preparing' ? 'bg-yellow-100 text-yellow-700' :
@@ -176,9 +179,20 @@ export default function KDSPage() {
                     {order.status === 'Ready' ? texts.ready : order.status === 'Preparing' ? texts.preparing : texts.received}
                   </span>
                 </div>
-                <ul className="mb-4 text-gray-700 font-medium">
-                  {order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>)}
+                {order.pickup_time && (
+                   <p className="text-sm font-bold text-blue-600 mb-2">
+                     Pickup: {new Date(order.pickup_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                   </p>
+                )}
+                <ul className="mb-3 text-gray-700 font-medium">
+                  {order.items ? order.items.map((item: string, idx: number) => <li key={idx}>• {item}</li>) : <li>• Items loading...</li>}
                 </ul>
+                {order.customer_notes && (
+                   <div className="mb-4 p-2 bg-yellow-50 rounded-lg border border-yellow-100 text-sm">
+                     <p className="font-semibold text-yellow-800">Note:</p>
+                     <p className="text-yellow-900">{language === 'ar' && order.translated_notes ? order.translated_notes : order.customer_notes}</p>
+                   </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                    {order.status === 'Received' && (
                       <button

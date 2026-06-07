@@ -24,6 +24,7 @@ exports_files(
         "catalog.rs",
         "shipping.rs",
         "local_seo.rs",
+        "food_orders.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -54,6 +55,7 @@ rust_library(
         "catalog.rs",
         "shipping.rs",
         "local_seo.rs",
+        "food_orders.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",
