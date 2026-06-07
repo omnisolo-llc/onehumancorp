@@ -168,6 +168,7 @@ let skills: SkillRecord[] = [];
 let connectors: ConnectorRecord[] = [];
 let sharedFiles: SharedFileRecord[] = [];
 let unshareQueue: SharedFileRecord[] = [];
+let authorizedFolders: string[] = [];
 
 function now() {
   return new Date().toISOString();
@@ -265,6 +266,53 @@ function chartArtifact(): AssistantArtifact {
     filename: 'assistant-chart.png',
     mimeType: 'image/png',
     preview: 'Generated chart preview.',
+  };
+}
+
+function artifactExportFor(format: string, title: string): AssistantArtifact {
+  const normalized = format.toLowerCase();
+  if (normalized.includes('spreadsheet')) {
+    return {
+      id: id('artifact'),
+      type: 'spreadsheet',
+      filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.xlsx`,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      preview: `Spreadsheet export for ${title}.`,
+    };
+  }
+  if (normalized.includes('presentation')) {
+    return {
+      id: id('artifact'),
+      type: 'presentation',
+      filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pptx`,
+      mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      preview: `Presentation export for ${title}.`,
+    };
+  }
+  if (normalized.includes('pdf')) {
+    return {
+      id: id('artifact'),
+      type: 'pdf',
+      filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`,
+      mimeType: 'application/pdf',
+      preview: `PDF export for ${title}.`,
+    };
+  }
+  if (normalized.includes('zip')) {
+    return {
+      id: id('artifact'),
+      type: 'zip',
+      filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.zip`,
+      mimeType: 'application/zip',
+      preview: `ZIP export for ${title}.`,
+    };
+  }
+  return {
+    id: id('artifact'),
+    type: 'document',
+    filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.docx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    preview: `Document export for ${title}.`,
   };
 }
 
@@ -591,6 +639,73 @@ export function mutateDataManagement(payload: {
   return getDataManagement();
 }
 
+export function createExportArtifact(payload: {
+  taskId?: string;
+  outputFormat?: string;
+  title?: string;
+}) {
+  const task = tasks.find((item) => item.id === payload.taskId);
+  if (!task) throw new Error('task not found');
+  const artifact = artifactExportFor(payload.outputFormat || 'Document', payload.title || task.title);
+  task.artifacts.unshift(artifact);
+  task.updatedAt = now();
+  return artifact;
+}
+
+export function getPermissions() {
+  return {
+    permissionProfile: 'Guarded',
+    authorizedFolders,
+    rules: [
+      'Reads are limited to authorized folders and uploaded attachments.',
+      'Writes outside task output folders require approval.',
+      'External sends and destructive actions require confirmation.',
+    ],
+  };
+}
+
+export function mutatePermissions(payload: {
+  action?: 'grant' | 'revoke';
+  folder?: string;
+}) {
+  if (!payload.folder?.trim()) throw new Error('folder is required');
+  const folder = payload.folder.trim();
+  if (payload.action === 'grant') {
+    if (!authorizedFolders.includes(folder)) authorizedFolders.push(folder);
+  } else if (payload.action === 'revoke') {
+    authorizedFolders = authorizedFolders.filter((item) => item !== folder);
+  } else {
+    throw new Error('unsupported permission action');
+  }
+  return getPermissions();
+}
+
+export function planFileOperation(payload: {
+  operation?: string;
+  folder?: string;
+  sourcePattern?: string;
+  targetFormat?: string;
+}) {
+  if (!payload.operation?.trim()) throw new Error('operation is required');
+  if (!payload.folder?.trim()) throw new Error('folder is required');
+  const folder = payload.folder.trim();
+  const hasPermission = authorizedFolders.includes(folder);
+  return {
+    id: id('fileop'),
+    operation: payload.operation,
+    folder,
+    sourcePattern: payload.sourcePattern || '*',
+    targetFormat: payload.targetFormat || 'original',
+    status: hasPermission ? 'ready_for_approval' : 'needs_permission',
+    approvalRequired: true,
+    plan: [
+      `Read matching files from ${folder} using ${payload.sourcePattern || '*'}.`,
+      `Write converted files as ${payload.targetFormat || 'requested format'}.`,
+      'Register outputs as task artifacts before sharing or download.',
+    ],
+  };
+}
+
 export function resetAssistantStore() {
   tasks = [
     {
@@ -721,6 +836,7 @@ export function resetAssistantStore() {
     { id: 'shared-chart', filename: 'assistant-chart.png', workspace: 'Personal OS', access: 'shared' },
   ];
   unshareQueue = [];
+  authorizedFolders = ['/workspace/assistant', '/workspace/reports'];
 }
 
 resetAssistantStore();

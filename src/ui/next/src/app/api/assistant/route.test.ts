@@ -7,6 +7,9 @@ import { PATCH as patchTaskAction } from './tasks/[id]/route';
 import { GET as getSkills, PATCH as patchSkills } from './skills/route';
 import { GET as getConnectors, PATCH as patchConnectors } from './connectors/route';
 import { GET as getData, PATCH as patchData } from './data/route';
+import { POST as postArtifact } from './artifacts/route';
+import { GET as getPermissions, PATCH as patchPermissions } from './permissions/route';
+import { POST as postFileOperation } from './files/route';
 import { resetAssistantStore } from './store';
 
 function jsonRequest(url: string, body: unknown) {
@@ -313,6 +316,72 @@ describe('assistant API contract', () => {
       expect.arrayContaining([
         expect.objectContaining({ name: 'Slack', status: 'available' }),
         expect.objectContaining({ name: 'WeChat ClawBot', status: 'available' }),
+      ]),
+    );
+  });
+
+  test('generates WorkBuddy-style office export artifacts', async () => {
+    for (const [format, mimeType] of [
+      ['Document', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      ['Spreadsheet', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+      ['Presentation', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+      ['PDF', 'application/pdf'],
+      ['ZIP', 'application/zip'],
+    ]) {
+      const response = await postArtifact(jsonRequest('http://localhost/api/assistant/artifacts', {
+        taskId: 'task-weekly-brief',
+        outputFormat: format,
+        title: `${format} Export`,
+      }));
+      const body = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(body.artifact).toMatchObject({
+        mimeType,
+        filename: expect.any(String),
+      });
+      expect(body.artifact.preview).toContain(format);
+    }
+  });
+
+  test('grants and revokes guarded folder permissions', async () => {
+    let body = await (await getPermissions()).json();
+    expect(body.permissionProfile).toBe('Guarded');
+    expect(body.authorizedFolders).toEqual(expect.arrayContaining(['/workspace/assistant']));
+
+    body = await (await patchPermissions(patchRequest('http://localhost/api/assistant/permissions', {
+      action: 'grant',
+      folder: '/Users/me/Downloads',
+    }))).json();
+    expect(body.authorizedFolders).toContain('/Users/me/Downloads');
+
+    body = await (await patchPermissions(patchRequest('http://localhost/api/assistant/permissions', {
+      action: 'revoke',
+      folder: '/Users/me/Downloads',
+    }))).json();
+    expect(body.authorizedFolders).not.toContain('/Users/me/Downloads');
+  });
+
+  test('plans guarded local file operations before execution', async () => {
+    const response = await postFileOperation(jsonRequest('http://localhost/api/assistant/files', {
+      operation: 'batch_convert',
+      folder: '/Users/me/Downloads',
+      sourcePattern: '*.png',
+      targetFormat: 'webp',
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(202);
+    expect(body.operation).toMatchObject({
+      operation: 'batch_convert',
+      folder: '/Users/me/Downloads',
+      status: 'needs_permission',
+      approvalRequired: true,
+    });
+    expect(body.operation.plan).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Read matching files'),
+        expect.stringContaining('Write converted files'),
       ]),
     );
   });
