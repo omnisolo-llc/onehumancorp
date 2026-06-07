@@ -104,9 +104,21 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                ::server_telemetry::record_error_signal("Failed to securely create DB directory");
-                                tracing::error!("Failed to securely create DB directory: {}", e);
-                                return Err(e.into());
+                                // If directory already exists, ensure it has correct permissions
+                                if e.kind() == std::io::ErrorKind::AlreadyExists {
+                                    use std::os::unix::fs::PermissionsExt;
+                                    let metadata = std::fs::metadata(parent)?;
+                                    let mut perms = metadata.permissions();
+                                    if perms.mode() & 0o777 != 0o700 {
+                                        tracing::warn!("Harding existing DB directory permissions to 0700");
+                                        perms.set_mode(0o700);
+                                        std::fs::set_permissions(parent, perms)?;
+                                    }
+                                } else {
+                                    ::server_telemetry::record_error_signal("Failed to securely create DB directory");
+                                    tracing::error!("Failed to securely create DB directory: {}", e);
+                                    return Err(e.into());
+                                }
                             }
                         }
                         #[cfg(not(unix))]

@@ -8369,6 +8369,8 @@ dependencies = [
  "serde",
  "server_config",
  "sqlx",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

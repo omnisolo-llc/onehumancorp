@@ -184,7 +184,21 @@ impl Store {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::OpenOptionsExt;
+                    use std::os::unix::fs::PermissionsExt;
                     use std::io::Write;
+
+                    // If it exists, ensure permissions are correct
+                    if secret_path.exists() {
+                        if let Ok(metadata) = std::fs::metadata(secret_path) {
+                            let mut perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                tracing::warn!("Hardening existing JWT secret file permissions to 0600");
+                                perms.set_mode(0o600);
+                                let _ = std::fs::set_permissions(secret_path, perms);
+                            }
+                        }
+                    }
+
                     if let Ok(mut file) = std::fs::OpenOptions::new()
                         .write(true)
                         .create(true)
@@ -915,4 +929,5 @@ mod store_tests {
 #[cfg(test)]
 mod tests {
     pub mod multitenancy_isolation;
+    pub mod security_audit_test;
 }

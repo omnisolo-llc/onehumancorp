@@ -20,3 +20,20 @@ pub struct Claims {
     #[serde(default)]
     pub jti: String,
 }
+
+#[cfg(test)]
+mod common_security_tests {
+    use super::auth_utils::*;
+
+    #[tokio::test]
+    async fn test_get_default_tenant_logic() {
+        // We can't easily mock server_config::get() because it's a static OnceLock
+        // but we can verify the function returns consistent results.
+        let def = get_default_tenant();
+        if ::server_config::get().multitenant {
+            assert_eq!(def, "");
+        } else {
+            assert_eq!(def, "system");
+        }
+    }
+}

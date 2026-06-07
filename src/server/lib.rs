@@ -3866,7 +3866,13 @@ async fn create_ui_bom_item_handler(
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(18789);
-    let mesh_addr: std::net::SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
+    let host = if is_standalone_runtime() {
+        std::env::var("OHC_HOST").unwrap_or_else(|_| "127.0.0.1".to_string())
+    } else {
+        std::env::var("OHC_HOST").unwrap_or_else(|_| "0.0.0.0".to_string())
+    };
+
+    let mesh_addr: std::net::SocketAddr = format!("{}:{}", host, port).parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
