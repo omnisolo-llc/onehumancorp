@@ -152,8 +152,8 @@ impl OnboardingAgent {
         .map_err(|e| e.to_string())?;
 
         let state = if let Some(record) = row {
-            let mut state: serde_json::Value = record.get("state_json");
-            let current_step: i32 = record.get("current_step");
+            let mut state: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+            let current_step: i32 = record.try_get("current_step").unwrap_or(0);
             if let Some(obj) = state.as_object_mut() {
                 obj.insert("step".to_string(), serde_json::json!(current_step));
             }
