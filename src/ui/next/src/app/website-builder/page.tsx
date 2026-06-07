@@ -27,6 +27,7 @@ export default function WebsiteBuilderPage() {
     domainChoice, setDomainChoice,
     aiAgents, setAiAgents,
     aiAutoRespond, setAiAutoRespond,
+    aiTone, setAiTone,
     blocks, setBlocks, moveBlock,
     status, setStatus,
     liveUrl, setLiveUrl
@@ -113,6 +114,7 @@ export default function WebsiteBuilderPage() {
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        if (data.wizardState.aiTone) setAiTone(data.wizardState.aiTone);
       }
     })
     .catch(err => console.error('Failed to load builder state', err));
@@ -141,7 +143,8 @@ export default function WebsiteBuilderPage() {
         bio,
         domainChoice,
         aiAgents,
-        aiAutoRespond
+        aiAutoRespond,
+        aiTone
       };
 
       const payload = {
@@ -159,7 +162,7 @@ export default function WebsiteBuilderPage() {
 
       return () => clearTimeout(timer);
     }
-  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
+  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, aiTone, blocks, status]);
 
 
 
@@ -265,6 +268,7 @@ export default function WebsiteBuilderPage() {
       else if (wizardStep === '8.5') setWizardStep(8);
       else if (wizardStep === 9) setWizardStep('8.5');
       else if (wizardStep === 'instant-build') setWizardStep(0);
+      else if (wizardStep === 'ai-team') setWizardStep('instant-build');
     };
 
     return (
@@ -290,7 +294,7 @@ export default function WebsiteBuilderPage() {
 
             <div className="absolute top-6 right-8 flex items-center gap-4 z-10">
               {saveMessage && <span className="text-[#34C759] text-sm font-semibold animate-fade-in">{saveMessage}</span>}
-              {wizardStep !== 0 && wizardStep !== 'instant-build' && (
+              {wizardStep !== 0 && wizardStep !== 'instant-build' && wizardStep !== 'ai-team' && (
                 <button
                   onClick={handleSaveDraft}
                   className="text-[#0071E3] font-medium text-sm hover:underline transition-all bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
@@ -597,6 +601,80 @@ export default function WebsiteBuilderPage() {
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
                       disabled={!bio.trim()}
+                      onClick={() => setWizardStep('ai-team')}
+                    >
+                      Next: Configure AI Team
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {wizardStep === 'ai-team' && (
+                <>
+                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Configure Your AI Team</h1>
+                  <div className="flex flex-col gap-4 mt-6">
+                    <div className="pt-2">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Agents</label>
+                      <div className="space-y-2">
+                        {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
+                           const isSelected = aiAgents.includes(agent);
+                           return (
+                             <div
+                               key={agent}
+                               onClick={() => {
+                                 if (isSelected) {
+                                   setAiAgents(aiAgents.filter(a => a !== agent));
+                                 } else {
+                                   setAiAgents([...aiAgents, agent]);
+                                 }
+                               }}
+                               className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:bg-white/60 dark:hover:bg-white/5'}`}
+                             >
+                               <span className="font-semibold text-sm">{agent}</span>
+                               <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
+                                  {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                               </div>
+                             </div>
+                           );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 mt-2">
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">AI Tone</label>
+                      <div className="flex gap-2">
+                        {['Friendly', 'Professional', 'Humorous'].map(tone => {
+                           const isSelected = aiTone === tone;
+                           return (
+                             <button
+                               key={tone}
+                               onClick={() => setAiTone(tone)}
+                               className={`flex-1 p-2 rounded-[8px] border text-sm font-semibold transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:bg-white/60 dark:hover:bg-white/5'}`}
+                             >
+                               {tone}
+                             </button>
+                           );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 mt-2">
+                      <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] glassmorphism border border-white/50 dark:border-white/10 text-[#1D1D1F] dark:text-white hover:bg-white/60 dark:hover:bg-white/5 transition-all">
+                        <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={aiAutoRespond}
+                          onChange={(e) => setAiAutoRespond(e.target.checked)}
+                        />
+                        <div className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? 'bg-[#34C759]' : 'bg-gray-300 dark:bg-gray-600'} relative`}>
+                           <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${aiAutoRespond ? 'translate-x-5' : 'translate-x-1'}`}></div>
+                        </div>
+                      </label>
+                    </div>
+
+                    <button
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50 mt-4"
                       onClick={async () => {
                         if (!bio.trim()) return;
                         setStatus('generating');

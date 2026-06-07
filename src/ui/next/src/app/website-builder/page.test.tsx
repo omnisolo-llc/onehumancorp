@@ -172,6 +172,13 @@ describe('WebsiteBuilderPage', () => {
 
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
+    fireEvent.click(screen.getByText('Next: Configure AI Team'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Configure Your AI Team')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Professional'));
     fireEvent.click(screen.getByText('Generate Storefront'));
 
     // Status changes to 'generating', wait for it
@@ -281,6 +288,12 @@ describe('WebsiteBuilderPage', () => {
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
+    fireEvent.click(screen.getByText('Next: Configure AI Team'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Configure Your AI Team')).toBeInTheDocument();
+    });
+
     fireEvent.click(screen.getByText('Generate Storefront'));
 
     // Status changes to 'generating', wait for it

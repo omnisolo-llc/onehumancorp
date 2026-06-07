@@ -6,6 +6,9 @@ test.describe('Website Builder Tool (E2E Validation)', () => {
         await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
         await page.getByRole('button', { name: 'Instant Build' }).click();
         await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+        await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a local bakery');
+        await page.getByRole('button', { name: 'Next: Configure AI Team' }).click();
+        await expect(page.getByRole('heading', { name: 'Configure Your AI Team' })).toBeVisible();
     }
 
     test('renders the initial step successfully', async ({ page }) => {

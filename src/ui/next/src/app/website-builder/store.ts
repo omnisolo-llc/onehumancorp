@@ -18,6 +18,7 @@ interface WebsiteBuilderState {
   domainChoice: string;
   aiAgents: string[];
   aiAutoRespond: boolean;
+  aiTone: string;
   setWizardStep: (step: number | string) => void;
   setBusinessName: (name: string) => void;
   setBusinessType: (type: string) => void;
@@ -34,6 +35,7 @@ interface WebsiteBuilderState {
   setDomainChoice: (domain: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
+  setAiTone: (tone: string) => void;
   blocks: any[];
   status: "idle" | "generating" | "draft" | "live";
   liveUrl: string;
@@ -63,6 +65,7 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       domainChoice: 'subdomain',
       aiAgents: [],
       aiAutoRespond: false,
+      aiTone: 'Friendly',
       setWizardStep: (wizardStep) => set({ wizardStep }),
       setBusinessName: (businessName) => set({ businessName }),
       setBusinessType: (businessType) => set({ businessType }),
@@ -79,6 +82,7 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       setDomainChoice: (domainChoice) => set({ domainChoice }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
+      setAiTone: (aiTone) => set({ aiTone }),
       blocks: [],
       status: "idle",
       liveUrl: "",
