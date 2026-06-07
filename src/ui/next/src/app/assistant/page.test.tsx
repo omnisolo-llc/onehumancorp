@@ -117,6 +117,7 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   expect(screen.getByRole('button', { name: 'Skills' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Connectors' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Data Management' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Permissions' })).toBeDefined();
   expect(screen.getByText('Task List')).toBeDefined();
   expect(screen.getByText('Conversation')).toBeDefined();
   expect(screen.getByText('Results Panel')).toBeDefined();
@@ -139,6 +140,11 @@ test('shows conversation, artifacts, files, changes, and preview for the active 
   expect(screen.getByText('Weekly brief draft with action items.')).toBeDefined();
   expect(screen.getByRole('button', { name: 'Stop' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Approve Changes' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Export DOCX' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Export XLSX' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Export PPTX' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Export PDF' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Export ZIP' })).toBeDefined();
 });
 
 test('submits full WorkBuddy-style composer payload and selects the new task', async () => {
@@ -206,6 +212,15 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   expect(screen.getByText('Shared Files')).toBeDefined();
   expect(screen.getByText('Archived Tasks')).toBeDefined();
   expect(screen.getByText('Unshare Queue')).toBeDefined();
+  expect(screen.getByText('Batch Convert')).toBeDefined();
+  expect(screen.getByText('Rename Files')).toBeDefined();
+  expect(screen.getByText('Merge PDFs')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Permissions' }));
+  expect(screen.getByText('Permission Mode')).toBeDefined();
+  expect(screen.getAllByText('Guarded').length).toBeGreaterThan(0);
+  expect(screen.getByText('Grant Folder')).toBeDefined();
+  expect(screen.getByText('Revoke Folder')).toBeDefined();
 });
 
 test('supports WorkBuddy-style mode and artifact options including Coding and Code App', async () => {
