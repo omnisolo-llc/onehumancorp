@@ -33,6 +33,45 @@ pub async fn bench_queue_latency() {
     bench_queue("AI Job Dispatch Latency Standalone Mode (Memory)", mem_queue).await;
 }
 
+pub async fn bench_hybrid_cache_lfu_eviction() {
+    println!("Benchmarking HybridCache LFU Eviction & Hit Rates...");
+    let cache = crate::utils::cache::HybridCache::<String>::with_capacity(None, 100);
+
+    let mut hit_count = 0;
+    let mut miss_count = 0;
+
+    // Warm up the cache by filling to capacity
+    for i in 0..100 {
+        cache.set(&format!("k{}", i), format!("v{}", i), std::time::Duration::from_secs(60)).await;
+    }
+
+    let iterations = 2000;
+    let mut eviction_times = Vec::new();
+
+    for i in 100..(100 + iterations) {
+        let start = std::time::Instant::now();
+        // Eviction happens because capacity is 100
+        cache.set(&format!("k{}", i), format!("v{}", i), std::time::Duration::from_secs(60)).await;
+        eviction_times.push(start.elapsed().as_micros());
+
+        // Measure hit rates for frequently accessed keys
+        if cache.get(&format!("k{}", i)).await.is_some() {
+            hit_count += 1;
+        } else {
+            miss_count += 1;
+        }
+    }
+
+    eviction_times.sort();
+    let hit_rate = (hit_count as f64 / (hit_count as f64 + miss_count as f64)) * 100.0;
+    println!("HybridCache LFU Hit Rate: {:.2}%", hit_rate);
+    println!("HybridCache LFU Eviction Latency: p50: {} us, p95: {} us, p99: {} us",
+        eviction_times[iterations / 2],
+        eviction_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        eviction_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    );
+}
+
 pub async fn bench_db_query_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
@@ -494,6 +533,11 @@ mod tests {
     #[tokio::test]
     async fn test_run_bench_queue_latency() {
         bench_queue_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_run_bench_hybrid_cache_lfu_eviction() {
+        bench_hybrid_cache_lfu_eviction().await;
     }
 
     #[tokio::test]

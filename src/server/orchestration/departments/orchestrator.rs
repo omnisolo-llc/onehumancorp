@@ -191,7 +191,7 @@ impl DepartmentOrchestrator {
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
                                 Err(_) => {
-                                    last_err = "AI timeout: Event handling exceeded 60 seconds".to_string();
+                                    last_err = format!("AI timeout: Event handling exceeded {} seconds", ohc_builtin_agent::agent::agent_task_timeout().as_secs());
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
                             }
@@ -705,14 +705,14 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await
                                 {
-                                    eprintln!("Failed to insert active_discount: {}", e);
+                                    tracing::error!("Failed to insert active_discount: {}", e);
                                     let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                                     return Err(format!("Failed to activate smart pricing discount: {}", e));
                                 }
 
                                 // Invalidate Redis edge cache for the product price
                                 let cache_key = format!("ohc:price:{}:{}", tenant_id, product_id);
-                                eprintln!("Mock redis invalidation for {}", cache_key);
+                                tracing::info!("Mock redis invalidation for {}", cache_key);
                                 if false {
 
                                 }
