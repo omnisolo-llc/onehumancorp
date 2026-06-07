@@ -31,7 +31,7 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
     tx.commit().await.map_err(|e| e.to_string())?;
 
     for row in rows {
-        let integration_id: String = row.get("id");
+        let _integration_id: String = row.get("id");
         let tenant_id: String = row.get("tenant_id");
         let provider: String = row.get("provider");
         let access_token: String = row.get("access_token");
