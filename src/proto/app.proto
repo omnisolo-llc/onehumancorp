@@ -249,6 +249,30 @@ message ConversationalCheckoutSession {
 }
 
 // POS Engine messages
+message TerminalSession {
+  string session_id = 1;
+  string tenant_id = 2;
+  string hardware_id = 3;
+  string status = 4; // ACTIVE, PAUSED, OFFLINE, RECONCILED
+  int64 started_at_unix = 5;
+  int64 last_synced_at_unix = 6;
+  int32 offline_changes_count = 7;
+}
+
+message StartTerminalSessionRequest {
+  string tenant_id = 1;
+  string hardware_id = 2;
+}
+
+message UpdateTerminalSessionStatusRequest {
+  string session_id = 1;
+  string status = 2;
+}
+
+message EndTerminalSessionRequest {
+  string session_id = 1;
+}
+
 message PosOfflineTransaction {
   string id = 1;
   string tenant_id = 2;
@@ -258,12 +282,14 @@ message PosOfflineTransaction {
   string payload = 6; // JSON detailing the items bought
   string status = 7; // PENDING, SYNCED, FAILED
   int64 created_at_unix = 8;
+  string session_id = 9;
 }
 
 message SyncOfflineTransactionsRequest {
   string tenant_id = 1;
   string client_id = 2;
   repeated PosOfflineTransaction transactions = 3;
+  string session_id = 4;
 }
 
 message SyncOfflineTransactionsResponse {
@@ -273,6 +299,9 @@ message SyncOfflineTransactionsResponse {
 }
 
 service PosService {
+  rpc StartTerminalSession(StartTerminalSessionRequest) returns (TerminalSession);
+  rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (TerminalSession);
+  rpc EndTerminalSession(EndTerminalSessionRequest) returns (TerminalSession);
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
 }
 

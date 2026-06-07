@@ -34,6 +34,8 @@ export default function TerminalPage() {
   const [pin, setPin] = useState('');
   const [activeStaff, setActiveStaff] = useState<any | null>(null);
   const [clockedIn, setClockedIn] = useState(false);
+  const [terminalSession, setTerminalSession] = useState<any | null>(null);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
@@ -56,7 +58,7 @@ export default function TerminalPage() {
   }, []);
   const [isOffline, setIsOffline] = useState(false);
 
-  // Network listener
+  // Network listener & Local State refresh
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -67,9 +69,14 @@ export default function TerminalPage() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    const countInterval = setInterval(() => {
+      setPendingSyncCount(OfflineStore.getPosTransactions().length);
+    }, 1000);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearInterval(countInterval);
     };
   }, []);
 
@@ -153,6 +160,42 @@ export default function TerminalPage() {
   const handleLock = () => {
       setActiveStaff(null);
       setPin('');
+  };
+
+  const handleStartSession = async () => {
+    if (!activeStaff) return;
+    try {
+      // In a real app, hardware_id would be detected from the connected Stripe reader
+      const res = await fetch('/api/v1/pos/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: activeStaff.tenant_id, hardware_id: 'terminal_1' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTerminalSession(data);
+        localStorage.setItem('ohc_active_session', JSON.stringify(data));
+      }
+    } catch (e) {
+      console.error("Failed to start session", e);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!terminalSession) return;
+    try {
+      const res = await fetch('/api/v1/pos/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: terminalSession.session_id })
+      });
+      if (res.ok) {
+        setTerminalSession(null);
+        localStorage.removeItem('ohc_active_session');
+      }
+    } catch (e) {
+      console.error("Failed to end session", e);
+    }
   };
 
   const handleClockAction = (type: 'CLOCK_IN' | 'CLOCK_OUT') => {
@@ -304,6 +347,32 @@ export default function TerminalPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50">
+           {/* Terminal Session Management */}
+           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
+             <div>
+               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{t('Terminal Status')}</p>
+               <div className="flex items-center gap-2">
+                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : syncing ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+                 <span className="font-bold text-gray-900">
+                   {isOffline ? t('Offline') : syncing ? t('Syncing') : t('Online')}
+                 </span>
+               </div>
+               {terminalSession && (
+                 <p className="text-xs text-gray-500 mt-1">{t('Session')}: {terminalSession.status}</p>
+               )}
+             </div>
+             <div>
+               {terminalSession ? (
+                 <button onClick={handleEndSession} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-bold text-sm">
+                   {t('End Session')}
+                 </button>
+               ) : (
+                 <button onClick={handleStartSession} className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-sm">
+                   {t('Start Session')}
+                 </button>
+               )}
+             </div>
+           </div>
 
            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
@@ -369,6 +438,10 @@ export default function TerminalPage() {
 
            <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
+
+           <div className="mt-6 px-2 flex justify-between items-center text-xs font-bold text-gray-400 uppercase tracking-wider">
+              <span>{t('Pending Sync')}: {pendingSyncCount}</span>
+           </div>
         </div>
 
         {syncing && (

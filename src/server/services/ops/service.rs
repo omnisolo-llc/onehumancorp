@@ -447,6 +447,50 @@ impl OpsService for MyOpsService {
             Err(e) => Err(Status::internal(format!("failed to prune missions: {}", e))),
         }
     }
+
+    async fn check_terminal_sync_health(
+        &self,
+        request: Request<EmptyRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
+        let pool = crate::db::get_pool();
+        let mut conn = pool.acquire().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Set tenant context for RLS
+        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *conn, &org_id).await {
+            return Err(Status::internal(format!("failed to set org context: {}", e)));
+        }
+
+        // Find sessions that have been offline for > 24 hours with pending changes
+        let stale_sessions = sqlx::query!(
+            "SELECT id, hardware_id, offline_changes_count FROM pos_terminal_sessions
+             WHERE tenant_id = $1 AND status != 'RECONCILED'
+             AND last_synced_at < (CURRENT_TIMESTAMP - INTERVAL '24 hours')
+             AND offline_changes_count > 0",
+            org_id
+        )
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        for session in stale_sessions {
+            let summary = format!(
+                "POS Terminal {} has {} pending offline transactions and hasn't synced in over 24 hours.",
+                session.hardware_id, session.offline_changes_count
+            );
+
+            let _ = self.create_incident(Request::new(CreateIncidentRequest {
+                severity: "HIGH".to_string(),
+                summary,
+                rca: "Likely network connectivity issue at physical location or hardware malfunction.".to_string(),
+            })).await;
+        }
+
+        Ok(Response::new(EmptyResponse {}))
+    }
 }
 #[cfg(test)]
 mod tests {

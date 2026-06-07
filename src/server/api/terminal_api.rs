@@ -27,7 +27,80 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
+        .route("/session/start", axum::routing::post(start_session_handler))
+        .route("/session/end", axum::routing::post(end_session_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Deserialize)]
+pub struct StartSessionRequest {
+    pub tenant_id: String,
+    pub hardware_id: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct EndSessionRequest {
+    pub session_id: String,
+}
+
+pub async fn start_session_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<StartSessionRequest>,
+) -> axum::response::Response {
+    let tenant_id = match auth_info {
+        Some(info) => info.org_id.clone(),
+        None => req_data.tenant_id.clone(), // Fallback if no auth (dev/offline)
+    };
+
+    let pool = crate::db::get_pool();
+    let session_id = uuid::Uuid::new_v4().to_string();
+
+    let row = sqlx::query(
+        "INSERT INTO pos_terminal_sessions (id, tenant_id, hardware_id, status)
+         VALUES ($1, $2, $3, 'ACTIVE')
+         ON CONFLICT (tenant_id, hardware_id)
+         DO UPDATE SET status = 'ACTIVE', started_at = CURRENT_TIMESTAMP, last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0
+         RETURNING id, status"
+    )
+    .bind(&session_id)
+    .bind(&tenant_id)
+    .bind(&req_data.hardware_id)
+    .fetch_one(&pool)
+    .await;
+
+    match row {
+        Ok(r) => {
+            let id: String = sqlx::Row::get(&r, "id");
+            let status: String = sqlx::Row::get(&r, "status");
+            (axum::http::StatusCode::OK, Json(serde_json::json!({ "session_id": id, "status": status }))).into_response()
+        }
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))).into_response(),
+    }
+}
+
+pub async fn end_session_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<EndSessionRequest>,
+) -> axum::response::Response {
+    let tenant_id = auth_info.map(|info| info.org_id.clone());
+
+    let pool = crate::db::get_pool();
+    let query = if let Some(tid) = tenant_id {
+        sqlx::query("UPDATE pos_terminal_sessions SET status = 'RECONCILED' WHERE id = $1 AND tenant_id = $2 RETURNING id")
+            .bind(&req_data.session_id).bind(tid)
+    } else {
+        sqlx::query("UPDATE pos_terminal_sessions SET status = 'RECONCILED' WHERE id = $1 RETURNING id")
+            .bind(&req_data.session_id)
+    };
+
+    match query.fetch_one(&pool).await {
+        Ok(_) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
+        Err(_) => (axum::http::StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Session not found" }))).into_response(),
+    }
 }
 
 
@@ -324,19 +397,25 @@ pub async fn sync_offline_transactions_handler(
 
     let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
 
-    // Update terminal_sessions
+    // Update pos_terminal_sessions
     let session_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query(
-        "INSERT INTO terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+    let session_row = sqlx::query(
+        "INSERT INTO pos_terminal_sessions (id, tenant_id, hardware_id, status, started_at, last_synced_at, offline_changes_count)
          VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-         ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = terminal_sessions.offline_changes_count + $4"
+         ON CONFLICT (tenant_id, hardware_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4
+         RETURNING id"
     )
     .bind(&session_id)
     .bind(&tenant_id)
     .bind(&client_id)
     .bind(req_data.transactions.len() as i32)
-    .execute(&pool)
+    .fetch_one(&pool)
     .await;
+
+    let active_session_id = match session_row {
+        Ok(row) => sqlx::Row::get(&row, "id"),
+        Err(_) => session_id,
+    };
 
     for tx in &req_data.transactions {
 
@@ -344,6 +423,7 @@ pub async fn sync_offline_transactions_handler(
         let tenant_id_clone = tenant_id.clone();
         let client_id_clone = tx.client_id.clone().unwrap_or_default();
         let tx_id = uuid::Uuid::new_v4().to_string();
+        let session_id_clone = active_session_id.clone();
 
         let amount_cents = tx.amount_cents;
         let currency = tx.currency.clone();
@@ -364,8 +444,8 @@ pub async fn sync_offline_transactions_handler(
             }
 
             let insert_res = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, session_id)
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', $7)"
             )
             .bind(&tx_id)
             .bind(&tenant_id_clone)
@@ -373,6 +453,7 @@ pub async fn sync_offline_transactions_handler(
             .bind(amount_cents)
             .bind(&currency)
             .bind(&payload_str)
+            .bind(&session_id_clone)
             .execute(&mut *db_tx)
             .await;
 

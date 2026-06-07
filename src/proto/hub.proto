@@ -1083,6 +1083,7 @@ service OpsService {
   rpc GetIncidents(EmptyRequest) returns (IncidentsResponse);
   rpc CreateIncident(CreateIncidentRequest) returns (Incident);
   rpc UpdateIncidentStatus(IncidentStatusRequest) returns (Incident);
+  rpc CheckTerminalSyncHealth(EmptyRequest) returns (EmptyResponse);
   
   rpc GetComputeProfiles(EmptyRequest) returns (ComputeProfilesResponse);
   rpc CreateComputeProfile(CreateComputeProfileRequest) returns (ComputeProfile);
