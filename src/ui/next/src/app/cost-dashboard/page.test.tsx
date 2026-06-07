@@ -114,6 +114,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getAllByText(/\/ 1000/)[0]).toBeDefined();
     // Storage used
     expect(screen.getByText(/2.0 MB/)).toBeDefined();
+    expect(screen.getByText(/\/ 5120 MB/)).toBeDefined();
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined();
 
@@ -146,6 +147,55 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('12 / 20 actions')).toBeDefined();
     expect(screen.getByText('operations')).toBeDefined();
     expect(screen.getByText('Tier limit reached')).toBeDefined();
+  });
+
+  test('renders / Unlimited when limits are null', async () => {
+    const mockCostData = {
+      total_revenue: 150000,
+      total_costs: 51000,
+      llm_cost: 20000,
+      storage_cost: 10000,
+      payment_fees: 5000,
+      network_cost: 16000,
+      bandwidth_savings: 5000,
+      cache_hit_rate: 85.5,
+      cost_per_1k_tokens: 0.0015,
+      period_start: "2023-10-01",
+      period_end: "2023-10-31",
+    };
+
+    const mockPlanData = {
+      current_plan: "Pro",
+      ai_actions_used: 150,
+      ai_actions_limit: null,
+      storage_used_bytes: 2 * 1024 * 1024,
+      storage_limit_bytes: null,
+      next_bill_estimated: 7900,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCostData)
+        });
+      } else if (url.includes('my-plan')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockPlanData)
+        });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).toBeNull();
+    });
+
+    const unlimitedElements = screen.getAllByText('/ Unlimited');
+    expect(unlimitedElements.length).toBe(2);
   });
 
   test('handles fetch error gracefully', async () => {
