@@ -34,11 +34,7 @@ impl MyDashboardService {
             return Ok(agents);
         }
 
-        let hub = self.hub.clone();
-        let org_id_clone = org_id.to_string();
-        let mut agents = tokio::task::spawn_blocking(move || {
-            hub.get_agents_by_org(&org_id_clone)
-        }).await.map_err(|e| e.to_string())?;
+        let mut agents = self.hub.get_agents_by_org(org_id);
 
         if mobile_optimized {
             for agent in agents.iter_mut() {
@@ -89,22 +85,19 @@ impl MyDashboardService {
             return Ok(cost_data);
         }
 
-        let hub_clone = self.hub.clone();
-        let cost_data = tokio::task::spawn_blocking(move || {
-            let cost_auditor = hub_clone.get_cost_auditor();
-            let mut snapshot = cost_auditor.get_agent_costs_snapshot();
-            if mobile_optimized {
-                // Clear any agent name strings from the tuple if it's mobile optimized to save payload space
-                for item in snapshot.iter_mut() {
-                    item.0.clear();
-                }
+        let cost_auditor = self.hub.get_cost_auditor();
+        let mut snapshot = cost_auditor.get_agent_costs_snapshot();
+        if mobile_optimized {
+            // Clear any agent name strings from the tuple if it's mobile optimized to save payload space
+            for item in snapshot.iter_mut() {
+                item.0.clear();
             }
-            (
-                cost_auditor.get_total_cost(),
-                cost_auditor.get_total_tokens(),
-                snapshot,
-            )
-        }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
+        }
+        let cost_data = (
+            cost_auditor.get_total_cost(),
+            cost_auditor.get_total_tokens(),
+            snapshot,
+        );
 
         cache.set(&cache_key, cost_data.clone(), std::time::Duration::from_secs(60)).await;
         Ok(cost_data)

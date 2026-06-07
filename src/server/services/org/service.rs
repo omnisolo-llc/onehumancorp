@@ -118,41 +118,35 @@ impl OrgService for MyOrgService {
                 let org_id_clone = org_id_bg.clone();
                 let org_id_for_agents = org_id_bg.clone();
                 let org_id_for_summary = org_id_bg.clone();
-                let (agents_res, all_meetings, summary_res, quota_res) = tokio::join!(
-                    tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
+
+                let (all_meetings, quota_result) = tokio::join!(
                     hub_bg.get_meetings(),
-                    tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
                     hub_bg.tracker().check_agent_quota(&org_id_clone)
                 );
 
-                let Ok(agents) = agents_res else { return; };
-                let Ok(summary) = summary_res else { return; };
-                let quota_result = quota_res;
+                let agents = hub_for_agents.get_agents_by_org(&org_id_for_agents);
+                let summary = hub_for_summary.tracker().summary(&org_id_for_summary);
 
                 let org_id_for_metrics = org_id_bg.clone();
                 let total_agents = agents.len() as i32;
-                let total_msgs_res = tokio::task::spawn_blocking(move || {
-                    let mut total_msgs = 0;
-                    let mut audited_msgs = 0;
-                    let mut agent_set = std::collections::HashSet::new();
-                    for a in agents.iter() {
-                        agent_set.insert(a.id.clone());
-                    }
 
-                    for m in all_meetings.iter() {
-                        if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
-                            for msg in &m.transcript {
-                                total_msgs += 1;
-                                if agent_set.contains(&msg.from_agent) {
-                                    audited_msgs += 1;
-                                }
+                let mut total_msgs = 0;
+                let mut audited_msgs = 0;
+                let mut agent_set = std::collections::HashSet::new();
+                for a in agents.iter() {
+                    agent_set.insert(a.id.clone());
+                }
+
+                for m in all_meetings.iter() {
+                    if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
+                        for msg in &m.transcript {
+                            total_msgs += 1;
+                            if agent_set.contains(&msg.from_agent) {
+                                audited_msgs += 1;
                             }
                         }
                     }
-                    (total_msgs, audited_msgs)
-                }).await;
-
-                let Ok((total_msgs, audited_msgs)) = total_msgs_res else { return; };
+                }
 
                 let audit_fidelity_pct = if total_msgs > 0 {
                     (audited_msgs as f64 / total_msgs as f64) * 100.0
@@ -202,38 +196,34 @@ impl OrgService for MyOrgService {
         let org_id_clone = org_id.clone();
         let org_id_for_agents = org_id.clone();
         let org_id_for_summary = org_id.clone();
-        let (agents_res, all_meetings, summary_res, quota_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
+        let (all_meetings, quota_result) = tokio::join!(
             self.hub.get_meetings(),
-            tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
             self.hub.tracker().check_agent_quota(&org_id_clone)
         );
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
-        let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
-        let quota_result = quota_res;
+
+        let agents = hub_for_agents.get_agents_by_org(&org_id_for_agents);
+        let summary = hub_for_summary.tracker().summary(&org_id_for_summary);
 
         let org_id_for_metrics = org_id.clone();
         let total_agents = agents.len() as i32;
-        let (total_msgs, audited_msgs) = tokio::task::spawn_blocking(move || {
-            let mut total_msgs = 0;
-            let mut audited_msgs = 0;
-            let mut agent_set = std::collections::HashSet::new();
-            for a in agents.iter() {
-                agent_set.insert(a.id.clone());
-            }
 
-            for m in all_meetings.iter() {
-                if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
-                    for msg in &m.transcript {
-                        total_msgs += 1;
-                        if agent_set.contains(&msg.from_agent) {
-                            audited_msgs += 1;
-                        }
+        let mut total_msgs = 0;
+        let mut audited_msgs = 0;
+        let mut agent_set = std::collections::HashSet::new();
+        for a in agents.iter() {
+            agent_set.insert(a.id.clone());
+        }
+
+        for m in all_meetings.iter() {
+            if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
+                for msg in &m.transcript {
+                    total_msgs += 1;
+                    if agent_set.contains(&msg.from_agent) {
+                        audited_msgs += 1;
                     }
                 }
             }
-            (total_msgs, audited_msgs)
-        }).await.map_err(|e| Status::internal(e.to_string()))?;
+        }
         
         let audit_fidelity_pct = if total_msgs > 0 {
             (audited_msgs as f64 / total_msgs as f64) * 100.0
