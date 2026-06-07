@@ -1582,6 +1582,20 @@ impl Agent {
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
                             // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                             let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
+                            let error_result = crate::types::ToolResult {
+                                tool_call_id: current_tc.id.clone(),
+                                content: String::new(),
+                                error: self_correct_msg.clone(),
+                            };
+                            let _msg_to_push = crate::types::Message {
+                                role: crate::types::Role::Tool,
+                                content: String::new(),
+                                tool_calls: vec![],
+                                tool_results: vec![error_result],
+                                response_id: None,
+                                previous_response_id: None,
+                            };
+                            // NOTE: run_workflow context
                             break Ok(self_correct_msg);
                         }
                         Err(e) => {
@@ -1663,6 +1677,19 @@ impl Agent {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
+                        let error_result = crate::types::ToolResult {
+                            tool_call_id: current_tc.id.clone(),
+                            content: String::new(),
+                            error: self_correct_msg.clone(),
+                        };
+                        let _msg_to_push = crate::types::Message {
+                            role: crate::types::Role::Tool,
+                            content: String::new(),
+                            tool_calls: vec![],
+                            tool_results: vec![error_result],
+                            response_id: None,
+                            previous_response_id: None,
+                        };
                         break self_correct_msg;
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -2725,11 +2752,20 @@ impl Agent {
                             result: self_correct_msg.clone(),
                             iteration,
                         });
-                        tool_results[idx] = ToolResult {
+                        let error_result = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: self_correct_msg,
+                            error: self_correct_msg.clone(),
                         };
+                        let _msg_to_push = Message {
+                            role: Role::Tool,
+                            content: String::new(),
+                            tool_calls: vec![],
+                            tool_results: vec![error_result.clone()],
+                            response_id: None,
+                            previous_response_id: None,
+                        };
+                        tool_results[idx] = error_result;
                     }
                     Err(ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
@@ -2918,6 +2954,19 @@ impl Agent {
                                 result: self_correct_msg.clone(),
                                 iteration,
                             });
+                            let error_result = ToolResult {
+                                tool_call_id: tc.id.clone(),
+                                content: String::new(),
+                                error: self_correct_msg.clone(),
+                            };
+                            let _msg_to_push = Message {
+                                role: Role::Tool,
+                                content: String::new(),
+                                tool_calls: vec![],
+                                tool_results: vec![error_result],
+                                response_id: None,
+                                previous_response_id: None,
+                            };
                             error = self_correct_msg;
                             content = String::new();
                             break;
