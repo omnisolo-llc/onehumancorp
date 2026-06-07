@@ -378,7 +378,7 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] flex items-center justify-center p-4">
+    <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
       <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
@@ -961,7 +961,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-[16px] border border-white/20 p-8 shadow-2xl">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism rounded-[16px] shadow-2xl p-8">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
@@ -998,7 +998,7 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="flex w-full items-center justify-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="dashboard">Go to Dashboard</IconLabel>
                 </a>
