@@ -405,3 +405,30 @@ mod tests {
         assert!(msg.len() < 9000, "Expected output length to be less than 9000 after truncation");
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use crate::runner::mock::MockCommandRunner;
+
+    #[tokio::test]
+    async fn test_subagent_worktree_creation_failure() {
+        let runner = Arc::new(MockCommandRunner::new());
+        runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "fatal: not a git repository")));
+
+        let executor = SubagentExecutor { runner };
+        let args = json!({
+            "task": "Do this worktree task",
+            "mode": "worktree"
+        });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("git worktree add failed"));
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+}

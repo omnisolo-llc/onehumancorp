@@ -144,7 +144,7 @@ mod tests {
             "end_line": 4903
         });
 
-        let result = crate::tools::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = crate::ToolExecutor::execute(&executor, args).await.unwrap();
         let expected = "Line 4900\nLine 4901\nLine 4902\nLine 4903";
         assert_eq!(result, expected);
 
@@ -166,7 +166,7 @@ mod tests {
 
         // 1. Try reading the whole file - should fail
         let args = json!({ "path": test_file.to_string_lossy().to_string() });
-        let result = crate::tools::ToolExecutor::execute(&executor, args).await;
+        let result = crate::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("JIT Retrieval Error: File is too large"));
@@ -180,7 +180,7 @@ mod tests {
             "start_line": 1,
             "end_line": 1200
         });
-        let result2 = crate::tools::ToolExecutor::execute(&executor, args2).await;
+        let result2 = crate::ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result2 {
             assert!(msg.contains("Cannot read more than 1000 lines at once"));
@@ -194,7 +194,7 @@ mod tests {
             "start_line": 500,
             "end_line": 600
         });
-        let result3 = crate::tools::ToolExecutor::execute(&executor, args3).await;
+        let result3 = crate::ToolExecutor::execute(&executor, args3).await;
         assert!(result3.is_ok());
 
         let _ = std::fs::remove_file(&test_file);

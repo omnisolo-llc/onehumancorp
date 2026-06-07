@@ -3,7 +3,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::Command as StdCommand;
+use tokio::process::Command;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Checkpoint {
@@ -76,7 +77,7 @@ impl GitCheckpointer {
 
     pub fn new(repo_path: PathBuf) -> Self {
         // Run git init, check error
-        let init_out = Command::new("git")
+        let init_out = StdCommand::new("git")
             .arg("init")
             .current_dir(&repo_path)
             .output()
@@ -85,7 +86,7 @@ impl GitCheckpointer {
             tracing::warn!("git init failed: {}", String::from_utf8_lossy(&init_out.stderr));
         }
 
-        let name_out = Command::new("git")
+        let name_out = StdCommand::new("git")
             .args(&["config", "user.name", "Agent"])
             .current_dir(&repo_path)
             .output()
@@ -94,7 +95,7 @@ impl GitCheckpointer {
             tracing::warn!("git config user.name failed: {}", String::from_utf8_lossy(&name_out.stderr));
         }
 
-        let err_out = Command::new("git")
+        let err_out = StdCommand::new("git")
             .args(&["config", "user.email", "agent@ohc.local"])
             .current_dir(&repo_path)
             .output()
@@ -124,7 +125,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("show")
             .arg(format!("{}:{}", target_ref, file_name))
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -133,7 +134,7 @@ impl CheckpointSaver for GitCheckpointer {
                 .arg("show")
                 .arg(format!("{}:{}", target_ref, file_name))
                 .current_dir(&self.repo_path)
-                .output()
+                .output().await
                 .map_err(|e| e.to_string())?;
 
             if !output.status.success() {
@@ -184,7 +185,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("add")
             .arg("-A")
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| format!("Failed to execute git add: {}", e))?;
 
         if !add_out.status.success() {
@@ -199,7 +200,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("-m")
             .arg(&commit_msg)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| format!("Failed to execute git commit: {}", e))?;
 
         if !output.status.success() {
@@ -212,7 +213,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("-f")
             .arg(&tag_name)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| format!("Failed to execute git tag: {}", e))?;
 
         if !tag_output.status.success() {
@@ -231,7 +232,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("--hard")
             .arg(&tag_name)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -241,7 +242,7 @@ impl CheckpointSaver for GitCheckpointer {
                 .arg("--hard")
                 .arg(checkpoint_id)
                 .current_dir(&self.repo_path)
-                .output()
+                .output().await
                 .map_err(|e| e.to_string())?;
 
             if !fallback_output.status.success() {
@@ -254,7 +255,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("clean")
             .arg("-fdx")
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !clean_output.status.success() {
@@ -276,7 +277,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("--")
             .arg(&file_name)
             .current_dir(&self.repo_path)
-            .output()
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
