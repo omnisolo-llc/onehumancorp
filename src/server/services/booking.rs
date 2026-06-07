@@ -988,6 +988,19 @@ impl BookingEngineService for NativeBookingService {
 
         let inventory_capacity =
             Self::product_inventory_capacity(&req.tenant_id, &req.product_id).await?;
+
+        // If capacity is 1, check if there's an active POS transaction locking this item.
+        if inventory_capacity <= 1 {
+            let pos_lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
+            if let Some(client) = &self.redis_client {
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    let is_locked: bool = redis::cmd("EXISTS").arg(&pos_lock_key).query_async(&mut conn).await.unwrap_or(false);
+                    if is_locked {
+                        return Err(Status::resource_exhausted("Product inventory is currently being checked out in-store"));
+                    }
+                }
+            }
+        }
         let soft_locks = self.soft_lock_store();
         let inventory_lock = soft_locks
             .acquire_inventory_lock(
@@ -1019,7 +1032,7 @@ impl BookingEngineService for NativeBookingService {
 
     async fn sync_calendar(
         &self,
-        request: Request<SyncCalendarRequest>,
+        _request: Request<SyncCalendarRequest>,
     ) -> Result<Response<SyncCalendarResponse>, Status> {
         Ok(Response::new(SyncCalendarResponse {
             status: "Sync queued".to_string(),
