@@ -113,7 +113,7 @@ mod tests {
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 
-        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+        let _state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
 
         let start = std::time::Instant::now();
 
