@@ -66,7 +66,7 @@ impl BaseAgent for FinanceAgent {
     }
 
     fn trigger_type(&self) -> AgentTriggerType {
-        AgentTriggerType::Scheduled
+        AgentTriggerType::Schedule
     }
 
     async fn execute(&self, _payload: Value) -> Result<(), String> {

@@ -134,7 +134,7 @@ impl BaseAgent for BusinessAdvisoryAgent {
     }
 
     fn trigger_type(&self) -> AgentTriggerType {
-        AgentTriggerType::Scheduled
+        AgentTriggerType::Schedule
     }
 
     async fn execute(&self, payload: Value) -> Result<(), String> {

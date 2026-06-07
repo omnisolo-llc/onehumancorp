@@ -89,6 +89,81 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown_sender");
+
+            // Zero-Party Data Extraction
+            let extraction_prompt = format!(
+                "Extract any personal facts, preferences, dietary restrictions (e.g., 'vegan', 'gluten-free', 'size 8'), or relations mentioned in this customer message. Handle negations correctly (e.g., 'I do not like chocolate' means no chocolate, not 'likes chocolate'). Return ONLY a valid JSON object with a 'preferences' key containing key-value pairs (e.g. {{\"preferences\": {{\"dietary_restriction\": \"vegan\"}}}}). If there are no facts to extract, return {{\"preferences\": {{}}}}.\n\nMessage: {}",
+                message
+            );
+
+            let compressed_extraction_prompt = crate::pricing::compression::reduce_tokens(&extraction_prompt);
+
+            let extracted_data_str = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                .as_deref()
+            {
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_extraction_prompt).await.unwrap_or_else(|_| "{}".to_string())
+                }
+                _ => {
+                    crate::minimax::LocalLLMClient::new().reason(&compressed_extraction_prompt).await.unwrap_or_else(|_| "{}".to_string())
+                }
+            };
+
+            if let Ok(extracted_json) = serde_json::from_str::<serde_json::Value>(&extracted_data_str) {
+                if let Some(preferences_ref) = extracted_json.get("preferences").and_then(|p| p.as_object()) {
+                    if !preferences_ref.is_empty() {
+                        let tenant_id = event.tenant_id.clone();
+                        let customer_id = sender_id.to_string();
+                        let orchestrator = self.orchestrator.clone();
+                        let preferences = preferences_ref.clone();
+                        let prefs_to_save = serde_json::Value::Object(preferences.clone());
+                        let extracted_keys: Vec<String> = preferences.keys().cloned().collect();
+                        let extracted_vals: Vec<String> = preferences.values().map(|v| v.to_string()).collect();
+
+                        tokio::spawn(async move {
+                            if let Ok(Some(mut c360)) = orchestrator.get_customer360(&tenant_id, &customer_id).await {
+                                let mut current_prefs = c360.preferences.unwrap_or_else(|| serde_json::json!({}));
+                                if let Some(obj) = current_prefs.as_object_mut() {
+                                    for (k, v) in preferences {
+                                        obj.insert(k.clone(), v.clone());
+                                    }
+                                }
+                                c360.preferences = Some(current_prefs);
+                                let _ = orchestrator.upsert_customer360(&c360).await;
+                            } else {
+                                let c360 = crate::orchestration::departments::types::Customer360 {
+                                    id: uuid::Uuid::new_v4().to_string(),
+                                    tenant_id: tenant_id.clone(),
+                                    customer_id: customer_id.clone(),
+                                    email: None,
+                                    phone: None,
+                                    mood: None,
+                                    preferences: Some(prefs_to_save),
+                                    created_at: None,
+                                    updated_at: None,
+                                };
+                                let _ = orchestrator.upsert_customer360(&c360).await;
+                            }
+
+                            let feed_desc = format!("The Ambassador learned that customer {} has preferences: {}. Profile updated.", customer_id, extracted_vals.join(", "));
+                            let _ = orchestrator.execute_action(
+                                DepartmentType::CustomerSuccess,
+                                feed_desc,
+                                tenant_id,
+                                ActionRisk::AutoExecute,
+                                serde_json::json!({
+                                    "feature_type": "zero_party_data_extraction",
+                                    "extracted_keys": extracted_keys
+                                }),
+                            ).await;
+                        });
+                    }
+                }
+            }
+
 
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
