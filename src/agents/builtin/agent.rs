@@ -704,6 +704,45 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Output Guardrail tripwire fires: {}", e))));
                     }
                 }
+                let mut verification_manager = crate::verification_loops::VerificationManager::new();
+                if cfg.enable_computational_guides && !cfg.computational_guide_command.is_empty() {
+                    verification_manager.add_computational(std::sync::Arc::new(crate::verification_loops::BashComputationalGuide { command: cfg.computational_guide_command.clone(), workspace_path: cfg.workspace_path.clone() }));
+                }
+                if cfg.enable_visual_verification {
+                    if cfg.visual_verification_command == "playwright" {
+                        verification_manager.add_visual(std::sync::Arc::new(crate::verification_loops::PlaywrightVisualVerifier));
+                    } else if !cfg.visual_verification_command.is_empty() {
+                        verification_manager.add_visual(std::sync::Arc::new(crate::verification_loops::BashVisualVerifier { command: cfg.visual_verification_command.clone(), workspace_path: cfg.workspace_path.clone() }));
+                    }
+                }
+                if cfg.enable_llm_judge {
+                    verification_manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
+                        llm: self.llm.clone(),
+                        model: cfg.model.clone(),
+                        criteria: Some(format!(
+                            "correctness, completeness, and strict adherence to these instructions: {}",
+                            cfg.developer_instructions
+                        )),
+                        confidence_threshold: cfg.confidence_threshold,
+                    }));
+                }
+
+                let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                if let Err(e) = verification_manager.run_computational_guides(&msg.content, &current_context).await {
+                    messages.push(crate::types::Message::user(e));
+                    continue;
+                }
+                if let Err(e) = verification_manager.run_visual_verifiers(&msg.content).await {
+                    messages.push(crate::types::Message::user(e));
+                    continue;
+                }
+                if let Err(e) = verification_manager.run_inferential_sensors(&msg.content, initial_message).await {
+                    messages.push(crate::types::Message::user(format!(
+                        "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
+                        e
+                    )));
+                    continue;
+                }
                 if let Some(store) = &self.memory_store {
                     let _ = store.store_session_message(&cfg.agent_id, "assistant", &msg.content).await;
                 }
@@ -4955,7 +4994,7 @@ mod tests {
     use serde_json::Value;
 
     struct MockLlmClient {
-        responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+        pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
     }
 
     #[async_trait::async_trait]
@@ -6883,7 +6922,7 @@ mod stream_tests {
     use std::sync::Arc;
 
     struct StreamMockLlmClient {
-        responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+        pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
     }
 
     #[async_trait::async_trait]
@@ -7303,7 +7342,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_tools_read_only_concurrent_mutating_serial() {
         struct MockLlmClientTools {
-            responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+            pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
         }
 
         #[async_trait::async_trait]
@@ -8105,4 +8144,124 @@ async fn test_anthropic_3_stage_gating_end_to_end() {
     let err_str = result.unwrap_err().to_string();
     assert!(err_str.contains("USER_FIXABLE") || err_str.contains("User intervention required") || err_str.contains("Confirmation") || err_str.contains("Stage 3"));
 }
+}
+
+
+
+
+
+
+
+
+#[cfg(test)]
+mod e2e_verification_tests {
+    use crate::agent::{Agent, AgentRunConfig};
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    struct EndToEndJudgeMockLlm {
+        pub responses: Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for EndToEndJudgeMockLlm {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("Done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tao_verification_loop_retry() {
+        let llm = Arc::new(EndToEndJudgeMockLlm {
+            responses: Mutex::new(vec![
+                // 1. Initial agent response (bad answer)
+                ChatResponse {
+                    message: Message::assistant("Bad initial answer."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                },
+                // 2. Verification Loop LLM Judge rejects it
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_judge_reject".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({
+                                "data": {
+                                    "status": "REJECT",
+                                    "reason": "It is bad.",
+                                    "confidence": 0.95,
+                                    "missing_elements": ["goodness"],
+                                    "suggested_fixes": ["make it good"]
+                                }
+                            })
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                },
+                // 3. Agent retry response (corrected answer)
+                ChatResponse {
+                    message: Message::assistant("Corrected answer."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                },
+                // 4. Verification Loop LLM Judge approves it
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_judge_approve".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({
+                                "data": {
+                                    "status": "APPROVE",
+                                    "reason": "It is good.",
+                                    "confidence": 0.95,
+                                    "missing_elements": [],
+                                    "suggested_fixes": []
+                                }
+                            })
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: None,
+                }
+            ]),
+        });
+
+        let agent = Agent::new(llm as Arc<dyn crate::llm::LlmClient>, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.enable_llm_judge = true; // Enables Verification Loops
+
+        let mut events = vec![];
+        let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "Corrected answer.");
+    }
 }
