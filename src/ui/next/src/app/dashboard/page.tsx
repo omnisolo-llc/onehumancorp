@@ -9,6 +9,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { AutoMilestoneAlert } from "./AutoMilestoneAlert";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
 type DashboardMetrics = {
@@ -238,6 +239,7 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
+      <AutoMilestoneAlert tenantId={tenantId()} />
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
