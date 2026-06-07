@@ -551,7 +551,28 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
-                    CREATE TABLE IF NOT EXISTS bookings (
+
+                    CREATE TABLE IF NOT EXISTS availability_rules (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        day_of_week INTEGER,
+                        start_time TEXT,
+                        end_time TEXT,
+                        is_available BOOLEAN DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS calendar_sync_connections (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        provider TEXT NOT NULL,
+                        access_token TEXT NOT NULL,
+                        refresh_token TEXT,
+                        expires_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+CREATE TABLE IF NOT EXISTS bookings (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         customer_id TEXT,
@@ -559,12 +580,25 @@ impl DB {
                         start_time TEXT,
                         end_time TEXT,
                         status TEXT,
+                        payment_intent_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
-                    CREATE TABLE IF NOT EXISTS products (
+
+                    CREATE TABLE IF NOT EXISTS services (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        duration_minutes INTEGER DEFAULT 60,
+                        price REAL DEFAULT 0,
+                        deposit_required INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         name TEXT,

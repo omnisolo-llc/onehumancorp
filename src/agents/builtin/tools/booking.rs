@@ -27,10 +27,21 @@ pub struct BookingRecord {
     pub status: String,
 }
 
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AvailabilityRule {
+    pub id: String,
+    pub tenant_id: String,
+    pub day_of_week: i32,
+    pub start_time: String,
+    pub end_time: String,
+    pub is_available: bool,
+}
 #[derive(Default)]
 pub struct BookingStore {
     pub services: Vec<Service>,
     pub bookings: Vec<BookingRecord>,
+    pub availability_rules: Vec<AvailabilityRule>,
 }
 
 pub type SharedBookingStore = Arc<RwLock<BookingStore>>;
@@ -234,5 +245,57 @@ pub fn booking_create_appointment_tool(store: SharedBookingStore) -> Tool {
             "required": ["tenant_id", "customer_id", "service_id", "start_time"]
         }),
         execute: Arc::new(PydanticAdapter::new(BookingCreateAppointmentExecutor { store })),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct BookingUpdateAvailabilityArgs {
+    pub tenant_id: String,
+    pub day_of_week: i32,
+    pub start_time: String,
+    pub end_time: String,
+    pub is_available: bool,
+}
+
+pub struct BookingUpdateAvailabilityExecutor {
+    pub store: SharedBookingStore,
+}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<BookingUpdateAvailabilityArgs> for BookingUpdateAvailabilityExecutor {
+    async fn execute_typed(&self, args: BookingUpdateAvailabilityArgs) -> Result<String, ToolError> {
+        let rule = AvailabilityRule {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: args.tenant_id,
+            day_of_week: args.day_of_week,
+            start_time: args.start_time,
+            end_time: args.end_time,
+            is_available: args.is_available,
+        };
+
+        let mut store = self.store.write().await;
+        store.availability_rules.push(rule);
+
+        Ok(json!({"status": "success", "message": "Availability updated successfully"}).to_string())
+    }
+}
+
+pub fn booking_update_availability_tool(store: SharedBookingStore) -> Tool {
+    Tool {
+        name: "booking_update_availability".to_string(),
+        description: "Block off time or update working hours for the business calendar.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "tenant_id": { "type": "string" },
+                "day_of_week": { "type": "integer", "description": "0-6 for Sunday-Saturday" },
+                "start_time": { "type": "string", "description": "HH:MM format" },
+                "end_time": { "type": "string", "description": "HH:MM format" },
+                "is_available": { "type": "boolean" }
+            },
+            "required": ["tenant_id", "day_of_week", "start_time", "end_time", "is_available"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(BookingUpdateAvailabilityExecutor { store })),
     }
 }
