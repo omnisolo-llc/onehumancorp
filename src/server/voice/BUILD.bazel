@@ -14,9 +14,9 @@ rust_library(
     deps = [
         "//src/server/domain:server_domain",
         "//src/server/integrations/twilio:server_integrations_twilio",
-        "//src/server:minimax",
         "//src/server/orchestration:server_orchestration",
         "//src/server/telemetry:server_telemetry",
+        "//src/server:minimax",
         "@crates//:chrono",
         "@crates//:serde",
         "@crates//:serde_json",

@@ -1,3 +1,5 @@
+extern crate minimax;
+
 use std::sync::Arc;
 use ::server_integrations_twilio::provider::TwilioProvider;
 use super::engine::VoiceAIEdgeEngine;
@@ -29,15 +31,15 @@ impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
             "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, or GENERAL_HELP. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
         );
 
-        let raw = match std::env::var("OHC_VOICE_LLM_PROVIDER")
+        let raw: String = match std::env::var("OHC_VOICE_LLM_PROVIDER")
             .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
             .as_deref()
         {
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                ::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+                minimax::MinimaxClient::new(api_key).reason(&prompt).await
             }
-            _ => ::minimax::LocalLLMClient::new().reason(&prompt).await,
+            _ => minimax::LocalLLMClient::new().reason(&prompt).await,
         }?;
 
         parse_voice_turn_plan(&raw)

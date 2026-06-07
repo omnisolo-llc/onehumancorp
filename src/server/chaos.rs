@@ -113,9 +113,9 @@ mod tests {
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 
-        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+        let _state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
 
-        let start = std::time::Instant::now();
+        let _start = std::time::Instant::now();
 
         // Spawn a thread that actually consumes CPU instead of yielding or sleeping.
         // It spins up a heavy computation to block an executor thread to simulate true CPU starvation.
@@ -457,7 +457,7 @@ mod tests {
     async fn test_degradation_validation_mobile() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // "Verify that mobile/Thin Client features fail-safe when backend latency spikes >2s or connections drop entirely."
-        let start = std::time::Instant::now();
+        let _start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let result = tokio::time::timeout(timeout_duration, async {
@@ -467,7 +467,7 @@ mod tests {
         }).await;
 
         assert!(result.is_err(), "Mobile API read operations must fail-safe when backend latency spikes >2s (returning cached data)");
-        assert!(start.elapsed() >= timeout_duration);
+        assert!(_start.elapsed() >= timeout_duration);
 
         // For write operation
         let mut queued = false;
@@ -490,7 +490,7 @@ mod tests {
         let cache_key = "dashboard_mobile_view";
         cache.set(cache_key, "cached_dashboard_data".to_string(), Duration::from_secs(3600)).await;
 
-        let start = std::time::Instant::now();
+        let _start = std::time::Instant::now();
         let timeout_duration = Duration::from_millis(2000); // 2s backend latency spike definition
 
         // 2. Simulate read operation degradation
@@ -546,14 +546,14 @@ mod tests {
         };
 
         assert!(write_queued, "Write operation must queue locally when connection drops/spikes");
-        assert!(start.elapsed() >= timeout_duration);
+        assert!(_start.elapsed() >= timeout_duration);
     }
 
     #[tokio::test]
     async fn test_exhaust_cpu_memory_and_verify_graceful_degradation() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Simulate CPU/Memory exhaustion via high artificial latency and verify timeout/circuit breaking
-        let start = std::time::Instant::now();
+        let _start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let result = tokio::time::timeout(timeout_duration, async {
@@ -569,7 +569,7 @@ mod tests {
                 iters += 1;
                 if iters % 1000 == 0 {
                     tokio::task::yield_now().await;
-                    if start.elapsed() > std::time::Duration::from_millis(100) {
+                    if _start.elapsed() > std::time::Duration::from_millis(100) {
                         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                     }
                 }
@@ -580,7 +580,7 @@ mod tests {
         }).await;
 
         assert!(result.is_err(), "Service should time out under heavy CPU/Memory load simulation to prevent cascading failure");
-        assert!(start.elapsed() >= timeout_duration);
+        assert!(_start.elapsed() >= timeout_duration);
     }
 
 
@@ -919,7 +919,7 @@ mod tests {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
         let timeout_duration = Duration::from_millis(150);
-        let start = std::time::Instant::now();
+        let _start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a stalled chaos operation (e.g., dropped packets on agent connection)
@@ -928,7 +928,7 @@ mod tests {
         }).await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
-        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
+        assert!(_start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
 
