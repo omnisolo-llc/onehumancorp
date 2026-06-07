@@ -39,12 +39,12 @@ export default function TeamChatPage() {
     setMessages(prev => [...prev, {id: userMsgId, role: 'user', content: userMsg}]);
 
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const response = await fetch('/api/agents/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Assuming authorization is handled by Next.js API routes / middleware in reality
-          // 'Authorization': 'Bearer ' + token
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
       });

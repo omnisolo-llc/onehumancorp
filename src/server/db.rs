@@ -321,7 +321,8 @@ impl DB {
                     let is_postgres_lock = !self.is_sqlite()
                         && (err_str.contains("serialization failure")
                             || err_str.contains("deadlock detected")
-                            || err_str.contains("40001"));
+                            || err_str.contains("40001")
+                            || err_str.contains("could not obtain lock"));
 
                     if is_sqlite_lock || is_postgres_lock {
                         attempt += 1;

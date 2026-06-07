@@ -377,6 +377,23 @@ mod parity_tests {
                 .await
                 .unwrap();
 
+            let pool_clone = db.pool.clone();
+
+            // For Postgres, we can try to acquire the lock with NOWAIT. If it errors out
+            // rather than waiting, we know it's isolated properly. We don't need channel loops,
+            // we can just await the task since NOWAIT guarantees it returns immediately with an error if locked.
+            let join_handle = tokio::spawn(async move {
+                let mut tx2 = pool_clone.begin().await.unwrap();
+                let res = sqlx::query("SELECT status FROM swarm_tasks WHERE id = $1 FOR UPDATE NOWAIT")
+                    .bind(parsed_id)
+                    .fetch_optional(&mut *tx2)
+                    .await;
+                res
+            });
+
+            let res = join_handle.await.unwrap();
+            assert!(res.is_err(), "Second transaction should be blocked by isolation in Postgres and fail with NOWAIT");
+
             tx1.commit().await.unwrap();
         }
     }
