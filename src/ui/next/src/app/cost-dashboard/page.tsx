@@ -25,6 +25,7 @@ interface CostDashboardData {
   period_start: string;
   period_end: string;
   trend: DailyCost[];
+  base_price: number;
 }
 
 export default function CostDashboardPage() {
@@ -116,6 +117,14 @@ export default function CostDashboardPage() {
             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-900">Cost Breakdown</h2>
 
             <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-gray-900">Base Plan</span>
+                        <p className="text-sm text-gray-500 mt-1">Fixed monthly subscription cost.</p>
+                    </div>
+                    <span id="cost-dashboard-base-price" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.base_price || 0)}</span>
+                </div>
+
                 <div className="flex flex-col p-6 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
                     <ul id="cost-dashboard-trend" className="space-y-2">

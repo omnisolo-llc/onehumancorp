@@ -23,6 +23,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
 
     // Check for individual breakdown items
+    await expect(page.locator('span', { hasText: 'Base Plan' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'LLM Usage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();

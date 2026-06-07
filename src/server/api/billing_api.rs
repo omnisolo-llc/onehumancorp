@@ -32,6 +32,7 @@ pub struct CostDashboardResponse {
     pub period_start: String,
     pub period_end: String,
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
+    pub base_price: i64,
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
@@ -124,7 +125,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![] })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], base_price: 0 })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -170,11 +171,23 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
+    let tracker_clone = hub.tracker().clone();
+    let tenant_id_clone_3 = tenant_id.clone();
+    let tier_future = tokio::task::spawn(async move {
+        tracker_clone.get_tenant_tier(&tenant_id_clone_3).await
+    });
+
+    let (storage_res, auditor_res, trend_res, tier_res) = tokio::join!(storage_future, auditor_future, trend_future, tier_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
     let trend = trend_res.unwrap_or_default();
+
+    let tier_inner = match tier_res {
+        Ok(res) => res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free),
+        Err(_) => ::server_pricing::rate_limit::PlanTier::Free,
+    };
+    let base_price_f64 = tier_inner.base_price();
 
     let cache_hit_rate = if total_tokens + cached_tokens > 0 {
         (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -192,7 +205,7 @@ pub async fn cost_dashboard_handler(
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
+    let total_costs_f64 = base_price_f64 + llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
@@ -207,6 +220,7 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
         trend,
+        base_price: (base_price_f64 * 100.0).round() as i64,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
