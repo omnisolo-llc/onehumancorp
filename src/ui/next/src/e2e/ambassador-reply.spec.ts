@@ -63,6 +63,7 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
       await expect(sendButton).toBeVisible();
 
       await sendButton.click();
+>>>>>>> 829bf2fc (rebase prep)
 
       // Validate empty state or removal
       await expect(inquiryLocator).toBeHidden();

@@ -2,6 +2,7 @@
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 
 
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +10,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 
@@ -240,7 +242,7 @@ export default function Dashboard() {
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Welcome back, {userName}.</h2>
+        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
@@ -303,6 +305,10 @@ export default function Dashboard() {
 
       <ViralLoopPerformanceWidget />
 
+      <div className="mb-6">
+          <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+      </div>
+
       <section className="app-panel mb-6">
         <div className="app-panel-header">
           <div>
@@ -333,7 +339,7 @@ export default function Dashboard() {
                   name="migration_url"
                   value={migrationUrl}
                   onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-white"
+                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
                   placeholder="mayas-cakes.myshopify.com"
                 />
               </label>
@@ -368,12 +374,12 @@ export default function Dashboard() {
         <UnifiedAgentFeed />
 
         <section>
-          <div className="mb-6 glassmorphism p-6 rounded-[16px] bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+          <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-4xl">🎉</div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white font-outfit">Milestone Unlocked!</h3>
+                  <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">Milestone Unlocked!</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
                 </div>
               </div>
@@ -427,7 +433,7 @@ export default function Dashboard() {
 
             <div className="glassmorphism p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
-              <h4 className="text-sm font-bold font-outfit text-gray-900 mb-1 flex items-center gap-1">
+              <h4 className="text-sm font-bold font-outfit text-[#1D1D1F] mb-1 flex items-center gap-1">
                 <span className="text-indigo-500">✨</span> Advanced AI Insights
               </h4>
               <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
@@ -480,35 +486,6 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
-              <div className="app-list-item">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
-                  <button
-                    id="sold-out-toggle-falafel"
-                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                    onClick={(e) => {
-                      const btn = e.currentTarget;
-                      btn.innerText = 'Sold Out';
-                      btn.classList.remove('bg-gray-100', 'text-gray-800');
-                      btn.classList.add('bg-red-100', 'text-red-700');
-
-                      let queue: any[] = [];
-                      try {
-                        queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                      } catch(err) {}
-                      queue.push({
-                          id: 'e2e-product-falafel',
-                          type: 'inventory_toggle',
-                          timestamp: new Date().toISOString()
-                      });
-                      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                      setOfflineQueueCount(queue.length);
-                    }}
-                  >
-                    Mark Sold Out
-                  </button>
-                </div>
-              </div>
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
@@ -543,46 +520,6 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Offline E2E Mock Element (Food Cart Scenario) */}
-        <section className="app-grid two">
-          <div className="app-panel">
-             <div className="app-panel-header">
-               <div className="app-panel-title">Quick Actions</div>
-             </div>
-             <div className="app-panel-body">
-               <div className="flex-1">
-                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Falafel</h3>
-                 <button
-                    id="sold-out-toggle-falafel"
-                    onClick={(e) => {
-                       const btn = e.currentTarget;
-                       const isSoldOut = btn.innerText === 'Sold Out';
-
-                       if (!isSoldOut) {
-                          btn.innerText = 'Sold Out';
-                          btn.classList.remove('bg-gray-100', 'text-gray-800');
-                          btn.classList.add('bg-red-100', 'text-red-700');
-                       } else {
-                          btn.innerText = 'Mark Sold Out';
-                          btn.classList.remove('bg-red-100', 'text-red-700');
-                          btn.classList.add('bg-gray-100', 'text-gray-800');
-                       }
-
-                       const { SyncManager } = require('../../lib/sync/SyncManager');
-                       SyncManager.getInstance().enqueue({
-                          id: 'e2e-product-falafel',
-                          type: 'inventory_toggle',
-                          timestamp: new Date().toISOString()
-                       });
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                 >
-                    Mark Sold Out
-                 </button>
-               </div>
-             </div>
-          </div>
-        </section>
 
         <section className="app-grid two">
           <div className="app-panel">
@@ -652,7 +589,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
                 <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Campaign Orchestration</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Campaign Orchestration</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Plan, generate, review, and launch customer campaigns from live dashboard data.</p>
             </Link>
 
@@ -661,7 +598,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Pro Plan ROI Calculator</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Pro Plan ROI Calculator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
             </Link>
 
@@ -670,7 +607,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Referrals</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referrals</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
@@ -679,7 +616,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Milestones</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Milestones</h3>
 
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
@@ -689,7 +626,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
                 <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Cards</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Social Share Cards</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Share Cards</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
             </Link>
 
@@ -698,7 +635,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Storefront Widget</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Storefront Widget</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
             </Link>
 
@@ -707,7 +644,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
                 <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Subscriptions & Fulfillments</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Subscriptions & Fulfillments</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
             </Link>
 
@@ -716,7 +653,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Social Proof Nudge</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Proof Nudge</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
             </Link>
 
@@ -725,7 +662,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Create Link-in-Bio Page</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Create Link-in-Bio Page</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
             </Link>
 
@@ -734,7 +671,7 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
                 <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Want more local jobs this week? [Tap here]</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Want more local jobs this week? [Tap here]</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch an autonomous hyper-local lead generation campaign.</p>
             </Link>
           </div>
