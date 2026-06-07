@@ -61,7 +61,7 @@ export default function CostDashboardPage() {
   }
 
   const formatCurrency = (cents: number) => {
-      return '$' + (cents / 100).toFixed(2);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
   };
 
   return (
