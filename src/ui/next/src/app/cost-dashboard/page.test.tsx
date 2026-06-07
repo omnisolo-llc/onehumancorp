@@ -49,7 +49,31 @@ describe('CostDashboardPage', () => {
       trend: [
         { date: "2023-10-01", total_cost: 1000, llm_cost: 500, storage_cost: 200, network_cost: 100, compute_cost: 200 },
         { date: "2023-10-02", total_cost: 1500, llm_cost: 800, storage_cost: 200, network_cost: 200, compute_cost: 300 }
-      ]
+      ],
+      department_tier_usage: {
+        current_plan: "Free",
+        period: "2023-10",
+        departments: [
+          {
+            id: "dept-marketing",
+            department_type: "marketing",
+            agent_id: "marketing_agent",
+            actions_used: 12,
+            action_limit: 20,
+            usage_percent: 60,
+            soft_limit_reached: false,
+          },
+          {
+            id: "dept-ops",
+            department_type: "operations",
+            agent_id: "operations_agent",
+            actions_used: 21,
+            action_limit: 20,
+            usage_percent: 100,
+            soft_limit_reached: true,
+          },
+        ],
+      },
     };
 
     const mockPlanData = {
@@ -116,6 +140,12 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('$10.00')).toBeDefined(); // 1000 cents
     expect(screen.getByText('2023-10-02')).toBeDefined();
     expect(screen.getByText('$15.00')).toBeDefined(); // 1500 cents
+
+    expect(screen.getByText('Department Tier Usage')).toBeDefined();
+    expect(screen.getByText('marketing')).toBeDefined();
+    expect(screen.getByText('12 / 20 actions')).toBeDefined();
+    expect(screen.getByText('operations')).toBeDefined();
+    expect(screen.getByText('Tier limit reached')).toBeDefined();
   });
 
   test('handles fetch error gracefully', async () => {
