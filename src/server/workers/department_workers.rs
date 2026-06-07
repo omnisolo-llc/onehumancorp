@@ -178,7 +178,27 @@ pub mod pos_sync_worker {
                         )
                         .bind(adj_job_id)
                         .bind(tenant_id)
-                        .bind(adj_payload)
+                        .bind(&adj_payload)
+                        .execute(&mut *tx)
+                        .await;
+
+                        // Create an Operations AI Agent alert task
+                        let ai_task_id = Uuid::new_v4().to_string();
+                        let ai_payload = json!({
+                            "transaction_id": tx_id,
+                            "product_id": product_id,
+                            "expected_stock": qty,
+                            "actual_stock": stock,
+                            "message": format!("Offline POS transaction {} encountered an inventory discrepancy for product {}.", tx_id, product_id)
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                             VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                        )
+                        .bind(&ai_task_id)
+                        .bind(tenant_id)
+                        .bind(&ai_payload)
                         .execute(&mut *tx)
                         .await;
                     }
