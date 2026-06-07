@@ -171,7 +171,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
+        let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 150).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
@@ -199,7 +199,7 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
+        let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 50).await;
         assert!(res.is_ok());
 
         let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")

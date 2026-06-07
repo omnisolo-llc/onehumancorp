@@ -222,11 +222,6 @@ impl CostAuditor {
         savings
     }
 
-    pub fn get_total_cost(&self) -> f64 {
-        let total_cost = self.total_cost.lock().unwrap();
-        *total_cost
-    }
-
     pub fn get_total_cost_cents(&self) -> i64 {
         let total_cost = self.total_cost.lock().unwrap();
         (*total_cost * 100.0).round() as i64
@@ -269,11 +264,6 @@ impl CostAuditor {
     pub fn get_tenant_cached_tokens(&self, tenant_id: &str) -> i64 {
         let tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
         *tenant_cached_tokens.get(tenant_id).unwrap_or(&0)
-    }
-
-    pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
-        let tenant_costs = self.tenant_costs.lock().unwrap();
-        *tenant_costs.get(tenant_id).unwrap_or(&0.0)
     }
 
     pub fn get_tenant_cost_cents(&self, tenant_id: &str) -> i64 {

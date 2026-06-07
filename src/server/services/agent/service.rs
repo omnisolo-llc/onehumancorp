@@ -38,7 +38,7 @@ impl MyAgentManagerService {
             tokio::spawn(async move {
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
-                    (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+                    (cost_auditor.get_total_cost_cents() as f64 / 100.0, cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
                 }).await.unwrap_or((0.0, 0, vec![]))
             })
         );

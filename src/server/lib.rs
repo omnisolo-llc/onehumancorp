@@ -1221,7 +1221,7 @@ impl HubService for MyHubService {
         let tenant_id_clone_2 = tenant_id.clone();
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
+                let llm = auditor.get_tenant_cost_cents(&tenant_id_clone_2) as f64 / 100.0;
                 let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
                 let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
                 let bw_savings = auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2);

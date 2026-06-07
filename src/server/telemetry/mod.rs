@@ -539,13 +539,13 @@ pub async fn record_llm_call_cost(
     pool: &PgPool,
     organization_id: &str,
     model: &str,
-    cost_usd: f64,
+    cost_cents: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    buffer_metric_i64(
         pool,
         "ohc_llm_call_cost",
         "counter",
-        cost_usd as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "model": model,
@@ -558,13 +558,13 @@ pub async fn record_outbound_api_cost(
     pool: &PgPool,
     organization_id: &str,
     api_name: &str,
-    cost_usd: f64,
+    cost_cents: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    buffer_metric_i64(
         pool,
         "ohc_outbound_api_cost",
         "counter",
-        cost_usd as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "api_name": api_name,
@@ -903,13 +903,13 @@ pub async fn record_agent_cost(
     role: &str,
     model: &str,
     entity: &str,
-    cost: f64,
+    cost_cents: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    buffer_metric_i64(
         pool,
         "ohc_agent_cost",
         "counter",
-        cost as f32,
+        cost_cents,
         serde_json::json!({
             "agent_id": agent_id,
             "organization_id": organization_id,
@@ -925,13 +925,13 @@ pub async fn record_api_call_cost(
     pool: &PgPool,
     organization_id: &str,
     entity: &str,
-    cost: f64,
+    cost_cents: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    buffer_metric_i64(
         pool,
         "ohc_api_call_cost",
         "counter",
-        cost as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "entity": entity,
@@ -1225,13 +1225,13 @@ pub async fn record_storage_rw_cost(
     pool: &PgPool,
     organization_id: &str,
     operation: &str,
-    size_bytes: i64,
+    cost_cents: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    buffer_metric_i64(
         pool,
         "ohc_storage_rw_cost",
         "counter",
-        size_bytes as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,
@@ -1245,11 +1245,11 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    buffer_metric_i64(
         pool,
         "ohc_email_send_cost",
         "counter",
-        count as f32,
+        count,
         serde_json::json!({
             "organization_id": organization_id,
         }),

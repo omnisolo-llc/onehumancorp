@@ -50,7 +50,7 @@ impl BillingService for MyBillingService {
         let req = request.into_inner();
         let org_id = req.organization_id;
 
-        let total_cost = self.auditor.get_total_cost();
+        let total_cost = self.auditor.get_total_cost_cents() as f64 / 100.0;
         let total_tokens = self.auditor.get_total_tokens();
 
         let mut agents = Vec::new();

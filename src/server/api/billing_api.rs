@@ -174,7 +174,7 @@ pub async fn cost_dashboard_handler(
     let tenant_id_clone_2 = tenant_id.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
         (
-            auditor.get_tenant_cost(&tenant_id_clone_2),
+            auditor.get_tenant_cost_cents(&tenant_id_clone_2) as f64 / 100.0,
             auditor.get_tenant_revenue(&tenant_id_clone_2),
             auditor.get_tenant_payment_fees(&tenant_id_clone_2),
             auditor.get_tenant_compute_cost(&tenant_id_clone_2),

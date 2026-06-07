@@ -51,7 +51,7 @@ pub async fn get_terminal_connection_token_handler(
         &crate::db::get_pool(),
         &tenant_id,
         "stripe_terminal_connection_token",
-        0.05
+        5
     ).await;
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
@@ -243,7 +243,7 @@ pub async fn create_payment_intent_handler(
         &crate::db::get_pool(),
         &tenant_id,
         "stripe_terminal_payment_intent",
-        0.05
+        5
     ).await;
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();

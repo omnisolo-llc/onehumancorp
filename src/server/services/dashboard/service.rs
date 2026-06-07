@@ -100,7 +100,7 @@ impl MyDashboardService {
                 }
             }
             (
-                cost_auditor.get_total_cost(),
+                cost_auditor.get_total_cost_cents() as f64 / 100.0,
                 cost_auditor.get_total_tokens(),
                 snapshot,
             )
