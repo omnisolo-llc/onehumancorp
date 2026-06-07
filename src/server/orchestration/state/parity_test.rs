@@ -1014,8 +1014,6 @@ mod parity_tests {
         }
     }
 
-
-
     #[tokio::test]
     async fn test_parity_smart_pricing_policies() {
         let sqlite_db = setup_sqlite_db().await;
@@ -1118,5 +1116,6 @@ mod parity_tests {
             assert_eq!(amount, 5.5);
         }
     }
+
 
 }

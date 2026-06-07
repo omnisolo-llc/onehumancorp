@@ -761,6 +761,7 @@ impl DB {
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        payment_intent_id TEXT,
                         tenant_id TEXT NOT NULL DEFAULT 'system',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
@@ -908,7 +909,8 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        payment_intent_id TEXT
 
                     );
 
@@ -946,7 +948,8 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        payment_intent_id TEXT
 
                     );
 
@@ -966,7 +969,8 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        payment_intent_id TEXT
 
                     );
 
@@ -994,7 +998,8 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        payment_intent_id TEXT
 
                     );
 
@@ -1030,7 +1035,8 @@ impl DB {
 
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        payment_intent_id TEXT
 
                     );
 
