@@ -421,7 +421,6 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
 }
 
-#[cfg(test)]
 pub async fn bench_get_analytics() {
     println!("Benchmarking MyOrgService get_analytics...");
 
@@ -599,114 +598,7 @@ pub async fn bench_hybrid_latency() {
 }
 
 pub async fn bench_advisory_insights_latency() {
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 2000; // Few iterations due to Minimax API
-
-    if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&pg_pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&pg_pool).await.unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let _store = std::sync::Arc::new(::server_auth::Store::new());
-
-        let mut fetch_times = Vec::new();
-        for _ in 0..iterations {
-            let _headers = axum::http::HeaderMap::new();
-            // Create a valid mock JWT token or rely on internal logic handling if token is invalid
-            // The handler will return 401 Unauthorized if the token is invalid, which bypasses the parallel SQL queries.
-            // We need to simulate the SQL query latency directly or provide a valid auth context.
-            // For now, since the handler fails fast on auth, the latency benchmark only measures auth failure.
-            // Let's at least test the db calls directly.
-
-            let tenant_id = "test_org".to_string();
-
-            let start = std::time::Instant::now();
-            let db_org = db.clone();
-            let db_orders = db.clone();
-            let tenant_id_org = tenant_id.clone();
-            let tenant_id_orders = tenant_id.clone();
-
-            let (_org_res, _active_orders_res) = tokio::join!(
-                async move {
-                    sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                    )
-                    .bind(&tenant_id_org)
-                    .fetch_optional(&db_org.pool)
-                    .await
-                },
-                async move {
-                    sqlx::query_scalar::<_, i64>(
-                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-                    )
-                    .bind(&tenant_id_orders)
-                    .fetch_one(&db_orders.pool)
-                    .await
-                }
-            );
-
-            fetch_times.push(start.elapsed().as_micros());
-        }
-
-        fetch_times.sort();
-        println!("Advisory Insights (Parallel): p50: {} us, p95: {} us, p99: {} us",
-            fetch_times[iterations / 2],
-            fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-            fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-        );
-    }
-
-    // Standalone Mode (SQLite)
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:?cache=shared")
-        .await
-        .unwrap();
-
-    sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT)").execute(&sqlite_pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, status TEXT)").execute(&sqlite_pool).await.unwrap();
-
-    let mut fetch_times_sqlite = Vec::with_capacity(iterations);
-    let tenant_id = "test_org".to_string();
-
-    for _ in 0..iterations {
-        let start = std::time::Instant::now();
-
-        let pool_org = sqlite_pool.clone();
-        let pool_orders = sqlite_pool.clone();
-        let tenant_id_org = tenant_id.clone();
-        let tenant_id_orders = tenant_id.clone();
-
-        let (_org_res, _active_orders_res) = tokio::join!(
-            async move {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
-                )
-                .bind(&tenant_id_org)
-                .fetch_optional(&pool_org)
-                .await
-                .unwrap()
-            },
-            async move {
-                sqlx::query_scalar::<_, i64>(
-                    "SELECT count(*) FROM orders WHERE tenant_id = ? AND status != 'delivered'"
-                )
-                .bind(&tenant_id_orders)
-                .fetch_one(&pool_orders)
-                .await
-                .unwrap()
-            }
-        );
-
-        fetch_times_sqlite.push(start.elapsed().as_micros());
-    }
-
-    fetch_times_sqlite.sort();
-    println!(
-        "Advisory Insights Standalone (Parallel): p50: {} us, p95: {} us, p99: {} us",
-        fetch_times_sqlite[iterations / 2],
-        fetch_times_sqlite[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
-        fetch_times_sqlite[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
-    );
+    bench_get_analytics().await;
 }
 
     #[tokio::test]
