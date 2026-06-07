@@ -50,3 +50,9 @@ CREATE TABLE IF NOT EXISTS ohc_collective_loyalty_balance (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (collective_id, buyer_id)
 );
+
+ALTER TABLE ohc_collective_loyalty_balance ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_ohc_collective_loyalty_balance ON ohc_collective_loyalty_balance;
+CREATE POLICY tenant_isolation_ohc_collective_loyalty_balance
+ON ohc_collective_loyalty_balance
+USING (buyer_id = current_setting('app.current_tenant', true)) WITH CHECK (buyer_id = current_setting('app.current_tenant', true));
