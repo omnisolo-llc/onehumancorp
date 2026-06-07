@@ -133,11 +133,11 @@ export default function CostDashboardPage() {
               </div>
               <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                   <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit ? `/ ${myPlanData.ai_actions_limit}` : ''}</span></p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit ? `/ ${myPlanData.ai_actions_limit}` : ' / Unlimited'}</span></p>
               </div>
               <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                   <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : ''}</span></p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : ' / Unlimited'}</span></p>
               </div>
               <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                   <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>

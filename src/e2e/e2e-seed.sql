@@ -18,14 +18,13 @@ ALTER TABLE IF EXISTS ohc_staff_member DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, tier)
+INSERT INTO tenants (id, business_name, plan_tier)
 VALUES
-  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter'),
-  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro')
+  ('e2e-tenant', 'OHC E2E Bakery', 'starter'),
+  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Pro')
 ON CONFLICT (id) DO UPDATE
-SET name = EXCLUDED.name,
-    industry = EXCLUDED.industry,
-    tier = EXCLUDED.tier,
+SET business_name = EXCLUDED.business_name,
+    plan_tier = EXCLUDED.plan_tier,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
