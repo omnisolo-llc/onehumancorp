@@ -3392,7 +3392,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_to_end_pydantic_self_correction_loop() {
 
-        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role, ToolResult};
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role};
         use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
@@ -7762,7 +7762,6 @@ mod tao_tests {
 }
 #[cfg(test)]
 mod guardrail_tests {
-    use crate::tools::ToolExecutor;
     use super::*;
     use crate::guardrails::{GuardrailRegistry, InputGuardrail, OutputGuardrail, ToolGuardrail};
     use crate::types::{ChatResponse, Message, Role, ToolCall, Usage};
@@ -7930,7 +7929,6 @@ mod guardrail_tests {
 
 #[cfg(test)]
 mod sona_pattern_tests {
-    use crate::tools::ToolExecutor;
     use super::*;
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -8053,7 +8051,7 @@ mod sona_pattern_tests {
 
 #[tokio::test]
 async fn test_anthropic_3_stage_gating_end_to_end() {
-    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError, Message};
+    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, Message};
 
     struct HighRiskLlmClient;
     #[async_trait::async_trait]
