@@ -159,9 +159,10 @@ async fn handle_webhook(
         serde_json::json!({
             "source": payload.source,
             "message": translation.translated_content,
-            "original_content": translation.original_content,
+            "original_message": translation.original_content,
             "translated_from_language": translation.source_language,
-            "draft_reply": draft_reply,
+            "generated_response": draft_reply,
+            "feature_type": "ambassador_reply",
             "inbox_message_id": id,
         }),
     ).await {
