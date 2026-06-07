@@ -77,7 +77,7 @@ mod tests {
 
     struct MockVisualClientLlm;
     #[async_trait::async_trait]
-    impl LlmClient for MockVisualClientLlm {
+    impl ohc_builtin_agent_llm::LlmClient for MockVisualClientLlm {
         async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let last_user = req.messages.last().unwrap().content.clone();
             Ok(ChatResponse {
