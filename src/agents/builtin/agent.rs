@@ -3238,9 +3238,10 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+    use ohc_builtin_agent_tools::ToolExecutor;
     #[tokio::test]
     async fn test_llm_recoverable_tool_messages_agent_loop() {
-        use crate::tools::ToolExecutor;
+
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLlmRecoverable {
@@ -3341,8 +3342,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_end_to_end_pydantic_self_correction_loop() {
-        use crate::tools::ToolExecutor;
-        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role, ToolResult};
+
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role};
+
         use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
@@ -4901,7 +4903,7 @@ mod tests {
 
 
     use ohc_builtin_agent_core::types::{ChatRequest};
-    use crate::tools::ToolExecutor;
+
     use serde_json::Value;
 
     struct MockLlmClient {
@@ -6829,6 +6831,7 @@ mod tests {
 
 #[cfg(test)]
 mod stream_tests {
+    use ohc_builtin_agent_tools::ToolExecutor;
     use super::*;
     use crate::llm::LlmClient;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
@@ -6952,7 +6955,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
-        use crate::tools::ToolExecutor;
+
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
 
         struct MockCheckpointerRewind {
@@ -7168,7 +7171,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
-        use crate::tools::ToolExecutor;
+
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
@@ -7219,6 +7222,7 @@ mod stream_tests {
             }
         }
 
+        use ohc_builtin_agent_tools::ToolExecutor;
         struct FailingTool;
         #[async_trait::async_trait]
         impl ToolExecutor for FailingTool {
@@ -7471,7 +7475,7 @@ mod hierarchical_prompt_tests {
 async fn test_stripe_retry_limit() {
     use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError};
 
-    struct FailingTool;
+        struct FailingTool;
     #[async_trait::async_trait]
     impl crate::tools::ToolExecutor for FailingTool {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {

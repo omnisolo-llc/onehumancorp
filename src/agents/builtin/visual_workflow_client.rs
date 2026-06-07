@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use crate::visual_workflow::{WorkflowGraph, WorkflowExecutor};
 use crate::agent::{Agent, AgentRunConfig};
-use crate::llm::LlmClient;
+
 
 /// HTTP Server AppState
 pub struct VisualWorkflowState {
@@ -74,6 +74,7 @@ mod tests {
     };
     use tower::ServiceExt;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use crate::llm::LlmClient;
     use crate::visual_workflow::{Node, NodeType, Edge};
 
     struct MockVisualClientLlm;
