@@ -242,7 +242,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
+      const combinedDescription = businessDescription;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -265,7 +265,50 @@ export default function OnboardingWizard() {
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
 
-      setStep(2); await syncStateToBackend({ step: 2 }); // Go to review step
+      setStep(4); await syncStateToBackend({ step: 4 }); // Skip to loading screen
+
+      // Auto-start onboarding
+      // Call startOnboarding API directly
+      const startRes = await fetch('/api/onboarding/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: combinedDescription || '',
+          selling_categories: intakeData.categories || ['physical'],
+          payment_pref: 'online',
+          admin_email: adminEmail || 'admin@ohc.app',
+          admin_name: adminName || intakeData.business_name + ' Admin',
+          admin_password: adminPassword || 'password123',
+          website_template: websiteTemplate,
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '10.00',
+          domain_choice: domainChoice,
+          price_type: 'fixed',
+          location: location || '',
+          target_audience: targetAudience || ''
+        })
+      });
+
+      const startData = await startRes.json();
+      if (!startRes.ok) throw new Error(startData.error || startData.message || 'Failed to start onboarding');
+
+      setStartResult(startData);
+      setStep(5);
+      await syncStateToBackend({ step: 5 });
+
+      setTimeout(async () => {
+         await fetch('/api/onboarding/launch', {
+           method: 'POST',
+           headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+         });
+      }, 1000);
+
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -368,13 +411,9 @@ export default function OnboardingWizard() {
 
   // Progress percentage calculation
   const getProgress = () => {
-    // There are 5 steps, let's make it a more gradual fill
     if (step === 1) {
-      if (chatStep === 0) return 10;
-      if (chatStep === 1) return 20;
-      if (chatStep === 2) return 30;
-      if (chatStep === 3) return 40;
-      if (chatStep === 4) return 50;
+      if (chatStep === 0) return 25;
+      if (chatStep === 1) return 50;
     }
     if (step === 2) return 60;
     if (step === 3) return 80;
@@ -429,25 +468,16 @@ export default function OnboardingWizard() {
                 </div>
               )}
 
-              {chatStep > 0 && (
-                <>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-                  </p>
-                </>
-              )}
-
-              {chatStep === 1 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+{chatStep === 1 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in w-full">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Describe your business in one sentence</h2>
+                  <div className="flex items-center justify-between mb-6 w-full">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm flex-1 text-center">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4 hidden"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -455,193 +485,62 @@ export default function OnboardingWizard() {
 
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
 
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        enterKeyHint="next"
-                        autoCapitalize="words"
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (businessName.trim().length < 3) {
-                              setValidationError('Business Name must be at least 3 characters.');
-                              return;
-                            }
-                            setValidationError('');
-                            setChatStep(2); syncStateToBackend({ chatStep: 2 });
-                          }
-                        }}
-                        placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
-                          return;
-                        }
-                        setValidationError('');
-                        setChatStep(2); syncStateToBackend({ chatStep: 2 });
-                      }}
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 2 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      Tell us a bit about your products or services.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
+                  <div className="space-y-4 flex-1 w-full max-w-xl">
                     <div>
                       <textarea
                         autoFocus
                         enterKeyHint="next"
                         autoCapitalize="sentences"
-                        value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
+                        value={businessDescription}
+                        onChange={(e) => setBusinessDescription(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            if (!whatYouSell.trim()) {
-                              setValidationError('Please tell us what you sell.');
-                              return;
-                            }
-                            setValidationError('');
-                            setChatStep(3); syncStateToBackend({ chatStep: 3 });
-                          }
-                        }}
-                        placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (!whatYouSell.trim()) {
-                          setValidationError('Please tell us what you sell.');
-                          return;
-                        }
-                        setValidationError('');
-                        setChatStep(3); syncStateToBackend({ chatStep: 3 });
-                      }}
-                      disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 3 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(2); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      This helps us set up your shipping and tax settings.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        enterKeyHint="next"
-                        autoCapitalize="words"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (!location.trim()) {
-                              setValidationError('Please tell us your location.');
+                            if (businessDescription.trim().length < 10) {
+                              setValidationError('Please provide a bit more detail about your business.');
                               return;
                             }
                             setValidationError('');
                             handleIntake();
                           }
                         }}
-                        placeholder="e.g. Portland, OR"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        placeholder="e.g. I bake custom vegan cakes for weddings and parties in Austin, TX..."
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
 
                   {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
+                  <div className="mt-auto pt-6 w-full max-w-xl">
                     <button
                       onClick={() => {
-                        if (!location.trim()) {
-                          setValidationError('Please tell us your location.');
+                        if (businessDescription.trim().length < 10) {
+                          setValidationError('Please provide a bit more detail about your business.');
                           return;
                         }
                         setValidationError('');
                         handleIntake();
                       }}
-                      disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!businessDescription.trim() || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     >
                       {isLoading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <svg className="animate-spin h-5 w-5 text-white backdrop-filter backdrop-blur-md rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" fill="none" viewBox="0 0 24 24">
+                        <div className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          Analyzing...
-                        </span>
-                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
+                          The Promoter is designing your storefront...
+                        </div>
+                      ) : (
+                        <IconLabel icon="launch">Generate Storefront</IconLabel>
+                      )}
                     </button>
                   </div>
                 </div>
               )}
             </div>
           )}
-
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <button onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
