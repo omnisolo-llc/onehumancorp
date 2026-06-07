@@ -2614,7 +2614,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+
         .with_state(hub.clone());
+
+
+    let booking_router = axum::Router::new()
+        .route("/api/v1/booking/request", axum::routing::post(api::booking::booking_request_handler))
+        .route("/api/v1/booking/availability", axum::routing::post(api::booking::booking_request_handler))
+        .with_state(db.clone());
 
     let db_for_login = db.clone();
 async fn generate_manychat_draft_handler() -> axum::response::Response {
@@ -3848,6 +3855,7 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
+        .merge(booking_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
             tools: vec![],
