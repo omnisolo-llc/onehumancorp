@@ -84,9 +84,13 @@ async fn save_draft(
 
 async fn start_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
+    auth_info_opt: Option<Extension<::server_auth::orchestration::AuthInfo>>,
     Json(payload): Json<StartOnboardingRequest>,
 ) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
-    match agent.start_onboarding(payload).await {
+    let tenant_id = auth_info_opt.as_ref().map(|ext| ext.org_id.clone()).unwrap_or_default();
+    let user_id = auth_info_opt.as_ref().map(|ext| ext.agent_id.clone()).unwrap_or_default();
+
+    match agent.start_onboarding(tenant_id, user_id, payload).await {
         Ok(res) => Ok(Json(res)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }

@@ -166,9 +166,14 @@ impl OnboardingAgent {
         Ok(state)
     }
 
-    pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+    pub async fn start_onboarding(&self, provided_tenant_id: String, provided_user_id: String, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
         let start_time = std::time::Instant::now();
-        let org_id = format!("org-{}", uuid::Uuid::new_v4());
+
+        let org_id = if provided_tenant_id == "default" || provided_tenant_id == "storefront" || provided_tenant_id.is_empty() {
+            format!("org-{}", uuid::Uuid::new_v4())
+        } else {
+            provided_tenant_id.clone()
+        };
 
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
@@ -176,7 +181,11 @@ impl OnboardingAgent {
         // Use organization id as tenant id if not provided
         let _tenant_id = org_id.clone();
 
-        let user_id = format!("usr-{}", uuid::Uuid::new_v4());
+        let user_id = if provided_user_id == "default" || provided_user_id == "test-user" || provided_user_id.is_empty() {
+            format!("usr-{}", uuid::Uuid::new_v4())
+        } else {
+            provided_user_id.clone()
+        };
         let email = req.admin_email.clone();
         let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
         let password = req.admin_password.clone();
@@ -315,8 +324,31 @@ impl OnboardingAgent {
 
         sqlx::query(
             r#"
+            INSERT INTO tenants (id, name, industry, tier)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                industry = EXCLUDED.industry
+            "#
+        )
+        .bind(&org_id)
+        .bind(&company_name)
+        .bind(&business_type)
+        .bind("starter")
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (id) DO UPDATE SET
+                username = EXCLUDED.username,
+                email = EXCLUDED.email,
+                password_hash = EXCLUDED.password_hash,
+                roles = EXCLUDED.roles,
+                updated_at = EXCLUDED.updated_at
             "#
         )
         .bind(&user_id)
@@ -394,7 +426,7 @@ impl OnboardingAgent {
         };
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
-        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING")
             .bind(&id)
             .bind(org_id)
             .bind(name)
@@ -2429,7 +2461,7 @@ impl OnboardingAgent {
 
             let hub = self.hub.clone();
             futures.push(tokio::spawn(async move {
-                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING")
                     .bind(&id)
                     .bind(&org_id)
                     .bind(&name)
@@ -2553,7 +2585,7 @@ mod tests {
         assert_eq!(req_categories.len(), 2);
         assert_eq!(req_categories[0], "physical");
 
-        let res = agent.start_onboarding(req).await;
+        let res = agent.start_onboarding("".to_string(), "".to_string(), req).await;
         assert!(res.is_ok());
         let resp = res.unwrap();
         assert!(resp.success);
@@ -2635,7 +2667,7 @@ mod tests {
             location: "London, UK".to_string(),
         };
 
-        let res_service = agent.start_onboarding(req_service).await.unwrap();
+        let res_service = agent.start_onboarding("".to_string(), "".to_string(), req_service).await.unwrap();
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
@@ -2673,7 +2705,7 @@ mod tests {
             location: "Austin, TX".to_string(),
         };
 
-        let res_food = agent.start_onboarding(req_food).await.unwrap();
+        let res_food = agent.start_onboarding("".to_string(), "".to_string(), req_food).await.unwrap();
         let org_id_food = res_food.organization_id;
 
         let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
