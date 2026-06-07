@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import ShareCardsPage from './page';
 import { describe, it, expect, vi } from 'vitest';

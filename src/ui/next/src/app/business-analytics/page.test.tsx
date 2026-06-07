@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BusinessAnalytics from './page';
 import { expect, test, vi, beforeEach, afterEach } from 'vitest';

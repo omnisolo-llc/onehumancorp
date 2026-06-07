@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import StorefrontBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';

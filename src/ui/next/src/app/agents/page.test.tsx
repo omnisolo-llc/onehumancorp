@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { expect, test, vi, beforeEach } from 'vitest';
 import AgentsPage from './page';

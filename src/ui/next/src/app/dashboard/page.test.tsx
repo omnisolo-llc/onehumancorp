@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from './page';
