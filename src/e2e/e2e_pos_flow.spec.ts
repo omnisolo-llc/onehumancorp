@@ -1,9 +1,16 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('In-Person Payment (POS) Flow', () => {
-  test('should complete a tap-to-pay transaction offline and sync', async ({ page, context }) => {
-    // Navigate to the POS terminal page
-    await page.goto('/pos/terminal');
+  test('Carlos uses tap-to-pay offline and syncs', async ({ page, context }) => {
+    // Navigate via UI to the POS terminal page
+    await page.goto('/login');
+    await page.getByPlaceholder('you@email.com').fill('test@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await page.getByRole('button', { name: 'Operations' }).click();
+    await page.getByRole('link', { name: 'POS / In-Person' }).click();
 
     // Wait for the pin pad
     await expect(page.locator('text=Terminal Locked')).toBeVisible();
@@ -34,9 +41,6 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Trigger New Order
     await page.locator('text=New Order').click();
     await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();
-
-    // Add a Stripe terminal component mock check if needed or navigate to payment
-    // Since the terminal component needs internet, we would simulate offline queuing here
 
     // Perform an offline clock in
     await page.locator('text=Clock In').click();
