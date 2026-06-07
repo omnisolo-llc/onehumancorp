@@ -9,6 +9,11 @@ type Order = {
   customer_name: string;
   items: string[];
   organization_id: string;
+  driver_status?: string;
+  driver_id?: string;
+  driver_lat?: number;
+  driver_lng?: number;
+  provider_delivery_id?: string;
 };
 
 export default function FulfillmentHub() {
@@ -49,6 +54,13 @@ export default function FulfillmentHub() {
     } catch (e) {
       console.error('Failed to execute action', e);
     }
+  };
+
+  const driverBadge = (order: Order) => {
+    if (typeof order.driver_lat === 'number' && typeof order.driver_lng === 'number') {
+      return `${order.driver_status || 'Driver'} ${order.driver_lat.toFixed(4)}, ${order.driver_lng.toFixed(4)}`;
+    }
+    return order.driver_status || order.status;
   };
 
   return (
@@ -133,7 +145,7 @@ export default function FulfillmentHub() {
                           </div>
                           {order.fulfillment_mode === 'LocalDelivery' && (
                             <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                              {order.status === 'DriverRequested' ? 'Driver Arriving in 5 mins' : 'ETA: 5 mins'}
+                              {driverBadge(order)}
                             </span>
                           )}
                         </div>

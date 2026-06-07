@@ -1,4 +1,4 @@
-use crate::db::DB;
+use crate::db::{DB, DbStore};
 use std::sync::Arc;
 use sqlx::Row;
 use super::llm_client::LLMClient;
@@ -8,6 +8,14 @@ pub struct AutoDreamPipeline {
     db: Arc<DB>,
     llm_client: Arc<dyn LLMClient>,
     pub cache: Option<Arc<crate::pricing::cache::LocalEmbeddingCache>>,
+}
+
+struct PendingAutoDreamTask {
+    id: String,
+    tenant_id: String,
+    agent_id: Option<String>,
+    payload: String,
+    deliberation_log: Option<String>,
 }
 
 impl AutoDreamPipeline {
@@ -74,20 +82,41 @@ impl AutoDreamPipeline {
             LIMIT 100
         ";
 
-        let tasks = sqlx::query(query)
-            .fetch_all(&self.db.pool)
-            .await
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let tasks: Vec<PendingAutoDreamTask> = match &self.db.store {
+            DbStore::Postgres => sqlx::query(query)
+                .fetch_all(&self.db.pool)
+                .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                .into_iter()
+                .map(|row| PendingAutoDreamTask {
+                    id: row.get("id"),
+                    tenant_id: row.get("organization_id"),
+                    agent_id: row.try_get("assigned_agent_id").unwrap_or(None),
+                    payload: row.try_get("payload").unwrap_or_default(),
+                    deliberation_log: row.try_get("deliberation_log").unwrap_or(None),
+                })
+                .collect(),
+            DbStore::Sqlite(pool) => sqlx::query(query)
+                .fetch_all(pool)
+                .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                .into_iter()
+                .map(|row| PendingAutoDreamTask {
+                    id: row.get("id"),
+                    tenant_id: row.get("organization_id"),
+                    agent_id: row.try_get("assigned_agent_id").unwrap_or(None),
+                    payload: row.try_get("payload").unwrap_or_default(),
+                    deliberation_log: row.try_get("deliberation_log").unwrap_or(None),
+                })
+                .collect(),
+        };
 
-        for row in tasks {
-            let task_id: String = row.get("id");
-            let tenant_id: String = row.get("organization_id");
-            let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
-
-            let payload: String = row.try_get("payload").unwrap_or_default();
-            let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
-
-            let content = format!("Task Payload:\n{}\nDeliberation Log:\n{}", payload, log.unwrap_or_default());
+        for task in tasks {
+            let content = format!(
+                "Task Payload:\n{}\nDeliberation Log:\n{}",
+                task.payload,
+                task.deliberation_log.unwrap_or_default()
+            );
 
             // Chunk the content to avoid token limits (e.g., 2000 chars roughly to tokens)
             let chunks = Self::chunk_content(&content, 2000);
@@ -120,9 +149,9 @@ impl AutoDreamPipeline {
 
                         self.db.insert_autodream_memory(
                             &mem_id,
-                            &tenant_id,
-                            agent_id.as_deref().unwrap_or("system"),
-                            &task_id,
+                            &task.tenant_id,
+                            task.agent_id.as_deref().unwrap_or("system"),
+                            &task.id,
                             &chunk,
                             &emb_str,
                             "TASK_SUMMARY"
@@ -135,11 +164,11 @@ impl AutoDreamPipeline {
                     }
                     Err(e) => {
                         ::server_telemetry::record_error_signal("AutoDreamPipeline: Failed to generate embedding for task ");
-                        tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
+                        tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task.id, e);
                     }
                 }
             }
-            tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
+            tracing::info!("AutoDreamPipeline: Consolidated task {}", task.id);
         }
 
         Ok(())
@@ -149,7 +178,6 @@ impl AutoDreamPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DbStore;
     use super::super::llm_client::MockLLMClient;
 
     #[test]
@@ -245,6 +273,73 @@ mod tests {
         assert_eq!(count.0, 2);
 
         // Since both tasks generated the exact same text chunk, the LLM should have only been called once.
+        assert_eq!(tracking_llm.get_call_count(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_process_closed_tasks_with_sqlite_and_local_cache() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                assigned_agent_id TEXT,
+                payload TEXT,
+                deliberation_log TEXT,
+                status TEXT NOT NULL
+            )",
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE autodream_memories (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT NOT NULL,
+                task_id TEXT NOT NULL UNIQUE,
+                content TEXT NOT NULL,
+                embedding TEXT NOT NULL,
+                source_type TEXT NOT NULL
+            )",
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        for task_id in ["sqlite-cache-task-1", "sqlite-cache-task-2"] {
+            sqlx::query(
+                "INSERT INTO shared_tasks
+                    (id, organization_id, assigned_agent_id, payload, deliberation_log, status)
+                 VALUES (?, 'org-sqlite', 'agent-local', 'identical local payload', 'identical local log', 'COMPLETED')",
+            )
+            .bind(task_id)
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+        }
+
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let db = Arc::new(DB {
+            pool: pg_pool,
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        });
+        let tracking_llm = Arc::new(TrackingMockLLMClient::new(vec![0.5, 0.6, 0.7]));
+        let cache = Arc::new(LocalEmbeddingCache::new(Duration::from_secs(60)));
+        let pipeline = AutoDreamPipeline::new_with_cache(db, tracking_llm.clone(), cache);
+
+        pipeline.process_closed_tasks().await.unwrap();
+
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM autodream_memories")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 2);
         assert_eq!(tracking_llm.get_call_count(), 1);
     }
 

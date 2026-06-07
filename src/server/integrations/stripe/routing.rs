@@ -4,6 +4,7 @@ pub enum PaymentMethod {
     Ach,
     Razorpay,
     MercadoPago,
+    Alipay,
 }
 
 pub struct PaymentRouter;
@@ -28,6 +29,9 @@ impl PaymentRouter {
         }
         if currency.eq_ignore_ascii_case("BRL") || currency.eq_ignore_ascii_case("MXN") {
             return PaymentMethod::MercadoPago;
+        }
+        if currency.eq_ignore_ascii_case("CNY") {
+            return PaymentMethod::Alipay;
         }
         let amount_usd = amount;
 
@@ -80,6 +84,12 @@ mod tests {
         // Card fee: $29.00 + $0.30 = $29.30
         // ACH fee: $8.00 capped at $5.00 = $5.00
         assert_eq!(PaymentRouter::optimize_payment_method(1000.0), PaymentMethod::Ach);
+    }
+
+    #[test]
+    fn test_optimize_payment_method_alipay_currency() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "CNY"), PaymentMethod::Alipay);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "cny"), PaymentMethod::Alipay);
     }
 
     #[test]

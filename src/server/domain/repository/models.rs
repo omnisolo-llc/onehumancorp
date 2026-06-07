@@ -113,6 +113,52 @@ pub struct Order {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Campaign {
+    pub id: String,
+    pub tenant_id: String,
+    pub goal: String,
+    pub status: String,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CampaignAsset {
+    pub id: String,
+    pub tenant_id: String,
+    pub campaign_id: String,
+    #[sqlx(rename = "type")]
+    pub r#type: String,
+    pub content_url: String,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ChannelExecution {
+    pub id: String,
+    pub tenant_id: String,
+    pub campaign_id: String,
+    pub channel: String,
+    pub metrics_sent: Option<i32>,
+    pub metrics_clicks: Option<i32>,
+    pub metrics_conversions: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PromotionCode {
+    pub code: String,
+    pub tenant_id: String,
+    pub campaign_id: String,
+    pub discount_value: f64,
+    pub discount_type: String,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Booking {
     pub id: String,
     pub tenant_id: String,
@@ -212,48 +258,6 @@ pub struct InventoryPrediction {
     pub suggested_reorder_quantity: Option<i32>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct Campaign {
-    pub id: String,
-    pub tenant_id: String,
-    pub goal: String,
-    pub status: String,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct CampaignAsset {
-    pub id: String,
-    pub tenant_id: String,
-    pub campaign_id: String,
-    pub r#type: String,
-    pub content_url: String,
-    pub created_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct ChannelExecution {
-    pub id: String,
-    pub tenant_id: String,
-    pub campaign_id: String,
-    pub channel: String,
-    pub metrics_sent: Option<i32>,
-    pub metrics_clicks: Option<i32>,
-    pub metrics_conversions: Option<i32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct PromotionCode {
-    pub code: String,
-    pub tenant_id: String,
-    pub campaign_id: String,
-    pub discount_value: Option<f64>,
-    pub discount_type: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

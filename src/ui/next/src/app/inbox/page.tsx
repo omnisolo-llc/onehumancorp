@@ -7,6 +7,8 @@ type Message = {
   id: string;
   source?: string;
   content?: string;
+  original_content?: string;
+  translated_from_language?: string;
   draft_reply?: string;
   status?: string;
   created_at?: string;
@@ -28,6 +30,7 @@ function badgeTone(status?: string) {
 export default function InboxPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
@@ -43,6 +46,7 @@ export default function InboxPage() {
         const rows = Array.isArray(data) ? data : [];
         setMessages(rows);
         setSelectedId(rows[0]?.id || null);
+        setShowOriginal(false);
       } catch (e: any) {
         setError(e?.message || "Failed to load inbox");
       } finally {
@@ -128,7 +132,10 @@ export default function InboxPage() {
               <button
                 key={message.id}
                 type="button"
-                onClick={() => setSelectedId(message.id)}
+                onClick={() => {
+                  setSelectedId(message.id);
+                  setShowOriginal(false);
+                }}
                 className="app-list-item w-full text-left"
                 style={{ background: selected?.id === message.id ? "#f8fafc" : "transparent" }}
               >
@@ -155,9 +162,20 @@ export default function InboxPage() {
                 <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
               </div>
               <div className="mb-4">
-                <div className="app-metric-label">Customer Message</div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="app-metric-label">Customer Message</div>
+                  {selected.original_content && selected.original_content !== selected.content && (
+                    <button
+                      type="button"
+                      className="app-badge"
+                      onClick={() => setShowOriginal((value) => !value)}
+                    >
+                      {showOriginal ? "Translated" : `Original ${selected.translated_from_language || ""}`.trim()}
+                    </button>
+                  )}
+                </div>
                 <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
-                  {selected.content || "Empty message"}
+                  {(showOriginal ? selected.original_content : selected.content) || "Empty message"}
                 </div>
               </div>
               <div className="mb-4">

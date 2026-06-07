@@ -1,24 +1,33 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const tenantId = req.headers.get('x-tenant-id') || 'default';
+  const userId = req.headers.get('x-user-id') || 'default';
+  const authHeader = req.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-tenant-id': tenantId,
+    'x-user-id': userId,
+  };
+  if (authHeader) {
+    headers.authorization = authHeader;
+  }
+
   try {
     const body = await req.json();
-
-    const baseUrl = process.env.OHC_API_URL || 'http://127.0.0.1:18789';
-    const response = await fetch(`${baseUrl}/api/v1/shipping/rates`, {
+    const res = await fetch(`${backendUrl}/api/v1/shipping/rates`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     });
 
-    if (!response.ok) {
-      throw new Error(`Backend returned status ${response.status}`);
+    if (res.ok) {
+      return NextResponse.json(await res.json());
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Failed to proxy rates:', error);
-    return NextResponse.json({ error: 'Failed to fetch rates' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch shipping rates' }, { status: res.status });
+  } catch {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }

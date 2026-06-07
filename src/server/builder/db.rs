@@ -51,6 +51,59 @@ pub async fn get_site(pool: &PgPool, tenant_id: Uuid, site_id: Uuid) -> Result<S
     .await
 }
 
+#[derive(sqlx::FromRow)]
+pub struct SiteStructureRow {
+    pub site_id: Uuid,
+    pub site_domain: Option<String>,
+    pub page_id: Option<Uuid>,
+    pub page_path: Option<String>,
+    pub page_title: Option<String>,
+    pub page_seo_metadata: Option<Value>,
+    pub block_id: Option<Uuid>,
+    pub block_type: Option<String>,
+    pub block_content: Option<Value>,
+    pub block_sort_order: Option<i32>,
+}
+
+pub fn site_structure_query() -> &'static str {
+    r#"
+    SELECT
+        s.id AS site_id,
+        s.domain AS site_domain,
+        p.id AS page_id,
+        p.path AS page_path,
+        p.title AS page_title,
+        p.seo_metadata AS page_seo_metadata,
+        b.id AS block_id,
+        b.block_type AS block_type,
+        b.content AS block_content,
+        b.sort_order AS block_sort_order
+    FROM builder_sites s
+    LEFT JOIN builder_pages p
+        ON p.tenant_id = s.tenant_id
+       AND p.site_id = s.id
+    LEFT JOIN builder_blocks b
+        ON b.tenant_id = s.tenant_id
+       AND b.page_id = p.id
+    WHERE s.tenant_id = $1
+      AND s.id = $2
+    ORDER BY p.path ASC, b.sort_order ASC
+    "#
+}
+
+pub async fn get_site_structure_rows(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    site_id: Uuid,
+) -> Result<Vec<SiteStructureRow>, sqlx::Error> {
+    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    sqlx::query_as::<_, SiteStructureRow>(site_structure_query())
+        .bind(tenant_id)
+        .bind(site_id)
+        .fetch_all(&mut *conn)
+        .await
+}
+
 pub async fn create_brand_toolbox(
     pool: &PgPool,
     tenant_id: Uuid,
