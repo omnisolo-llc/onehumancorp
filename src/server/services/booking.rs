@@ -615,7 +615,7 @@ impl BookingEngineService for NativeBookingService {
 
     async fn sync_calendar(
         &self,
-        request: Request<SyncCalendarRequest>,
+        _request: Request<SyncCalendarRequest>,
     ) -> Result<Response<SyncCalendarResponse>, Status> {
         Ok(Response::new(SyncCalendarResponse {
             status: "Sync queued".to_string(),
@@ -630,7 +630,7 @@ mod native_booking_tests {
     use tonic::Request;
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
     use ::server_ohc::app::{
-    SyncCalendarRequest, SyncCalendarResponse,ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
+    ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
 
     #[tokio::test]
     async fn test_native_booking_invalid_timeslot_format() {
