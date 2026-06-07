@@ -1,14 +1,129 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
+use std::sync::Arc;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RescheduleIntent {
+    pub original_message: String,
+    pub suggested_time: String,
+    pub booking_id: Option<String>,
+}
+
+#[async_trait::async_trait]
+pub trait BookingIntentPlanner: Send + Sync {
+    async fn plan_reschedule_intent(
+        &self,
+        tenant_id: &str,
+        payload: &Value,
+    ) -> Result<Option<RescheduleIntent>, String>;
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OperationsIntentBackend {
+    Local,
+    Minimax { api_key: String },
+}
+
+impl OperationsIntentBackend {
+    pub fn from_env() -> Self {
+        match std::env::var("OHC_OPERATIONS_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            .as_deref()
+        {
+            Ok("minimax") => {
+                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                if api_key.trim().is_empty() {
+                    Self::Local
+                } else {
+                    Self::Minimax { api_key }
+                }
+            }
+            _ => Self::Local,
+        }
+    }
+}
+
+struct RuntimeBookingIntentPlanner {
+    backend: OperationsIntentBackend,
+}
+
+impl RuntimeBookingIntentPlanner {
+    fn from_env() -> Self {
+        Self {
+            backend: OperationsIntentBackend::from_env(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl BookingIntentPlanner for RuntimeBookingIntentPlanner {
+    async fn plan_reschedule_intent(
+        &self,
+        tenant_id: &str,
+        payload: &Value,
+    ) -> Result<Option<RescheduleIntent>, String> {
+        let original_message = payload
+            .get("message")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim();
+        if original_message.is_empty() {
+            return Ok(None);
+        }
+
+        let payload_json = serde_json::to_string(payload).map_err(|e| e.to_string())?;
+        let prompt = format!(
+            "You are the OneHumanCorp operations planner. Decide whether a customer message is asking to reschedule an appointment. Return strict JSON only with keys intent, suggested_time, confidence, booking_id, and original_message. intent must be reschedule or none. confidence is 0.0 to 1.0. suggested_time must be the ISO8601 string of the requested time. booking_id is the string ID of the booking if present in context. Tenant: {tenant_id}. Payload: {payload_json}"
+        );
+
+        let raw = match &self.backend {
+            OperationsIntentBackend::Minimax { api_key } => {
+                crate::minimax::MinimaxClient::new(api_key.clone())
+                    .reason(&prompt)
+                    .await
+            }
+            OperationsIntentBackend::Local => crate::minimax::LocalLLMClient::new()
+                .reason(&prompt)
+                .await,
+        }?;
+
+        let parsed: Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+        if parsed.get("intent").and_then(|i| i.as_str()) == Some("reschedule") {
+            let confidence = parsed.get("confidence").and_then(|c| c.as_f64()).unwrap_or(0.0);
+            if confidence > 0.6 {
+                return Ok(Some(RescheduleIntent {
+                    original_message: original_message.to_string(),
+                    suggested_time: parsed.get("suggested_time").and_then(|t| t.as_str()).unwrap_or("unknown").to_string(),
+                    booking_id: parsed.get("booking_id").and_then(|t| t.as_str()).map(|s| s.to_string()),
+                }));
+            }
+        }
+        Ok(None)
+    }
+}
 
 pub struct OperationsAgent {
-    orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    orchestrator: Arc<DepartmentOrchestrator>,
+    booking_intent_planner: Arc<dyn BookingIntentPlanner>,
 }
 
 impl OperationsAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
-        Self { orchestrator }
+        Self {
+            orchestrator,
+            booking_intent_planner: Arc::new(RuntimeBookingIntentPlanner::from_env()),
+        }
+    }
+
+    pub fn with_planner(
+        orchestrator: Arc<DepartmentOrchestrator>,
+        booking_intent_planner: Arc<dyn BookingIntentPlanner>,
+    ) -> Self {
+        Self {
+            orchestrator,
+            booking_intent_planner,
+        }
     }
 }
 
@@ -21,6 +136,7 @@ impl Department for OperationsAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.quote.accepted".to_string(),
+            "tenant.booking.reschedule_requested".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
         ]
@@ -38,7 +154,21 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
+        let mut payload = event.payload.clone();
+
         let action_description = match event.event_type.as_str() {
+            "tenant.booking.reschedule_requested" => {
+                if let Ok(Some(intent)) = self.booking_intent_planner.plan_reschedule_intent(&event.tenant_id, &event.payload).await {
+                    let mut obj = payload.as_object_mut().unwrap();
+                    obj.insert("suggested_time".to_string(), Value::String(intent.suggested_time.clone()));
+                    if let Some(booking_id) = intent.booking_id {
+                        obj.insert("booking_id".to_string(), Value::String(booking_id));
+                    }
+                    format!("Review Reschedule Request for {}", intent.suggested_time)
+                } else {
+                    "Review Reschedule Request".to_string()
+                }
+            },
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event
@@ -64,7 +194,7 @@ impl Department for OperationsAgent {
             action_description,
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            payload,
         ).await?;
 
         if event.event_type == "tenant.subscription.fulfillment_batch.created" {
