@@ -996,7 +996,7 @@ impl BookingEngineService for NativeBookingService {
                 if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                     let is_locked: bool = redis::cmd("EXISTS").arg(&pos_lock_key).query_async(&mut conn).await.unwrap_or(false);
                     if is_locked {
-                        return Err(Status::resource_exhausted("Product inventory is currently being checked out in-store"));
+                        return Err(Status::resource_exhausted("Item just sold out in-store"));
                     }
                 }
             }

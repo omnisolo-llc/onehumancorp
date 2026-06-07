@@ -89,7 +89,9 @@ test.describe('In-Person Payment (POS) Flow with Concurrent Online Checkout', ()
     });
 
     // Verify that the online checkout fails due to POS lock
-    expect(onlineRes.status()).not.toBe(200); // Usually a 500/400 due to resource exhausted in gRPC translation, or specifically 14 / ResourceExhausted
+    expect(onlineRes.status()).not.toBe(200);
+    const errData = await onlineRes.json();
+    expect(errData.message || errData.error || errData.details || JSON.stringify(errData)).toContain("Item just sold out in-store"); // Usually a 500/400 due to resource exhausted in gRPC translation, or specifically 14 / ResourceExhausted
 
     // Back to POS, wait for payment completion (simulated in page.tsx after 1s)
     await expect(page.locator('text=Payment Completed')).toBeVisible();

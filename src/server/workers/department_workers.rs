@@ -211,6 +211,21 @@ pub mod pos_sync_worker {
                         .await
                         .map_err(|e| e.to_string())?;
 
+                    if new_stock <= 5 {
+                        let ai_task_id = Uuid::new_v4().to_string();
+                        let ai_payload = json!({
+                            "product_id": product_id,
+                            "remaining_stock": new_stock,
+                            "threshold": 5,
+                            "message": format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                        }).to_string();
+                        if let Err(e) = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                            .bind(&ai_task_id).bind(tenant_id).bind(&ai_payload).execute(&mut *tx).await {
+                            tracing::error!("Failed to enqueue LowStockAlert: {}", e);
+                        }
+                    }
+
+
                     let cache = crate::builder::edge::get_edge_cache();
                     cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
