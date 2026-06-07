@@ -41,7 +41,7 @@ export default function HelpCenterPage() {
             placeholder="Search for help articles and videos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 rounded-2xl border border-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 backdrop-blur-[20px] saturate-200 bg-white/70 hover:bg-white/80 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
+            className="w-full p-4 rounded-2xl border border-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.08)] text-gray-900 backdrop-blur-2xl saturate-150 bg-white/60 hover:bg-white/70 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
           />
         </div>
 
@@ -62,7 +62,7 @@ export default function HelpCenterPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
-                          <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-white/50 group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
+                          <div className="bg-white/50 backdrop-blur-2xl saturate-150 p-6 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/40 group-hover:border-blue-300/60 group-hover:shadow-[0_16px_48px_rgba(59,130,246,0.15)] group-hover:-translate-y-1 hover:bg-white/70 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
                             <h3 className="text-xl font-bold font-outfit text-blue-600 mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>

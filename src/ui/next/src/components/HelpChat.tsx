@@ -130,9 +130,9 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
+        <div className="fixed bottom-24 right-6 z-[9999] w-[360px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-2xl saturate-150 rounded-3xl shadow-[0_16px_48px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden border border-white/40 animate-slide-up-chat">
           {/* Header */}
-          <div id="ai-chat-header" className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-[20px]">
+          <div id="ai-chat-header" className="bg-gradient-to-r from-blue-600/90 to-indigo-600/90 text-white p-4 flex justify-between items-center backdrop-blur-2xl border-b border-white/10">
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
               <div>
@@ -150,7 +150,7 @@ export function HelpChat() {
           <div className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent flex flex-col gap-5 font-inter text-sm">
             {messages.map(msg => (
               <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${
+                <div className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_4px_16px_rgba(0,0,0,0.04)] ${
                   msg.sender === 'user'
                     ? 'bg-blue-600/95 backdrop-blur-[20px] saturate-200 text-white rounded-br-sm border border-blue-500/50'
                     : 'bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm'
