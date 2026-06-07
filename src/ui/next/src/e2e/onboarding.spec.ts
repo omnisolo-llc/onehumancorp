@@ -250,6 +250,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByText('Start Onboarding').click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('My Restored Business');
+    await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Save Draft' }).click();
     await expect(page.getByText('Draft Saved!')).toBeVisible();
 
