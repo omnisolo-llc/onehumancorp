@@ -218,11 +218,12 @@ impl Department for SalesAgent {
         vec![
             "tenant.quote.requested".to_string(),
             "tenant.message.received".to_string(),
+            "tenant.omnichannel.message.received".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.message.received" {
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let planned_intent = match self
                 .quote_intent_planner
                 .plan_quote_intent(&event.tenant_id, &event.payload)
