@@ -133,7 +133,7 @@ fn matches_include(filename: &str, include: &str) -> bool {
 pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Grep".to_string(),
-        description: "Search for a regex pattern in files under a directory. Returns file:line:content matches. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Search for a regex pattern in files under a directory. Returns file:line:content matches. Used for Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",

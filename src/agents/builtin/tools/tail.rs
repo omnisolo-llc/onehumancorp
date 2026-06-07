@@ -99,7 +99,7 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
 pub fn tail_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Tail".to_string(),
-        description: "Read the last N lines of a file (default 10). Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Read the last N lines of a file (default 10). Used for Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
