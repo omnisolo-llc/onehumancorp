@@ -55,6 +55,7 @@ describe('useOnboardingStore', () => {
     useOnboardingStore.getState().setFirstProductName('Coffee');
     useOnboardingStore.getState().setFirstProductPrice('5.00');
     useOnboardingStore.getState().setDomainChoice('custom');
+    useOnboardingStore.getState().setIsInstantBuild(true);
 
     const state = useOnboardingStore.getState();
     expect(state.businessName).toBe('Test Business');
@@ -64,6 +65,7 @@ describe('useOnboardingStore', () => {
     expect(state.firstProductName).toBe('Coffee');
     expect(state.firstProductPrice).toBe('5.00');
     expect(state.domainChoice).toBe('custom');
+    expect(state.isInstantBuild).toBe(true);
   });
 
   it('should persist state to localStorage', () => {

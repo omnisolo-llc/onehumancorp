@@ -477,6 +477,80 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('Step 1 (chatStep 0): Offers Instant AI Build and transitions to chatStep 5', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 1, chatStep: 0 });
+    });
+
+    await renderOnboardingWizard();
+
+    const instantBuildBtn = screen.getByRole('link', { name: /Instant AI Build/i });
+    expect(instantBuildBtn).toBeInTheDocument();
+
+    await user.click(instantBuildBtn);
+
+    await waitFor(() => {
+      expect(useOnboardingStore.getState().chatStep).toBe(5);
+      expect(screen.getByText('Instant AI Storefront')).toBeInTheDocument();
+    });
+  });
+
+  it('Step 1 (chatStep 5): Instant Build validation and submission works', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock successful API response
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_name: 'Instant Bakery',
+            business_type: 'Bakery',
+            initial_products: [{ name: 'Instant Cake', price: '25.00' }],
+            categories: ['food']
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 1, chatStep: 5 });
+    });
+
+    await renderOnboardingWizard();
+
+    const textarea = screen.getByRole('textbox');
+    const submitBtn = screen.getByRole('button', { name: /Generate Store/i });
+
+    // Wait for the textarea to be loaded
+    expect(textarea).toBeInTheDocument();
+
+    // Check validation error directly when textarea is too short
+    await user.type(textarea, 'Short');
+
+    // The button is disabled when length is < 10, so it can't be clicked.
+    expect(submitBtn).toBeDisabled();
+
+    // Provide valid description
+    await user.clear(textarea);
+    await user.type(textarea, 'This is a long enough description to pass validation.');
+
+    expect(submitBtn).not.toBeDisabled();
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      const state = useOnboardingStore.getState();
+      expect(state.step).toBe(2); // Should navigate to review step
+      expect(state.businessName).toBe('Instant Bakery');
+      expect(state.businessType).toBe('Bakery');
+      expect(state.firstProductName).toBe('Instant Cake');
+      expect(state.firstProductPrice).toBe('25.00');
+    });
+  });
+
   it('Step 5: Shows Live Screen with correct links', async () => {
     act(() => {
       useOnboardingStore.setState({

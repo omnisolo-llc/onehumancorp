@@ -22,7 +22,7 @@ function SetupIcon({ name }: { name: SetupIconName }) {
 
 function IconLabel({ icon, children }: { icon: SetupIconName; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center justify-center gap-2">
+    <span className="inline-flex items-center justify-center gap-2 text-inherit">
       <SetupIcon name={icon} />
       <span>{children}</span>
     </span>
@@ -276,6 +276,46 @@ export default function OnboardingWizard() {
     }
   };
 
+  const handleInstantIntake = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const intakeRes = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: businessDescription })
+      });
+
+      const intakeData = await intakeRes.json();
+      if (!intakeRes.ok) {
+        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+      }
+
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
+
+      setStep(2); await syncStateToBackend({ step: 2 }); // Go to review step
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred processing details');
+      setStep(1); syncStateToBackend({ step: 1 });
+      setChatStep(5); syncStateToBackend({ chatStep: 5 });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleStartOnboarding = async () => {
     const errors: Record<string, string> = {};
     if (!adminName.trim()) {
@@ -422,14 +462,21 @@ export default function OnboardingWizard() {
                   <button
                     role="link"
                     onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }}
-                    className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                    className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mb-4"
                   >
-                    Start Onboarding
+                    Start Guided Setup
+                  </button>
+                  <button
+                    role="link"
+                    onClick={() => { setChatStep(5); syncStateToBackend({ chatStep: 5 }); }}
+                    className="w-full bg-white dark:bg-[#1a1a1a] text-[#0066FF] border border-[#0066FF] min-h-[54px] p-4 rounded-[8px] font-bold hover:bg-[#0066FF]/10 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  >
+                    Instant AI Build
                   </button>
                 </div>
               )}
 
-              {chatStep > 0 && (
+              {chatStep > 0 && chatStep < 5 && (
                 <>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
@@ -635,6 +682,55 @@ export default function OnboardingWizard() {
                           Analyzing...
                         </span>
                       ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 5 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                  <button onClick={() => { setChatStep(0); syncStateToBackend({ chatStep: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Instant AI Storefront</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                    Tell us about your business in a paragraph, or paste your Instagram bio. We'll build your entire system in 30 seconds.
+                  </p>
+
+                  <div className="w-full space-y-4 flex-1">
+                    <textarea
+                      autoFocus
+                      rows={5}
+                      value={businessDescription}
+                      onChange={(e) => setBusinessDescription(e.target.value)}
+                      placeholder="e.g. I sell custom vegan cookies and cakes in Portland. I need to handle online orders, manage pickups, and send automated confirmation emails..."
+                      className="w-full p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner custom-scrollbar resize-none"
+                    />
+                  </div>
+
+                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+                  <div className="mt-auto pt-6 w-full">
+                    <button
+                      onClick={() => {
+                        if (businessDescription.trim().length < 10) {
+                          setValidationError('Please provide a bit more detail (at least 10 characters).');
+                          return;
+                        }
+                        setValidationError('');
+                        handleInstantIntake();
+                      }}
+                      disabled={businessDescription.trim().length < 10 || isLoading}
+                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5 text-white backdrop-filter backdrop-blur-md rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Generating Store...
+                        </span>
+                      ) : <IconLabel icon="launch">Generate Store (30 seconds)</IconLabel>}
                     </button>
                   </div>
                 </div>
