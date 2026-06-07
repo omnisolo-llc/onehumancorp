@@ -222,19 +222,32 @@ export function UnifiedAgentFeed() {
                         </>
                       ) : (
                         <>
-                          {approval.payload.context.abandoned_carts_count !== undefined && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.context.abandoned_carts_count}</span>
+                          {approval.payload.context.weekly_health_report === true ? (
+                            <div className="flex flex-col gap-2">
+                              <div className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="font-semibold">Summary:</span> {approval.payload.context.summary}
+                              </div>
+                              <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">Suggestion:</span> {approval.payload.context.actionable_suggestion}
+                              </div>
                             </div>
-                          )}
-                          {approval.payload.context.potential_revenue !== undefined && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
-                              <span className="font-semibold text-green-600 dark:text-green-400">
-                                ${Number(approval.payload.context.potential_revenue).toFixed(2)}
-                              </span>
-                            </div>
+                          ) : (
+                            <>
+                              {approval.payload.context.abandoned_carts_count !== undefined && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.context.abandoned_carts_count}</span>
+                                </div>
+                              )}
+                              {approval.payload.context.potential_revenue !== undefined && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
+                                  <span className="font-semibold text-green-600 dark:text-green-400">
+                                    ${Number(approval.payload.context.potential_revenue).toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </>
                       )}
@@ -258,6 +271,25 @@ export function UnifiedAgentFeed() {
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Dismiss proposal"
                         data-testid="dismiss-sale"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.context?.weekly_health_report === true ? (
+                    <div className="flex gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Draft it"
+                        data-testid="approve-draft"
+                      >
+                        Yes, draft it!
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss proposal"
+                        data-testid="dismiss-draft"
                       >
                         Dismiss
                       </button>
