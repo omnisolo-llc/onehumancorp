@@ -825,6 +825,174 @@ impl DB {
                         metadata TEXT DEFAULT '{}',
                         UNIQUE(tenant_id, milestone_type)
                     );
+                    CREATE TABLE IF NOT EXISTS pos_offline_transactions (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        client_id TEXT NOT NULL,
+
+                        amount_cents BIGINT NOT NULL,
+
+                        currency TEXT NOT NULL DEFAULT 'USD',
+
+                        payload TEXT NOT NULL DEFAULT '{}',
+
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_pos_offline_transactions_tenant ON pos_offline_transactions(tenant_id, status);
+
+
+
+                    CREATE TABLE IF NOT EXISTS task_dependencies (
+
+                        task_id TEXT NOT NULL,
+
+                        depends_on_task_id TEXT NOT NULL,
+
+                        tenant_id TEXT,
+
+                        PRIMARY KEY (task_id, depends_on_task_id)
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_task_dependencies_tenant_id ON task_dependencies(tenant_id);
+
+
+
+                    CREATE TABLE IF NOT EXISTS delivery_zones (
+
+                        id TEXT PRIMARY KEY,
+
+                        organization_id TEXT NOT NULL,
+
+                        polygon TEXT,
+
+                        flat_fee_cents BIGINT NOT NULL DEFAULT 0,
+
+                        min_order_value_cents BIGINT NOT NULL DEFAULT 0,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_delivery_zones_org ON delivery_zones(organization_id);
+
+
+
+                    CREATE TABLE IF NOT EXISTS route_plans (
+
+                        id TEXT PRIMARY KEY,
+
+                        organization_id TEXT NOT NULL,
+
+                        delivery_date TEXT NOT NULL,
+
+                        waypoint_sequence TEXT NOT NULL DEFAULT '[]',
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_route_plans_org_date ON route_plans(organization_id, delivery_date);
+
+
+
+                    CREATE TABLE IF NOT EXISTS delivery_tasks (
+
+                        id TEXT PRIMARY KEY,
+
+                        organization_id TEXT NOT NULL,
+
+                        order_id TEXT NOT NULL,
+
+                        driver_id TEXT,
+
+                        route_plan_id TEXT,
+
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+
+                        estimated_arrival TIMESTAMP,
+
+                        delivery_location TEXT,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_delivery_tasks_org ON delivery_tasks(organization_id);
+
+                    CREATE INDEX IF NOT EXISTS idx_delivery_tasks_order ON delivery_tasks(order_id);
+
+                    CREATE INDEX IF NOT EXISTS idx_delivery_tasks_route_plan ON delivery_tasks(route_plan_id);
+
+
+
+                    CREATE TABLE IF NOT EXISTS ohc_job_queue (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        parent_task_id TEXT,
+
+                        job_type TEXT NOT NULL,
+
+                        payload TEXT NOT NULL DEFAULT '{}',
+
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+
+                        retry_count INTEGER NOT NULL DEFAULT 0,
+
+                        max_retries INTEGER NOT NULL DEFAULT 3,
+
+                        next_retry_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        locked_until TIMESTAMP,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_ohc_job_queue_polling ON ohc_job_queue(status, next_retry_at);
+
+                    CREATE INDEX IF NOT EXISTS idx_ohc_job_queue_tenant ON ohc_job_queue(tenant_id);
+
+
+
+                    CREATE TABLE IF NOT EXISTS ohc_universal_ledger (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        department TEXT NOT NULL,
+
+                        action_type TEXT NOT NULL,
+
+                        state_change TEXT NOT NULL,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_ohc_universal_ledger_tenant ON ohc_universal_ledger(tenant_id, created_at DESC);
+
                     CREATE TABLE IF NOT EXISTS customer360 (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

@@ -680,4 +680,338 @@ mod parity_tests {
         }
     }
 
+
+
+    #[tokio::test]
+    async fn test_parity_pos_offline_transactions() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let tenant_id = "tenant_parity";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status) VALUES (?, ?, 'client_1', 1000, 'USD', '{}', 'PENDING')")
+                .bind(&task_id)
+                .bind(tenant_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let amount: i64 = sqlx::query_scalar("SELECT amount_cents FROM pos_offline_transactions WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(amount, 1000);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status) VALUES ($1, $2, 'client_1', 1000, 'USD', '{}'::jsonb, 'PENDING')")
+                .bind(&task_id)
+                .bind(tenant_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let amount: i64 = sqlx::query_scalar("SELECT amount_cents FROM pos_offline_transactions WHERE id = $1")
+                .bind(&task_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(amount, 1000);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_task_dependencies() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let depends_on_task_id = uuid::Uuid::new_v4().to_string();
+        let tenant_id = "tenant_parity";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id, tenant_id) VALUES (?, ?, ?)")
+                .bind(&task_id)
+                .bind(&depends_on_task_id)
+                .bind(tenant_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let result_tenant_id: String = sqlx::query_scalar("SELECT tenant_id FROM task_dependencies WHERE task_id = ? AND depends_on_task_id = ?")
+                .bind(&task_id)
+                .bind(&depends_on_task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(result_tenant_id, tenant_id);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_task_id = uuid::Uuid::parse_str(&task_id).unwrap();
+            let parsed_depends_on_task_id = uuid::Uuid::parse_str(&depends_on_task_id).unwrap();
+
+            sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id, tenant_id) VALUES ($1, $2, $3)")
+                .bind(parsed_task_id)
+                .bind(parsed_depends_on_task_id)
+                .bind(tenant_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let result_tenant_id: String = sqlx::query_scalar("SELECT tenant_id FROM task_dependencies WHERE task_id = $1 AND depends_on_task_id = $2")
+                .bind(parsed_task_id)
+                .bind(parsed_depends_on_task_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(result_tenant_id, tenant_id);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_delivery_zones() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let zone_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "org_parity";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO delivery_zones (id, organization_id, flat_fee_cents, min_order_value_cents) VALUES (?, ?, 500, 1500)")
+                .bind(&zone_id)
+                .bind(org_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let flat_fee: i64 = sqlx::query_scalar("SELECT flat_fee_cents FROM delivery_zones WHERE id = ?")
+                .bind(&zone_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(flat_fee, 500);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&zone_id).unwrap();
+
+            sqlx::query("INSERT INTO delivery_zones (id, organization_id, flat_fee_cents, min_order_value_cents) VALUES ($1, $2, 500, 1500)")
+                .bind(parsed_id)
+                .bind(org_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let flat_fee: i64 = sqlx::query_scalar("SELECT flat_fee_cents FROM delivery_zones WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(flat_fee, 500);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_route_plans() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let plan_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "org_parity";
+
+        let date_str = "2024-01-01";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO route_plans (id, organization_id, delivery_date) VALUES (?, ?, ?)")
+                .bind(&plan_id)
+                .bind(org_id)
+                .bind(date_str)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let result_org: String = sqlx::query_scalar("SELECT organization_id FROM route_plans WHERE id = ?")
+                .bind(&plan_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(result_org, org_id);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&plan_id).unwrap();
+            let parsed_date = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d").unwrap();
+
+            sqlx::query("INSERT INTO route_plans (id, organization_id, delivery_date) VALUES ($1, $2, $3)")
+                .bind(parsed_id)
+                .bind(org_id)
+                .bind(parsed_date)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let result_org: String = sqlx::query_scalar("SELECT organization_id FROM route_plans WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(result_org, org_id);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_delivery_tasks() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let org_id = "org_parity";
+        let order_id = "order_123";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO delivery_tasks (id, organization_id, order_id) VALUES (?, ?, ?)")
+                .bind(&task_id)
+                .bind(org_id)
+                .bind(order_id)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let status: String = sqlx::query_scalar("SELECT status FROM delivery_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(status, "PENDING");
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
+
+            sqlx::query("INSERT INTO delivery_tasks (id, organization_id, order_id) VALUES ($1, $2, $3)")
+                .bind(parsed_id)
+                .bind(org_id)
+                .bind(order_id)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let status: String = sqlx::query_scalar("SELECT status FROM delivery_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(status, "PENDING");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_ohc_job_queue() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let tenant_id = "tenant_parity";
+        let job_type = "test_job";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES (?, ?, ?, '{}')")
+                .bind(&job_id)
+                .bind(tenant_id)
+                .bind(job_type)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let status: String = sqlx::query_scalar("SELECT status FROM ohc_job_queue WHERE id = ?")
+                .bind(&job_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(status, "PENDING");
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, $3, '{}'::jsonb)")
+                .bind(&job_id)
+                .bind(tenant_id)
+                .bind(job_type)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let status: String = sqlx::query_scalar("SELECT status FROM ohc_job_queue WHERE id = $1")
+                .bind(&job_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(status, "PENDING");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parity_ohc_universal_ledger() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let ledger_id = uuid::Uuid::new_v4().to_string();
+        let tenant_id = "tenant_parity";
+        let department = "finance";
+        let action_type = "payment";
+
+        // SQLite
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES (?, ?, ?, ?, '{}')")
+                .bind(&ledger_id)
+                .bind(tenant_id)
+                .bind(department)
+                .bind(action_type)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let dept: String = sqlx::query_scalar("SELECT department FROM ohc_universal_ledger WHERE id = ?")
+                .bind(&ledger_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            assert_eq!(dept, department);
+        }
+
+        // Postgres
+        if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, $3, $4, '{}'::jsonb)")
+                .bind(&ledger_id)
+                .bind(tenant_id)
+                .bind(department)
+                .bind(action_type)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let dept: String = sqlx::query_scalar("SELECT department FROM ohc_universal_ledger WHERE id = $1")
+                .bind(&ledger_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            assert_eq!(dept, department);
+        }
+    }
+
 }
