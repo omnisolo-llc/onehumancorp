@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     timeout-minutes: 20
     permissions:
       contents: read
@@ -61,7 +61,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     permissions:
       contents: read
       pages: write
