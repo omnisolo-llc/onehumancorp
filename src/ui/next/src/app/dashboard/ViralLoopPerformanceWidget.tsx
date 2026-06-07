@@ -10,39 +10,27 @@ export function ViralLoopPerformanceWidget() {
   const [pendingRewards, setPendingRewards] = useState(0);
 
   useEffect(() => {
-    async function fetchInvites() {
+    async function fetchMetrics() {
       try {
-        const res = await fetch("/api/v1/growth/team-invites");
+        const res = await fetch("/api/v1/growth/team-invites/aggregated-metrics");
         if (res.ok) {
           const data = await res.json();
-          setInvitesSent(data.invites?.length || 0);
-        }
-      } catch (err) {
-        console.error("Failed to fetch invites", err);
-      }
-    }
-
-    async function fetchReferrals() {
-      try {
-        const res = await fetch("/api/v1/growth/referrals/stats");
-        if (res.ok) {
-          const data = await res.json();
-          setActiveReferrals(data.active_referrals || 0);
-          setRevenue(data.revenue_from_referrals || 0);
-          setPendingRewards(data.pending_rewards || 0);
+          setInvitesSent(data.total_invites || 0);
+          setActiveReferrals(data.metrics?.active_referrals || 0);
+          setRevenue(data.metrics?.revenue || 0);
+          setPendingRewards(data.metrics?.pending_rewards || 0);
         } else {
-            // Default 0
-            setActiveReferrals(0);
-            setRevenue(0);
-            setPendingRewards(0);
+          setInvitesSent(0);
+          setActiveReferrals(0);
+          setRevenue(0);
+          setPendingRewards(0);
         }
       } catch (err) {
-        console.error("Failed to fetch referrals", err);
+        console.error("Failed to fetch viral loop metrics", err);
       }
     }
 
-    fetchInvites();
-    fetchReferrals();
+    fetchMetrics();
   }, []);
 
   return (
