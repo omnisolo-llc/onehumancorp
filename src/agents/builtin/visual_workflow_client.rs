@@ -74,6 +74,7 @@ mod tests {
     use tower::ServiceExt;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
     use crate::visual_workflow::{Node, NodeType, Edge};
+    use crate::llm::LlmClient;
 
     struct MockVisualClientLlm;
     #[async_trait::async_trait]
