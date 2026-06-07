@@ -4,7 +4,7 @@ use axum::{
     Router,
     extract::{Extension, Json},
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
@@ -30,6 +30,14 @@ pub struct CreateProductRequest {
 pub struct CreateProductResponse {
     pub success: bool,
     pub message: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct ProductDto {
+    pub id: String,
+    pub name: String,
+    pub price: String,
+    pub status: String,
 }
 
 #[derive(Serialize)]
@@ -134,14 +142,20 @@ async fn handle_create_product(
 
     let product_id = uuid::Uuid::new_v4().to_string();
 
+    let mut price_cents = 0;
+    if let Ok(p) = payload.price.replace("$", "").parse::<f64>() {
+        price_cents = (p * 100.0) as i64;
+    }
+
     let insert_product = sqlx::query(
-        "INSERT INTO products (id, tenant_id, title, description, type, inventory_count) VALUES ($1, $2, $3, $4, $5, 100)"
+        "INSERT INTO products (id, tenant_id, title, description, type, inventory_count, price_cents) VALUES ($1, $2, $3, $4, $5, 100, $6)"
     )
     .bind(&product_id)
     .bind(&tenant_id)
     .bind(&payload.name)
     .bind(&payload.description)
     .bind(&payload.item_type)
+    .bind(price_cents)
     .execute(&mut *conn)
     .await;
 
@@ -225,5 +239,50 @@ async fn handle_create_product(
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/products", get(handle_list_products))
         .layer(Extension(hub))
+}
+
+async fn handle_list_products(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json::<Vec<ProductDto>>(vec![])).into_response();
+        }
+    };
+
+    let rows = sqlx::query("SELECT id, title, price, price_cents, inventory_count FROM products WHERE tenant_id = $1 ORDER BY created_at DESC")
+        .bind(&tenant_id)
+        .fetch_all(&mut *conn)
+        .await;
+
+    let mut products: Vec<ProductDto> = Vec::new();
+    match rows {
+        Ok(rows_data) => {
+            for r in rows_data {
+                let price_cents: i64 = r.try_get("price_cents").unwrap_or(0);
+                let formatted_price = format!("${:.2}", (price_cents as f64) / 100.0);
+
+                products.push(ProductDto {
+                    id: r.try_get("id").unwrap_or_default(),
+                    name: r.try_get("title").unwrap_or_default(),
+                    price: formatted_price,
+                    status: "Published".to_string(),
+                });
+            }
+        },
+        Err(e) => {
+            tracing::error!("Failed to fetch products: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(products)).into_response();
+        }
+    }
+    (StatusCode::OK, Json(products)).into_response()
 }
