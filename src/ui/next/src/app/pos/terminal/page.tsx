@@ -196,7 +196,7 @@ export default function TerminalPage() {
       setOrderStatus(t('Processing/Reserving...'));
 
       try {
-        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+        const reserveRes = await fetch('/api/pos/terminal/reserve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
@@ -212,7 +212,7 @@ export default function TerminalPage() {
 
         setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
-        await fetch('/api/v1/payments/terminal/commit', {
+        await fetch('/api/pos/terminal/commit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })

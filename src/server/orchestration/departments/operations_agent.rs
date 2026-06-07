@@ -23,6 +23,7 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "LowStockAlert".to_string(),
         ]
     }
 
@@ -40,6 +41,22 @@ impl Department for OperationsAgent {
 
         let action_description = match event.event_type.as_str() {
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
+            "LowStockAlert" => {
+                let product_id = event
+                    .payload
+                    .get("product_id")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("unknown product");
+                let remaining_stock = event
+                    .payload
+                    .get("remaining_stock")
+                    .and_then(|value| value.as_i64())
+                    .unwrap_or(0);
+                format!(
+                    "Low stock alert for product {}: {} remaining. Restock recommended.",
+                    product_id, remaining_stock
+                )
+            }
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event
                     .payload
@@ -67,7 +84,7 @@ impl Department for OperationsAgent {
             event.payload.clone(),
         ).await?;
 
-        if event.event_type == "tenant.subscription.fulfillment_batch.created" {
+        if event.event_type == "tenant.subscription.fulfillment_batch.created" || event.event_type == "LowStockAlert" {
             return Ok(());
         }
 
