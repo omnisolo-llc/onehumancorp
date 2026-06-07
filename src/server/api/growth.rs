@@ -883,9 +883,9 @@ async fn handle_get_milestone_card(
     };
 
     let branding = if !has_pro {
-        format!(r##"<a href="https://ohc.app/join?ref={tenant_id}" target="_blank">
+        format!(r##"<a href="https://ohc.app/join?ref={}" target="_blank">
     <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
-  </a>"##)
+  </a>"##, tenant_id)
     } else {
         "".to_string()
     };
@@ -923,7 +923,14 @@ async fn handle_get_milestone_card(
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   {branding}
-</svg>"##);
+</svg>"##,
+    grad_start = grad_start,
+    grad_end = grad_end,
+    icon = icon,
+    title = title,
+    sub = sub,
+    safe_business_name = safe_business_name,
+    branding = branding);
 
     axum::response::Response::builder()
         .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
