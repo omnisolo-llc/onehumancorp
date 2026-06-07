@@ -303,10 +303,6 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
-      <div className="mb-6">
-        <GrowthReferralWidget />
-      </div>
-
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
 
