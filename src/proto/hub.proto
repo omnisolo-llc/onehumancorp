@@ -309,6 +309,7 @@ message StartOnboardingRequest {
   string admin_password = 12;
   string price_type = 13;
   string location = 14;
+  string target_audience = 15;
 }
 
 message StartOnboardingResponse {
