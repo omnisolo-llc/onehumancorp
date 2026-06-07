@@ -16,7 +16,7 @@ export default function GrowthReferralWidget() {
       const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
 
       const res = await fetch('/api/v1/growth/team-invites', {
-        body: JSON.stringify({ team_id: 'test-team', inviter_id: 'test-user' }),
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

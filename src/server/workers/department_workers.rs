@@ -22,13 +22,15 @@ pub mod pos_sync_worker {
     pub struct PosSyncWorker {
         pub db: Arc<DB>,
         pub poll_interval: Duration,
+        pub hub: Arc<crate::hub::Hub>,
     }
 
     impl PosSyncWorker {
-        pub fn new(db: Arc<DB>) -> Self {
+        pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
             Self {
                 db,
                 poll_interval: Duration::from_secs(5),
+                hub,
             }
         }
 
@@ -210,6 +212,10 @@ pub mod pos_sync_worker {
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
+
+                    let cache = crate::builder::edge::get_edge_cache();
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
                 }
             }
 

@@ -4,11 +4,12 @@ use crate::db::DB;
 
 pub struct PosSyncWorker {
     db: Arc<DB>,
+    hub: Arc<crate::hub::Hub>,
 }
 
 impl PosSyncWorker {
-    pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
+        Self { db, hub }
     }
 
     pub async fn handle(&self, job: crate::queue::Job) -> Result<Result<(), String>, String> {
@@ -38,12 +39,28 @@ impl PosSyncWorker {
             let product_id = mutation["product_id"].as_str().unwrap();
             let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
 
-            sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
+            let update_res: Option<(i32,)> = sqlx::query_as("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 RETURNING inventory_count")
                 .bind(quantity_deducted)
                 .bind(product_id)
-                .execute(&mut *tx)
+                .fetch_optional(&mut *tx)
                 .await
                 .unwrap();
+
+            let cache = crate::builder::edge::get_edge_cache();
+            cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+            cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+
+            if let Some((remaining_inventory,)) = update_res {
+                if remaining_inventory == 0 {
+                    let msg = self.hub.sanitize_hub_event(serde_json::json!({
+                        "type": "inventory.sold_out",
+                        "product_id": product_id,
+                        "tenant_id": &job.tenant_id,
+                        "message": format!("Product {} just sold out via POS.", product_id)
+                    }));
+                    self.hub.append_recent_event(msg);
+                }
+            }
         }
 
         sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")
@@ -75,7 +92,9 @@ mod tests {
 
         let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
         let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
-        let worker = PosSyncWorker::new(db.clone());
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let worker = PosSyncWorker::new(db.clone(), hub.clone());
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
