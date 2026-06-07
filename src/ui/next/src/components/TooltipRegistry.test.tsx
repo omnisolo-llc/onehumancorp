@@ -4,14 +4,18 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TooltipProvider, WithTooltip } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-global.fetch = vi.fn().mockImplementation((url) => {
+const mockTooltipFetch = vi.fn().mockImplementation((url) => {
     if (url === '/api/tooltips' || url.toString().includes('/api/tooltips')) {
         return Promise.resolve({ ok: true, json: async () => ({ "test-id": "Fetched tooltip text" }) });
     }
     return Promise.resolve({ ok: true, json: async () => ({}) });
-}) as any;
+});
 
 describe('TooltipRegistry', () => {
+  beforeEach(() => {
+    mockTooltipFetch.mockClear();
+    global.fetch = mockTooltipFetch as any;
+  });
 
   it('renders default text on hover', async () => {
     render(
