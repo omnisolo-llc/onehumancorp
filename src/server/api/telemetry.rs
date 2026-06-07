@@ -43,7 +43,9 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     .and_then(|v| v.as_f64().map(|f| f as i64).or(v.as_i64()))
                     .unwrap_or(item.value as i64);
 
-                ::server_telemetry::record_token_usage(agent_id, role, model, t_type, count);
+                ::server_telemetry::record_token_usage(&agent_id, &role, model, t_type, count);
+                let _agent_id_owned = agent_id.to_string();
+                let _role_owned = role.to_string();
 
                 // Track cost dynamically
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
@@ -67,9 +69,12 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .and_then(Value::as_str)
                         .unwrap_or("unknown_tenant")
                         .to_string();
+                    let agent_id_c = agent_id.to_string();
+                    let role_c = role.to_string();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
                         let _ = ::server_telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
+                        let _ = ::server_telemetry::record_agent_cost(&pool, &agent_id_c, &tenant_id, &role_c, &model_string, "task", cost_usd).await;
                         let cost_cents = (cost_usd * 100.0).round() as i64;
                         let labels_cents = serde_json::json!({
                             "tenant_id": tenant_id.clone(),

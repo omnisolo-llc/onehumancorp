@@ -4091,6 +4091,91 @@
         "overrides": []
       },
       "transparent": true
+    },
+    {
+      "id": 90001,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 198
+      },
+      "type": "row",
+      "title": "Agent Efficiency & ROI",
+      "panels": []
+    },
+    {
+      "id": 90002,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 199
+      },
+      "type": "heatmap",
+      "title": "Token Efficiency by Agent Role",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_agent_efficiency_gauge[5m])) by (agent_role)",
+          "legendFormat": "{{agent_role}}",
+          "format": "time_series"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "id": 69026,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 199
+      },
+      "type": "stat",
+      "title": "Swarm ROI",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[5m])) / sum(rate(ohc_agent_cost[5m]))",
+          "legendFormat": "Total Successes / Total USD Cost"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "id": 90003,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 199
+      },
+      "type": "timeseries",
+      "title": "Tokens per Success",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[5m])) by (agent_role)",
+          "legendFormat": "{{agent_role}}"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "id": 90004,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 207
+      },
+      "type": "timeseries",
+      "title": "Waste Ratio",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_token_usage_by_outcome{outcome=\"FAILED\"}[5m])) / sum(rate(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[5m]))",
+          "legendFormat": "Waste Ratio (Failed / Success)"
+        }
+      ],
+      "transparent": true
     }
   ],
   "refresh": "",
