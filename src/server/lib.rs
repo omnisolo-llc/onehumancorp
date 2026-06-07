@@ -336,6 +336,7 @@ pub mod services {
     pub mod booking;
     pub mod pos;
     pub mod collective;
+
 }
 
 use tonic::{transport::Server, Request, Response, Status};
