@@ -65,10 +65,14 @@ impl OnboardingAgent {
         let response = minimax.reason(&prompt).await?;
 
         // Clean up markdown code blocks if present
-        let clean_json = response.trim_start_matches("```json")
-            .trim_start_matches("```")
-            .trim_end_matches("```")
-            .trim();
+        let mut clean_json = response.as_str();
+        if let Some(start) = clean_json.find('{') {
+            if let Some(end) = clean_json.rfind('}') {
+                if start <= end {
+                    clean_json = &clean_json[start..=end];
+                }
+            }
+        }
 
         let data: IntakeData = serde_json::from_str(clean_json)
             .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;

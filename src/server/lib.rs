@@ -40,6 +40,7 @@ static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCach
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+use server_utils::cache::HybridCache as LocalHybridCache;
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
@@ -77,6 +78,9 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
+    m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
+    m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
+    m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
     m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
@@ -1200,6 +1204,12 @@ impl HubService for MyHubService {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
+        static COST_DASHBOARD_CACHE: std::sync::OnceLock<server_utils::cache::HybridCache<::server_ohc::orchestration::CostDashboardResponse>> = std::sync::OnceLock::new();
+        let cache = COST_DASHBOARD_CACHE.get_or_init(|| server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
+        let cache_key = format!("cost_dashboard:{}", tenant_id);
+        if let Some(cached) = cache.get(&cache_key).await {
+            return Ok(tonic::Response::new(cached));
+        }
 
         let auditor = self.hub.get_cost_auditor();
         let tenant_id_clone = tenant_id.clone();
@@ -1228,7 +1238,7 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + network_cost_f64;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
+        let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
@@ -1238,7 +1248,11 @@ impl HubService for MyHubService {
             period_end: "2024-05-31".to_string(),
             bandwidth_savings: (bandwidth_savings_f64 * 100.0) as i64,
             network_cost: (network_cost_f64 * 100.0) as i64,
-        }))
+        };
+
+        cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(tonic::Response::new(response))
     }
 
     async fn select_plan(
@@ -3299,6 +3313,83 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/settings/voice", axum::routing::get({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                let settings = settings_store.get();
+                axum::response::Json(serde_json::json!({
+                    "voice_receptionist_enabled": settings.voice_receptionist_enabled,
+                    "voice_receptionist_number": settings.voice_receptionist_number,
+                    "voice_receptionist_persona": settings.voice_receptionist_persona,
+                }))
+            }
+        }))
+        .route("/api/settings/voice", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let enabled = req.get("voice_receptionist_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+                let number = req.get("voice_receptionist_number").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let persona = req.get("voice_receptionist_persona").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+                if let Err(e) = settings_store.set_voice_settings(enabled, number, persona) {
+                    ::server_telemetry::record_error_signal("Failed to save voice settings");
+                    tracing::error!("Failed to save voice settings: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false }));
+                }
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
+        .route("/api/settings/voice/provision", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                // Mock Twilio number provisioning
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                let last_four: u32 = rng.gen_range(1000..9999);
+                let mock_number = format!("+1555123{}", last_four);
+
+                let settings = settings_store.get();
+                if let Err(e) = settings_store.set_voice_settings(
+                    settings.voice_receptionist_enabled,
+                    Some(mock_number.clone()),
+                    settings.voice_receptionist_persona,
+                ) {
+                    ::server_telemetry::record_error_signal("Failed to provision voice number");
+                    tracing::error!("Failed to provision voice number: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false, "error": "Internal error" }));
+                }
+
+                axum::response::Json(serde_json::json!({ "success": true, "number": mock_number }))
+            }
+        }))
+        .route("/api/voice/incoming", axum::routing::post({
+            let settings_store = settings_store.clone();
+            let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
+            let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
+                std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+                std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+            ));
+            let voice_router = Arc::new(crate::voice::VoiceContextRouter::new(voice_engine.clone(), twilio_client));
+
+            move |axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let caller_phone = req.get("caller_phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let user_text = req.get("user_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+                let settings = settings_store.get();
+                if !settings.voice_receptionist_enabled {
+                    return axum::response::Json(serde_json::json!({ "reply": "The voice receptionist is currently disabled." }));
+                }
+
+                let merchant_phone = settings.voice_receptionist_number.clone().unwrap_or_default();
+                let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone).await;
+
+                let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone).await;
+
+                voice_engine.end_call(&session_id).await;
+
+                axum::response::Json(serde_json::json!({ "reply": reply }))
+            }
+        }))
         .route("/api/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
@@ -3842,4 +3933,22 @@ async fn api_not_found_handler(req: axum::extract::Request) -> impl axum::respon
         .into_response()
 }
 pub mod crypto;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settings::Store;
+
+    #[tokio::test]
+    async fn test_voice_settings_logic() {
+        let store = Arc::new(Store::new());
+        // Enable Voice Settings
+        store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+
+        let current = store.get();
+        assert_eq!(current.voice_receptionist_enabled, true);
+        assert_eq!(current.voice_receptionist_number, Some("+15551112222".to_string()));
+        assert_eq!(current.voice_receptionist_persona, Some("Professional".to_string()));
+    }
+}
 // resolves #9690

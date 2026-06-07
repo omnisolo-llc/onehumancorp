@@ -132,14 +132,8 @@ export default function OnboardingWizard() {
         body: JSON.stringify({ wizardState })
       });
 
-      await fetch('/api/onboarding/state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-        body: JSON.stringify({ wizardState })
-      });
-
       if (!res.ok) {
-        console.warn('Draft endpoint failed; state endpoint was updated for restoration.');
+        throw new Error('Draft endpoint failed');
       }
 
       setSaveMessage('Draft Saved!');
@@ -460,6 +454,8 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
@@ -523,6 +519,8 @@ export default function OnboardingWizard() {
                     <div>
                       <textarea
                         autoFocus
+                        enterKeyHint="next"
+                        autoCapitalize="sentences"
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         onKeyDown={(e) => {
@@ -587,6 +585,8 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
@@ -664,6 +664,8 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoFocus
+                    enterKeyHint="next"
+                    autoCapitalize="words"
                     value={businessName}
                     onChange={(e) => {
                       setBusinessName(e.target.value);
@@ -681,6 +683,8 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
                   <input
                     type="text"
+                    enterKeyHint="next"
+                    autoCapitalize="words"
                     value={businessType}
                     onChange={(e) => {
                       setBusinessType(e.target.value);
@@ -698,6 +702,8 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
                     type="text"
+                    enterKeyHint="next"
+                    autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
                     className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -708,6 +714,8 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
                       <input
                         type="text"
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
                         className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
@@ -741,7 +749,8 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => {
                     if (businessName.trim().length < 3) {
-                      setValidationError('Business Name must be at least 3 characters.');
+                      setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                      setValidationError('Please fix the errors before continuing.');
                       return;
                     }
                     if (Object.keys(validationErrors).length > 0) {
@@ -823,8 +832,18 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
                       <input
                         type="text"
+                        enterKeyHint="next"
+                        autoCapitalize="words"
                         value={adminName}
-                        onChange={(e) => setAdminName(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminName(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminName: 'Admin Name is required' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminName, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="e.g. Maya Smith"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
@@ -834,8 +853,20 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
+                        enterKeyHint="next"
+                        autoCapitalize="none"
                         value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminEmail(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
+                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                            setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="you@example.com"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
@@ -845,8 +876,19 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
                       <input
                         type="password"
+                        enterKeyHint="done"
                         value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminPassword(val);
+                          if (!val.trim()) {
+                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password is required' }));
+                          } else if (val.length < 8 || !/\d/.test(val)) {
+                            setValidationErrors(prev => ({ ...prev, adminPassword: 'Password must be at least 8 characters and contain a number' }));
+                          } else {
+                            setValidationErrors(prev => { const { adminPassword, ...rest } = prev; return rest; });
+                          }
+                        }}
                         placeholder="••••••••"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
