@@ -112,7 +112,19 @@ pub async fn my_plan_handler(
 
     let base_bill = tier.base_price();
 
-    let next_bill_estimated = base_bill as i32;
+    let now = chrono::Utc::now();
+    use chrono::Datelike;
+    let days_elapsed = now.day() as u32;
+    // rough total days
+    let total_days = 30;
+
+    let projected_cost = ::server_pricing::calculator::calculate_projected_monthly_cost(
+        base_bill,
+        days_elapsed,
+        total_days
+    );
+
+    let next_bill_estimated = projected_cost as i32;
 
     let resp = MyPlanResponse {
         current_plan: plan_name,

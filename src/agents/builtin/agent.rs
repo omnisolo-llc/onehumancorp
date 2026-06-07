@@ -255,31 +255,7 @@ pub struct Agent {
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
     pub sona_matcher: Option<Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
-    pub skill_trace: Arc<tokio::sync::Mutex<crate::expert_team::SkillTrace>>,
 }
-#[derive(Clone, Default)]
-pub struct AgentState {
-    pub messages: Vec<Message>,
-    pub has_tool_calls: bool,
-    pub total_tokens: i32,
-    pub error_counts: std::collections::HashMap<String, u64>,
-    pub last_message: Option<Message>,
-}
-
-pub struct AgentStateReducer;
-
-impl crate::langgraph::Reducer<AgentState> for AgentStateReducer {
-    fn reduce(&self, state: &mut AgentState, update: AgentState) {
-        state.messages.extend(update.messages);
-        state.has_tool_calls = update.has_tool_calls;
-        state.total_tokens = update.total_tokens;
-        state.error_counts.extend(update.error_counts);
-        if update.last_message.is_some() {
-            state.last_message = update.last_message;
-        }
-    }
-}
-
 
 impl Agent {
     pub fn add_tool(&mut self, tool: Tool) {
@@ -296,7 +272,6 @@ impl Agent {
             event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
             sona_matcher: None,
-            skill_trace: Arc::new(tokio::sync::Mutex::new(crate::expert_team::SkillTrace::new())),
         }
     }
 
@@ -793,8 +768,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
-            sona_matcher: self.sona_matcher.clone(),
-            skill_trace: self.skill_trace.clone(),
+                sona_matcher: self.sona_matcher.clone(),
         });
 
         let coord_actor = crate::actor_model::AgentActor {
@@ -866,7 +840,7 @@ impl Agent {
             initial_messages.push(Message::user(initial_message));
         }
 
-        let mut graph = crate::langgraph::StateGraph::<AgentState>::new(std::sync::Arc::new(AgentStateReducer));
+        let mut graph = crate::langgraph::StateGraph::<serde_json::Value>::new(std::sync::Arc::new(crate::langgraph::DefaultReducer));
 
         let llm = self.llm.clone();
         let tools_def: Vec<_> = session_tools.iter().map(|t| crate::types::ToolDefinition {
@@ -896,7 +870,52 @@ impl Agent {
             let llm_cfg_c = llm_cfg.clone();
             let llm_tools_c = llm_tools.clone();
             Box::pin(async move {
-                let msgs = state.messages.clone();
+                let msgs_val = match state.get("messages").and_then(|m| m.as_array()) {
+                    Some(arr) => arr,
+                    None => {
+                        return Err("Missing or invalid 'messages' array in state".into());
+                    }
+                };
+                let mut msgs = vec![];
+                for m in msgs_val {
+                    let role_str = m.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+                    let content = m.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let role = match role_str {
+                        "user" => crate::types::Role::User,
+                        "assistant" => crate::types::Role::Assistant,
+                        "system" => crate::types::Role::System,
+                        "tool" => crate::types::Role::Tool,
+                        _ => crate::types::Role::User,
+                    };
+                    let mut tool_calls = vec![];
+                    if let Some(tcs) = m.get("tool_calls").and_then(|v| v.as_array()) {
+                        for tc in tcs {
+                            tool_calls.push(crate::types::ToolCall {
+                                id: tc.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                name: tc.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                arguments: tc.get("arguments").cloned().unwrap_or(serde_json::json!({})),
+                            });
+                        }
+                    }
+                    let mut tool_results = vec![];
+                    if let Some(trs) = m.get("tool_results").and_then(|v| v.as_array()) {
+                        for tr in trs {
+                            tool_results.push(crate::types::ToolResult {
+                                tool_call_id: tr.get("tool_call_id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                content: tr.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                error: tr.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                            });
+                        }
+                    }
+                    msgs.push(crate::types::Message {
+                        role,
+                        content,
+                        tool_calls,
+                        tool_results,
+                        response_id: None,
+                previous_response_id: None,
+                    });
+                }
 
                 let req = crate::types::ChatRequest {
                     model: llm_cfg_c.model.clone(),
@@ -910,7 +929,8 @@ impl Agent {
                 match llm_client_c.chat(req).await {
                     Ok(resp) => {
                         let total_tokens_this_turn = resp.usage.input_tokens + resp.usage.output_tokens;
-                        let current_total = state.total_tokens + total_tokens_this_turn as i32;
+                        let mut current_total = state.get("total_tokens").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        current_total += total_tokens_this_turn;
 
                         let mut final_content = resp.message.content.clone();
                         let mut has_tool_calls = !resp.message.tool_calls.is_empty();
@@ -921,27 +941,30 @@ impl Agent {
                         }
 
                         let final_tool_calls = if has_tool_calls {
-                            resp.message.tool_calls.clone()
+                            resp.message.tool_calls.iter().map(|tc| serde_json::json!({
+                                "id": tc.id,
+                                "name": tc.name,
+                                "arguments": tc.arguments,
+                            })).collect::<Vec<_>>()
                         } else {
                             vec![]
                         };
 
-                        let new_message = crate::types::Message {
-                            role: crate::types::Role::Assistant,
-                            content: final_content,
-                            tool_calls: final_tool_calls,
-                            tool_results: vec![],
-                            response_id: None,
-                            previous_response_id: None,
-                        };
-
-                        let update = AgentState {
-                            messages: vec![new_message.clone()],
-                            has_tool_calls,
-                            total_tokens: current_total,
-                            error_counts: std::collections::HashMap::new(),
-                            last_message: Some(new_message),
-                        };
+                        let mut update = serde_json::json!({
+                            "has_tool_calls": has_tool_calls,
+                            "total_tokens": current_total,
+                            "last_message": {
+                                "role": "assistant",
+                                "content": final_content,
+                                "tool_calls": final_tool_calls
+                            }
+                        });
+                        // Also append to messages array using the reducer
+                        update.as_object_mut().unwrap().insert("messages".to_string(), serde_json::json!([{
+                                "role": "assistant",
+                                "content": final_content,
+                                "tool_calls": final_tool_calls
+                        }]));
                         Ok(update)
                     }
                     Err(e) => Err(format!("LLM Error: {}", e)),
@@ -956,57 +979,60 @@ impl Agent {
             let tt = tool_tools.clone();
             let cfg_arc_node = cfg_arc.clone();
             Box::pin(async move {
-                let last_msg = state.last_message.as_ref().unwrap();
-                let tool_calls = &last_msg.tool_calls;
+                let last_msg = state.get("last_message").unwrap();
+                let tool_calls = last_msg.get("tool_calls").unwrap().as_array().unwrap();
 
-                let mut error_counts = state.error_counts.clone();
+                let mut error_counts = state.get("error_counts").unwrap().as_object().unwrap().clone();
                 let mut read_only_calls = Vec::new();
                 let mut mutating_calls = Vec::new();
 
-                for tc in tool_calls {
-                    let is_read_only = tt.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+                for tc_val in tool_calls {
+                    let name = tc_val["name"].as_str().unwrap();
+                    let is_read_only = tt.iter().find(|t| t.name == name).map(|t| t.is_read_only).unwrap_or(false);
                     if is_read_only {
-                        read_only_calls.push(tc.clone());
+                        read_only_calls.push(tc_val.clone());
                     } else {
-                        mutating_calls.push(tc.clone());
+                        mutating_calls.push(tc_val.clone());
                     }
                 }
 
-                let mut tool_results = vec![crate::types::ToolResult {
-                    tool_call_id: "".to_string(),
-                    content: "".to_string(),
-                    error: "".to_string(),
-                }; tool_calls.len()];
+                let mut tool_results_json = vec![serde_json::json!(null); tool_calls.len()];
 
-                // Master Catalog B.2. Tools: Read-only operations run concurrently; mutating operations run serially.
+                // Execute read-only calls concurrently
                 let mut read_only_futures = Vec::new();
-                for tc in read_only_calls {
-                    let name = tc.name.clone();
-                    let args = tc.arguments.clone();
-                    let id = tc.id.clone();
+                for tc_val in read_only_calls {
                     let tt_clone = tt.clone();
                     let cfg_arc_clone = cfg_arc_node.clone();
-                    let tc_clone = tc.clone();
-
                     read_only_futures.push(async move {
-                        let gating_err = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_arc_clone);
-                        if let Err(e) = gating_err {
+                        let name = tc_val["name"].as_str().unwrap();
+                        let args = tc_val["arguments"].clone();
+                        let id = tc_val["id"].as_str().unwrap().to_string();
+
+                        let tc = crate::types::ToolCall {
+                            id: id.clone(),
+                            name: name.to_string(),
+                            arguments: args.clone(),
+                        };
+
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, true, &cfg_arc_clone) {
                             return (id, Err(e));
                         }
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                return (id, Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e))));
+                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                                return (id, final_res);
                             }
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                            let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                                 tool,
-                                &tc_clone,
+                                &tc,
                                 max_retries
                             ).await;
-                            (id, res)
+                            (id, final_res)
                         } else {
-                            (id, Err(crate::types::ToolError::Unexpected(format!("Tool {} not found", name))))
+                            // Unreachable if tool not found goes to mutating calls
+                            unreachable!()
                         }
                     });
                 }
@@ -1014,29 +1040,30 @@ impl Agent {
                 let ro_results = futures::future::join_all(read_only_futures).await;
 
                 for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc.id == id).unwrap();
-                    let tool_name = tool_calls[idx].name.clone();
+                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
                     match final_res {
                         Ok(res) => {
-                            error_counts.insert(tool_name, 0);
-                            tool_results[idx] = crate::types::ToolResult {
-                                tool_call_id: id,
-                                content: res,
-                                error: "".to_string(),
-                            };
+                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
+                            error_counts.insert(tool_name, serde_json::json!(0));
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": res,
+                                "error": ""
+                            });
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            let count = error_counts.entry(tool_name.clone()).or_insert(0).clone() + 1;
-                            error_counts.insert(tool_name.clone(), count);
+                            let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
                             }
                             let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                            tool_results[idx] = crate::types::ToolResult {
-                                tool_call_id: id,
-                                content: "".to_string(),
-                                error: self_correct_msg,
-                            };
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": "",
+                                "error": self_correct_msg
+                            });
                         }
                         Err(crate::types::ToolError::Unexpected(msg)) => {
                             return Err(format!("Unexpected tool error: {}", msg));
@@ -1057,53 +1084,58 @@ impl Agent {
                 }
 
                 // Execute mutating calls sequentially
-                for tc in mutating_calls {
-                    let name = tc.name.clone();
-                    let args = tc.arguments.clone();
-                    let id = tc.id.clone();
-                    let idx = tool_calls.iter().position(|t| t.id == id).unwrap();
+                for tc_val in mutating_calls {
+                    let name = tc_val["name"].as_str().unwrap();
+                    let args = tc_val["arguments"].clone();
+                    let id = tc_val["id"].as_str().unwrap();
+                    let idx = tool_calls.iter().position(|tc| tc["id"].as_str().unwrap() == id).unwrap();
+
+                    let tc = crate::types::ToolCall {
+                        id: id.to_string(),
+                        name: name.to_string(),
+                        arguments: args.clone(),
+                    };
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
-                        match e {
-                            crate::types::ToolError::LlmRecoverable(msg) => {
-                                let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                                tool_results[idx] = crate::types::ToolResult {
-                                    tool_call_id: id,
-                                    content: "".to_string(),
-                                    error: self_correct_msg,
-                                };
+                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+                        match final_res {
+                            Ok(_) => unreachable!(),
+                            Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                error_counts.insert(name.to_string(), serde_json::json!(count));
+                                if count > cfg_max_retries as u64 {
+                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                }
+                                tool_results_json[idx] = serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": "",
+                                    "error": msg
+                                });
                             }
-                            crate::types::ToolError::UserFixable(msg) => {
-                                return Err(format!("USER_FIXABLE:{}", msg));
-                            }
-                            crate::types::ToolError::Transient(msg) => {
-                                return Err(format!("Unexpected tool error: Transient error: {}", msg));
-                            }
-                            crate::types::ToolError::Unexpected(msg) => {
-                                return Err(format!("Unexpected tool error: {}", msg));
-                            }
-                            crate::types::ToolError::Fatal(msg) => {
-                                return Err(format!("Fatal tool error: {}", msg));
-                            }
-                            crate::types::ToolError::HandoffRequested(target) => return Err(format!("Handoff requested to {}", target)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
+                        Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error: {}", msg)),
+                            Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
+                            Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
+                            Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
                         }
                         continue;
                     }
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let tool_name = name.clone();
-                            let count = error_counts.entry(tool_name.clone()).or_insert(0).clone() + 1;
-                            error_counts.insert(tool_name.clone(), count);
+                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let tool_name = name.to_string();
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
                             }
-                            tool_results[idx] = crate::types::ToolResult {
-                                tool_call_id: id,
-                                content: "".to_string(),
-                                error: format!("Schema validation failed: {}. Please correct your tool arguments.", e)
-                            };
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": "",
+                                "error": format!("Schema validation failed: {}. Please correct your tool arguments.", e)
+                            });
                             continue;
                         }
                         let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
@@ -1118,25 +1150,25 @@ impl Agent {
                                 return Err(format!("Unexpected tool error: Transient error: {}", msg));
                             }
                             Ok(res) => {
-                                error_counts.insert(name.clone(), 0);
-                                tool_results[idx] = crate::types::ToolResult {
-                                    tool_call_id: id,
-                                    content: res,
-                                    error: "".to_string(),
-                                };
+                                error_counts.insert(name.to_string(), serde_json::json!(0));
+                                tool_results_json[idx] = serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": res,
+                                    "error": ""
+                                });
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                                let count = error_counts.entry(name.clone()).or_insert(0).clone() + 1;
-                                error_counts.insert(name.clone(), count);
+                                let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                                error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
                                 }
                                 let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                                tool_results[idx] = crate::types::ToolResult {
-                                    tool_call_id: id,
-                                    content: "".to_string(),
-                                    error: self_correct_msg,
-                                };
+                                tool_results_json[idx] = serde_json::json!({
+                                    "tool_call_id": id,
+                                    "content": "",
+                                    "error": self_correct_msg
+                                });
                             }
                             Err(crate::types::ToolError::Unexpected(msg)) => {
                                 return Err(format!("Unexpected tool error: {}", msg));
@@ -1152,37 +1184,32 @@ impl Agent {
                             }
                         }
                     } else {
-                        tool_results[idx] = crate::types::ToolResult {
-                            tool_call_id: id,
-                            content: "".to_string(),
-                            error: format!("Tool {} not found", name)
-                        };
+                        tool_results_json[idx] = serde_json::json!({
+                            "tool_call_id": id,
+                            "content": "",
+                            "error": format!("Tool {} not found", name)
+                        });
                     }
                 }
 
-                Ok(AgentState {
-                    messages: vec![crate::types::Message {
-                        role: crate::types::Role::Tool,
-                        content: "".to_string(),
-                        tool_calls: vec![],
-                        tool_results,
-                        response_id: None,
-                        previous_response_id: None,
-                    }],
-                    has_tool_calls: false,
-                    total_tokens: state.total_tokens,
-                    error_counts,
-                    last_message: None,
-                })
+                Ok(serde_json::json!({
+                    "has_tool_calls": false, // Clear flag
+                    "error_counts": error_counts,
+                    "messages": [{
+                        "role": "tool",
+                        "content": "",
+                        "tool_results": tool_results_json
+                    }]
+                }))
             })
         });
 
         // --- EDGES ---
         graph.add_edge("tool_node", "llm_call");
 
-        // LangChain/LangGraph: conditional edges (if tool calls present -> route to ; if absent -> route to ).
+        // LangChain/LangGraph: conditional edges (if tool calls present -> route to `tool_node`; if absent -> route to `END`).
         graph.add_conditional_edges("llm_call", |state| {
-            if state.has_tool_calls {
+            if state.get("has_tool_calls").and_then(|v| v.as_bool()).unwrap_or(false) {
                 "tool_node".to_string()
             } else {
                 crate::langgraph::END.to_string()
@@ -1191,23 +1218,42 @@ impl Agent {
 
         graph.set_entry_point("llm_call");
 
-        let initial_state = AgentState {
-            messages: initial_messages.to_vec(),
-            has_tool_calls: false,
-            total_tokens: 0,
-            error_counts: std::collections::HashMap::new(),
-            last_message: None,
-        };
+        // Convert initial messages to json state
+        let msgs_json: Vec<_> = initial_messages.iter().map(|m| {
+            serde_json::json!({
+                "role": match m.role {
+                    crate::types::Role::User => "user",
+                    crate::types::Role::Assistant => "assistant",
+                    crate::types::Role::System => "system",
+                    crate::types::Role::Tool => "tool",
+                },
+                "content": m.content,
+                "tool_calls": m.tool_calls.iter().map(|tc| serde_json::json!({
+                    "id": tc.id,
+                    "name": tc.name,
+                    "arguments": tc.arguments,
+                })).collect::<Vec<_>>(),
+                "tool_results": m.tool_results.iter().map(|tr| serde_json::json!({
+                    "tool_call_id": tr.tool_call_id,
+                    "content": tr.content,
+                    "error": tr.error,
+                })).collect::<Vec<_>>(),
+            })
+        }).collect();
+
+        let initial_state = serde_json::json!({
+            "messages": msgs_json,
+            "has_tool_calls": false,
+            "total_tokens": 0,
+            "error_counts": {}
+        });
 
         match graph.run(initial_state).await {
             Ok(final_state) => {
-                let msgs = final_state.messages;
-                let last_msg = msgs.last().unwrap();
-                let content = last_msg.content.clone();
-
-                on_event(AgentEvent::TaskComplete {
-                    content: content.clone()
-                });
+                let final_msgs = final_state.get("messages").unwrap().as_array().unwrap();
+                let last_msg = final_msgs.last().unwrap();
+                let content = last_msg.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                on_event(AgentEvent::TaskComplete { content: content.clone() });
 
                 // Cross-Department Memory Consolidation for LangGraph
                 if !content.is_empty() {
@@ -1763,8 +1809,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
-            sona_matcher: self.sona_matcher.clone(),
-            skill_trace: self.skill_trace.clone(),
+                sona_matcher: self.sona_matcher.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1878,7 +1923,6 @@ impl Agent {
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
                 sona_matcher: self.sona_matcher.clone(),
-                skill_trace: self.skill_trace.clone(),
             };
             self_with_memory = &owned_agent;
         }
@@ -3188,52 +3232,15 @@ impl Agent {
 
         let mut modified_tc = tc.clone();
         modified_tc.arguments = args;
-
-        // Skill-trace tracking: record the skill usage in the agent's skill_trace
-        {
-            let mut trace = self.skill_trace.lock().await;
-            trace.record_skill(&format!("{}_invoked", tc.name));
-        }
-
         crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries).await
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::tools::ToolExecutor;
-    #[tokio::test]
-    async fn test_agentstate_reducer() {
-        let mut state = AgentState {
-            messages: vec![crate::types::Message::user("Hello")],
-            has_tool_calls: false,
-            total_tokens: 10,
-            error_counts: std::collections::HashMap::new(),
-            last_message: None,
-        };
-
-        let update = AgentState {
-            messages: vec![crate::types::Message::assistant("Hi")],
-            has_tool_calls: true,
-            total_tokens: 20,
-            error_counts: [("toolA".to_string(), 1)].into_iter().collect(),
-            last_message: Some(crate::types::Message::assistant("Hi")),
-        };
-
-        let reducer = AgentStateReducer;
-        crate::langgraph::Reducer::reduce(&reducer, &mut state, update);
-
-        assert_eq!(state.messages.len(), 2);
-        assert_eq!(state.messages[1].content, "Hi");
-        assert!(state.has_tool_calls);
-        assert_eq!(state.total_tokens, 20);
-        assert_eq!(state.error_counts.get("toolA"), Some(&1));
-        assert!(state.last_message.is_some());
-    }
-
     #[tokio::test]
     async fn test_llm_recoverable_tool_messages_agent_loop() {
-
+        use crate::tools::ToolExecutor;
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLlmRecoverable {
@@ -3334,7 +3341,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_end_to_end_pydantic_self_correction_loop() {
-
+        use crate::tools::ToolExecutor;
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role, ToolResult};
         use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
@@ -4894,7 +4901,7 @@ mod tests {
 
 
     use ohc_builtin_agent_core::types::{ChatRequest};
-
+    use crate::tools::ToolExecutor;
     use serde_json::Value;
 
     struct MockLlmClient {
@@ -6945,7 +6952,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
-
+        use crate::tools::ToolExecutor;
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
 
         struct MockCheckpointerRewind {
@@ -7038,14 +7045,14 @@ mod stream_tests {
 
         struct FailTool;
         #[async_trait::async_trait]
-        impl crate::tools::ToolExecutor for FailTool {
+        impl ToolExecutor for FailTool {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
                 Err(ToolError::LlmRecoverable("I always fail".to_string()))
             }
         }
         struct GoodTool;
         #[async_trait::async_trait]
-        impl crate::tools::ToolExecutor for GoodTool {
+        impl ToolExecutor for GoodTool {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
                 Ok("Success".to_string())
             }
@@ -7161,7 +7168,7 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
-
+        use crate::tools::ToolExecutor;
         use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
@@ -7214,7 +7221,7 @@ mod stream_tests {
 
         struct FailingTool;
         #[async_trait::async_trait]
-        impl crate::tools::ToolExecutor for FailingTool {
+        impl ToolExecutor for FailingTool {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
                 Err(ToolError::LlmRecoverable("I keep failing".to_string()))
             }
@@ -7707,7 +7714,6 @@ mod tao_tests {
 }
 #[cfg(test)]
 mod guardrail_tests {
-    use crate::tools::ToolExecutor;
     use super::*;
     use crate::guardrails::{GuardrailRegistry, InputGuardrail, OutputGuardrail, ToolGuardrail};
     use crate::types::{ChatResponse, Message, Role, ToolCall, Usage};
@@ -7875,7 +7881,6 @@ mod guardrail_tests {
 
 #[cfg(test)]
 mod sona_pattern_tests {
-    use crate::tools::ToolExecutor;
     use super::*;
     use std::sync::Arc;
     use tokio::sync::Mutex;

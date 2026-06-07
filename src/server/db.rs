@@ -10,7 +10,6 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
-const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get_or_init(|| {
@@ -360,28 +359,13 @@ impl DB {
 
         match &self.store {
             DbStore::Postgres => {
-                let mut migration_conn = self.pool.acquire().await?;
-
-                sqlx::query("SELECT pg_advisory_lock($1);")
-                    .bind(POSTGRES_MIGRATION_LOCK_KEY)
-                    .execute(&mut *migration_conn)
-                    .await?;
-
                 sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
-                    .execute(&mut *migration_conn)
+                    .execute(&self.pool)
                     .await?;
 
                 let migrator =
                     sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                let migration_result = migrator.run(&mut *migration_conn).await;
-
-                let unlock_result = sqlx::query("SELECT pg_advisory_unlock($1);")
-                    .bind(POSTGRES_MIGRATION_LOCK_KEY)
-                    .execute(&mut *migration_conn)
-                    .await;
-
-                migration_result?;
-                unlock_result?;
+                migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"

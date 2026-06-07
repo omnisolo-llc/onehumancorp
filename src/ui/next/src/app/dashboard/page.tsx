@@ -1,6 +1,5 @@
-"use client";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
-
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -11,7 +10,6 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
-import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 
 type DashboardMetrics = {
   active_customers: number;

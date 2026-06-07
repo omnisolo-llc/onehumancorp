@@ -5738,7 +5738,6 @@ dependencies = [
  "dashmap 5.5.3",
  "glob",
  "ohc_builtin_agent_core",
- "ohc_builtin_agent_llm",
  "once_cell",
  "qrcode",
  "regex",

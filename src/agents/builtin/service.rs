@@ -665,7 +665,6 @@ impl AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
         let mut tools = crate::tools::all_tools(
-            None, // Pass None for LLM in tools to avoid circular dependencies for now
             None,
             todos,
             task_store,

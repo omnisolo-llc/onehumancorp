@@ -359,7 +359,7 @@ fn get_telemetry_chan() -> &'static mpsc::Sender<Box<dyn FnOnce() + Send>> {
     TELEMETRY_CHAN.get_or_init(|| {
         let (tx, rx) = mpsc::channel::<Box<dyn FnOnce() + Send>>(10000);
         let rx = std::sync::Arc::new(tokio::sync::Mutex::new(rx));
-        
+
         for _ in 0..16 {
             let rx = rx.clone();
             tokio::spawn(async move {
@@ -368,7 +368,7 @@ fn get_telemetry_chan() -> &'static mpsc::Sender<Box<dyn FnOnce() + Send>> {
                         let mut rx = rx.lock().await;
                         rx.recv().await
                     };
-                    
+
                     if let Some(job) = job {
                         job();
                     } else {
@@ -1431,7 +1431,7 @@ impl HubService for MyHubService {
     ) -> Result<tonic::Response<VerifyEnvironmentResponse>, tonic::Status> {
         let req = request.into_inner();
         let env_vars = req.env_vars;
-        
+
         match services::onboarding::env_verifier::verify_environment(&env_vars) {
             Ok(config) => {
                 Ok(tonic::Response::new(VerifyEnvironmentResponse {
@@ -1505,7 +1505,7 @@ impl HubService for MyHubService {
         let user_id = auth_info.spiffe_id.clone();
 
         let req = request.into_inner();
-        
+
         let mut state = req.state;
         state.remove("admin_password");
         let current_step = state.get("step").and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
@@ -1646,7 +1646,7 @@ impl HubService for MyHubService {
         request: tonic::Request<ProvisionRequest>,
     ) -> Result<tonic::Response<ProvisionResponse>, tonic::Status> {
         let _req = request.into_inner();
-        
+
         Ok(tonic::Response::new(ProvisionResponse {
             status: "provisioned".to_string(),
             message: "State persisted successfully".to_string(),
@@ -1709,9 +1709,9 @@ impl HubService for MyHubService {
         _request: tonic::Request<DiagnosticsRequest>,
     ) -> Result<tonic::Response<DiagnosticsResponse>, tonic::Status> {
         let env_vars = std::env::vars().collect::<std::collections::HashMap<String, String>>();
-        
+
         let config_res = services::onboarding::env_verifier::verify_environment(&env_vars);
-        
+
         let state = std::collections::HashMap::new();
 
         match config_res {
@@ -1793,7 +1793,7 @@ impl HubService for MyHubService {
             req.description,
             req.priority,
         ).map_err(|e| Status::internal(e))?;
-        
+
         Ok(Response::new(::server_ohc::orchestration::SharedTask {
             id: task.id,
             organization_id: task.organization_id,
@@ -1819,14 +1819,14 @@ impl HubService for MyHubService {
     }
 
     type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::SharedTask, Status>> + Send>>;
-    
+
     async fn poll_tasks(
         &self,
         request: Request<PollTasksRequest>,
     ) -> Result<Response<Self::PollTasksStream>, Status> {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
-        
+
         let mapped_tasks: Vec<Result<::server_ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
             Ok(::server_ohc::orchestration::SharedTask {
                 id: task.id,
@@ -1851,7 +1851,7 @@ impl HubService for MyHubService {
                 proposed_content: task.proposed_content.unwrap_or_default(),
             })
         }).collect();
-        
+
         let stream = tokio_stream::iter(mapped_tasks);
         Ok(Response::new(Box::pin(stream) as Self::PollTasksStream))
     }
@@ -1861,7 +1861,7 @@ impl HubService for MyHubService {
         request: Request<UpdateTaskStatusRequest>,
     ) -> Result<Response<UpdateTaskStatusResponse>, Status> {
         let req = request.into_inner();
-        
+
         match req.status.as_str() {
             "REVIEW" => {
                 self.hub.task_manager().review_task(&req.task_id, &req.agent_id)
@@ -1876,7 +1876,7 @@ impl HubService for MyHubService {
                     .map_err(|e| Status::internal(e))?;
             }
         }
-        
+
         Ok(Response::new(UpdateTaskStatusResponse { success: true }))
     }
 
@@ -1968,11 +1968,11 @@ async fn get_pending_approvals(
         request: Request<SubTask>,
     ) -> Result<Response<DelegateTaskResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.task_id.is_empty() || req.target_role.is_empty() {
             return Err(Status::invalid_argument("task_id and target_role are required"));
         }
-        
+
         if self.hub.get_agent(&req.from_agent_id).is_none() {
             return Err(Status::invalid_argument("sender agent is not registered"));
         }
@@ -1982,10 +1982,10 @@ async fn get_pending_approvals(
             // Soft limit: allow even if VRAM limit is exceeded
         tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
         }
-        
+
         let now_nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         let sub_agent_id = format!("sub-agent-{}-{}", req.target_role, now_nano);
-        
+
         let sub_agent = Agent {
             id: sub_agent_id.clone(),
             name: format!("Specialized {} Agent", req.target_role),
@@ -1994,9 +1994,9 @@ async fn get_pending_approvals(
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         };
-        
+
         self.hub.register_agent(sub_agent);
-        
+
         // Prompt injection checks
         if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
             return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
@@ -2023,7 +2023,7 @@ async fn get_pending_approvals(
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
-        
+
         match self.hub.clone().publish(msg) {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
@@ -2038,7 +2038,7 @@ async fn get_pending_approvals(
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agent_id is required"));
         }
-        
+
         match self.hub.advertise_capabilities(req) {
             Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
@@ -2052,13 +2052,13 @@ async fn get_pending_approvals(
         _request: Request<Query>,
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(caps) => Ok(caps),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::DiscoverAgentsStream))
     }
 
@@ -2089,17 +2089,17 @@ async fn get_pending_approvals(
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
         }
-        
+
         self.stream_counter.add(1, &[opentelemetry::KeyValue::new("topic", req.topic.clone())]);
 
         let rx = self.hub.subscribe_mesh_events(req.topic);
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(event) => Ok(event),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
 
@@ -2131,15 +2131,15 @@ async fn get_pending_approvals(
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
         }
-        
+
         let rx = self.hub.subscribe_teammate_mesh(req.topic);
-        
+
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
                 Ok(event) => Ok(event),
                 Err(e) => Err(Status::internal(e.to_string())),
             });
-            
+
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamTeammateMeshStream))
     }
 
@@ -2148,7 +2148,7 @@ async fn get_pending_approvals(
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing required fields"));
         }
@@ -2166,7 +2166,7 @@ async fn get_pending_approvals(
         request: Request<AcceptInviteRequest>,
     ) -> Result<Response<AcceptInviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing invitee_id"));
         }
@@ -2269,7 +2269,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
-    
+
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
@@ -2285,10 +2285,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
-
-    // Start Translation Worker
-    let translation_worker = crate::workers::translation_worker::TranslationWorker::new(db.clone());
-    translation_worker.start();
 
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
@@ -3889,7 +3885,7 @@ async fn create_ui_bom_item_handler(
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = std::sync::Arc::new(crate::auth::Store::new());
-    
+
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());

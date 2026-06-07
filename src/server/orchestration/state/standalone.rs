@@ -211,8 +211,8 @@ impl StateManager for StandaloneStateManager {
                     AND NOT EXISTS (
                         SELECT 1
                         FROM json_each(t.dependencies) as dep_id
-                        LEFT JOIN swarm_tasks dep ON dep.id = dep_id.value
-                        WHERE dep.id IS NULL OR dep.status != 'COMPLETED'
+                        JOIN swarm_tasks dep ON dep.id = dep_id.value
+                        WHERE dep.status != 'COMPLETED'
                     )
                     LIMIT ?
                 )

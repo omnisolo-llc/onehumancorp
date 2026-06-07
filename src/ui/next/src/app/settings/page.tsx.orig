@@ -123,47 +123,6 @@ export default function SettingsPage() {
     }
   };
 
-  const [translationSettings, setTranslationSettings] = useState({
-    enabled_languages: [] as string[],
-    auto_translate: true,
-  });
-
-  useEffect(() => {
-    fetch("/api/v1/settings/translation")
-      .then(res => res.json())
-      .then(data => {
-        if (data.enabled_languages) {
-          setTranslationSettings({
-            enabled_languages: data.enabled_languages,
-            auto_translate: data.auto_translate,
-          });
-        }
-      })
-      .catch(err => console.error("Failed to load translation settings", err));
-  }, []);
-
-  const handleTranslationToggle = async (lang: string) => {
-    const current = translationSettings.enabled_languages;
-    const isEnabled = current.includes(lang);
-    const updated = isEnabled ? current.filter(l => l !== lang) : [...current, lang];
-
-    setTranslationSettings(prev => ({ ...prev, enabled_languages: updated }));
-
-    try {
-      await fetch("/api/v1/settings/translation", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          primary_language: "en",
-          enabled_languages: updated,
-          auto_translate: translationSettings.auto_translate
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to save translation preferences", e);
-    }
-  };
-
   const handleVoiceSettingChange = async (key: string, value: string | boolean) => {
     const newSettings = { ...voiceSettings, [key]: value };
     setVoiceSettings(newSettings);
@@ -436,37 +395,6 @@ export default function SettingsPage() {
             <button onClick={() => router.push("/dashboard")} className="app-button primary w-fit" type="button">
               Save
             </button>
-          </div>
-        </section>
-
-        <section className="app-panel col-span-2">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Translation Preferences</div>
-              <div className="app-list-subtitle">Autonomous multi-language edge translation.</div>
-            </div>
-          </div>
-          <div className="app-panel-body">
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={translationSettings.enabled_languages.includes('ar')}
-                  onChange={() => handleTranslationToggle('ar')}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                Enable Arabic
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={translationSettings.enabled_languages.includes('es')}
-                  onChange={() => handleTranslationToggle('es')}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                Enable Spanish
-              </label>
-            </div>
           </div>
         </section>
       </div>

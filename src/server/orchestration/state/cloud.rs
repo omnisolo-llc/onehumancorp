@@ -178,8 +178,8 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
               AND NOT EXISTS (
                   SELECT 1
                   FROM json_array_elements_text(t.dependencies) as dep_id
-                  LEFT JOIN swarm_tasks dep ON dep.id::text = dep_id
-                  WHERE dep.id IS NULL OR dep.status != 'COMPLETED'
+                  JOIN swarm_tasks dep ON dep.id::text = dep_id
+                  WHERE dep.status != 'COMPLETED'
               )
             LIMIT $1
             FOR UPDATE SKIP LOCKED

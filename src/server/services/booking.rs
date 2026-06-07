@@ -1019,7 +1019,7 @@ impl BookingEngineService for NativeBookingService {
 
     async fn sync_calendar(
         &self,
-        _request: Request<SyncCalendarRequest>,
+        request: Request<SyncCalendarRequest>,
     ) -> Result<Response<SyncCalendarResponse>, Status> {
         Ok(Response::new(SyncCalendarResponse {
             status: "Sync queued".to_string(),

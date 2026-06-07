@@ -4,7 +4,7 @@
 # This test:
 #   1. Creates a temporary Kind cluster
 #   2. Builds and loads Docker images into the cluster
-#   3. Installs Valkey and PostgreSQL for cloud/web mode
+#   3. Installs Redis and PostgreSQL for cloud/web mode
 #   4. Installs the OHC application chart in cloud/web mode
 #   5. Runs REST API smoke tests
 #   6. Installs the OHC application chart in standalone/desktop mode
@@ -19,17 +19,8 @@ CLUSTER_NAME="ohc-e2e-$$"
 NAMESPACE="ohc-e2e"
 CLOUD_RELEASE_NAME="ohc-cloud"
 STANDALONE_RELEASE_NAME="ohc-standalone"
-FAILED_COMMAND=""
-FAILED_LINE=""
 
 log() { echo "[kind-e2e] $*"; }
-
-record_failure() {
-  FAILED_LINE="$1"
-  FAILED_COMMAND="$2"
-}
-
-trap 'record_failure "$LINENO" "$BASH_COMMAND"' ERR
 
 require_tool() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -47,30 +38,11 @@ cleanup() {
 }
 
 dump_diagnostics() {
-  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
-    echo "::group::Kind E2E failure diagnostics"
-  fi
-
   log "Collecting Kubernetes diagnostics after failure ..."
-  if [[ -n "${FAILED_COMMAND}" ]]; then
-    echo "Failed command near line ${FAILED_LINE}: ${FAILED_COMMAND}" >&2
-  fi
-
-  helm list --all-namespaces 2>/dev/null || true
-  kubectl get nodes -o wide 2>/dev/null || true
   kubectl get pods --namespace "${NAMESPACE}" -o wide 2>/dev/null || true
-  kubectl get deployments --namespace "${NAMESPACE}" -o wide 2>/dev/null || true
-  kubectl get services --namespace "${NAMESPACE}" -o wide 2>/dev/null || true
-  kubectl get pvc --namespace "${NAMESPACE}" -o wide 2>/dev/null || true
-  kubectl get events --namespace "${NAMESPACE}" --sort-by='.lastTimestamp' 2>/dev/null || true
   kubectl describe pods --namespace "${NAMESPACE}" 2>/dev/null || true
-  kubectl logs --namespace "${NAMESPACE}" --all-containers --tail=100 -l app.kubernetes.io/name=valkey 2>/dev/null || true
   kubectl logs --namespace "${NAMESPACE}" --all-containers --tail=100 -l "app=${CLOUD_RELEASE_NAME}-backend" 2>/dev/null || true
   kubectl logs --namespace "${NAMESPACE}" --all-containers --tail=100 -l "app=${STANDALONE_RELEASE_NAME}-backend" 2>/dev/null || true
-
-  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
-    echo "::endgroup::"
-  fi
 }
 
 on_exit() {
@@ -112,7 +84,7 @@ COMMON_HELM_SMOKE_ARGS=(
   --set backend.resources.requests.memory=128Mi
   --set backend.resources.limits.cpu=500m
   --set backend.resources.limits.memory=512Mi
-  --set valkey.enabled=false
+  --set redis.enabled=false
   --set cnpg.enabled=false
   --set ohcCore.enabled=false
   --set chatwoot.enabled=false
@@ -125,8 +97,9 @@ COMMON_HELM_SMOKE_ARGS=(
 CLOUD_HELM_SMOKE_ARGS=(
   "${COMMON_HELM_SMOKE_ARGS[@]}"
   --set multiTenant.enabled=true
-  --set valkey.enabled=true
   --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
+  --set-string backend.env.REDIS_URL=redis://redis-master:6379
+  --set-string backend.env.REDIS_ADDR=redis-master:6379
   --set-string backend.env.OHC_STANDALONE_MODE=false
   --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
 )
@@ -181,10 +154,10 @@ else
 fi
 
 # ── Add Helm repos ─────────────────────────────────────────────────────────────
-log "Adding Helm repos ..."
-helm repo add valkey https://valkey.io/valkey-helm/ 2>/dev/null || true
+log "Adding Bitnami Helm repo ..."
+helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
-helm repo update valkey prometheus-community 2>/dev/null || true
+helm repo update bitnami prometheus-community 2>/dev/null || true
 
 log "Building chart dependencies ..."
 helm dependency build "${CHART_DIR}" --skip-refresh
@@ -369,6 +342,17 @@ kubectl wait pod/postgres \
   --namespace "${NAMESPACE}" \
   --for=condition=Ready \
   --timeout=120s
+
+# ── Install Redis for cloud/web mesh and cache paths ───────────────────────────
+log "Installing Redis ..."
+helm upgrade --install redis bitnami/redis \
+  --namespace "${NAMESPACE}" \
+  --set architecture=standalone \
+  --set auth.enabled=false \
+  --set image.registry=public.ecr.aws \
+  --set image.repository=bitnami/redis \
+  --set global.security.allowInsecureImages=true \
+  --wait --timeout 120s
 
 # ── Cloud/web mode ─────────────────────────────────────────────────────────────
 install_ohc_release "${CLOUD_RELEASE_NAME}" "cloud/web mode" "${CLOUD_HELM_SMOKE_ARGS[@]}"

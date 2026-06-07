@@ -6,7 +6,7 @@ mod tests {
 
     #[test]
     fn test_sub_agent_queue_schema_migration_exists() {
-        let mut migration_path = std::path::PathBuf::from("src/server/migrations/104_sub_agent_queue.sql");
+        let mut migration_path = std::path::PathBuf::from("src/server/migrations/084_sub_agent_queue.sql");
         if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
             migration_path = std::path::PathBuf::from(workspace_dir).join(&migration_path);
         }
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_legacy_json_dependencies_are_backfilled_to_edge_table() {
-        let mut migration_path = std::path::PathBuf::from("src/server/migrations/100_backfill_shared_task_dependencies.sql");
+        let mut migration_path = std::path::PathBuf::from("src/server/migrations/080_backfill_shared_task_dependencies.sql");
         if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
             migration_path = std::path::PathBuf::from(workspace_dir).join(&migration_path);
         }
