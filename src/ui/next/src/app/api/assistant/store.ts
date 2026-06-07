@@ -1,0 +1,470 @@
+import { randomUUID } from 'node:crypto';
+
+export type PermissionProfile = 'Guarded' | 'Full Access';
+export type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'archived';
+
+export type AssistantArtifact = {
+  id: string;
+  type: 'document' | 'spreadsheet' | 'presentation' | 'chart' | 'pdf' | 'zip' | 'code';
+  filename: string;
+  mimeType: string;
+  preview: string;
+};
+
+export type AssistantChange = {
+  id: string;
+  path: string;
+  changeType: 'created' | 'modified' | 'deleted';
+  summary: string;
+  approvalStatus: 'pending' | 'approved' | 'not_required';
+};
+
+export type AssistantMessage = {
+  id: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string;
+  createdAt: string;
+};
+
+export type AssistantTask = {
+  id: string;
+  title: string;
+  prompt: string;
+  workspace: string;
+  status: AssistantTaskStatus;
+  mode: string;
+  model: string;
+  provider: string;
+  workDirectory: string;
+  outputFormat: string;
+  constraints: string;
+  contextReferences: string;
+  attachments: string[];
+  skills: string[];
+  connectors: string[];
+  permissionProfile: PermissionProfile;
+  currentStep: string;
+  riskSummary: string[];
+  artifacts: AssistantArtifact[];
+  changes: AssistantChange[];
+  messages: AssistantMessage[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RemoteTask = {
+  id: string;
+  platform: string;
+  userId: string;
+  threadId: string;
+  confirmationRequired: boolean;
+  taskId: string;
+};
+
+export type Automation = {
+  id: string;
+  name: string;
+  schedule: string;
+  prompt: string;
+  workspace: string;
+  status: 'active' | 'paused';
+  notificationChannel: string;
+  permissionProfile: PermissionProfile;
+  nextRunLabel: string;
+};
+
+export type MemoryItem = {
+  id: string;
+  scope: 'global' | 'workspace';
+  content: string;
+  source: 'seed' | 'import' | 'edit';
+  editable: boolean;
+};
+
+export type CreateTaskPayload = {
+  prompt?: string;
+  workspace?: string;
+  mode?: string;
+  model?: string;
+  provider?: string;
+  workDirectory?: string;
+  outputFormat?: string;
+  constraints?: string;
+  contextReferences?: string;
+  attachments?: string[] | string;
+  skills?: string[];
+  connectors?: string[];
+  permissionProfile?: PermissionProfile;
+};
+
+type NormalizedCreateTaskPayload = {
+  prompt: string;
+  workspace: string;
+  mode: string;
+  model: string;
+  provider: string;
+  workDirectory: string;
+  outputFormat: string;
+  constraints: string;
+  contextReferences: string;
+  attachments: string[];
+  skills: string[];
+  connectors: string[];
+  permissionProfile: PermissionProfile;
+};
+
+let tasks: AssistantTask[] = [];
+let remotes: RemoteTask[] = [];
+let automations: Automation[] = [];
+let memories: MemoryItem[] = [];
+
+function now() {
+  return new Date().toISOString();
+}
+
+function id(prefix: string) {
+  return `${prefix}-${randomUUID()}`;
+}
+
+function normalizeAttachments(raw: CreateTaskPayload['attachments']): string[] {
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === 'string') {
+    return raw.split(',').map((part) => part.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function titleFromPrompt(prompt: string) {
+  return prompt.trim().slice(0, 96);
+}
+
+function artifactForFormat(outputFormat: string): AssistantArtifact {
+  const normalized = outputFormat.toLowerCase();
+  if (normalized.includes('presentation') || normalized.includes('ppt')) {
+    return {
+      id: id('artifact'),
+      type: 'presentation',
+      filename: 'assistant-presentation.pptx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      preview: 'Slide deck outline and generated speaker notes.',
+    };
+  }
+  if (normalized.includes('spreadsheet') || normalized.includes('table')) {
+    return {
+      id: id('artifact'),
+      type: 'spreadsheet',
+      filename: 'assistant-spreadsheet.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      preview: 'Workbook with summary, data, and chart tabs.',
+    };
+  }
+  if (normalized.includes('pdf')) {
+    return {
+      id: id('artifact'),
+      type: 'pdf',
+      filename: 'assistant-report.pdf',
+      mimeType: 'application/pdf',
+      preview: 'PDF export ready for review.',
+    };
+  }
+  return {
+    id: id('artifact'),
+    type: 'document',
+    filename: 'assistant-brief.md',
+    mimeType: 'text/markdown',
+    preview: 'Draft report ready for review.',
+  };
+}
+
+function chartArtifact(): AssistantArtifact {
+  return {
+    id: id('artifact'),
+    type: 'chart',
+    filename: 'assistant-chart.png',
+    mimeType: 'image/png',
+    preview: 'Generated chart preview.',
+  };
+}
+
+function buildRiskSummary(payload: NormalizedCreateTaskPayload) {
+  const risks = ['Guarded mode is active'];
+  if (payload.connectors.length > 0) risks.push('External sends require approval');
+  if (payload.workDirectory) risks.push(`File writes are limited to ${payload.workDirectory}`);
+  if (payload.permissionProfile === 'Full Access') risks.push('Full Access still logs risky actions');
+  return risks;
+}
+
+export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
+  const prompt = payload.prompt?.trim();
+  if (!prompt) {
+    throw new Error('prompt is required');
+  }
+
+  const normalized: NormalizedCreateTaskPayload = {
+    prompt,
+    workspace: payload.workspace || 'Personal OS',
+    mode: payload.mode || 'Ask',
+    model: payload.model || 'Auto',
+    provider: payload.provider || 'Auto',
+    workDirectory: payload.workDirectory || '/workspace/assistant',
+    outputFormat: payload.outputFormat || 'Document',
+    constraints: payload.constraints || '',
+    contextReferences: payload.contextReferences || '',
+    attachments: normalizeAttachments(payload.attachments),
+    skills: payload.skills || [],
+    connectors: payload.connectors || [],
+    permissionProfile: payload.permissionProfile || 'Guarded',
+  };
+
+  const createdAt = now();
+  const primaryArtifact = artifactForFormat(normalized.outputFormat);
+  const task: AssistantTask = {
+    id: id('task'),
+    title: titleFromPrompt(prompt),
+    prompt,
+    workspace: normalized.workspace,
+    status: 'running',
+    mode: normalized.mode,
+    model: normalized.model,
+    provider: normalized.provider,
+    workDirectory: normalized.workDirectory,
+    outputFormat: normalized.outputFormat,
+    constraints: normalized.constraints,
+    contextReferences: normalized.contextReferences,
+    attachments: normalized.attachments,
+    skills: normalized.skills,
+    connectors: normalized.connectors,
+    permissionProfile: normalized.permissionProfile,
+    currentStep: 'Planning and preparing tools',
+    riskSummary: buildRiskSummary(normalized),
+    artifacts: [primaryArtifact, chartArtifact()],
+    changes: [
+      {
+        id: id('change'),
+        path: `${normalized.workDirectory.replace(/\/$/, '')}/${primaryArtifact.filename}`,
+        changeType: 'created',
+        summary: 'Generated output file will be written after approval if required.',
+        approvalStatus: normalized.permissionProfile === 'Guarded' ? 'pending' : 'not_required',
+      },
+    ],
+    messages: [
+      { id: id('msg'), role: 'user', content: prompt, createdAt },
+      {
+        id: id('msg'),
+        role: 'assistant',
+        content: `Jarvis planned the task with ${normalized.skills.length || 'default'} skills and ${normalized.connectors.length || 'no'} connectors.`,
+        createdAt,
+      },
+    ],
+    createdAt,
+    updatedAt: createdAt,
+  };
+
+  tasks.unshift(task);
+  return task;
+}
+
+export function listAssistantTasks() {
+  return tasks;
+}
+
+export function createRemoteTask(payload: {
+  platform?: string;
+  userId?: string;
+  threadId?: string;
+  message?: string;
+  attachments?: string[];
+}) {
+  if (!payload.message?.trim()) {
+    throw new Error('message is required');
+  }
+  const task = createAssistantTask({
+    prompt: payload.message,
+    workspace: 'Remote Control',
+    mode: 'Plan',
+    outputFormat: 'Document',
+    attachments: payload.attachments || [],
+    connectors: [payload.platform || 'Remote'],
+    permissionProfile: 'Guarded',
+  });
+  const confirmationRequired = /\b(send|delete|overwrite|convert all|post|share)\b/i.test(payload.message);
+  const remote: RemoteTask = {
+    id: id('remote'),
+    platform: payload.platform || 'Slack',
+    userId: payload.userId || 'unknown',
+    threadId: payload.threadId || task.id,
+    confirmationRequired,
+    taskId: task.id,
+  };
+  remotes.unshift(remote);
+  return { remote, task, reply: `Jarvis started "${task.title}" from ${remote.platform}.` };
+}
+
+export function createAutomation(payload: {
+  name?: string;
+  schedule?: string;
+  prompt?: string;
+  workspace?: string;
+  notificationChannel?: string;
+  permissionProfile?: PermissionProfile;
+}) {
+  if (!payload.name?.trim()) throw new Error('name is required');
+  if (!payload.prompt?.trim()) throw new Error('prompt is required');
+  const automation: Automation = {
+    id: id('automation'),
+    name: payload.name.trim(),
+    schedule: payload.schedule || 'Daily 09:00',
+    prompt: payload.prompt.trim(),
+    workspace: payload.workspace || 'Personal OS',
+    status: 'active',
+    notificationChannel: payload.notificationChannel || 'In app',
+    permissionProfile: payload.permissionProfile || 'Guarded',
+    nextRunLabel: `Next run follows: ${payload.schedule || 'Daily 09:00'}`,
+  };
+  automations.unshift(automation);
+  return automation;
+}
+
+export function listMemories() {
+  return memories;
+}
+
+export function mutateMemory(payload: {
+  action?: 'import' | 'edit' | 'forget';
+  id?: string;
+  content?: string;
+  scope?: 'global' | 'workspace';
+}) {
+  if (payload.action === 'import') {
+    if (!payload.content?.trim()) throw new Error('content is required');
+    memories.unshift({
+      id: id('memory'),
+      scope: payload.scope || 'workspace',
+      content: payload.content.trim(),
+      source: 'import',
+      editable: true,
+    });
+  } else if (payload.action === 'edit') {
+    const item = memories.find((memory) => memory.id === payload.id);
+    if (!item) throw new Error('memory not found');
+    if (!payload.content?.trim()) throw new Error('content is required');
+    item.content = payload.content.trim();
+    item.source = 'edit';
+  } else if (payload.action === 'forget') {
+    memories = memories.filter((memory) => memory.id !== payload.id);
+  } else {
+    throw new Error('unsupported memory action');
+  }
+  return memories;
+}
+
+export function resetAssistantStore() {
+  tasks = [
+    {
+      id: 'task-weekly-brief',
+      title: 'Create this week\'s operating brief',
+      prompt: 'Summarize this week and prepare a brief.',
+      workspace: 'Personal OS',
+      status: 'running',
+      mode: 'Plan',
+      model: 'Auto',
+      provider: 'Auto',
+      workDirectory: '/workspace/reports',
+      outputFormat: 'Document',
+      constraints: 'Keep it concise.',
+      contextReferences: '@calendar @notes',
+      attachments: [],
+      skills: ['Web Research', 'Document Writer'],
+      connectors: ['Google Drive'],
+      permissionProfile: 'Guarded',
+      currentStep: 'Drafting report',
+      riskSummary: ['Guarded mode is active', 'External sends require approval'],
+      artifacts: [
+        {
+          id: 'artifact-weekly-brief',
+          type: 'document',
+          filename: 'weekly-brief.md',
+          mimeType: 'text/markdown',
+          preview: 'Weekly brief draft with action items.',
+        },
+      ],
+      changes: [
+        {
+          id: 'change-weekly-brief',
+          path: '/workspace/reports/weekly-brief.md',
+          changeType: 'created',
+          summary: 'Creates a markdown brief.',
+          approvalStatus: 'pending',
+        },
+      ],
+      messages: [
+        {
+          id: 'msg-weekly-user',
+          role: 'user',
+          content: 'Summarize this week and prepare a brief.',
+          createdAt: '2026-06-07T00:00:00.000Z',
+        },
+        {
+          id: 'msg-weekly-assistant',
+          role: 'assistant',
+          content: 'I am gathering context and drafting the brief.',
+          createdAt: '2026-06-07T00:01:00.000Z',
+        },
+      ],
+      createdAt: '2026-06-07T00:00:00.000Z',
+      updatedAt: '2026-06-07T00:01:00.000Z',
+    },
+    {
+      id: 'task-downloads-cleanup',
+      title: 'Organize Downloads by file type',
+      prompt: 'Organize Downloads by file type.',
+      workspace: 'Files',
+      status: 'blocked',
+      mode: 'Craft',
+      model: 'MiniMax-M3',
+      provider: 'Auto',
+      workDirectory: '/Users/me/Downloads',
+      outputFormat: 'Table',
+      constraints: 'Ask before moving files.',
+      contextReferences: '@Downloads',
+      attachments: [],
+      skills: ['File Organizer'],
+      connectors: [],
+      permissionProfile: 'Guarded',
+      currentStep: 'Waiting for folder permission',
+      riskSummary: ['Needs permission for Downloads'],
+      artifacts: [],
+      changes: [],
+      messages: [
+        {
+          id: 'msg-downloads-assistant',
+          role: 'assistant',
+          content: 'I need permission to read Downloads before continuing.',
+          createdAt: '2026-06-07T00:03:00.000Z',
+        },
+      ],
+      createdAt: '2026-06-07T00:02:00.000Z',
+      updatedAt: '2026-06-07T00:03:00.000Z',
+    },
+  ];
+  remotes = [];
+  automations = [];
+  memories = [
+    {
+      id: 'memory-concise-citations',
+      scope: 'global',
+      content: 'Prefer concise technical summaries with citations.',
+      source: 'seed',
+      editable: true,
+    },
+    {
+      id: 'memory-approval',
+      scope: 'workspace',
+      content: 'Ask before sending messages or modifying original files.',
+      source: 'seed',
+      editable: true,
+    },
+  ];
+}
+
+resetAssistantStore();
