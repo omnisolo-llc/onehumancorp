@@ -159,14 +159,14 @@ kubectl wait --for=condition=Ready node --all --timeout=120s
 # In a manual run, we fallback to docker build (for dev convenience).
 if [[ -n "${TEST_SRCDIR:-}" ]]; then
   log "Bazel environment detected. Loading images from runfiles..."
-  SERVER_LOADER="${REPO_ROOT}/deploy/server_load.sh"
+  SERVER_LOADER="${REPO_ROOT}/deploy/load_all_images"
 
   if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-    SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "server_load.sh" -type f -executable | head -1)"
+    SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "load_all_images" -type f -executable | head -1)"
   fi
 
   if [[ -z "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-    echo "error: could not find executable server_load.sh in Bazel runfiles" >&2
+    echo "error: could not find executable load_all_images in Bazel runfiles" >&2
     exit 1
   fi
 
