@@ -430,9 +430,9 @@ impl DB {
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         assigned_agent_id TEXT,
-                        dependencies JSONB DEFAULT '[]',
-                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        dependencies TEXT DEFAULT '[]',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -446,8 +446,8 @@ impl DB {
                         content TEXT NOT NULL,
                         metadata TEXT DEFAULT '{}',
                         embedding BLOB,
-                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -775,6 +775,8 @@ impl DB {
                         tenant_id TEXT,
                         source TEXT,
                         content TEXT,
+                        original_content TEXT,
+                        translated_from_language TEXT,
                         draft_reply TEXT,
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -1682,4 +1684,3 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
         assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
     }
 }
-

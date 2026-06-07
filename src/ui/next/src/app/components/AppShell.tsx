@@ -21,6 +21,7 @@ type IconName =
   | "activity"
   | "analytics"
   | "calendar"
+  | "campaigns"
   | "cost"
   | "dashboard"
   | "diagnostics"
@@ -48,6 +49,7 @@ const primaryNav: NavItem[] = [
   { label: "Kairos", href: "/kairos", icon: "activity" },
   { label: "Agents", href: "/agents", icon: "team" },
   { label: "Analytics", href: "/business-analytics", icon: "analytics" },
+  { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
   { label: "Settings", href: "/settings", icon: "settings" },
 ];
 
@@ -64,6 +66,7 @@ function ShellIcon({ name }: { name: IconName }) {
     activity: ["M4 12h4l2-7 4 14 2-7h4"],
     analytics: ["M5 19V9", "M12 19V5", "M19 19v-7"],
     calendar: ["M7 3v4", "M17 3v4", "M4 9h16", "M5 5h14v16H5z"],
+    campaigns: ["M4 6h10", "M4 12h7", "M4 18h10", "M16 9l4-4", "M20 5v10", "M16 15l4 4"],
     cost: ["M12 3v18", "M17 7.5c-.8-1.1-2.2-1.8-4-1.8-2.3 0-4 1.1-4 2.8 0 4.2 8 1.8 8 6 0 1.7-1.8 2.8-4 2.8-1.9 0-3.5-.7-4.4-1.9"],
     dashboard: ["M4 5h7v7H4z", "M13 5h7v4h-7z", "M13 11h7v8h-7z", "M4 14h7v5H4z"],
     diagnostics: ["M12 9v4", "M12 17h.01", "M10.3 4.7 3.9 16.2A2 2 0 0 0 5.6 19h12.8a2 2 0 0 0 1.7-2.8L13.7 4.7a2 2 0 0 0-3.4 0z"],

@@ -37,6 +37,18 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
+    fn require_api_key(&self) -> Result<&str, String> {
+        let key = self.api_key.trim();
+        if key.is_empty() || key == "sk_test_123" || key == "sk_test" {
+            return Err("Stripe API key is required for Terminal API calls".to_string());
+        }
+        Ok(key)
+    }
+
+    fn api_base() -> String {
+        std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
+    }
+
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
 
         // Use PaymentRouter to optimize method
@@ -58,20 +70,39 @@ impl StripeClient {
                     let mp_client = MercadoPagoClient::new(token);
                     mp_client.create_checkout_preference(_price_id, customer_id).await
                 } else {
-                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
+                    Err("Mercado Pago access token is required".to_string())
                 }
+            },
+            PaymentMethod::Alipay => {
+                Err("Alipay checkout is not configured for Stripe checkout sessions".to_string())
             }
         }
     }
 
-    pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+    pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
+        let api_key = self.require_api_key()?;
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/terminal/connection_tokens", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&std::collections::HashMap::<String, String>::new())
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Terminal connection token request failed: {}", e))?;
 
-        // In a real implementation, this would make an HTTP POST to Stripe's /v1/terminal/connection_tokens
-        // endpoint. Since we're mocking external APIs, we return a mock token string here.
-        // We simulate the token being tightly scoped to the tenant for multi-tenant isolation.
-        let mock_token = format!("tss_mock_token_for_{}", tenant_id);
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe Terminal API error ({}): {}", status, text));
+        }
 
-        Ok(mock_token)
+        let json: serde_json::Value = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse Stripe Terminal token response: {}", e))?;
+        json["secret"]
+            .as_str()
+            .map(|secret| secret.to_string())
+            .ok_or_else(|| "Missing secret in Stripe Terminal token response".to_string())
     }
 
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
@@ -126,17 +157,24 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_create_terminal_connection_token() {
-        let client = StripeClient::new("sk_test_123".to_string());
+    async fn test_terminal_connection_token_requires_configured_key() {
+        let client = StripeClient::new("".to_string());
         let result = client.create_terminal_connection_token("test_tenant").await;
-        assert!(result.is_ok());
-        let token = result.unwrap();
-        assert_eq!(token, "tss_mock_token_for_test_tenant");
+        let err = result.expect_err("Terminal tokens must not be mocked when Stripe credentials are missing");
+        assert!(err.contains("Stripe API key"));
     }
 }
 
 impl StripeClient {
     pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
+        let api_key = self.require_api_key()?;
+        if amount_cents <= 0 {
+            return Err("amount_cents must be positive".to_string());
+        }
+        if currency.trim().is_empty() {
+            return Err("currency is required".to_string());
+        }
+
         let mut form = std::collections::HashMap::new();
         form.insert("amount".to_string(), amount_cents.to_string());
         form.insert("currency".to_string(), currency.to_string());
@@ -144,8 +182,8 @@ impl StripeClient {
         form.insert("capture_method".to_string(), "manual".to_string());
         form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
 
-        let res = reqwest::Client::new().post("https://api.stripe.com/v1/payment_intents")
-            .basic_auth(&self.api_key, Some(""))
+        let res = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))
+            .basic_auth(api_key, Some(""))
             .form(&form)
             .send()
             .await
