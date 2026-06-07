@@ -8,8 +8,9 @@ import { InteractiveWalkthrough } from './Walkthrough';
 
 // --- Walkthrough System ---
 type Step = {
+  title?: string;
   targetId: string;
-  message: string;
+  content: string;
 };
 
 type HelpArticle = { title: string; desc: string; link?: string };
@@ -125,7 +126,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
+          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.content, position: "top" }))}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
@@ -196,7 +197,7 @@ export function HelpWidget() {
     setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
 
     try {
-      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
+      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: val }) });
       if (!response.ok) throw new Error("Failed to fetch chat reply");
       const data = await response.json();
       const reply = normalizeChatReply(data);
@@ -318,7 +319,7 @@ export function HelpWidget() {
                     onChange={(e) => setChatInput(e.target.value)}
                     className="flex-1 p-3 border border-white/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/70 backdrop-blur-md shadow-sm min-h-[44px]"
                   />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-md text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
+                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-md text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send content">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </form>
