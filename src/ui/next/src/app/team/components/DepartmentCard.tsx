@@ -14,11 +14,11 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
     <WithTooltip id="department-card-tooltip" defaultText="Click to view and manage pending approvals for this department.">
     <button
       onClick={onClick}
-      className="w-full text-left bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] flex items-center justify-between group mb-4"
+      className="w-full text-left bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] flex items-center justify-between group mb-4 focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2"
     >
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 flex items-center justify-center border border-blue-200/50 shadow-inner flex-shrink-0">
-           <span className="text-xl font-bold text-blue-600 font-outfit">{name.charAt(4)}</span>
+        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#0066FF]/10 to-[#0066FF]/5 flex items-center justify-center border border-[#0066FF]/20 shadow-inner flex-shrink-0">
+           <span className="text-xl font-bold text-[#0066FF] font-outfit">{name.charAt(4)}</span>
         </div>
 
         <div>

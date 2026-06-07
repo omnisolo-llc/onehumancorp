@@ -555,7 +555,7 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 mt-4">
                     <button
                       onClick={() => {
                         if (payload && (payload.original_message || payload.feature_type === "quote_draft")) {
@@ -564,7 +564,7 @@ export default function ApprovalInbox({
                           onReject(req.id);
                         }
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
                     >
                       {payload && (payload.original_message || payload.feature_type === "quote_draft")
                         ? "Review"
@@ -572,7 +572,7 @@ export default function ApprovalInbox({
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052cc] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
@@ -622,13 +622,13 @@ export default function ApprovalInbox({
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-4">
                 <button
                   onClick={() => {
                     onReject(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
                 >
                   Discard
                 </button>
@@ -636,7 +636,7 @@ export default function ApprovalInbox({
                   onClick={() => {
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
                 >
                   Edit
                 </button>
@@ -645,7 +645,7 @@ export default function ApprovalInbox({
                     onApprove(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052cc] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 shadow-[0_4px_12px_rgba(0,102,255,0.2)]"
                 >
                   Send Now
                 </button>

@@ -23,6 +23,22 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   useEffect(() => {
     if (!isOpen || steps.length === 0) return;
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+        if (currentStepIndex === steps.length - 1) {
+          onComplete?.();
+          onClose();
+        } else {
+          setCurrentStepIndex(i => i + 1);
+        }
+      } else if (e.key === 'ArrowLeft' && currentStepIndex > 0) {
+        setCurrentStepIndex(i => i - 1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     const currentStep = steps[currentStepIndex];
     const targetElement = document.getElementById(currentStep.targetId);
 
@@ -44,12 +60,14 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         clearTimeout(timeoutId);
         window.removeEventListener('scroll', handleScroll, true);
         window.removeEventListener('resize', handleScroll);
+        window.removeEventListener('keydown', handleKeyDown);
       };
     } else {
       console.warn(`Walkthrough: Target element with id "${currentStep.targetId}" not found.`);
       setTargetRect(null);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, currentStepIndex, steps]);
+  }, [isOpen, currentStepIndex, steps, onClose, onComplete]);
 
   if (!isOpen || steps.length === 0) return null;
   const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
@@ -65,6 +83,12 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       onClose();
     } else {
       setCurrentStepIndex(i => i + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(i => i - 1);
     }
   };
 
@@ -89,7 +113,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.left + (targetRect.width / 2),
           transform: 'translateX(-50%)'
         };
-        arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white/90 border-x-transparent border-t-0 border-8";
+        arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white/65 border-x-transparent border-t-0 border-8";
         break;
       case 'top':
         bubbleStyle = {
@@ -97,7 +121,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.left + (targetRect.width / 2),
           transform: 'translate(-50%, -100%)'
         };
-        arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white/90 border-x-transparent border-b-0 border-8";
+        arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white/65 border-x-transparent border-b-0 border-8";
         break;
       case 'right':
          bubbleStyle = {
@@ -105,7 +129,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.right + margin,
           transform: 'translateY(-50%)'
         };
-        arrowClass = "right-full top-1/2 -translate-y-1/2 border-r-white/90 border-y-transparent border-l-0 border-8";
+        arrowClass = "right-full top-1/2 -translate-y-1/2 border-r-white/65 border-y-transparent border-l-0 border-8";
         break;
       case 'left':
          bubbleStyle = {
@@ -113,7 +137,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           left: targetRect.left - margin,
           transform: 'translate(-100%, -50%)'
         };
-        arrowClass = "left-full top-1/2 -translate-y-1/2 border-l-white/90 border-y-transparent border-r-0 border-8";
+        arrowClass = "left-full top-1/2 -translate-y-1/2 border-l-white/65 border-y-transparent border-r-0 border-8";
         break;
     }
   }
@@ -123,7 +147,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          className="fixed z-[90] pointer-events-none transition-all duration-300 ease-in-out border-2 border-blue-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
+          className="fixed z-[90] pointer-events-none transition-all duration-300 ease-in-out border-2 border-[#0066FF] rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
           style={{
             top: targetRect.top - 4,
             left: targetRect.left - 4,
@@ -137,7 +161,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       <div
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
-        className="fixed z-[1000] bg-white/90 backdrop-blur-[40px] saturate-200 border border-white/60 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
+        className="fixed z-[1000] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
@@ -146,23 +170,38 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
         <div className="flex justify-between items-start mb-3">
           <h3 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h3>
-          <button onClick={handleSkip} className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
+          <button onClick={handleSkip} aria-label="Skip walkthrough" className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
         <p className="text-sm text-gray-700 mb-5 leading-relaxed">{currentStep.content}</p>
 
+        {/* Stepper Progress Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-4">
+          <div className="bg-[#0066FF] h-1.5 rounded-full transition-all duration-300" style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}></div>
+        </div>
+
         <div className="flex justify-between items-center pt-2 border-t border-gray-100/80">
           <span className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
             Step {currentStepIndex + 1} of {steps.length}
           </span>
-          <button
-            onClick={handleNext}
-            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95 transition-all"
-          >
-            {isLastStep ? 'Finish' : 'Next'}
-          </button>
+          <div className="flex space-x-2">
+            {currentStepIndex > 0 && (
+              <button
+                onClick={handleBack}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-sm font-bold active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+              >
+                Back
+              </button>
+            )}
+            <button
+              onClick={handleNext}
+              className="bg-[#0066FF]/95 hover:bg-[#0052cc] text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_4px_12px_rgba(0,102,255,0.2)] active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2"
+            >
+              {isLastStep ? 'Finish' : 'Next'}
+            </button>
+          </div>
         </div>
       </div>
 

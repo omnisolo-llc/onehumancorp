@@ -289,7 +289,7 @@ export default function WebsiteBuilderPage() {
             {wizardStep !== 0 && (
               <button
                 onClick={handleBack}
-                className="absolute top-6 left-8 text-[#0071E3] font-medium text-sm hover:underline transition-all z-10 flex items-center gap-1 bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+                className="absolute top-6 left-8 text-[#0066FF] font-medium text-sm hover:underline transition-all z-10 flex items-center gap-1 bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
@@ -302,7 +302,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep !== 0 && wizardStep !== 'instant-build' && (
                 <button
                   onClick={handleSaveDraft}
-                  className="text-[#0071E3] font-medium text-sm hover:underline transition-all bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+                  className="text-[#0066FF] font-medium text-sm hover:underline transition-all bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
                 >
                   Save Draft
                 </button>
@@ -329,7 +329,7 @@ export default function WebsiteBuilderPage() {
                     </button>
 
                     <button
-                      className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('instant-build')}
                     >
                       Instant Build
@@ -367,14 +367,14 @@ export default function WebsiteBuilderPage() {
                   <div id="step-3" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="What is your business called?"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
@@ -428,14 +428,14 @@ export default function WebsiteBuilderPage() {
                   <div id="step-5" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="What is the name of this product?"
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="0.00"
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
@@ -477,21 +477,21 @@ export default function WebsiteBuilderPage() {
                   <div id="step-7" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. Maya Smith"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
                     />
                     <input
                       type="email"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="you@email.com"
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
                     />
                     <input
                       type="password"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="Password"
                       value={userPassword}
                       onChange={(e) => setUserPassword(e.target.value)}
@@ -551,7 +551,7 @@ export default function WebsiteBuilderPage() {
                       Free OHC Domain
                     </button>
                     <button
-                      className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('8.5')}
                     >
                       Connect Custom Domain
@@ -599,7 +599,7 @@ export default function WebsiteBuilderPage() {
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
@@ -781,9 +781,9 @@ export default function WebsiteBuilderPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
       `}} />
     </div>
