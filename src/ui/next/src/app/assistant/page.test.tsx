@@ -25,6 +25,10 @@ const tasksPayload = {
         { id: 'msg-1', role: 'user', content: 'Summarize this week and prepare a brief.' },
         { id: 'msg-2', role: 'assistant', content: 'I am gathering context and drafting the brief.' },
       ],
+      actions: [
+        { id: 'action-stop', label: 'Stop', kind: 'control', approvalRequired: false },
+        { id: 'action-approve', label: 'Approve Changes', kind: 'approval', approvalRequired: true },
+      ],
     },
     {
       id: 'task-downloads',
@@ -42,8 +46,18 @@ const tasksPayload = {
       messages: [
         { id: 'msg-3', role: 'assistant', content: 'I need permission to read Downloads before continuing.' },
       ],
+      actions: [
+        { id: 'action-grant', label: 'Grant Folder Access', kind: 'permission', approvalRequired: true },
+      ],
     },
   ],
+  capabilities: {
+    resultTabs: ['Artifacts', 'All Files', 'Changes', 'Preview'],
+    remotePlatforms: ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot'],
+    outputFormats: ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'Chart', 'Code App', 'ZIP'],
+    workModes: ['Ask', 'Craft', 'Plan', 'Coding'],
+    permissionProfiles: ['Guarded', 'Full Access'],
+  },
 };
 
 beforeEach(() => {
@@ -74,6 +88,10 @@ beforeEach(() => {
             { id: 'msg-user', role: 'user', content: 'Build a Q3 planning deck' },
             { id: 'msg-assistant', role: 'assistant', content: 'Jarvis planned the task with Web Research.' },
           ],
+          actions: [
+            { id: 'action-preview', label: 'Open Preview', kind: 'preview', approvalRequired: false },
+            { id: 'action-download', label: 'Download File', kind: 'download', approvalRequired: false },
+          ],
         },
       }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
@@ -88,9 +106,9 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   render(<AssistantPage />);
 
   expect(await screen.findByRole('heading', { name: 'Jarvis Assistant' })).toBeDefined();
-  expect(screen.getByText('Personal OS')).toBeDefined();
-  expect(screen.getByText('Files')).toBeDefined();
-  expect(screen.getByText("Create this week's operating brief")).toBeDefined();
+  expect(screen.getAllByText('Personal OS').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Files').length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Create this week's operating brief").length).toBeGreaterThan(0);
   expect(screen.getByText('Organize Downloads by file type')).toBeDefined();
   expect(screen.getByRole('link', { name: 'Expert Center' })).toHaveAttribute('href', '/agents');
   expect(screen.getByRole('button', { name: 'Remote Control' })).toBeDefined();
@@ -98,6 +116,10 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   expect(screen.getByRole('button', { name: 'Memory' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Skills' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Connectors' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Data Management' })).toBeDefined();
+  expect(screen.getByText('Task List')).toBeDefined();
+  expect(screen.getByText('Conversation')).toBeDefined();
+  expect(screen.getByText('Results Panel')).toBeDefined();
 });
 
 test('shows conversation, artifacts, files, changes, and preview for the active task', async () => {
@@ -115,12 +137,14 @@ test('shows conversation, artifacts, files, changes, and preview for the active 
 
   fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
   expect(screen.getByText('Weekly brief draft with action items.')).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Stop' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Approve Changes' })).toBeDefined();
 });
 
 test('submits full WorkBuddy-style composer payload and selects the new task', async () => {
   render(<AssistantPage />);
 
-  await screen.findByText("Create this week's operating brief");
+  await screen.findAllByText("Create this week's operating brief");
   fireEvent.change(screen.getByLabelText('Task prompt'), {
     target: { value: 'Build a Q3 planning deck' },
   });
@@ -152,14 +176,14 @@ test('submits full WorkBuddy-style composer payload and selects the new task', a
   expect(await screen.findByText('assistant-presentation.pptx')).toBeDefined();
 });
 
-test('opens feature panels for remote control, automations, memory, skills, and connectors', async () => {
+test('opens feature panels for remote control, automations, memory, skills, connectors, and data management', async () => {
   render(<AssistantPage />);
 
   await screen.findByRole('heading', { name: 'Jarvis Assistant' });
   fireEvent.click(screen.getByRole('button', { name: 'Remote Control' }));
-  expect(screen.getByText('Slack')).toBeDefined();
-  expect(screen.getByText('Telegram')).toBeDefined();
-  expect(screen.getByText('Discord')).toBeDefined();
+  for (const platform of ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot']) {
+    expect(screen.getByText(platform)).toBeDefined();
+  }
 
   fireEvent.click(screen.getByRole('button', { name: 'Automations' }));
   expect(screen.getByText('Weekly research brief')).toBeDefined();
@@ -177,4 +201,22 @@ test('opens feature panels for remote control, automations, memory, skills, and 
   const connectorPanel = screen.getByLabelText('Connector panel');
   expect(within(connectorPanel).getByText('Google Drive')).toBeDefined();
   expect(within(connectorPanel).getByText('MCP Endpoint')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Data Management' }));
+  expect(screen.getByText('Shared Files')).toBeDefined();
+  expect(screen.getByText('Archived Tasks')).toBeDefined();
+  expect(screen.getByText('Unshare Queue')).toBeDefined();
+});
+
+test('supports WorkBuddy-style mode and artifact options including Coding and Code App', async () => {
+  render(<AssistantPage />);
+
+  await screen.findAllByText("Create this week's operating brief");
+  fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'Coding' } });
+  fireEvent.change(screen.getByLabelText('Output format'), { target: { value: 'Code App' } });
+
+  expect(screen.getByDisplayValue('Coding')).toBeDefined();
+  expect(screen.getByDisplayValue('Code App')).toBeDefined();
+  expect(screen.getByText('Open Preview')).toBeDefined();
+  expect(screen.getByText('Run Locally')).toBeDefined();
 });
