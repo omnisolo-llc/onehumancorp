@@ -9,7 +9,9 @@ import { InteractiveWalkthrough } from './Walkthrough';
 // --- Walkthrough System ---
 type Step = {
   targetId: string;
-  message: string;
+  title: string;
+  content: string;
+  position?: "top" | "bottom" | "left" | "right";
 };
 
 type HelpArticle = { title: string; desc: string; link?: string };
@@ -125,7 +127,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
+          steps={steps as any}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}

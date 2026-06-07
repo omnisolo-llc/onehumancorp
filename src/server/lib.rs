@@ -2286,6 +2286,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
 
+    let advisor_worker = crate::workers::department_workers::AdvisorWorker::new(db.clone());
+    advisor_worker.start();
+
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
     promoter_worker.start();
