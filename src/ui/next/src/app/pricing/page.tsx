@@ -4,6 +4,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function PricingPage() {
   const router = useRouter();
@@ -116,6 +117,7 @@ export default function PricingPage() {
             </div>
         </div>
 
+        <PoweredByOHC tenantId="ohc" />
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
