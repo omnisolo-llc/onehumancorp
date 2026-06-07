@@ -409,4 +409,42 @@ mod tests {
             _ => panic!("Expected HandoffRequested error"),
         }
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn test_transient_retry_clamped_to_two() {
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(TransientRetryExecutor {
+                call_count: call_count.clone(),
+                fail_until: 10, // Keep failing
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        // Pass max_retries = 5, but it should be clamped to 2
+        let handle = tokio::spawn(async move {
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5).await
+        });
+
+        tokio::time::advance(std::time::Duration::from_millis(30000)).await;
+
+        let res = handle.await.unwrap();
+
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
+            _ => panic!("Expected Unexpected error"),
+        }
+        // 1 initial + 2 clamped retries = 3 calls
+        assert_eq!(call_count.load(Ordering::SeqCst), 3);
+    }
 }
