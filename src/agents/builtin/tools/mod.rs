@@ -97,6 +97,7 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
+    llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<Arc<RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     todos: SharedTodos,
     task_store: SharedTaskStore,
@@ -138,7 +139,7 @@ pub fn all_tools(
         finance::finance_report_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
-        subagent::subagent_tool(runner.clone()),
+        subagent::subagent_tool(runner.clone(), llm.clone()),
         workflow::workflow_tool(runner.clone()),
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
