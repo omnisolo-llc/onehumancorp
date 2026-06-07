@@ -319,7 +319,7 @@ export default function TerminalPage() {
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
-        {syncing && <div className="bg-blue-50 text-blue-600 text-xs text-center py-2 border-t border-blue-100">{t('Syncing offline events...')}</div>}
+        {syncing && <div className="min-h-[44px] flex items-center justify-center bg-blue-50 text-blue-600 text-xs text-center py-2 border-t border-blue-100">{t('Syncing offline events...')}</div>}
         {offlineConversion && (
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-xs font-bold border border-amber-200 shadow-lg animate-bounce">
             {t('Using cached rates - Syncing soon')}

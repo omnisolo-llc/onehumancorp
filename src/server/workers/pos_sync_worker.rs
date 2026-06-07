@@ -34,16 +34,31 @@ impl PosSyncWorker {
             .await
             .unwrap();
 
-        if let Some(mutation) = payload.get("mutation") {
-            let product_id = mutation["product_id"].as_str().unwrap();
-            let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
+        if let Some(payload_str) = payload.get("payload").and_then(|v| v.as_str()) {
+            if let Ok(mutations) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                if let Some(mutations_array) = mutations.as_array() {
+                    let cache = crate::builder::edge::get_edge_cache();
+                    cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
 
-            sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
-                .bind(quantity_deducted)
-                .bind(product_id)
-                .execute(&mut *tx)
-                .await
-                .unwrap();
+                    for mutation in mutations_array {
+                        if let Some(product_id) = mutation.get("product_id").and_then(|v| v.as_str()) {
+                            let quantity_deducted = mutation.get("quantity")
+                                .or_else(|| mutation.get("quantity_deducted"))
+                                .and_then(|v| v.as_i64())
+                                .unwrap_or(1);
+
+                            sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
+                                .bind(quantity_deducted)
+                                .bind(product_id)
+                                .execute(&mut *tx)
+                                .await
+                                .unwrap();
+
+                            cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                        }
+                    }
+                }
+            }
         }
 
         sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")
@@ -86,12 +101,7 @@ mod tests {
 
         let job_payload = serde_json::json!({
             "transaction_id": "tx-test-worker",
-            "mutation": {
-                "product_id": "prod-worker-test-1",
-                "quantity_deducted": 2,
-                "amount": 5000,
-                "transaction_id": "tx-test-worker"
-            }
+            "payload": "[{\"product_id\": \"prod-worker-test-1\", \"quantity\": 2}]",
         });
 
         let job = crate::queue::Job {
