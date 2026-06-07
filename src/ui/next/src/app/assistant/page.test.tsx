@@ -63,6 +63,16 @@ const tasksPayload = {
     workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
     commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
     mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
+    paritySummary: { total: 50, implemented: 50, remaining: 0 },
+    parityCategories: [
+      'Cloud Agent lifecycle: 24/24',
+      'Home execution controls: 4/4',
+      'Expert teams: 6/6',
+      'Plugin system: 7/7',
+      'Remote assistant: 5/5',
+      'Automation governance: 4/4',
+    ],
+    parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates'],
   },
 };
 
@@ -181,6 +191,7 @@ test('renders the primary Jarvis workstation and preserves Expert Center navigat
   expect(screen.getByRole('button', { name: 'Data Management' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Explore' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Cloud Runtime' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Parity Audit' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Permissions' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Models & Runtime' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'System & Safety' })).toBeDefined();
@@ -310,6 +321,13 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   expect(within(cloudPanel).getByText('Background Session')).toBeDefined();
   expect(within(cloudPanel).getByText('Uploaded Files')).toBeDefined();
   expect(within(cloudPanel).getByText('Pause/Resume')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Parity Audit' }));
+  const parityPanel = screen.getByLabelText('Parity audit panel');
+  expect(within(parityPanel).getByText('50 / 50 implemented')).toBeDefined();
+  expect(within(parityPanel).getByText('Cloud Agent lifecycle: 24/24')).toBeDefined();
+  expect(within(parityPanel).getByText('Hook plugins')).toBeDefined();
+  expect(within(parityPanel).getByText('Dedicated remote folder')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Permissions' }));
   expect(screen.getByText('Permission Mode')).toBeDefined();
