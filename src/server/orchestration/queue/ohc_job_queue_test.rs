@@ -219,3 +219,61 @@ async fn test_worker_pool_chaos_timeout() {
     assert_eq!(status_retry.0, "PENDING");
     assert_eq!(status_retry.1, 1);
 }
+
+#[tokio::test]
+async fn test_ohc_job_queue_fail_max_retries_dead_letter() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .unwrap();
+
+    let queue = OHCJobQueue::new(Arc::new(pool.clone()));
+
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+    sqlx::query("DELETE FROM department_dead_letters").execute(&pool).await.unwrap();
+
+    let tenant_id = "tenant_test_dead_letter";
+    let job_type = "fail_job_type_dead_letter";
+    let payload = serde_json::json!({"test": "payload"});
+
+    let job_id = queue.enqueue(tenant_id, job_type, &payload).await.unwrap();
+
+    // Directly set retry_count to max_retries - 1
+    sqlx::query("UPDATE ohc_job_queue SET retry_count = 2 WHERE id = $1")
+        .bind(&job_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    // Trigger failure that exceeds max_retries
+    queue.fail(&job_id, 3).await.unwrap();
+
+    // Verify job is marked as FAILED
+    let status_retry: (String, i32) = sqlx::query_as("SELECT status, retry_count FROM ohc_job_queue WHERE id = $1")
+        .bind(&job_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(status_retry.0, "FAILED");
+
+    // Verify dead letter was created
+    use sqlx::Row;
+    let dl_row = sqlx::query("SELECT tenant_id, event_type, department, payload, error_message FROM department_dead_letters LIMIT 1").fetch_one(&pool).await.unwrap();
+    let dl_tenant_id: String = dl_row.get("tenant_id");
+    let dl_event_type: String = dl_row.get("event_type");
+    let dl_department: String = dl_row.get("department");
+    let dl_payload: String = dl_row.get("payload");
+    let dl_error_message: String = dl_row.get("error_message");
+
+    assert_eq!(dl_tenant_id, tenant_id);
+    assert_eq!(dl_event_type, "job_failed");
+    assert_eq!(dl_department, "job_queue");
+    assert_eq!(dl_payload, "{\"test\":\"payload\"}");
+    assert_eq!(dl_error_message, "Max retries exceeded");
+}

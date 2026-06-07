@@ -203,7 +203,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT retry_count, max_retries FROM ohc_job_queue WHERE id = $1 FOR UPDATE")
+        let row = sqlx::query("SELECT retry_count, max_retries, tenant_id, payload FROM ohc_job_queue WHERE id = $1 FOR UPDATE")
             .bind(job_id)
             .fetch_optional(&mut *tx)
             .await
@@ -216,6 +216,19 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
 
             if next_attempt >= max_retries {
                 // Poison pill
+                let tenant_id: String = r.try_get("tenant_id").unwrap_or_default();
+                let payload: serde_json::Value = r.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
+                let payload_str = serde_json::to_string(&payload).unwrap_or_default();
+                sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind("job_failed")
+                    .bind("job_queue")
+                    .bind(&payload_str)
+                    .bind(_reason)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
                 sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
                     .bind(next_attempt)
                     .bind(job_id)
