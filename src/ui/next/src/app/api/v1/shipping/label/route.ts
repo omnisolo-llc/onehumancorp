@@ -1,33 +1,24 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-  const tenantId = req.headers.get('x-tenant-id') || 'default';
-  const userId = req.headers.get('x-user-id') || 'default';
-  const authHeader = req.headers.get('authorization');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-tenant-id': tenantId,
-    'x-user-id': userId,
-  };
-  if (authHeader) {
-    headers.authorization = authHeader;
-  }
-
   try {
     const body = await req.json();
-    const res = await fetch(`${backendUrl}/api/v1/shipping/label`, {
+
+    const baseUrl = process.env.OHC_API_URL || 'http://127.0.0.1:18789';
+    const response = await fetch(`${baseUrl}/api/v1/shipping/label`, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
-    if (res.ok) {
-      return NextResponse.json(await res.json());
+    if (!response.ok) {
+      throw new Error(`Backend returned status ${response.status}`);
     }
 
-    return NextResponse.json({ error: 'Failed to purchase shipping label' }, { status: res.status });
-  } catch {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Failed to proxy label purchase:', error);
+    return NextResponse.json({ error: 'Failed to purchase label' }, { status: 500 });
   }
 }

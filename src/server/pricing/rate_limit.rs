@@ -144,15 +144,6 @@ impl RedisRateLimiter {
         Ok(used.unwrap_or(0))
     }
 
-    pub async fn get_agent_actions_used(&self, tenant_id: &str, agent_id: &str) -> Result<u32, String> {
-        let mut conn = self.get_connection().await?;
-        let now = chrono::Utc::now();
-        let month_key = now.format("%Y-%m").to_string();
-        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
-        let used: Option<u32> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
-        Ok(used.unwrap_or(0))
-    }
-
     pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
         let mut conn = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);

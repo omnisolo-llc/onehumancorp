@@ -23,12 +23,6 @@ export default function SettingsPage() {
     delivery_fee: 8.50,
   });
 
-  const [voiceSettings, setVoiceSettings] = useState({
-    voice_receptionist_enabled: false,
-    voice_receptionist_number: "",
-    voice_receptionist_persona: "Friendly",
-  });
-
   useEffect(() => {
     fetch("/api/settings/delivery")
       .then(res => res.json())
@@ -40,19 +34,6 @@ export default function SettingsPage() {
          });
       })
       .catch(e => console.error("Failed to load delivery settings", e));
-
-    fetch("/api/settings/voice")
-      .then(res => res.json())
-      .then(data => {
-        if (data) {
-          setVoiceSettings({
-            voice_receptionist_enabled: data.voice_receptionist_enabled || false,
-            voice_receptionist_number: data.voice_receptionist_number || "",
-            voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
-          });
-        }
-      })
-      .catch(e => console.error("Failed to load voice settings", e));
   }, []);
 
   const handleDeliverySettingChange = async (key: string, value: any) => {
@@ -120,35 +101,6 @@ export default function SettingsPage() {
       } catch (e) {
         console.error("Failed to save preferences", e);
       }
-    }
-  };
-
-  const handleVoiceSettingChange = async (key: string, value: string | boolean) => {
-    const newSettings = { ...voiceSettings, [key]: value };
-    setVoiceSettings(newSettings);
-
-    try {
-      await fetch("/api/settings/voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSettings),
-      });
-    } catch (e) {
-      console.error("Failed to save voice settings", e);
-    }
-  };
-
-  const handleProvisionVoiceNumber = async () => {
-    try {
-      const res = await fetch("/api/settings/voice/provision", {
-        method: "POST",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        handleVoiceSettingChange('voice_receptionist_number', data.number);
-      }
-    } catch (e) {
-      console.error("Failed to provision voice number", e);
     }
   };
 
@@ -313,63 +265,6 @@ export default function SettingsPage() {
                   />
                 </label>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="app-panel">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Autonomous Voice Receptionist</div>
-              <div className="app-list-subtitle">Never miss a call. Let AI answer, book appointments, and take orders.</div>
-            </div>
-          </div>
-          <div className="app-panel-body">
-            <div className="space-y-4">
-              <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
-                <span>Enable AI Voice Receptionist</span>
-                <input
-                  type="checkbox"
-                  checked={voiceSettings.voice_receptionist_enabled}
-                  onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
-                  className="rounded"
-                />
-              </label>
-
-              {voiceSettings.voice_receptionist_enabled && (
-                <div className="space-y-4 border-t border-gray-200 pt-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <label className="block">
-                      <span className="app-metric-label">Voice Persona</span>
-                      <select
-                        value={voiceSettings.voice_receptionist_persona}
-                        onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
-                        className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
-                      >
-                        <option value="Friendly">Friendly & Casual</option>
-                        <option value="Professional">Professional & Crisp</option>
-                        <option value="Efficient">Fast & Efficient</option>
-                      </select>
-                    </label>
-                    <div className="block">
-                      <span className="app-metric-label">Assigned Phone Number</span>
-                      <div className="mt-2 flex gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={voiceSettings.voice_receptionist_number || "Not assigned"}
-                          className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500"
-                        />
-                        {!voiceSettings.voice_receptionist_number && (
-                          <button onClick={handleProvisionVoiceNumber} className="app-button secondary whitespace-nowrap" type="button">
-                            Get Number
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </section>

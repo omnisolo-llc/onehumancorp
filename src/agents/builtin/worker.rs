@@ -192,7 +192,7 @@ impl TaskWorker {
         loop {
             attempt += 1;
             // ML-Resilience: 60 second timeout
-            let result = tokio::time::timeout(crate::agent::agent_task_timeout(), async {
+            let result = tokio::time::timeout(std::time::Duration::from_secs(60), async {
                 let mut client = crate::ohc::agent::service::agent_service_client::AgentServiceClient::connect(format!("http://{}", address))
                     .await
                     .map_err(|e| format!("connect to builtin agent at {}: {}", address, e))?;

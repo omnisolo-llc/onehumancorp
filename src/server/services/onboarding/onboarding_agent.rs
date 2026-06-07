@@ -65,14 +65,10 @@ impl OnboardingAgent {
         let response = minimax.reason(&prompt).await?;
 
         // Clean up markdown code blocks if present
-        let mut clean_json = response.as_str();
-        if let Some(start) = clean_json.find('{') {
-            if let Some(end) = clean_json.rfind('}') {
-                if start <= end {
-                    clean_json = &clean_json[start..=end];
-                }
-            }
-        }
+        let clean_json = response.trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
 
         let data: IntakeData = serde_json::from_str(clean_json)
             .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;
@@ -333,7 +329,39 @@ impl OnboardingAgent {
         .await
         .map_err(|e| e.to_string())?;
 
-        let flags_json = onboarding_feature_state(&req, &company_name, &business_type, &location);
+        // Extract feature flags logic
+        let mut flags = serde_json::Map::new();
+        if business_type == "Service Business" || business_type == "Service" || req.selling_categories.contains(&"services".to_string()) {
+            flags.insert("enable_booking".to_string(), serde_json::json!(true));
+        }
+        if business_type == "Restaurant / Food" || business_type == "Food Cart" || req.selling_categories.contains(&"food".to_string()) {
+            flags.insert("enable_menu".to_string(), serde_json::json!(true));
+            flags.insert("enable_pre_order".to_string(), serde_json::json!(true));
+        }
+        if req.selling_categories.contains(&"physical".to_string()) || req.selling_categories.contains(&"digital".to_string()) {
+            flags.insert("enable_ecommerce".to_string(), serde_json::json!(true));
+        }
+        if req.selling_categories.contains(&"subscriptions".to_string()) {
+            flags.insert("enable_subscriptions".to_string(), serde_json::json!(true));
+        }
+
+        // Add initial artifact placeholders to state
+        flags.insert("storefront_status".to_string(), json!("generating"));
+        flags.insert("policies_status".to_string(), json!("generating"));
+        flags.insert("location".to_string(), json!(location));
+        flags.insert("artifacts".to_string(), json!({
+            "storefront": {
+                "title": company_name,
+                "description": format!("Welcome to {}!", company_name),
+                "theme": req.website_template,
+            },
+            "policies": [
+                {"title": "Terms of Service", "content": "Generating..."},
+                {"title": "Privacy Policy", "content": "Generating..."}
+            ]
+        }));
+
+        let flags_json = serde_json::Value::Object(flags);
 
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4)"
@@ -2474,73 +2502,6 @@ impl OnboardingAgent {
     }
 }
 
-pub fn onboarding_feature_state(
-    req: &StartOnboardingRequest,
-    company_name: &str,
-    business_type: &str,
-    location: &str,
-) -> serde_json::Value {
-    let has_services = business_type == "Service Business"
-        || business_type == "Service"
-        || req.selling_categories.iter().any(|category| category == "services");
-    let has_products = req
-        .selling_categories
-        .iter()
-        .any(|category| category == "physical" || category == "digital")
-        || !req.first_product_name.trim().is_empty();
-    let has_food = business_type == "Restaurant / Food"
-        || business_type == "Food Cart"
-        || req.selling_categories.iter().any(|category| category == "food");
-
-    let mut flags = serde_json::Map::new();
-    flags.insert("onboarding_goal_seconds".to_string(), json!(600));
-    flags.insert("unified_storefront".to_string(), json!(true));
-    if has_services {
-        flags.insert("enable_booking".to_string(), json!(true));
-    }
-    if has_food {
-        flags.insert("enable_menu".to_string(), json!(true));
-        flags.insert("enable_pre_order".to_string(), json!(true));
-    }
-    if has_products {
-        flags.insert("enable_ecommerce".to_string(), json!(true));
-    }
-    if req.selling_categories.iter().any(|category| category == "subscriptions") {
-        flags.insert("enable_subscriptions".to_string(), json!(true));
-    }
-
-    let mut modules = vec!["storefront"];
-    if has_products {
-        modules.push("products");
-    }
-    if has_services {
-        modules.push("bookings");
-    }
-    if has_food {
-        modules.push("menu");
-    }
-
-    flags.insert("generated_modules".to_string(), json!(modules));
-    flags.insert("storefront_status".to_string(), json!("generating"));
-    flags.insert("policies_status".to_string(), json!("generating"));
-    flags.insert("location".to_string(), json!(location));
-    flags.insert("artifacts".to_string(), json!({
-        "storefront": {
-            "title": company_name,
-            "description": format!("Welcome to {}!", company_name),
-            "theme": req.website_template,
-            "supports_products": has_products,
-            "supports_bookings": has_services,
-        },
-        "policies": [
-            {"title": "Terms of Service", "content": "Generating..."},
-            {"title": "Privacy Policy", "content": "Generating..."}
-        ]
-    }));
-
-    serde_json::Value::Object(flags)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2640,38 +2601,6 @@ mod tests {
         // This test will likely fail without a real API key if it actually calls the API,
         // but we want to verify the method existence and basic logic.
         // In a real scenario we'd use a trait and mock it.
-    }
-
-    #[test]
-    fn test_onboarding_feature_state_supports_products_and_bookings_under_ten_minutes() {
-        let req = StartOnboardingRequest {
-            business_type: "Service Business".to_string(),
-            company_name: "Maya Studio".to_string(),
-            company_description: "Cakes and classes".to_string(),
-            selling_categories: vec!["physical".to_string(), "services".to_string()],
-            payment_pref: "online".to_string(),
-            admin_email: "owner@example.com".to_string(),
-            admin_name: "Owner".to_string(),
-            admin_password: "password123".to_string(),
-            website_template: "Modern".to_string(),
-            first_product_name: "Celebration Cake".to_string(),
-            first_product_price: "45.00".to_string(),
-            domain_choice: "subdomain".to_string(),
-            price_type: "fixed".to_string(),
-            location: "Oakland, CA".to_string(),
-        };
-
-        let state = onboarding_feature_state(&req, "Maya Studio", &req.business_type, &req.location);
-
-        assert_eq!(state["unified_storefront"], true);
-        assert_eq!(state["onboarding_goal_seconds"], 600);
-        assert_eq!(state["enable_ecommerce"], true);
-        assert_eq!(state["enable_booking"], true);
-        assert_eq!(state["artifacts"]["storefront"]["supports_products"], true);
-        assert_eq!(state["artifacts"]["storefront"]["supports_bookings"], true);
-        let modules = state["generated_modules"].as_array().unwrap();
-        assert!(modules.iter().any(|module| module == "products"));
-        assert!(modules.iter().any(|module| module == "bookings"));
     }
 
     #[tokio::test]

@@ -695,7 +695,6 @@ export default function BuilderPage() {
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 glassmorphism border-t border-white/40 dark:border-white/10 z-50">
           <div className="flex gap-3 mb-2">
-            <WithTooltip id="change-vibe-tooltip" defaultText="Change the theme and colors of your website.">
             <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px] inline-flex items-center justify-center gap-2">
               <svg className="h-4 w-4 flex-none" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24">
                 <path d="M4 7h16" />
@@ -704,9 +703,7 @@ export default function BuilderPage() {
               </svg>
               <span>Change Vibe</span>
             </button>
-          </WithTooltip>
             {!isPremium && (
-              <WithTooltip id="remove-branding-tooltip" defaultText="Upgrade to Premium to remove OHC branding.">
               <button
                 className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px] inline-flex items-center justify-center gap-2"
                 onClick={() => setShowUpgradeModal(true)}
@@ -718,7 +715,6 @@ export default function BuilderPage() {
                 </svg>
                 <span>Remove Branding</span>
               </button>
-            </WithTooltip>
             )}
           </div>
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">

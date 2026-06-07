@@ -1,10 +1,7 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { POST } from './route';
 
 describe('chat API', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
   it('rejects malformed JSON', async () => {
     const response = await POST(new Request('http://localhost/api/chat', {
       method: 'POST',
@@ -35,8 +32,6 @@ describe('chat API', () => {
   });
 
   it('returns successful reply for valid message', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
     // In vitest environment without backend, it falls through to the catch block
     const response = await POST(new Request('http://localhost/api/chat', {
       method: 'POST',
@@ -47,7 +42,5 @@ describe('chat API', () => {
     const data = await response.json();
     expect(data).toHaveProperty('reply');
     expect(data.reply).toContain("I'm having trouble connecting to my brain right now");
-
-    expect(consoleSpy).toHaveBeenCalled();
   });
 });
