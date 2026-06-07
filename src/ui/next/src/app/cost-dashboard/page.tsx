@@ -17,6 +17,7 @@ interface CostDashboardData {
   total_costs: number;
   llm_cost: number;
   storage_cost: number;
+  compute_cost: number;
   payment_fees: number;
   network_cost: number;
   bandwidth_savings: number;
