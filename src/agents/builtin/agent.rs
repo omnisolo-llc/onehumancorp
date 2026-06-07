@@ -90,6 +90,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_3_stage_anthropic_tool_gating: bool,
+    pub enable_openai_3_hook_guardrails: bool,
     pub enable_actor_model_message_passing: bool,
     pub enable_tao_orchestration_loop: bool,
     pub enable_agent_curated_memory: bool,
@@ -122,6 +123,46 @@ impl AgentRunConfig {
                 self.high_risk_tools.clone(),
             );
             registry.tool_guardrails.push(std::sync::Arc::new(anthropic_gater));
+            self.guardrails = Some(registry);
+        }
+    }
+
+    pub fn apply_openai_guardrails(&mut self) {
+        if self.enable_openai_3_hook_guardrails {
+            let mut registry = self.guardrails.take().unwrap_or_default();
+
+            let safe_tools = if let Some(allowed) = &self.allowed_tools {
+                allowed.clone()
+            } else {
+                vec![]
+            };
+
+            // 1. Input Validator
+            registry.input_guardrails.push(std::sync::Arc::new(
+                crate::guardrails::openai_hooks::OpenAiInputValidator::new(
+                    100_000,
+                    vec![],
+                    vec![], // Example block list
+                )
+            ));
+
+            // 2. Output Auditor
+            registry.output_guardrails.push(std::sync::Arc::new(
+                crate::guardrails::openai_hooks::OpenAiOutputAuditor::new(
+                    0,
+                    false,
+                    vec![], // Example block list
+                )
+            ));
+
+            // 3. Tool Policy Enforcer
+            registry.tool_guardrails.push(std::sync::Arc::new(
+                crate::guardrails::openai_hooks::OpenAiToolPolicyEnforcer::new(
+                    safe_tools,
+                    vec![], // Blocked arguments
+                )
+            ));
+
             self.guardrails = Some(registry);
         }
     }
@@ -176,6 +217,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_3_stage_anthropic_tool_gating: false,
+            enable_openai_3_hook_guardrails: false,
             enable_actor_model_message_passing: false,
             enable_tao_orchestration_loop: false,
             enable_agent_curated_memory: false,
@@ -353,6 +395,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
@@ -615,6 +658,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         // Guardrails & Safety: OpenAI Mechanic (Input Guardrail)
@@ -855,6 +899,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         tracing::info!("Executing via Actor-model message passing");
@@ -930,6 +975,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
@@ -1334,6 +1380,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
@@ -1392,6 +1439,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let timeout_duration = agent_task_timeout();
@@ -1842,6 +1890,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let mut final_cfg = cfg.clone();
@@ -1987,6 +2036,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let mut self_with_memory = self;
@@ -8311,5 +8361,42 @@ mod e2e_verification_tests {
         let res = agent.run_tao_orchestration_loop(&cfg, "Hello", &[], &mut |e| events.push(e)).await;
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "Corrected answer.");
+    }
+}
+
+#[cfg(test)]
+mod openai_guardrail_tests {
+    use super::*;
+    use crate::types::{Message, ChatRequest, ChatResponse, Usage};
+    use crate::llm::LlmClient;
+
+    struct MockLlm;
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlm {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                message: Message::assistant("success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id".to_string()),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_openai_guardrails_wiring_tripwire() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_openai_3_hook_guardrails = true;
+        cfg.apply_openai_guardrails();
+
+        let agent = Agent::new(std::sync::Arc::new(MockLlm), vec![]);
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        // Test the Input Validator, the output should not cause a crash immediately,
+        // but if we were to trigger a condition, it would error.
+        // We're just asserting the wiring enables a successful run with standard input.
+        let result = agent.run(&cfg, "hello", &mut on_event).await;
+        assert!(result.is_ok());
     }
 }
