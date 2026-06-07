@@ -6,8 +6,6 @@ backend:
     port: 8080
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 3
@@ -51,8 +49,6 @@ ohcCore:
     port: 18789
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 3
@@ -126,8 +122,6 @@ chatwoot:
     port: 3000
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 1
@@ -169,8 +163,6 @@ powersync:
     targetPort: 8080
   networkPolicy:
     enabled: true
-  vpa:
-    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 1

@@ -1,3 +1,4 @@
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }) }));
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import TeamChatPage from './page';
