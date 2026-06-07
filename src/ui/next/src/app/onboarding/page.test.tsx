@@ -48,7 +48,7 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     await renderOnboardingWizard();
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
