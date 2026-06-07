@@ -19,7 +19,7 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string()]
+        vec!["tenant.report.weekly_health".to_string(), "tenant.inventory.analyze_stagnant".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -33,6 +33,34 @@ impl Department for BusinessAdvisoryAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "tenant.inventory.analyze_stagnant" {
+            // CRON-based inventory analysis pipeline to detect stagnant stock based on sales velocity
+            // In a real scenario, this queries inventory and order_history tables.
+            // For now, we simulate finding a stagnant product matching the smart pricing policy.
+
+            let payload = serde_json::json!({
+                "context": {
+                    "smart_pricing": true,
+                    "product_id": uuid::Uuid::new_v4().to_string(),
+                    "product_name": "Winter Scarf",
+                    "old_price": 50.0,
+                    "new_price": 42.5,
+                    "discount_amount": 7.5,
+                    "sales_projection": "+$120",
+                    "stagnant_days": 60,
+                    "margin_percent": 40
+                }
+            });
+
+            return self.orchestrator.execute_action(
+                DepartmentType::BusinessAdvisory,
+                "Smart Price Suggestion: Winter Scarf".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview, // Always draft for review for pricing changes initially
+                payload
+            ).await.map(|_| ());
+        }
 
         // Scheduled background worker triggers tenant.report.weekly_health to generate brief.
         self.orchestrator.execute_action(
@@ -70,7 +98,18 @@ impl BaseAgent for BusinessAdvisoryAgent {
         AgentTriggerType::Scheduled
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
+    async fn execute(&self, payload: Value) -> Result<(), String> {
+        // If triggered as a CRON job for inventory analysis
+        if payload.get("action").and_then(|v| v.as_str()) == Some("analyze_stagnant_inventory") {
+            let tenant_id = payload.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("system");
+            let event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: tenant_id.to_string(),
+                event_type: "tenant.inventory.analyze_stagnant".to_string(),
+                payload: payload.clone(),
+            };
+            return self.handle_event(&event).await;
+        }
         Ok(())
     }
 }
