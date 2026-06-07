@@ -2,6 +2,62 @@
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+function SwipeableCard({ children, onApprove, onDismiss }: { children: React.ReactNode, onApprove: () => void, onDismiss: () => void }) {
+  const [startX, setStartX] = useState<number | null>(null);
+  const [offsetX, setOffsetX] = useState(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startX !== null) {
+      setOffsetX(e.touches[0].clientX - startX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (offsetX > 100) {
+      onApprove();
+    } else if (offsetX < -100) {
+      onDismiss();
+    }
+    setStartX(null);
+    setOffsetX(0);
+  };
+
+  const cardStyle = {
+    transform: `translateX(${offsetX}px)`,
+    transition: startX !== null ? 'none' : 'transform 0.3s ease-out',
+    opacity: 1 - Math.abs(offsetX) / 300,
+  };
+
+  return (
+    <div className="relative w-full overflow-hidden mb-4 rounded-[16px]">
+        <div className="absolute inset-y-0 left-0 w-1/2 bg-green-500 rounded-l-[16px] flex items-center pl-6 text-white font-bold" style={{ opacity: offsetX > 0 ? 1 : 0 }}>
+            Approve
+        </div>
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-red-500 rounded-r-[16px] flex items-center justify-end pr-6 text-white font-bold" style={{ opacity: offsetX < 0 ? 1 : 0 }}>
+            Dismiss
+        </div>
+        <div
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={cardStyle}
+            className="w-full relative z-10"
+        >
+            {children}
+            <div className="text-center text-xs text-gray-500 mt-2 italic flex justify-between px-4 pb-2">
+                <span>&larr; Swipe to dismiss</span>
+                <span>Swipe to approve &rarr;</span>
+            </div>
+        </div>
+    </div>
+  );
+}
+
+
 
 type ApprovalRequest = {
   id: string;
@@ -176,7 +232,8 @@ export function UnifiedAgentFeed() {
                 </div>
               </div>
             )}
-            {approvals.map((approval) => (
+            {approvals.map((approval) => {
+              const contentCard = (
               <div
                 key={approval.id}
                 className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
@@ -254,7 +311,8 @@ export function UnifiedAgentFeed() {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {approval.payload?.context?.smart_pricing === true ? (
+                  {approval.payload?.feature_type === "social_post" ? null :
+                  approval.payload?.context?.smart_pricing === true ? (
                     <div className="flex gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -321,7 +379,12 @@ export function UnifiedAgentFeed() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+              if (approval.payload?.feature_type === "social_post") {
+                 return <SwipeableCard key={approval.id} onApprove={() => handleDecision(approval.id, true)} onDismiss={() => handleDecision(approval.id, false)}>{contentCard}</SwipeableCard>;
+              }
+              return contentCard;
+            })}
           </>
         )}
 

@@ -23,10 +23,39 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "tenant.inventory.updated".to_string(),
+            "tenant.product.created".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.product.created" || event.event_type == "tenant.inventory.updated" {
+            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
+            let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            let images = event.payload.get("images").and_then(|v| v.as_array());
+
+            let remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(-1);
+            let quantity_deducted = event.payload.get("quantity_deducted").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            // Only hand off if it's newly created, or inventory reached 0, or was freshly added.
+            if event.event_type == "tenant.product.created" || remaining_stock == 0 || quantity_deducted < 0 {
+                let marketing_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "tenant.operations.draft_social_post".to_string(),
+                    payload: serde_json::json!({
+                        "name": product_name,
+                        "description": description,
+                        "images": images,
+                        "reason": if remaining_stock == 0 { "sold_out" } else if event.event_type == "tenant.product.created" { "new_arrival" } else { "restocked" }
+                    }),
+                };
+                return self.orchestrator.dispatch_event(marketing_event).await;
+            } else {
+                return Ok(());
+            }
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

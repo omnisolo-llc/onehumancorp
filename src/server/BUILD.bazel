@@ -60,6 +60,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:shipping.rs",
     "//src/server/api/booking:mod.rs",
     "//src/server/api/booking:request.rs",
+    "//src/server/api/booking:rules.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",

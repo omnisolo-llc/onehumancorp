@@ -231,10 +231,8 @@ impl Department for MarketingAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.insight.trending".to_string(),
-            "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
-            "tenant.inventory.updated".to_string(),
+            "tenant.operations.draft_social_post".to_string(),
         ]
     }
 
@@ -272,7 +270,7 @@ impl Department for MarketingAgent {
             }
         }
 
-        if event.event_type == "tenant.product.created" || event.event_type == "tenant.inventory.updated" {
+        if event.event_type == "tenant.operations.draft_social_post" {
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());
