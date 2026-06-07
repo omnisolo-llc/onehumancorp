@@ -3663,6 +3663,10 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route(
+            "/api/v1/ai/ops-agent",
+            axum::routing::post(api::ops_agent::ops_agent_handler)
+        )
+        .route(
             "/api/v1/ai/draft-reply",
             axum::routing::post({
                 let db = db.clone();
