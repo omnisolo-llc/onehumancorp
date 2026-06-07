@@ -978,15 +978,15 @@ describe('assistant API contract', () => {
     expect(body.session.status).toBe('canceled');
   });
 
-  test('tracks 50 additional WorkBuddy gaps as implemented Jarvis parity capabilities', async () => {
+  test('tracks 100 additional WorkBuddy gaps as implemented Jarvis parity capabilities', async () => {
     const body = await (await getParity()).json();
 
     expect(body.summary).toMatchObject({
-      total: 50,
-      implemented: 50,
+      total: 100,
+      implemented: 100,
       remaining: 0,
     });
-    expect(body.gaps).toHaveLength(50);
+    expect(body.gaps).toHaveLength(100);
     expect(body.gaps.every((gap: any) => gap.status === 'implemented')).toBe(true);
     expect(body.gaps.map((gap: any) => gap.name)).toEqual(expect.arrayContaining([
       'Runtime sandbox filesystem',
@@ -1002,6 +1002,16 @@ describe('assistant API contract', () => {
       'Dedicated remote folder',
       'Automation task templates',
       'Concurrency and runtime limits',
+      'Task search box',
+      'Task status filtering',
+      'Nightly memory summary',
+      'User-level MCP config',
+      'Project-level MCP config',
+      'Mini app voice input',
+      'Mini app artifact sharing',
+      'Permission risk boundary',
+      'Clipboard screenshot paste',
+      'Hook event family',
     ]));
     expect(body.categories).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Cloud Agent lifecycle', implemented: 24 }),
@@ -1010,6 +1020,13 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Plugin system', implemented: 7 }),
       expect.objectContaining({ name: 'Remote assistant', implemented: 5 }),
       expect.objectContaining({ name: 'Automation governance', implemented: 4 }),
+      expect.objectContaining({ name: 'Task management', implemented: 10 }),
+      expect.objectContaining({ name: 'Memory governance', implemented: 6 }),
+      expect.objectContaining({ name: 'MCP configuration', implemented: 10 }),
+      expect.objectContaining({ name: 'Mobile mini app', implemented: 10 }),
+      expect.objectContaining({ name: 'Permission safety', implemented: 6 }),
+      expect.objectContaining({ name: 'Create task context', implemented: 4 }),
+      expect.objectContaining({ name: 'Hook lifecycle', implemented: 4 }),
     ]));
   });
 });
