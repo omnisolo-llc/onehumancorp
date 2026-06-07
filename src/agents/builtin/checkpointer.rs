@@ -176,9 +176,14 @@ impl CheckpointSaver for GitCheckpointer {
         // 0.5. Missing .gitignore defaults: Ensure we don't snapshot massive build directories if user forgot to ignore them
         let gitignore_path = self.repo_path.join(".gitignore");
         if !gitignore_path.exists() {
-            let default_ignore = "target/\nnode_modules/\n.idea/\n.vscode/\ndist/\nbuild/\n";
+            let default_ignore = "target/\nnode_modules/\n.idea/\n.vscode/\ndist/\nbuild/\n.scratchpad_*.json\n";
             let _ = tokio::fs::write(&gitignore_path, default_ignore).await;
             tracing::info!("Created default .gitignore to prevent massive snapshotting.");
+        } else {
+            let content = tokio::fs::read_to_string(&gitignore_path).await.unwrap_or_default();
+            if !content.contains(".scratchpad_*.json") {
+                let _ = tokio::fs::write(&gitignore_path, format!("{}\n.scratchpad_*.json\n", content)).await;
+            }
         }
 
         // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
@@ -228,6 +233,14 @@ impl CheckpointSaver for GitCheckpointer {
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
         let tag_name = format!("checkpoint-{}", checkpoint_id);
 
+        // Pre-clean to remove any untracked files that might block the reset
+        // Use -fd to preserve ignored files (like target/ or .env) while still cleaning untracked ones.
+        let _pre_clean = Command::new("git")
+            .arg("clean")
+            .arg("-fd")
+            .current_dir(&self.repo_path)
+            .output().await;
+
         let output = Command::new("git")
             .arg("reset")
             .arg("--hard")
@@ -251,10 +264,10 @@ impl CheckpointSaver for GitCheckpointer {
             }
         }
 
-        // Robust Restore Edge Cases: Use -fdx to also clean ignored files and artifacts that might have been built after the checkpoint
+        // Robust Restore Edge Cases: Clean remaining untracked files without deleting ignored dependencies.
         let clean_output = Command::new("git")
             .arg("clean")
-            .arg("-fdx")
+            .arg("-fd")
             .current_dir(&self.repo_path)
             .output().await
             .map_err(|e| e.to_string())?;
