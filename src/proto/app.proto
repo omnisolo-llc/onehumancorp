@@ -220,6 +220,7 @@ message ReserveTimeSlotRequest {
   string product_id = 3;
   string start_time = 4; // RFC3339
   string end_time = 5; // RFC3339
+  string resource_id = 6;
 }
 
 message ReserveTimeSlotResponse {

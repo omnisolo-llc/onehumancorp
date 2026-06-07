@@ -2669,6 +2669,23 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 }
 
 #[derive(serde::Deserialize)]
+pub struct CheckAvailabilityQuery {
+    pub tenant_id: Option<String>,
+    pub product_id: String,
+    pub date: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ReserveTimeSlotPayload {
+    pub tenant_id: Option<String>,
+    pub customer_id: String,
+    pub product_id: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub resource_id: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
 struct UiTenantQuery {
     tenant_id: Option<String>,
     tenant: Option<String>,
@@ -2750,6 +2767,62 @@ async fn list_ui_orders_handler(
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
+    }
+}
+
+
+async fn check_availability_handler(
+    axum::extract::State(_db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<CheckAvailabilityQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+
+    let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+    let svc = crate::services::booking::NativeBookingService { redis_client: None };
+    let mut req = tonic::Request::new(::server_ohc::app::CheckAvailabilityRequest {
+        tenant_id: tenant_id.clone(),
+        product_id: query.product_id,
+        date: query.date,
+    });
+    req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+        spiffe_id: "api".to_string(),
+        org_id: tenant_id,
+        agent_id: "".to_string(),
+    });
+
+    match svc.check_availability(req).await {
+        Ok(res) => (axum::http::StatusCode::OK, axum::Json(serde_json::to_value(res.into_inner()).unwrap())).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.message()}))).into_response(),
+    }
+}
+
+async fn reserve_time_slot_handler(
+    axum::extract::State(_db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Json(payload): axum::extract::Json<ReserveTimeSlotPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
+
+    let tenant_id = payload.tenant_id.unwrap_or_else(|| "default".to_string());
+    let svc = crate::services::booking::NativeBookingService { redis_client: None };
+    let mut req = tonic::Request::new(::server_ohc::app::ReserveTimeSlotRequest {
+        tenant_id: tenant_id.clone(),
+        customer_id: payload.customer_id,
+        product_id: payload.product_id,
+        start_time: payload.start_time,
+        end_time: payload.end_time,
+        resource_id: payload.resource_id.unwrap_or_default(),
+    });
+    req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+        spiffe_id: "api".to_string(),
+        org_id: tenant_id,
+        agent_id: "".to_string(),
+    });
+
+    match svc.reserve_time_slot(req).await {
+        Ok(res) => (axum::http::StatusCode::OK, axum::Json(serde_json::to_value(res.into_inner()).unwrap())).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.message()}))).into_response(),
     }
 }
 
@@ -3415,7 +3488,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
-        .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
+                .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
+        .route("/api/ui/bookings/availability", axum::routing::get(check_availability_handler).with_state(db.clone()))
+        .route("/api/ui/bookings/reserve", axum::routing::post(reserve_time_slot_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))

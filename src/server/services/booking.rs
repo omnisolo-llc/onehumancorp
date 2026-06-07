@@ -603,6 +603,7 @@ mod native_booking_tests {
             product_id: "p1".to_string(),
             start_time: "invalid_time".to_string(),
             end_time: "invalid_time".to_string(),
+            resource_id: "r1".to_string(),
         });
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
