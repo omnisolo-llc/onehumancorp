@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default function Booking() {
+function BookingForm() {
+  const searchParams = useSearchParams();
+  const tenant = searchParams?.get("tenant") || "default-store";
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -39,6 +42,15 @@ export default function Booking() {
           >
             Submit Another Request
           </button>
+          <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
+            <a
+              href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+              ⚡ Powered by OHC
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -96,6 +108,15 @@ export default function Booking() {
             </button>
           </div>
         </form>
+        <div className="py-4 text-center border-t border-gray-100 bg-gray-50" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
+          <a
+            href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+            ⚡ Powered by OHC
+          </a>
+        </div>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
@@ -106,5 +127,14 @@ export default function Booking() {
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />
     </div>
+  );
+}
+
+
+export default function Booking() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
+      <BookingForm />
+    </Suspense>
   );
 }
