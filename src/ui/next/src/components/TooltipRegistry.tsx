@@ -101,9 +101,10 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
 
   const handleTouchEnd = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    setTimeout(() => {
+    const hideTimer = setTimeout(() => {
         setActiveTooltip(null);
     }, 2000); // Hide after 2 seconds on mobile
+    timerRef.current = hideTimer;
   };
 
   useEffect(() => {
