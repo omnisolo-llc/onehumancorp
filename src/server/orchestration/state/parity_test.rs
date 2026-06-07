@@ -400,6 +400,7 @@ mod parity_tests {
 
     #[tokio::test]
     async fn test_parity_timezones() {
+        use chrono::Timelike;
         let sqlite_db = setup_sqlite_db().await;
         let pg_db = setup_postgres_db().await;
 
@@ -409,11 +410,9 @@ mod parity_tests {
 
         // Define a strict UTC timestamp explicitly
         let dt = chrono::Utc::now();
+        let dt_sqlite = dt.with_nanosecond(0).unwrap();
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            use chrono::Timelike;
-            let dt_sqlite = dt.with_nanosecond(0).unwrap();
-
             sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at, tenant_id) VALUES (?, ?, ?, \'PENDING\', ?, 'default_tenant')")
                 .bind(&task_id)
                 .bind(mission_id)
@@ -432,7 +431,7 @@ mod parity_tests {
 
             // SQLite strips milliseconds to certain precisions based on formatting,
             // but the timezone itself (UTC) must match.
-            assert_eq!(created_at.timestamp(), dt_sqlite.timestamp());
+            assert_eq!(created_at.timestamp(), dt.timestamp());
         }
 
         if let Some(ref db) = pg_db {
@@ -452,7 +451,10 @@ mod parity_tests {
                 .await
                 .unwrap();
             let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
-            assert_eq!(created_at.timestamp(), dt.timestamp());
+
+            // SQLite strips milliseconds to certain precisions based on formatting,
+            // but the timezone itself (UTC) must match.
+            assert_eq!(created_at.timestamp(), dt_sqlite.timestamp());
         }
     }
 
