@@ -336,7 +336,6 @@ test.describe('comprehensive UI contract', () => {
       const page = await browser.newPage();
       try {
         const audit = await auditInteractivePurposeForRoute(page, route);
-        console.log(`Audited ${audit.auditedElements} interactive elements on ${routeLabel(route)}.`);
         expect(audit.failures).toEqual([]);
       } finally {
         await page.close();
@@ -348,7 +347,6 @@ test.describe('comprehensive UI contract', () => {
       const page = await browser.newPage();
       try {
         const audit = await auditClickEffectsForRoute(page, route);
-        console.log(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
         expect(audit.failures).toEqual([]);
       } finally {
         await page.close();
@@ -361,7 +359,6 @@ test.describe('comprehensive UI contract', () => {
     test.setTimeout(180000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
-    console.log(`Discovered ${appRoutes.length} app routes for load audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     page.on('pageerror', (error) => {
@@ -390,7 +387,6 @@ test.describe('comprehensive UI contract', () => {
     const failures: string[] = [];
     const checked = new Set<string>();
     const appRoutes = discoverAppRoutes();
-    console.log(`Discovered ${appRoutes.length} app routes for internal link audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
@@ -430,7 +426,6 @@ test.describe('comprehensive UI contract', () => {
     test.setTimeout(180000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
-    console.log(`Discovered ${appRoutes.length} app routes for external/protocol link audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
@@ -497,7 +492,6 @@ test.describe('comprehensive UI contract', () => {
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
     let auditedTargets = 0;
-    console.log(`Discovered ${appRoutes.length} app routes for click target audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
@@ -563,7 +557,6 @@ test.describe('comprehensive UI contract', () => {
       }
     }
 
-    console.log(`Audited ${auditedTargets} visible enabled click targets.`);
     expect(failures).toEqual([]);
   });
 
@@ -572,7 +565,6 @@ test.describe('comprehensive UI contract', () => {
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
     let auditedElements = 0;
-    console.log(`Discovered ${appRoutes.length} app routes for interactive element audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
@@ -616,7 +608,6 @@ test.describe('comprehensive UI contract', () => {
       }
     }
 
-    console.log(`Audited ${auditedElements} visible interactive elements.`);
     expect(failures).toEqual([]);
   });
 
@@ -625,7 +616,6 @@ test.describe('comprehensive UI contract', () => {
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
     let auditedLayouts = 0;
-    console.log(`Discovered ${appRoutes.length} app routes for layout audit across ${viewports.length} viewports.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const viewport of viewports) {
@@ -693,7 +683,6 @@ test.describe('comprehensive UI contract', () => {
       }
     }
 
-    console.log(`Audited ${auditedLayouts} route/viewport layout combinations.`);
     expect(failures).toEqual([]);
   });
 });

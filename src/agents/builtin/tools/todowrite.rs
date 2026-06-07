@@ -9,52 +9,38 @@ use super::{SharedTodos, Tool, ToolExecutor};
 /// A single todo item.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TodoItem {
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub content: String,
+    #[serde(default)]
     pub status: String, // "pending" | "in_progress" | "completed"
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub priority: String, // "low" | "medium" | "high"
 }
 
 // ── TodoWrite ─────────────────────────────────────────────────────────────────
+#[derive(Debug, Deserialize)]
+pub struct TodoWriteArgs {
+    pub todos: Vec<TodoItem>,
+}
 
 struct TodoWriteExecutor {
     todos: SharedTodos,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TodoWriteExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let todos_arr = args["todos"]
-            .as_array()
-            .ok_or_else(|| ToolError::LlmRecoverable("todowrite: todos must be an array".to_string()))?;
-
-        let items: Vec<TodoItem> = todos_arr
-            .iter()
-            .enumerate()
-            .map(|(i, t)| TodoItem {
-                id: t["id"]
-                    .as_str()
-                    .map(str::to_string)
-                    .unwrap_or_else(|| format!("todo-{}", i + 1)),
-                content: t["content"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string(),
-                status: t["status"]
-                    .as_str()
-                    .unwrap_or("pending")
-                    .to_string(),
-                priority: t["priority"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string(),
-            })
-            .collect();
-
+impl super::pydantic::PydanticToolExecutor<TodoWriteArgs> for TodoWriteExecutor {
+    async fn execute_typed(&self, args: TodoWriteArgs) -> Result<String, ToolError> {
+        let mut items = args.todos;
+        for (i, item) in items.iter_mut().enumerate() {
+            if item.id.is_empty() {
+                item.id = format!("todo-{}", i + 1);
+            }
+            if item.status.is_empty() {
+                item.status = "pending".to_string();
+            }
+        }
         let mut todos = self.todos.write().await;
         *todos = items;
         Ok(format!("Todo list updated with {} items.", todos.len()))
@@ -116,7 +102,7 @@ pub fn todowrite_tool(todos: SharedTodos) -> Tool {
             },
             "required": ["todos"]
         }),
-        execute: Arc::new(TodoWriteExecutor { todos }),
+        execute: Arc::new(super::pydantic::PydanticAdapter::new(TodoWriteExecutor { todos })),
     }
 }
 

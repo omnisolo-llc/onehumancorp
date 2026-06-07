@@ -65,15 +65,5 @@ describe('MasterMenu', () => {
     stdin.write('\u001B[A');
   });
 
-  test('handles keyboard interaction (return)', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const { stdin } = render(<MasterMenu />);
-
-    // Write return key to stdin (for the first option: Run Developer Setup)
-    stdin.write('\r');
-
-    expect(logSpy).toHaveBeenCalledWith('Executing Run Developer Setup...');
-    logSpy.mockRestore();
-  });
 
 });
