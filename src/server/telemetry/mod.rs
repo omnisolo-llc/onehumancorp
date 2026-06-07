@@ -1407,8 +1407,11 @@ mod additional_tests {
         assert_eq!(metric_name, "ohc_autodream_sync_duration_seconds");
         record_autodream_sync_duration(0.25, "Standalone");
 
-        let dashboard = fs::read_to_string("src/server/monitoring/dashboards/hybrid-telemetry.json")
-            .expect("hybrid telemetry dashboard should be readable");
+        let dashboard = fs::read_to_string("../monitoring/dashboards/hybrid-telemetry.json").or_else(|_| {
+            fs::read_to_string("../../monitoring/dashboards/hybrid-telemetry.json").or_else(|_| {
+                fs::read_to_string("src/server/monitoring/dashboards/hybrid-telemetry.json")
+            })
+        }).expect("hybrid telemetry dashboard should be readable");
         assert!(dashboard.contains(metric_name));
     }
 }
@@ -1512,8 +1515,30 @@ mod harness_io_bytes_tests {
     }
 }
 
+pub static HARNESS_SECURITY_DIVERGENCE_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
 pub static RAG_RECORDS_SYNCED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 pub static RAG_SYNC_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_harness_security_divergence_total() -> &'static Counter<u64> {
+    HARNESS_SECURITY_DIVERGENCE_TOTAL.get_or_init(|| {
+        global::meter("ohc.telemetry")
+            .u64_counter("ohc_harness_security_divergence_total")
+            .with_description("Total number of security divergence validations triggered in Harness")
+            .build()
+    })
+}
+
+pub fn record_harness_security_divergence(reason: &str, command_snippet: &str) {
+    let counter = get_harness_security_divergence_total();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("reason", reason.to_string()),
+            opentelemetry::KeyValue::new("command_snippet", command_snippet.to_string()),
+        ],
+    );
+}
 
 pub fn get_rag_records_synced_total() -> &'static Counter<u64> {
     let meter = global::meter("ohc.hybrid_sync");
@@ -1612,5 +1637,17 @@ impl ChaosRecoveryTracker {
 impl Drop for ChaosRecoveryTracker {
     fn drop(&mut self) {
         record_task_recovery_time(&self.env_mode, self.start.elapsed().as_millis() as f64);
+    }
+}
+
+#[cfg(test)]
+mod harness_security_divergence_tests {
+    use super::*;
+
+    #[test]
+    fn test_record_harness_security_divergence() {
+        record_harness_security_divergence("test_reason", "test_cmd");
+        let counter = get_harness_security_divergence_total();
+        counter.add(0, &[]);
     }
 }

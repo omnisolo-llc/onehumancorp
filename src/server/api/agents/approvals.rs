@@ -58,7 +58,7 @@ async fn simulate_smart_pricing(
     match orchestrator.simulate_smart_pricing(&tenant_id).await {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
-            eprintln!("Failed to simulate smart pricing: {}", e);
+            tracing::error!("Failed to simulate smart pricing: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }
