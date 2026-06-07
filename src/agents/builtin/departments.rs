@@ -54,7 +54,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Creates and schedules social media posts (Instagram, Facebook, TikTok)\n\
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
-                - Creates QR codes, link-in-bio pages, and shareable storefront links",
+                - Creates QR codes, link-in-bio pages, and shareable storefront links\n\
+                - Proactively injects 'Powered by OHC' referral loops across widgets and forms to drive acquisition",
             allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
             confidence_threshold: 0.70,
         },

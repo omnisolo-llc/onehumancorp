@@ -234,7 +234,7 @@ export default function FlashSaleGeneratorPage() {
                 </div>
 
                 <div className="mt-4 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                    <a href={`https://ohc.app/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                    <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                         ⚡ Powered by OHC
                     </a>
                 </div>

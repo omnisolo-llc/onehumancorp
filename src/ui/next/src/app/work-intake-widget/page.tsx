@@ -21,7 +21,7 @@ export default function WorkIntakeWidgetPage() {
   }, []);
 
   const embedUrl = `https://ohc.app/api/v1/growth/work-intake/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}`;
-  const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/join?ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -163,7 +163,7 @@ export default function WorkIntakeWidgetPage() {
                         />
                         {!removeBranding && (
                             <div style={{ fontFamily: 'sans-serif', textAlign: 'center', fontSize: '12px', marginTop: '8px' }}>
-                                <a href={`https://ohc.app/join?ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OHC</a>
+                                <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OHC</a>
                             </div>
                         )}
                     </div>

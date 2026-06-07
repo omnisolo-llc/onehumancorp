@@ -143,6 +143,7 @@ where
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
+        .route("/referrals/stats", get(handle_referral_stats))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -334,7 +335,7 @@ async fn handle_send_receipt(
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
+        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"/api/v1/growth/referrals/click?target=/onboarding&ref={}\">Powered by OHC - Start your business today</a>",
         email, amount, order_id, tenant_id
     );
 
@@ -657,7 +658,7 @@ async fn handle_flash_sale_embed(
         <div class="code-box">{safe_code}</div>
 
         <div class="footer">
-            <a href="https://ohc.app/join?ref={tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 
@@ -883,7 +884,7 @@ async fn handle_get_milestone_card(
     };
 
     let branding = if !has_pro {
-        format!(r##"<a href="https://ohc.app/join?ref={}" target="_blank">
+        format!(r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
     <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
   </a>"##, tenant_id)
     } else {
@@ -1083,6 +1084,35 @@ async fn handle_referral_click(
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
+
+async fn handle_referral_stats(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let mut active_referrals: i64 = 0;
+    let mut revenue_from_referrals: f64 = 0.0;
+    let mut pending_rewards: f64 = 0.0;
+
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await;
+
+    if let Ok(r) = row {
+        use sqlx::Row;
+        let conv: i64 = r.get(0);
+        active_referrals = conv;
+        revenue_from_referrals = (conv as f64) * 50.0;
+        pending_rewards = (conv as f64) * 10.0;
+    }
+
+    Ok(Json(serde_json::json!({
+        "active_referrals": active_referrals,
+        "revenue_from_referrals": revenue_from_referrals,
+        "pending_rewards": pending_rewards,
+    })))
+}
+
 
 async fn handle_referral_convert(
     Extension(state): Extension<GrowthState>,
