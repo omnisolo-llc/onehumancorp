@@ -34,7 +34,12 @@ impl MyDashboardService {
             return Ok(agents);
         }
 
-        let mut agents = self.hub.get_agents_by_org(org_id);
+        let hub = self.hub.clone();
+        let org_id_clone = org_id.to_string();
+        let mut agents = tokio::task::spawn_blocking(move || {
+            hub.get_agents_by_org(&org_id_clone)
+        }).await.map_err(|e| e.to_string())?;
+
         if mobile_optimized {
             for agent in agents.iter_mut() {
                 agent.name = String::new();
@@ -45,8 +50,8 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_meetings(&self, org_id: &str) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
-        let cache_key = format!("hub:meetings:{}", org_id);
+    async fn fetch_meetings(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+        let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
         let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
         if let Some(meetings) = cache.get(&cache_key).await {
@@ -57,9 +62,17 @@ impl MyDashboardService {
         let mut filtered = Vec::new();
         for m in all_meetings.iter() {
             if m.id.starts_with(org_id) || m.id.contains(org_id) {
-                filtered.push(m.clone());
+                let mut mtg = m.clone();
+                if mobile_optimized {
+                    mtg.transcript.clear();
+                }
+                filtered.push(mtg);
             } else if m.participants.iter().any(|p| p.starts_with(org_id) || p.contains(org_id)) {
-                filtered.push(m.clone());
+                let mut mtg = m.clone();
+                if mobile_optimized {
+                    mtg.transcript.clear();
+                }
+                filtered.push(mtg);
             }
         }
         let meetings = Arc::new(filtered);
@@ -379,7 +392,7 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o).await })
+                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
             },
             {
                 let s = self.clone();

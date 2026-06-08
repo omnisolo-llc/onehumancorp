@@ -1,22 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const tenantId = req.headers.get('x-tenant-id') || 'default';
+  const userId = req.headers.get('x-user-id') || 'default';
+  const authHeader = req.headers.get('authorization');
+  const spiffeId = req.headers.get('x-spiffe-id');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-tenant-id': tenantId,
+    'x-user-id': userId,
+  };
+  if (authHeader) {
+    headers.authorization = authHeader;
+  }
+  if (spiffeId) {
+    headers['x-spiffe-id'] = spiffeId;
+  }
+
   try {
     const body = await req.json();
-    const data = body.data;
+    const res = await fetch(`${backendUrl}/api/mesh/v2/broadcast`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
 
-    if (!data || !data.message) {
-        return NextResponse.json({ error: 'Validation failed' }, { status: 422 });
+    if (res.ok) {
+      return NextResponse.json(await res.json(), { status: res.status });
     }
 
-    const { agent_id, action, status, channel, payload, msg_id } = data.message;
-
-    if (!agent_id || !action || !status || !channel || !payload || !msg_id) {
-        return NextResponse.json({ error: 'Validation failed' }, { status: 422 });
-    }
-
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to broadcast mesh message' }, { status: res.status });
+  } catch {
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }

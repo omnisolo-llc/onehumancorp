@@ -3,7 +3,10 @@ use futures::future::join_all;
 
 #[async_trait::async_trait]
 pub trait ExpertTeamLlmClient: Send + Sync {
-    async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
+    async fn chat(
+        &self,
+        req: ChatRequest,
+    ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// Skill-trace tracking to prevent hard-coded bypasses.
@@ -37,9 +40,15 @@ pub struct DomainExpert<T: ExpertTeamLlmClient + ?Sized> {
 impl<T: ExpertTeamLlmClient + ?Sized> DomainExpert<T> {
     pub async fn execute(&self, task: &str, trace: &mut SkillTrace) -> Result<String, String> {
         // Track the skill usage
-        trace.record_skill(&format!("{}_analysis", self.role.to_lowercase().replace(" ", "_")));
+        trace.record_skill(&format!(
+            "{}_analysis",
+            self.role.to_lowercase().replace(" ", "_")
+        ));
 
-        let system_prompt = format!("You are an expert in {}. Provide a detailed analysis based on the user's task.", self.role);
+        let system_prompt = format!(
+            "You are an expert in {}. Provide a detailed analysis based on the user's task.",
+            self.role
+        );
 
         let req = ChatRequest {
             model: "default".to_string(),
@@ -74,7 +83,12 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
     }
 
     /// Execute the full expert workflow applying all code-enforced quality gates.
-    pub async fn run_full_expert_workflow(&self, task: &str, trace: &mut SkillTrace, lead_llm: std::sync::Arc<dyn ExpertTeamLlmClient>) -> Result<String, String> {
+    pub async fn run_full_expert_workflow(
+        &self,
+        task: &str,
+        trace: &mut SkillTrace,
+        lead_llm: std::sync::Arc<dyn ExpertTeamLlmClient>,
+    ) -> Result<String, String> {
         // 1. Pre-flight Gate
         QualityGates::pre_flight(self, task)?;
 
@@ -86,7 +100,10 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
 
         // 4. Synthesis by Lead LLM
         let combined = summaries.join("\n");
-        let synthesize_prompt = format!("Synthesize the following expert summaries into a final report of at least 20000 words. Include any required charts or analysis. Task: {}\nSummaries:\n{}", task, combined);
+        let synthesize_prompt = format!(
+            "Synthesize the following expert summaries into a final report of at least 20000 words. Include any required charts or analysis. Task: {}\nSummaries:\n{}",
+            task, combined
+        );
 
         use crate::types::{ChatRequest, Message};
         let req = ChatRequest {
@@ -98,7 +115,10 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
             temperature: 0.2,
         };
 
-        let synth_res = lead_llm.chat(req).await.map_err(|e| format!("Lead LLM failed: {}", e))?;
+        let synth_res = lead_llm
+            .chat(req)
+            .await
+            .map_err(|e| format!("Lead LLM failed: {}", e))?;
         let final_output = synth_res.message.content;
 
         // 5. Pre-deliver Gate
@@ -109,7 +129,11 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
 
     /// Execute the parallel tasks with the team of domain experts.
     /// Incorporates concurrent execution and the "condensed summaries" rule.
-    pub async fn execute_parallel_tasks(&self, task: &str, trace: &mut SkillTrace) -> Result<Vec<String>, String> {
+    pub async fn execute_parallel_tasks(
+        &self,
+        task: &str,
+        trace: &mut SkillTrace,
+    ) -> Result<Vec<String>, String> {
         // Prepare futures for parallel execution
         let mut futures = Vec::new();
 
@@ -124,7 +148,10 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
 
             let fut = async move {
                 let mut local_trace = SkillTrace::new();
-                let expert_instance = DomainExpert { role: role_name, llm: llm_clone };
+                let expert_instance = DomainExpert {
+                    role: role_name,
+                    llm: llm_clone,
+                };
 
                 let mut retries = 3;
                 let mut last_err = String::new();
@@ -164,7 +191,8 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
                     let output_str: &str = output.as_ref();
                     let condensed = if output_str.len() > max_length {
                         let mut iter = output_str.char_indices();
-                        let max_byte_index = iter.nth(max_length).map_or(output_str.len(), |(i, _)| i);
+                        let max_byte_index =
+                            iter.nth(max_length).map_or(output_str.len(), |(i, _)| i);
                         format!("{}... [Condensed]", &output_str[..max_byte_index])
                     } else {
                         output_str.to_string()
@@ -186,7 +214,10 @@ pub struct QualityGates;
 impl QualityGates {
     /// Pre-flight (e.g., initialization check).
     /// Ensures there are exactly 6 agents initialization (Tencent Workbuddy: Expert Team Feature).
-    pub fn pre_flight<T: ExpertTeamLlmClient + ?Sized>(manager: &ExpertTeamManager<T>, task: &str) -> Result<(), String> {
+    pub fn pre_flight<T: ExpertTeamLlmClient + ?Sized>(
+        manager: &ExpertTeamManager<T>,
+        task: &str,
+    ) -> Result<(), String> {
         // Enforce 6 agent initialization
         // 1 Lead (already in manager) + 5 Domain/Quality experts = 6 total
         // Therefore, we expect exactly 5 domain_experts.
@@ -206,9 +237,21 @@ impl QualityGates {
         }
 
         // 75% similarity deduplication using Jaccard index on word tokens
+        // Normalize strings to be case-insensitive and ignore punctuation.
         let mut token_sets = Vec::with_capacity(summaries.len());
+        let mut normalized_summaries = Vec::with_capacity(summaries.len());
+
         for summary in summaries {
-            let set: std::collections::HashSet<&str> = summary.split_whitespace().collect();
+            let normalized: String = summary
+                .chars()
+                .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+                .flat_map(|c| c.to_lowercase())
+                .collect();
+            normalized_summaries.push(normalized);
+        }
+
+        for normalized in &normalized_summaries {
+            let set: std::collections::HashSet<&str> = normalized.split_whitespace().collect();
             token_sets.push(set);
         }
 
@@ -232,8 +275,14 @@ impl QualityGates {
         // 8-chapter completeness check
         let combined = summaries.join("\n");
         let required_chapters = [
-            "Chapter 1", "Chapter 2", "Chapter 3", "Chapter 4",
-            "Chapter 5", "Chapter 6", "Chapter 7", "Chapter 8",
+            "Chapter 1",
+            "Chapter 2",
+            "Chapter 3",
+            "Chapter 4",
+            "Chapter 5",
+            "Chapter 6",
+            "Chapter 7",
+            "Chapter 8",
         ];
 
         let mut missing_chapters = Vec::new();
@@ -244,7 +293,10 @@ impl QualityGates {
         }
 
         if !missing_chapters.is_empty() {
-            return Err(format!("Pre-merge Gate Failed: Outputs do not meet the minimum completeness criteria. Missing: {}.", missing_chapters.join(", ")));
+            return Err(format!(
+                "Pre-merge Gate Failed: Outputs do not meet the minimum completeness criteria. Missing: {}.",
+                missing_chapters.join(", ")
+            ));
         }
 
         Ok(())
@@ -260,7 +312,10 @@ impl QualityGates {
         // Enforce word count to exactly match the requirement (>= 20,000 words)
         let word_count = final_output.split_whitespace().count();
         if word_count < 20000 {
-            return Err(format!("Pre-deliver Gate Failed: Final output is too short ({} words). Required >= 20000 words for delivery.", word_count));
+            return Err(format!(
+                "Pre-deliver Gate Failed: Final output is too short ({} words). Required >= 20000 words for delivery.",
+                word_count
+            ));
         }
 
         // Chart verification (simulated by checking if the output contains "Chart" or similar keywords, if required by context)
@@ -285,7 +340,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ExpertTeamLlmClient for MockExpertLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Ok(ChatResponse {
                 message: Message::assistant(self.role_resp.clone()),
                 usage: Usage::default(),
@@ -311,16 +369,26 @@ mod tests {
         let word_padding = "word ".repeat(20000);
 
         let lead_llm = Arc::new(MockExpertLlm {
-            role_resp: format!("Combined Executive Summary:\n\nOverall Strategy:\nProceed with investment.\nWe include the Chart: Market Trends. {}", word_padding)
+            role_resp: format!(
+                "Combined Executive Summary:\n\nOverall Strategy:\nProceed with investment.\nWe include the Chart: Market Trends. {}",
+                word_padding
+            ),
         });
 
-        let result = manager.run_full_expert_workflow(task, &mut trace, lead_llm).await;
+        let result = manager
+            .run_full_expert_workflow(task, &mut trace, lead_llm)
+            .await;
         assert!(result.is_ok(), "Expert workflow failed: {:?}", result.err());
     }
 
     #[test]
     fn test_pre_flight_failure_not_enough_experts() {
-        let experts = vec![DomainExpert { role: "Lone Wolf".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "".to_string() }) }];
+        let experts = vec![DomainExpert {
+            role: "Lone Wolf".to_string(),
+            llm: Arc::new(MockExpertLlm {
+                role_resp: "".to_string(),
+            }),
+        }];
         let manager = ExpertTeamManager::new("Lead", experts);
         let res = QualityGates::pre_flight(&manager, "Task");
         assert!(res.is_err());
@@ -339,6 +407,29 @@ mod tests {
     }
 
     #[test]
+    fn test_pre_merge_success_low_similarity() {
+        let summaries = vec![
+            "This is a completely unique summary about AI trends for Chapter 1 and Chapter 2.".to_string(),
+            "And here we have financial data talking about profits for Chapter 3 and Chapter 4.".to_string(),
+            "Strategic overview with different insights for Chapter 5 and Chapter 6.".to_string(),
+            "Process analysis detailing operational changes for Chapter 7 and Chapter 8.".to_string(),
+        ];
+        let res = QualityGates::pre_merge(&summaries);
+        assert!(res.is_ok(), "Expected success but got error: {:?}", res.err());
+    }
+
+    #[test]
+    fn test_pre_merge_failure_high_similarity_casing() {
+        let summaries = vec![
+            "IDENTICAL output about market analysis! Chapter 1, Chapter 2, Chapter 3, Chapter 4, Chapter 5, Chapter 6, Chapter 7, Chapter 8.".to_string(),
+            "identical output about market analysis chapter 1 chapter 2 chapter 3 chapter 4 chapter 5 chapter 6 chapter 7 chapter 8".to_string(),
+        ];
+        let res = QualityGates::pre_merge(&summaries);
+        assert!(res.is_err());
+        assert!(matches!(res, Err(e) if e.contains("High similarity detected")));
+    }
+
+    #[test]
     fn test_pre_merge_failure_missing_chapters() {
         let summaries = vec![
             "Research summary... Chapter 1 and Chapter 2 unique words alpha beta".to_string(),
@@ -346,17 +437,22 @@ mod tests {
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("Missing: Chapter 5, Chapter 6, Chapter 7, Chapter 8")));
+        assert!(
+            matches!(res, Err(e) if e.contains("Missing: Chapter 5, Chapter 6, Chapter 7, Chapter 8"))
+        );
     }
 
     #[test]
     fn test_pre_deliver_failure_missing_chart() {
-        let final_output = "word ".repeat(20000) + "This output is quite long so it passes the word count check. It is very detailed and thorough, however it is missing something important.";
+        let final_output = "word ".repeat(20000)
+            + "This output is quite long so it passes the word count check. It is very detailed and thorough, however it is missing something important.";
         let mut trace = SkillTrace::new();
         trace.record_skill("test_skill");
         let res = QualityGates::pre_deliver(&final_output, &trace);
         assert!(res.is_err());
-        assert!(matches!(res, Err(e) if e.contains("Missing required chart/analysis verification")));
+        assert!(
+            matches!(res, Err(e) if e.contains("Missing required chart/analysis verification"))
+        );
     }
 
     #[test]

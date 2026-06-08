@@ -13,6 +13,7 @@ export default function CheckoutPage() {
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState("my-store");
   const [checkoutStatus, setCheckoutStatus] = useState("");
+  const [isMercadoPagoProcessing, setIsMercadoPagoProcessing] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -31,10 +32,32 @@ export default function CheckoutPage() {
     setDeliveryError(null);
 
     try {
+      const coordinates = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+        if (typeof navigator === "undefined" || !navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          }),
+          () => resolve(null),
+          { maximumAge: 300000, timeout: 2000 },
+        );
+      });
+      const payload: {
+        deliveryAddress: string;
+        coordinates?: { lat: number; lng: number };
+      } = { deliveryAddress };
+      if (coordinates) {
+        payload.coordinates = coordinates;
+      }
+
       const response = await fetch("/api/checkout/delivery-quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deliveryAddress }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
       if (data.success) {
@@ -52,6 +75,35 @@ export default function CheckoutPage() {
   };
 
   const [isSubscription, setIsSubscription] = useState(false);
+
+  const startMercadoPagoCheckout = async () => {
+    setIsMercadoPagoProcessing(true);
+    setCheckoutStatus("Preparing Mercado Pago checkout...");
+
+    try {
+      const response = await fetch("/api/checkout/mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenant_id: tenant,
+          amount_cents: 4500,
+          currency: "MXN",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.checkout_url) {
+        throw new Error(data.error || "Mercado Pago checkout unavailable.");
+      }
+
+      setCheckoutStatus("Redirecting to Mercado Pago...");
+      window.location.assign(data.checkout_url);
+    } catch (e) {
+      console.error("Failed to start Mercado Pago checkout", e);
+      setCheckoutStatus("Mercado Pago checkout is temporarily unavailable.");
+    } finally {
+      setIsMercadoPagoProcessing(false);
+    }
+  };
 
   const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
@@ -178,7 +230,7 @@ export default function CheckoutPage() {
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  setCheckoutStatus('Offline terminal payment saved locally for sync.');
+                  setCheckoutStatus('Payment Saved Offline');
                   setShowSuccessModal(true);
                 }
               }}
@@ -190,13 +242,11 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
             <button
-              onClick={() => {
-                setCheckoutStatus("Mercado Pago checkout prepared.");
-                setShowSuccessModal(true);
-              }}
+              onClick={startMercadoPagoCheckout}
+              disabled={isMercadoPagoProcessing}
               className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              Pay with Mercado Pago
+              {isMercadoPagoProcessing ? "Preparing Mercado Pago..." : "Pay with Mercado Pago"}
             </button>
           </WithTooltip>
 
