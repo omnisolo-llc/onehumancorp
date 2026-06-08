@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('POS Inventory Sync', () => {
   test('POS terminal applies lock and prevents double booking', async ({ memberPage }) => {

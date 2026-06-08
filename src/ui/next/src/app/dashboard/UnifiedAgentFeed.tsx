@@ -44,6 +44,30 @@ export function UnifiedAgentFeed() {
     return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
   };
 
+  const simulateQuoteDraft = async () => {
+    try {
+      const tenant = tenantId();
+      await fetch(`/api/agents/approvals/simulate-quote-draft?tenant_id=${tenant}`, {
+        method: "POST",
+        headers: {
+          "x-tenant-id": tenant,
+          "x-user-id": "default",
+        },
+      });
+      // Refresh feed
+      const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+        headers: {
+          "x-tenant-id": tenant,
+          "x-user-id": "default",
+        },
+      });
+      const data = await refreshRes.json();
+      setApprovals(data.pending_approvals || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -145,7 +169,16 @@ export function UnifiedAgentFeed() {
   }
 
   return (
-    <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full max-w-[100vw] overflow-hidden" aria-label="Unified Agent Feed">
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={simulateQuoteDraft}
+          className="px-3 py-1.5 min-h-[44px] text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium rounded-[8px] hover:bg-indigo-100 dark:hover:bg-indigo-800/40 transition-colors"
+          data-testid="simulate-quote-draft"
+        >
+          Simulate Action
+        </button>
+      </div>
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
@@ -192,7 +225,7 @@ export function UnifiedAgentFeed() {
             {approvals.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className="w-full glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4 bg-white/10 backdrop-blur-md"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -491,7 +524,7 @@ export function UnifiedAgentFeed() {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                className="w-full glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px] bg-white/10 backdrop-blur-md"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
