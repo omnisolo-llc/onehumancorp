@@ -1,0 +1,141 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { AppShell } from "../components/AppShell";
+
+type Message = {
+  id: string;
+  source?: string;
+  content?: string;
+  draft_reply?: string;
+  status?: string;
+  created_at?: string;
+};
+
+function tenantId() {
+  if (typeof window === "undefined") return "default";
+  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+}
+
+function badgeTone(status?: string) {
+  const normalized = (status || "").toLowerCase();
+  if (["closed", "sent", "resolved"].includes(normalized)) return "good";
+  if (["open", "pending", ""].includes(normalized)) return "warn";
+  if (["failed", "blocked"].includes(normalized)) return "bad";
+  return "";
+}
+
+export default function InboxPage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadMessages() {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId())}`);
+        if (!res.ok) throw new Error("Failed to load inbox messages from the database");
+        const data = await res.json();
+        const rows = Array.isArray(data) ? data : [];
+        setMessages(rows);
+        setSelectedId(rows[0]?.id || null);
+      } catch (e: any) {
+        setError(e?.message || "Failed to load inbox");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadMessages();
+  }, []);
+
+  const selected = useMemo(
+    () => messages.find((message) => message.id === selectedId) || messages[0],
+    [messages, selectedId],
+  );
+
+  const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
+
+  return (
+    <AppShell
+      title="Inbox"
+      subtitle="Database-backed customer conversations and generated drafts."
+      statusItems={[
+        { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
+        { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
+      ]}
+      actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
+    >
+      <div className="app-grid two">
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Message Queue</div>
+              <div className="app-list-subtitle">Loaded from `/api/ui/inbox/messages`.</div>
+            </div>
+          </div>
+          <div id="messages-list" className="app-list">
+            {error && <div className="app-empty">{error}</div>}
+            {!error && messages.length === 0 ? (
+              <div className="app-empty">{loading ? "Loading inbox messages from the database..." : "No inbox message rows found for this tenant."}</div>
+            ) : messages.map((message) => (
+              <button
+                key={message.id}
+                type="button"
+                onClick={() => setSelectedId(message.id)}
+                className="app-list-item w-full text-left"
+                style={{ background: selected?.id === message.id ? "#f8fafc" : "transparent" }}
+              >
+                <div className="min-w-0">
+                  <div className="app-list-title">{message.source || "Unknown source"}</div>
+                  <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
+                </div>
+                <span className={`app-badge ${badgeTone(message.status)}`}>{message.status || "Open"}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div className="app-panel-title">Conversation Detail</div>
+          </div>
+          {!selected ? (
+            <div className="app-empty">Select a database-backed message to inspect it.</div>
+          ) : (
+            <div className="app-panel-body">
+              <div className="mb-4">
+                <div className="app-metric-label">Source</div>
+                <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
+              </div>
+              <div className="mb-4">
+                <div className="app-metric-label">Customer Message</div>
+                <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
+                  {selected.content || "Empty message"}
+                </div>
+              </div>
+              <div className="mb-4">
+                <div className="app-metric-label">Draft Reply</div>
+                <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
+                  {selected.draft_reply || "No draft reply stored for this message."}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="app-card">
+                  <div className="app-metric-label">Status</div>
+                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{selected.status || "Open"}</span></div>
+                </div>
+                <div className="app-card">
+                  <div className="app-metric-label">Created</div>
+                  <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </AppShell>
+  );
+}

@@ -582,11 +582,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_bench_billing_api_response_time() {
-        bench_billing_api_response_time().await;
-    }
-
-    #[tokio::test]
     async fn test_bench_agent_snapshot() {
         bench_agent_snapshot().await;
     }
@@ -669,59 +664,7 @@ pub async fn bench_hybrid_latency() {
     println!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
 
-    println!("4. Billing API Response Time (Parallel Execution)");
-    bench_billing_api_response_time().await;
-
     println!("--- Hybrid Latency Benchmark Complete ---");
-}
-
-pub async fn bench_billing_api_response_time() {
-    println!("Benchmarking Billing API Response Time...");
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 200;
-
-    let (tx, _rx) = tokio::sync::mpsc::channel(100);
-
-    let db = if database_url.starts_with("sqlite") {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let pg_pool = crate::db::get_pool();
-        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
-    } else {
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
-    };
-
-    // Setup tables for mock data
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_departments (id TEXT, tenant_id TEXT, department_type TEXT)").execute(&db.pool).await;
-
-    // insert some mock departments
-    for i in 0..10 {
-        let _ = sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type) VALUES ($1, $2, $3)")
-            .bind(format!("dept_{}", i))
-            .bind("test_org")
-            .bind(format!("type_{}", i))
-            .execute(&db.pool).await;
-    }
-
-    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-
-    let mut fetch_times = Vec::new();
-    for _ in 0..iterations {
-        let start = std::time::Instant::now();
-        let _ = crate::api::billing_api::department_tier_usage_for_tenant(&hub, "test_org").await;
-        fetch_times.push(start.elapsed().as_micros());
-    }
-
-    fetch_times.sort();
-    let p50 = fetch_times[iterations / 2];
-    let p95 = fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))];
-    let p99 = fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))];
-    println!("Billing API Fetch: p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
 }
 
 pub async fn bench_advisory_insights_latency() {

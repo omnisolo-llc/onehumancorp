@@ -118,10 +118,9 @@ impl OrgService for MyOrgService {
                 let org_id_clone = org_id_bg.clone();
                 let org_id_for_agents = org_id_bg.clone();
                 let org_id_for_summary = org_id_bg.clone();
-                let org_id_for_meetings = org_id_bg.clone();
                 let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
                     tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
-                    tokio::spawn({ let h = hub_bg.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
+                    tokio::spawn({ let h = hub_bg.clone(); async move { h.get_meetings().await } }),
                     tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
                     tokio::spawn({ let h = hub_bg.clone(); async move { h.tracker().check_agent_quota(&org_id_clone).await } })
                 );
@@ -136,6 +135,7 @@ impl OrgService for MyOrgService {
                     user_message: None,
                 });
 
+                let org_id_for_metrics = org_id_bg.clone();
                 let total_agents = agents.len() as i32;
                 let (total_msgs, audited_msgs) = {
                     let mut agent_set = std::collections::HashSet::new();
@@ -145,12 +145,15 @@ impl OrgService for MyOrgService {
 
                     let mut total_msgs = 0;
                     let mut audited_msgs = 0;
+                    let org_str = org_id_for_metrics.as_str();
 
                     for m in all_meetings.iter() {
-                        for msg in &m.transcript {
-                            total_msgs += 1;
-                            if agent_set.contains(&msg.from_agent) {
-                                audited_msgs += 1;
+                        if m.id.starts_with(org_str) || m.id.contains(org_str) {
+                            for msg in &m.transcript {
+                                total_msgs += 1;
+                                if agent_set.contains(&msg.from_agent) {
+                                    audited_msgs += 1;
+                                }
                             }
                         }
                     }
@@ -201,10 +204,9 @@ impl OrgService for MyOrgService {
         let org_id_clone = org_id.clone();
         let org_id_for_agents = org_id.clone();
         let org_id_for_summary = org_id.clone();
-        let org_id_for_meetings = org_id.clone();
         let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
-            tokio::spawn({ let h = self.hub.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
+            tokio::spawn({ let h = self.hub.clone(); async move { h.get_meetings().await } }),
             tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
             tokio::spawn({ let h = self.hub.clone(); let o = org_id_clone.clone(); async move { h.tracker().check_agent_quota(&o).await } })
         );
@@ -217,6 +219,7 @@ impl OrgService for MyOrgService {
             user_message: None,
         });
 
+        let org_id_for_metrics = org_id.clone();
         let total_agents = agents.len() as i32;
         let (total_msgs, audited_msgs) = {
             let mut agent_set = std::collections::HashSet::new();
@@ -226,12 +229,15 @@ impl OrgService for MyOrgService {
 
             let mut total_msgs = 0;
             let mut audited_msgs = 0;
+            let org_str = org_id_for_metrics.as_str();
 
             for m in all_meetings.iter() {
-                for msg in &m.transcript {
-                    total_msgs += 1;
-                    if agent_set.contains(&msg.from_agent) {
-                        audited_msgs += 1;
+                if m.id.starts_with(org_str) || m.id.contains(org_str) {
+                    for msg in &m.transcript {
+                        total_msgs += 1;
+                        if agent_set.contains(&msg.from_agent) {
+                            audited_msgs += 1;
+                        }
                     }
                 }
             }

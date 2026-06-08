@@ -215,7 +215,7 @@ export default function LoyaltyProgramPage() {
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism {
           background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(20px) saturate(200%);
         }
       `}} />
     </div>

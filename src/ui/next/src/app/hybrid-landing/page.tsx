@@ -327,7 +327,7 @@ export default function HybridLandingPage() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism {
-          backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(20px) saturate(200%);
         }
       `,
         }}

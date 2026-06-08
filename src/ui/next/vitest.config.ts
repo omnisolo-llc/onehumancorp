@@ -12,6 +12,7 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
       '**/e2e/**',
+      '**/verification_tests/**',
       '**/external/**',
       '**/.next/**',
       '**/coverage/**',
