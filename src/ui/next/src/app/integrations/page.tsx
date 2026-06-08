@@ -17,6 +17,7 @@ export default function Integrations() {
     { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
+    { id: "whatsapp", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox for Work Triage and Customer Assistant." },
     { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
     { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
@@ -25,6 +26,7 @@ export default function Integrations() {
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const [showTwilioModal, setShowTwilioModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
     instagram: false,
@@ -49,6 +51,11 @@ export default function Integrations() {
     if (id === 'twilio') {
       setShowTwilioModal(true);
       setStatusMessage("Choose Twilio channels to finish connecting.");
+      return;
+    }
+    if (id === 'whatsapp') {
+      setShowWhatsAppModal(true);
+      setStatusMessage("Follow the Embedded Signup flow to connect WhatsApp.");
       return;
     }
     setStatusMessage(`Connecting ${integration?.name || id}...`);
@@ -82,8 +89,48 @@ export default function Integrations() {
     router.push('/inbox');
   };
 
+  const saveWhatsAppIntegration = () => {
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === 'whatsapp' ? { ...integration, status: "connected" } : integration
+    ));
+    setShowWhatsAppModal(false);
+    setStatusMessage("WhatsApp Cloud API connected.");
+    router.push('/inbox');
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+
+      {/* WhatsApp Cloud API Connect Modal */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-2xl text-green-600 border border-green-100">
+                💬
+              </div>
+              <button
+                onClick={() => setShowWhatsAppModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect WhatsApp</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Connect your business number via the Meta Embedded Signup flow. Incoming messages will be automatically routed into Work Triage.
+            </p>
+
+            <button
+              onClick={saveWhatsAppIntegration}
+              className="w-full bg-[#25D366] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#1ebe57] transition-colors flex items-center justify-center gap-2"
+            >
+              Continue with Meta
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Twilio Conversations Connect Modal */}
       {showTwilioModal && (
