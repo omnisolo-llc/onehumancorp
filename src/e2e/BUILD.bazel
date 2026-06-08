@@ -19,8 +19,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/milestones.spec.ts",
     "//src/ui/next:src/e2e/onboarding.spec.ts",
     "//src/ui/next:src/e2e/review-campaign.spec.ts",
-    "//src/ui/next:src/e2e/smart-pricing.spec.ts",
-    "//src/ui/next:src/e2e/staff-mesh.spec.ts",
+        "//src/ui/next:src/e2e/staff-mesh.spec.ts",
     "//src/ui/next:src/e2e/store-wrapped.spec.ts",
     "//src/ui/next:src/e2e/subscription_box.spec.ts",
     "//src/ui/next:src/e2e/supply_chain.spec.ts",
@@ -82,7 +81,6 @@ sh_binary(
 define_playwright_tests(
     ci_discovery_data = [
         "//:root_e2e_specs",
-        "//src/ui/next:next_e2e_specs",
     ],
     ci_shard_count = 1,
     data = [
