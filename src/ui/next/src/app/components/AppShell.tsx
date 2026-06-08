@@ -20,6 +20,7 @@ type ShellAction = {
 type IconName =
   | "activity"
   | "analytics"
+  | "assistant"
   | "calendar"
   | "campaigns"
   | "cost"
@@ -42,6 +43,7 @@ type NavItem = {
 
 const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Assistant", href: "/assistant", icon: "assistant" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
   { label: "Orders", href: "/orders", icon: "orders" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
@@ -64,6 +66,7 @@ function ShellIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, string[]> = {
     activity: ["M4 12h4l2-7 4 14 2-7h4"],
     analytics: ["M5 19V9", "M12 19V5", "M19 19v-7"],
+    assistant: ["M4 7h16", "M4 12h10", "M4 17h7", "M17 14v6", "M14 17h6"],
     calendar: ["M7 3v4", "M17 3v4", "M4 9h16", "M5 5h14v16H5z"],
     campaigns: ["M4 6h10", "M4 12h7", "M4 18h10", "M16 9l4-4", "M20 5v10", "M16 15l4 4"],
     cost: ["M12 3v18", "M17 7.5c-.8-1.1-2.2-1.8-4-1.8-2.3 0-4 1.1-4 2.8 0 4.2 8 1.8 8 6 0 1.7-1.8 2.8-4 2.8-1.9 0-3.5-.7-4.4-1.9"],
@@ -115,6 +118,10 @@ function NavLink({ item }: { item: NavItem }) {
 
   if (item.href === "/dashboard") {
     return <WithTooltip id="dashboard-tooltip" defaultText="View your daily sales and overall business health.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/assistant") {
+    return <WithTooltip id="assistant-tooltip" defaultText="Chat with your Jarvis Assistant to orchestrate work.">{link}</WithTooltip>;
   }
 
   if (item.href === "/inventory") {
