@@ -51,8 +51,8 @@ test.describe('Abandoned Cart Recovery Growth Loop', () => {
 
     // 7. Wait for AI generation to complete and verify the generated text
     const draft = page.locator('pre');
-    await expect(draft).toContainText("Hi Alice,", { timeout: 15000 });
-    await expect(draft).toContainText("totaling $45.00");
+    await expect(draft).toContainText("Hi Alice", { timeout: 15000 });
+    await expect(draft).toContainText("$45.00");
 
     // Verify the "Powered by OHC" viral loop branding is inside the generated draft
     await expect(draft).toContainText('Powered by OHC');

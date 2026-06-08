@@ -55,7 +55,7 @@ describe('POST /api/v1/growth/campaign/generate-cart', () => {
         const data = await res.json();
 
         expect(res.status).toBe(200);
-        expect(data.message).toContain('Hi there');
+        expect(data.message).toContain('Hi Bob');
 
         consoleErrorSpy.mockRestore();
     });
