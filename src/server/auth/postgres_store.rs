@@ -50,14 +50,8 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
         let tenant_id = org_id;
-        if should_bypass {
-            set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
-        } else {
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"
@@ -383,9 +377,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if should_bypass {
-            set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
-        } else {
+        if !should_bypass {
             let tenant_id = org_id;
             set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
         }
@@ -442,13 +434,7 @@ impl UserRepository for PgUserRepository {
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
-        if should_bypass {
-            set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
-        } else {
-            set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2")
             .bind(jti)
