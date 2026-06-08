@@ -86,6 +86,30 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [loading, setLoading] = useState(true);
+  const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
+  const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
+  const [ledgerLoading, setLedgerLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLedgerBalance() {
+      try {
+        const res = await fetch("/api/ledger/accounts");
+        if (res.ok) {
+          const data = await res.json();
+          const mainAccount = data.accounts?.find((a: any) => a.name === "main");
+          if (mainAccount) {
+            setLedgerBalance(mainAccount.balance);
+            setLedgerCurrency(mainAccount.currency);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch ledger balance", err);
+      } finally {
+        setLedgerLoading(false);
+      }
+    }
+    fetchLedgerBalance();
+  }, []);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);

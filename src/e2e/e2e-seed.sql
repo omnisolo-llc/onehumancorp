@@ -28,6 +28,58 @@ SET name = EXCLUDED.name,
     tier = EXCLUDED.tier,
     updated_at = CURRENT_TIMESTAMP;
 
+-- Ensure RLS allows us to insert ledger data
+ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
+
+-- Seed Ledger Data
+INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
+VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET balance = EXCLUDED.balance,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_transactions (id, tenant_id, description, status, metadata, created_at, updated_at)
+VALUES ('txn-1', 'e2e-tenant', 'Initial deposit', 'completed', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_entries (id, tenant_id, transaction_id, account_id, amount, currency, direction, type, created_at)
+VALUES ('entry-1', 'e2e-tenant', 'txn-1', 'acct-1', 1500.00, 'USD', 'credit', 'payment', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
+
+-- Ensure RLS allows us to insert ledger data
+ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
+
+-- Seed Ledger Data
+INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
+VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET balance = EXCLUDED.balance,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_transactions (id, tenant_id, description, status, metadata, created_at, updated_at)
+VALUES ('txn-1', 'e2e-tenant', 'Initial deposit', 'completed', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_entries (id, tenant_id, transaction_id, account_id, amount, currency, direction, type, created_at)
+VALUES ('entry-1', 'e2e-tenant', 'txn-1', 'acct-1', 1500.00, 'USD', 'credit', 'payment', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
+
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
 VALUES
   (
@@ -216,6 +268,12 @@ ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_accounts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_accounts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY;
 
