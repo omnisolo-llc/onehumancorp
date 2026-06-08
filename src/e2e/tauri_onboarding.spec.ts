@@ -32,6 +32,29 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
+    // Mock the Tauri invoke API.
+    // We use sessionStorage to preserve state across page navigations in Playwright
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async (cmd, args) => {
+            if (cmd === 'get_onboarding_state') {
+              const state = sessionStorage.getItem('mockState');
+              return state ? JSON.parse(state) : {};
+            } else if (cmd === 'save_onboarding_state') {
+              const state = sessionStorage.getItem('mockState');
+              const currentState = state ? JSON.parse(state) : {};
+              sessionStorage.setItem('mockState', JSON.stringify({ ...currentState, ...args.state }));
+              return null;
+            } else if (cmd === 'generate_cloud_invite') {
+              return "https://cloud.ohc.network/invite/mock-test";
+            }
+            throw new Error(`Unhandled command: ${cmd}`);
+          }
+        }
+      };
+    });
+
     // Navigate to the index.html page. Tauri loads it at /index.html.
     await page.goto('/index.html');
 

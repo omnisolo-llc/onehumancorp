@@ -91,14 +91,24 @@
       <button id="dashboard-btn">Go to Dashboard</button>
     </div>
     <script>
-      const name = localStorage.getItem('businessName');
-      const assistantName = localStorage.getItem('assistantName');
-      if (name) {
-          let msg = `Workspace created for ${name}.`;
-          if (assistantName) {
-              msg += ` ${assistantName} is ready to help.`;
-          }
-          document.getElementById('success-msg').innerText = msg;
+      function showSuccess(name, assistantName) {
+        if (name) {
+            let msg = `Workspace created for ${name}.`;
+            if (assistantName) {
+                msg += ` ${assistantName} is ready to help.`;
+            }
+            document.getElementById('success-msg').innerText = msg;
+        }
+      }
+
+      if (window.__TAURI__ && window.__TAURI__.core) {
+        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+          showSuccess(state.businessName, state.assistantName);
+        }).catch(console.error);
+      } else {
+        const name = localStorage.getItem('businessName');
+        const assistantName = localStorage.getItem('assistantName');
+        showSuccess(name, assistantName);
       }
 
       const dashboardBtn = document.getElementById('dashboard-btn');
