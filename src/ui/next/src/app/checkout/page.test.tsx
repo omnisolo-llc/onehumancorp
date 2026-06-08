@@ -80,7 +80,7 @@ beforeEach(() => {
   it('renders the checkout page', () => {
     render(<CheckoutPage />);
     expect(screen.getByText('Checkout')).toBeDefined();
-    expect(screen.getByText('Pay Now')).toBeDefined();
+    expect(screen.getByText('Pay $45.00')).toBeDefined();
   });
 
   it('handles payment click', async () => {
@@ -90,7 +90,7 @@ beforeEach(() => {
 
     render(<CheckoutPage />);
 
-    const payButton = screen.getByText('Pay Now');
+    const payButton = screen.getByText('Pay $45.00');
     fireEvent.click(payButton);
 
     expect(payButton.textContent).toBe('Processing...');

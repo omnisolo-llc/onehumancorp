@@ -9,6 +9,11 @@ export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
+  const subscriptionDiscount = searchParams?.get("discount");
+  const subscriptionInterval = searchParams?.get("interval") || "monthly";
+  const allowsSubscription = searchParams?.get("isSubscription") === "true" || !!subscriptionDiscount;
+
+  const [selectedPurchaseMode, setSelectedPurchaseMode] = useState<'one-time' | 'subscribe'>('one-time');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
@@ -81,7 +86,8 @@ export default function CheckoutPage() {
   };
 
   const [isSubscription, setIsSubscription] = useState(false);
-
+  const basePrice = 45.00;
+  const discountedPrice = subscriptionDiscount ? basePrice * (1 - parseInt(subscriptionDiscount) / 100) : basePrice;
 
   const handlePlanUpgrade = async () => {
     setIsProcessing(true);
@@ -343,31 +349,48 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {allowsSubscription && (
+            <div className="flex flex-col gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="purchaseMode"
+                  value="one-time"
+                  checked={selectedPurchaseMode === 'one-time'}
+                  onChange={() => setSelectedPurchaseMode('one-time')}
+                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-900">One-time purchase (${(basePrice + (deliveryFee || 0)).toFixed(2)})</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="purchaseMode"
+                  value="subscribe"
+                  checked={selectedPurchaseMode === 'subscribe'}
+                  onChange={() => setSelectedPurchaseMode('subscribe')}
+                  className="w-4 h-4 text-green-600 focus:ring-green-500"
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-900">
+                    Subscribe & Save {subscriptionDiscount || 10}% (${(discountedPrice + (deliveryFee || 0)).toFixed(2)})
+                  </span>
+                  <span className="text-xs text-gray-500">Delivered {subscriptionInterval}</span>
+                </div>
+              </label>
+            </div>
+          )}
+
           <WithTooltip
             id="checkout-pay-now-tooltip"
             defaultText="Click here to securely finish your purchase and process your payment."
           >
             <button
-              onClick={() => handlePayment(false)}
+              onClick={() => handlePayment(selectedPurchaseMode === 'subscribe')}
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
             >
-              {isProcessing ? "Processing..." : "Pay Now"}
-            </button>
-          </WithTooltip>
-
-          <WithTooltip
-            id="checkout-subscribe-tooltip"
-            defaultText="Start a monthly subscription using saved wallet payment for frictionless vaulting."
-          >
-            <button
-              onClick={() => handlePayment(true)}
-              disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
-            >
-              {isProcessing
-                ? "Processing..."
-                : "Subscribe Monthly (Wallet Pay)"}
+              {isProcessing ? "Processing..." : `Pay $${(selectedPurchaseMode === 'subscribe' ? discountedPrice + (deliveryFee || 0) : basePrice + (deliveryFee || 0)).toFixed(2)}`}
             </button>
           </WithTooltip>
 

@@ -323,33 +323,45 @@ function AutoCatalogContent() {
                           <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.isSubscription ? 'transform translate-x-4' : ''}`}></div>
                       </div>
                       <div className="ml-3 text-gray-800 font-semibold text-sm">
-                          Offer as Subscription
+                          Enable Subscribe & Save
                       </div>
                   </label>
 
                   {productData?.isSubscription && (
-                      <div className="mt-4 flex gap-4 animate-fade-in-up">
-                          <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Deliver every</label>
-                              <select
-                                  value={subscriptionInterval}
-                                  onChange={(e) => {
-                                    setSubscriptionInterval(e.target.value);
-                                    setProductData({...productData, subscriptionInterval: e.target.value});
-                                  }}
-                                  className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                              >
-                                  <option value="weekly">weekly</option>
-                                  <option value="monthly">monthly</option>
-                                  <option value="yearly">yearly</option>
-                              </select>
+                      <div className="mt-4 flex flex-col gap-4 animate-fade-in-up">
+                          <div className="flex gap-4">
+                              <div className="flex-1">
+                                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Deliver every</label>
+                                  <select
+                                      value={subscriptionInterval}
+                                      onChange={(e) => {
+                                        setSubscriptionInterval(e.target.value);
+                                        setProductData({...productData, subscriptionInterval: e.target.value});
+                                      }}
+                                      className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                  >
+                                      <option value="weekly">weekly</option>
+                                      <option value="monthly">monthly</option>
+                                      <option value="yearly">yearly</option>
+                                  </select>
+                              </div>
+                              <div className="flex-1">
+                                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cutoff day</label>
+                                  <input
+                                      type="number"
+                                      value={subscriptionCutoff}
+                                      onChange={(e) => setSubscriptionCutoff(e.target.value)}
+                                      className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                  />
+                              </div>
                           </div>
-                          <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cutoff day</label>
+                          <div>
+                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Discount %</label>
                               <input
                                   type="number"
-                                  value={subscriptionCutoff}
-                                  onChange={(e) => setSubscriptionCutoff(e.target.value)}
+                                  value={productData.subscriptionDiscount || ''}
+                                  onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
+                                  placeholder="10"
                                   className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                               />
                           </div>
