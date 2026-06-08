@@ -105,7 +105,8 @@ test.describe('Changelog UX', () => {
 });
 
 test.describe('AppShell Help Button', () => {
-  test('should display Help Center link and navigate successfully', async ({ page }) => {
+  test('should display Help Center link and navigate successfully', async ({ page, loginAs }) => {
+    await loginAs(page, 'owner');
     await page.goto('/dashboard');
 
     const helpButton = page.getByRole('link', { name: 'Help Center' });
