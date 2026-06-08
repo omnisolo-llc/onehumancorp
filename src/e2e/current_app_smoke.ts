@@ -6,9 +6,12 @@ export function currentAppSmoke(label: string) {
 
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await page.goto('/dashboard');
+    await page.goto('/login');
+    await page.fill('input[placeholder="Email or Username"]', 'Maya');
+    await page.getByRole('button', { name: 'Log In' }).click();
+
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
-    await expect(page.getByText('Welcome back, Human.')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Welcome back, Maya.')).toBeVisible({ timeout: 5000 });
 
     // Verify glassmorphism style drift on dashboard panels
     const panel = page.locator('.app-panel').first();
