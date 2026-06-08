@@ -66,11 +66,7 @@ export function SuccessMilestoneAlert() {
     }
   };
 
-  const [shareTarget, setShareTarget] = useState('/onboarding?ref=milestone');
-  useEffect(() => {
-    setShareTarget(`${window.location.origin}/onboarding?ref=milestone`);
-  }, []);
-
+  const shareTarget = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=milestone` : '/onboarding?ref=milestone';
   const shareText = `I just hit a huge business milestone (${milestone.title}) using OHC! Launch your own store today: ${shareTarget}`;
 
   return (

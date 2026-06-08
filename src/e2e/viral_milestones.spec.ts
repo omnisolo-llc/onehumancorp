@@ -4,7 +4,7 @@ test('viral milestones: verify dynamic loading and card generation', async ({ pa
   // We skip login and use local storage to simulate a tenant session if needed,
   // but since we updated the UI to use 'DEFAULT' fallback, it should work.
 
-  await page.goto('http://localhost:3000/milestones');
+  await page.goto('/milestones');
 
   // Wait for milestones to load
   await expect(page.locator('h2:has-text("Your Achievements")')).toBeVisible();
@@ -33,7 +33,7 @@ test('viral milestones: verify multiple milestone titles from API', async ({ pag
     await route.fulfill({ json });
   });
 
-  await page.goto('http://localhost:3000/milestones');
+  await page.goto('/milestones');
   await expect(page.locator('h3:has-text("High Connector!")')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('h3:has-text("Four-Figure Club")')).toBeVisible({ timeout: 15000 });
 });
@@ -48,7 +48,7 @@ test('viral milestones: verify social share buttons', async ({ page }) => {
     await route.fulfill({ json });
   });
 
-  await page.goto('http://localhost:3000/milestones');
+  await page.goto('/milestones');
 
   await expect(page.locator('text=Share to WhatsApp')).toBeVisible();
   await expect(page.locator('text=Share on Facebook')).toBeVisible();
