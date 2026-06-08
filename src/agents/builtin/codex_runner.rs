@@ -344,7 +344,7 @@ impl AppServer {
                 nodes.push(Arc::new(AgentNodeAdapter { runner: self.runner.clone() }));
             }
 
-            let orchestrator = crate::scalable_multi_agent::CloudOrchestrator::new(mode, nodes);
+            let orchestrator = crate::scalable_multi_agent::CloudOrchestrator::new(mode, nodes, 3, 100, 60);
             let mut tasks = Vec::new();
             for i in 0..count {
                 tasks.push(crate::scalable_multi_agent::TaskChunk {
