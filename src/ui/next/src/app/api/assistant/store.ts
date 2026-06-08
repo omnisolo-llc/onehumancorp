@@ -70,6 +70,15 @@ export type RemoteTask = {
   taskId: string;
 };
 
+export type BillingRecord = {
+  plan: string;
+  aiActionsUsed: number;
+  aiActionsLimit: number;
+  storageUsedGB: number;
+  storageLimitGB: number;
+  estimatedNextBill: number;
+};
+
 export type Automation = {
   id: string;
   name: string;
@@ -748,6 +757,15 @@ let clawChannels: ClawChannelRecord[] = [];
 let clawGuides: { platform: string; steps: string[]; troubleshooting: string[] }[] = [];
 let clawConfirmations: ClawConfirmationRecord[] = [];
 let approvals: ApprovalRecord[] = [];
+let billing: BillingRecord = {
+  plan: 'Growth',
+  aiActionsUsed: 145,
+  aiActionsLimit: 500,
+  storageUsedGB: 12.4,
+  storageLimitGB: 50,
+  estimatedNextBill: 29.00,
+};
+
 let settings: AssistantSettings = {
   fontSize: 'medium',
   systemLanguage: 'auto',
@@ -2197,6 +2215,10 @@ export function mutateApproval(payload: {
   approval.reviewer = payload.reviewer || 'owner';
   approval.decidedAt = now();
   return approval;
+}
+
+export function getBilling() {
+  return billing;
 }
 
 export function getAssistantSettings() {
