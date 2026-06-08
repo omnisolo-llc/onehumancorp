@@ -29,6 +29,7 @@ impl Department for OperationsAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        use crate::msgbus::Bus;
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
@@ -76,6 +77,31 @@ impl Department for OperationsAgent {
             risk,
             event.payload.clone(),
         ).await?;
+
+        // Cache invalidation hook logic
+        if event.event_type == "tenant.order.created" || event.event_type == "tenant.inventory.updated" {
+            let product_id_opt = event.payload.get("product_id").and_then(|v| v.as_str())
+                .or_else(|| {
+                    event.payload.get("items")
+                        .and_then(|items| items.as_array())
+                        .and_then(|items| items.first())
+                        .and_then(|item| item.get("product_id"))
+                        .and_then(|v| v.as_str())
+                });
+
+            if let Some(product_id) = product_id_opt {
+                if let Ok(bus) = crate::msgbus::RedisBus::new(&std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1".to_string())).await {
+                    let tag = format!("entity:product:{}", product_id);
+                    let payload_str = serde_json::json!({
+                        "event": event.event_type.clone(),
+                        "tags": [tag, format!("tenant-id:{}", event.tenant_id)],
+                    }).to_string();
+                    if let Err(e) = bus.publish(crate::msgbus::Message { topic: "cache_invalidation_events".to_string(), payload: payload_str.into_bytes() }).await {
+                        tracing::error!("Failed to publish cache invalidation event: {}", e);
+                    }
+                }
+            }
+        }
 
         if event.event_type == "tenant.subscription.fulfillment_batch.created" {
             return Ok(());

@@ -2,6 +2,10 @@ use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerTyp
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use serde_json::Value;
 use std::sync::Arc;
+use crate::builder::db::list_pages;
+use crate::builder::db::list_sites;
+use std::str::FromStr;
+
 
 #[async_trait::async_trait]
 pub trait MarketingCopyClient: Send + Sync {
@@ -276,6 +280,26 @@ impl Department for MarketingAgent {
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());
+
+            // Agentic SEO Pre-rendering logic
+            if let Ok(tenant_uuid) = uuid::Uuid::from_str(&event.tenant_id) {
+                if let Ok(orchestrator) = self.orchestrator() {
+                    let pool = orchestrator.db().pool.clone();
+                    let cache = crate::builder::edge::get_edge_cache();
+                    tokio::spawn(async move {
+                        if let Ok(sites) = list_sites(&pool, tenant_uuid).await {
+                            for site in sites {
+                                if let Ok(pages) = list_pages(&pool, tenant_uuid, site.id).await {
+                                    for page in pages {
+                                        let cache_key = format!("site:{}:path:{}", site.id, page.path);
+                                        let _ = crate::builder::edge::regenerate_cache(pool.clone(), tenant_uuid, site.id, cache_key, cache.clone()).await;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
 
             let image_url = if let Some(imgs) = images {
                 if !imgs.is_empty() {

@@ -152,7 +152,7 @@ pub async fn handle_edge_request_impl(
     Ok(response)
 }
 
-async fn regenerate_cache(
+pub async fn regenerate_cache(
     pool: PgPool,
     tenant_id: Uuid,
     site_id: Uuid,
@@ -176,7 +176,8 @@ async fn regenerate_cache(
         return Err(axum::http::StatusCode::NOT_FOUND);
     }
 
-    let page = &pages[0];
+    let target_path = cache_key.split(":path:").nth(1).unwrap_or("/");
+    let page = pages.iter().find(|p| p.path == target_path).unwrap_or(&pages[0]);
 
     let blocks = super::db::list_blocks(&pool, tenant_id, page.id)
         .await

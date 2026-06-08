@@ -331,6 +331,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+    pub mod cache_invalidator;
 
     #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
@@ -2295,6 +2296,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
+
+    // Start Cache Invalidator Worker
+    tokio::spawn(async move {
+        crate::services::cache_invalidator::start_cache_invalidator().await;
+    });
 
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
