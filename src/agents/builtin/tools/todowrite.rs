@@ -1,20 +1,37 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
 
+use super::{SharedTodos, Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
-use super::{SharedTodos, Tool, ToolExecutor};
+fn default_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+fn default_status() -> String {
+    "pending".to_string()
+}
 
 /// A single todo item.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TodoItem {
+    #[serde(default = "default_id")]
     pub id: String,
     pub content: String,
+    #[serde(default = "default_status")]
     pub status: String, // "pending" | "in_progress" | "completed"
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub priority: String, // "low" | "medium" | "high"
 }
+
+#[derive(Deserialize)]
+pub struct TodoWriteArgs {
+    pub todos: Vec<TodoItem>,
+}
+
+#[derive(Deserialize)]
+pub struct TodoReadArgs {}
 
 // ── TodoWrite ─────────────────────────────────────────────────────────────────
 
@@ -23,40 +40,13 @@ struct TodoWriteExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TodoWriteExecutor {
-    async fn execute(
+impl PydanticToolExecutor<TodoWriteArgs> for TodoWriteExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: TodoWriteArgs,
     ) -> Result<String, ToolError> {
-        let todos_arr = args["todos"]
-            .as_array()
-            .ok_or_else(|| ToolError::LlmRecoverable("todowrite: todos must be an array".to_string()))?;
-
-        let items: Vec<TodoItem> = todos_arr
-            .iter()
-            .enumerate()
-            .map(|(i, t)| TodoItem {
-                id: t["id"]
-                    .as_str()
-                    .map(str::to_string)
-                    .unwrap_or_else(|| format!("todo-{}", i + 1)),
-                content: t["content"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string(),
-                status: t["status"]
-                    .as_str()
-                    .unwrap_or("pending")
-                    .to_string(),
-                priority: t["priority"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string(),
-            })
-            .collect();
-
         let mut todos = self.todos.write().await;
-        *todos = items;
+        *todos = args.todos;
         Ok(format!("Todo list updated with {} items.", todos.len()))
     }
 }
@@ -68,10 +58,10 @@ struct TodoReadExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TodoReadExecutor {
-    async fn execute(
+impl PydanticToolExecutor<TodoReadArgs> for TodoReadExecutor {
+    async fn execute_typed(
         &self,
-        _args: Value,
+        _args: TodoReadArgs,
     ) -> Result<String, ToolError> {
         let todos = self.todos.read().await;
         if todos.is_empty() {
@@ -116,7 +106,7 @@ pub fn todowrite_tool(todos: SharedTodos) -> Tool {
             },
             "required": ["todos"]
         }),
-        execute: Arc::new(TodoWriteExecutor { todos }),
+        execute: Arc::new(PydanticAdapter::new(TodoWriteExecutor { todos })),
     }
 }
 
@@ -129,7 +119,7 @@ pub fn todoread_tool(todos: SharedTodos) -> Tool {
             "type": "object",
             "properties": {}
         }),
-        execute: Arc::new(TodoReadExecutor { todos }),
+        execute: Arc::new(PydanticAdapter::new(TodoReadExecutor { todos })),
     }
 }
 
