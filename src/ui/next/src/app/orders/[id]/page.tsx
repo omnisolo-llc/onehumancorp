@@ -108,7 +108,7 @@ export default function OrderDetailsPage() {
       <main className="p-6 max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           {/* Order Details Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-bold font-outfit text-gray-900 mb-4">Items</h2>
             <div className="flex items-center justify-between py-3 border-b border-gray-50">
               <div className="flex items-center gap-4">
@@ -138,7 +138,7 @@ export default function OrderDetailsPage() {
           </div>
 
           {/* Fulfillment Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold font-outfit text-gray-900">Fulfillment</h2>
               <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-100">
@@ -274,7 +274,7 @@ export default function OrderDetailsPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500 mb-4">Customer</h2>
             <p className="font-medium text-gray-900 mb-1">Alice Johnson</p>
             <p className="text-sm text-blue-600 hover:underline cursor-pointer mb-4">alice.j@example.com</p>
