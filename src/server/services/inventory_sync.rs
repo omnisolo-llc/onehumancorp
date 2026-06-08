@@ -203,3 +203,92 @@ impl InventorySyncService for MyInventorySyncService {
         }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::server_ohc::app::{ReserveInventoryRequest, CommitInventoryRequest};
+    use tonic::Request;
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn test_inventory_sync_service() {
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        let db = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let service = MyInventorySyncService::new(db, None);
+
+        let tenant_id = "test-tenant-123";
+        let product_id = "test-product-123";
+
+        // Setup test data
+        sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+            .bind(tenant_id)
+            .bind("Test Tenant")
+            .bind("free")
+            .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+            .bind(product_id)
+            .bind(tenant_id)
+            .bind("Test Product")
+            .bind(10)
+            .execute(&pool).await.unwrap();
+
+        // Test ReserveInventory
+        let mut reserve_req = Request::new(ReserveInventoryRequest {
+            product_id: product_id.to_string(),
+            ttl_seconds: 60,
+            tenant_id: tenant_id.to_string(),
+        });
+        reserve_req.metadata_mut().insert("x-spiffe-id", "spiffe://example.org/test".parse().unwrap());
+
+        let reserve_res = service.reserve_inventory(reserve_req).await.unwrap().into_inner();
+        assert!(reserve_res.success);
+        let lock_id = reserve_res.lock_id;
+
+        // Test CommitInventory
+        let mut commit_req = Request::new(CommitInventoryRequest {
+            product_id: product_id.to_string(),
+            lock_id: lock_id.clone(),
+            quantity: 2,
+            tenant_id: tenant_id.to_string(),
+        });
+        commit_req.metadata_mut().insert("x-spiffe-id", "spiffe://example.org/test".parse().unwrap());
+
+        let commit_res = service.commit_inventory(commit_req).await.unwrap().into_inner();
+        assert!(commit_res.success);
+
+        // Verify inventory count
+        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = $1")
+            .bind(product_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 8);
+
+        // Test CommitInventory with insufficient stock
+        let mut commit_req_fail = Request::new(CommitInventoryRequest {
+            product_id: product_id.to_string(),
+            lock_id: lock_id.clone(),
+            quantity: 10,
+            tenant_id: tenant_id.to_string(),
+        });
+        commit_req_fail.metadata_mut().insert("x-spiffe-id", "spiffe://example.org/test".parse().unwrap());
+
+        let commit_res_fail = service.commit_inventory(commit_req_fail).await.unwrap().into_inner();
+        assert!(!commit_res_fail.success);
+        assert!(commit_res_fail.error_message.contains("Insufficient inventory"));
+
+        // Cleanup
+        sqlx::query("DELETE FROM products WHERE id = $1").bind(product_id).execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM tenants WHERE id = $1").bind(tenant_id).execute(&pool).await.unwrap();
+    }
+}
