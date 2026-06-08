@@ -2695,11 +2695,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 struct UiTenantQuery {
     tenant_id: Option<String>,
     tenant: Option<String>,
-    mobile_optimized: Option<bool>,
-}
-
-fn ui_is_mobile_optimized(query: &UiTenantQuery) -> bool {
-    query.mobile_optimized.unwrap_or(false)
 }
 
 fn ui_tenant_id(query: &UiTenantQuery) -> String {
@@ -2770,9 +2765,8 @@ async fn list_ui_orders_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
-    let is_mobile = ui_is_mobile_optimized(&query);
 
-    let cache_key = format!("ui_orders:{}:{}", tenant_id, is_mobile);
+    let cache_key = format!("ui_orders:{}", tenant_id);
     let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
@@ -2790,10 +2784,10 @@ async fn list_ui_orders_handler(
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
-                    "customer_name": if is_mobile { String::new() } else { row.get::<String, _>("customer_name") },
+                    "customer_name": row.get::<String, _>("customer_name"),
                     "total_amount": row.get::<f64, _>("total_amount"),
                     "status": row.get::<String, _>("status"),
-                    "created_at": if is_mobile { String::new() } else { row.get::<String, _>("created_at") },
+                    "created_at": row.get::<String, _>("created_at"),
                 })).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
@@ -2809,10 +2803,10 @@ async fn list_ui_orders_handler(
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
-                    "customer_name": if is_mobile { String::new() } else { row.get::<String, _>("customer_name") },
+                    "customer_name": row.get::<String, _>("customer_name"),
                     "total_amount": row.get::<f64, _>("total_amount"),
                     "status": row.get::<String, _>("status"),
-                    "created_at": if is_mobile { String::new() } else { row.get::<String, _>("created_at") },
+                    "created_at": row.get::<String, _>("created_at"),
                 })).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
@@ -2839,9 +2833,8 @@ async fn list_ui_bookings_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
-    let is_mobile = ui_is_mobile_optimized(&query);
 
-    let cache_key = format!("ui_bookings:{}:{}", tenant_id, is_mobile);
+    let cache_key = format!("ui_bookings:{}", tenant_id);
     let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
@@ -2860,11 +2853,11 @@ async fn list_ui_bookings_handler(
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
-                    "customer_name": if is_mobile { String::new() } else { row.get::<String, _>("customer_name") },
+                    "customer_name": row.get::<String, _>("customer_name"),
                     "product_id": row.get::<String, _>("product_id"),
-                    "product_title": if is_mobile { String::new() } else { row.get::<String, _>("product_title") },
+                    "product_title": row.get::<String, _>("product_title"),
                     "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                    "end_time": if is_mobile { String::new() } else { row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default() },
+                    "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                     "status": row.get::<String, _>("status"),
                 })).collect::<Vec<_>>()),
                 Err(e) => Err(e),
@@ -2882,11 +2875,11 @@ async fn list_ui_bookings_handler(
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
-                    "customer_name": if is_mobile { String::new() } else { row.get::<String, _>("customer_name") },
+                    "customer_name": row.get::<String, _>("customer_name"),
                     "product_id": row.get::<String, _>("product_id"),
-                    "product_title": if is_mobile { String::new() } else { row.get::<String, _>("product_title") },
+                    "product_title": row.get::<String, _>("product_title"),
                     "start_time": row.get::<String, _>("start_time"),
-                    "end_time": if is_mobile { String::new() } else { row.get::<String, _>("end_time") },
+                    "end_time": row.get::<String, _>("end_time"),
                     "status": row.get::<String, _>("status"),
                 })).collect::<Vec<_>>()),
                 Err(e) => Err(e),
@@ -2913,9 +2906,8 @@ async fn list_ui_inbox_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
-    let is_mobile = ui_is_mobile_optimized(&query);
 
-    let cache_key = format!("ui_inbox:{}:{}", tenant_id, is_mobile);
+    let cache_key = format!("ui_inbox:{}", tenant_id);
     let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
@@ -2944,11 +2936,11 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
-                        "original_content": if is_mobile { String::new() } else { row.get::<String, _>("original_content") },
-                        "translated_from_language": if is_mobile { String::new() } else { row.get::<String, _>("translated_from_language") },
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
-                        "created_at": if is_mobile { String::new() } else { row.get::<String, _>("created_at") },
+                        "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),
                     Err(e) => Err(e),
                 }
@@ -2975,11 +2967,11 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
-                        "original_content": if is_mobile { String::new() } else { row.get::<String, _>("original_content") },
-                        "translated_from_language": if is_mobile { String::new() } else { row.get::<String, _>("translated_from_language") },
+                        "original_content": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
                         "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
-                        "created_at": if is_mobile { String::new() } else { row.get::<String, _>("created_at") },
+                        "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),
                     Err(e) => Err(e),
                 }
@@ -3040,7 +3032,6 @@ async fn list_ui_supply_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
-    let is_mobile = ui_is_mobile_optimized(&query);
 
     let (vendors, raw_materials, bom_items) = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -3061,7 +3052,7 @@ async fn list_ui_supply_handler(
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "name": row.get::<String, _>("name"),
-                    "contact_info": if is_mobile { String::new() } else { row.get::<String, _>("contact_info") },
+                    "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
 
@@ -3071,7 +3062,7 @@ async fn list_ui_supply_handler(
                     "id": row.get::<String, _>("id"),
                     "name": row.get::<String, _>("name"),
                     "current_quantity": row.get::<i32, _>("current_quantity"),
-                    "reorder_threshold": if is_mobile { 0 } else { row.get::<i32, _>("reorder_threshold") },
+                    "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
 
@@ -3105,7 +3096,7 @@ async fn list_ui_supply_handler(
                 .map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "name": row.get::<String, _>("name"),
-                    "contact_info": if is_mobile { String::new() } else { row.get::<String, _>("contact_info") },
+                    "contact_info": row.get::<String, _>("contact_info"),
                 }))
                 .collect::<Vec<_>>();
 
@@ -3115,7 +3106,7 @@ async fn list_ui_supply_handler(
                     "id": row.get::<String, _>("id"),
                     "name": row.get::<String, _>("name"),
                     "current_quantity": row.get::<i32, _>("current_quantity"),
-                    "reorder_threshold": if is_mobile { 0 } else { row.get::<i32, _>("reorder_threshold") },
+                    "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
                 }))
                 .collect::<Vec<_>>();
 
