@@ -193,10 +193,27 @@ export function UnifiedAgentFeed() {
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {approval.description}
+                    {approval.payload?.feature_type === 'invoice_past_due' ? `Action Needed: Invoice Past Due` : approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft") && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft" || approval.payload?.feature_type === "invoice_past_due") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {approval.payload?.feature_type === "invoice_past_due" && (
+                        <div className="mb-4 p-4 rounded-xl bg-orange-50/50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 flex flex-col gap-3" data-testid="invoice-past-due-card">
+                          <div className="flex items-center justify-between text-orange-800 dark:text-orange-300 font-semibold text-sm">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>{approval.payload.client_name} - {approval.payload.invoice_id}</span>
+                            </div>
+                            <span className="font-bold">${approval.payload.amount?.toFixed(2)}</span>
+                          </div>
+                          <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">{approval.payload.days_past_due} days past due</div>
+                          <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white dark:bg-[#1D1D1F] p-3 rounded-lg border border-gray-200 dark:border-gray-700 italic">
+                            "{approval.payload.drafted_message}"
+                          </div>
+                        </div>
+                      )}
                       {approval.payload?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm">

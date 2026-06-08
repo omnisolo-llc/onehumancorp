@@ -686,7 +686,12 @@ impl DepartmentOrchestrator {
 
             if approved {
                 if let Some(payload) = &original_payload {
-                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_past_due") {
+                        let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("UNKNOWN");
+                        tracing::info!("Simulating dispatch of AR recovery SMS for invoice {}", invoice_id);
+                        // In a real implementation we would insert a task to call Twilio/Omnichannel Gateway
+                        // For the purpose of closing the drafted item, we just proceed.
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;
                         let total_amount_cents = (price * 100.0) as i64;

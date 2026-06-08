@@ -43,8 +43,42 @@ where
         .route("/activity", get(list_activity_feed))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
+        .route("/simulate-invoice-past-due", post(simulate_invoice_past_due))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
+}
+
+async fn simulate_invoice_past_due(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "invoice_past_due",
+        "invoice_id": "INV-102",
+        "client_name": "Acme Corp",
+        "amount": 1250.00,
+        "days_past_due": 3,
+        "drafted_message": "Hi Acme team, touching base on Invoice #102. If it helps, we can split this into two payments. Let me know!"
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+        "Drafted follow-ups for 1 late invoice".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate invoice past due: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
 }
 
 async fn simulate_quote_draft(
