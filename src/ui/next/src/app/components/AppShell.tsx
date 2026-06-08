@@ -51,6 +51,7 @@ const primaryNav: NavItem[] = [
   { label: "Analytics", href: "/business-analytics", icon: "analytics" },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
   { label: "Settings", href: "/settings", icon: "settings" },
+  { label: "AI Usage", href: "/ai-usage-paywall", icon: "activity" },
 ];
 
 const secondaryNav: NavItem[] = [
