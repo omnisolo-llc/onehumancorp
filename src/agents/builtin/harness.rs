@@ -912,3 +912,14 @@ mod tests {
         assert_eq!(vercel_res.exit_code, 0);
     }
 }
+
+impl Default for SshBackend { fn default() -> Self { Self::new() } }
+impl Default for SingularityBackend { fn default() -> Self { Self::new() } }
+impl Default for ModalBackend { fn default() -> Self { Self::new() } }
+impl Default for DaytonaBackend { fn default() -> Self { Self::new() } }
+impl Default for VercelSandboxBackend { fn default() -> Self { Self::new() } }
+
+impl Default for ASTValidator { fn default() -> Self { Self::new() } }
+
+impl Default for LocalBackend { fn default() -> Self { Self::new(std::sync::Arc::new(ASTValidator::default()), Config::default()) } }
+impl Default for DockerBackend { fn default() -> Self { Self::new() } }

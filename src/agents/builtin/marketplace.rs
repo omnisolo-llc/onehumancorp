@@ -85,3 +85,5 @@ mod tests {
         assert_eq!(result.unwrap_err(), "Agent 'Non-existent Agent' not found in the marketplace.");
     }
 }
+
+impl Default for Marketplace { fn default() -> Self { Self::new() } }

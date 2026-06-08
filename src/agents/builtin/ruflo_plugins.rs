@@ -105,3 +105,5 @@ mod tests {
         assert_eq!(result, "plugin_10 executed");
     }
 }
+
+impl Default for PluginRegistry { fn default() -> Self { Self::new() } }

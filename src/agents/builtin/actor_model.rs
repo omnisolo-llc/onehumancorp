@@ -452,3 +452,5 @@ mod tests {
         }
     }
 }
+
+impl Default for ActorSystem { fn default() -> Self { Self::new() } }

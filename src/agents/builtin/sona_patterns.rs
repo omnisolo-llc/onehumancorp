@@ -133,3 +133,5 @@ mod tests {
         assert!(matcher.find_best_match("kubernetes deployment").is_none());
     }
 }
+
+impl Default for PatternMatcher { fn default() -> Self { Self::new() } }
