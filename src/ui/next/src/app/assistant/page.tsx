@@ -75,7 +75,7 @@ type AssistantCapabilities = {
   parityHighlights?: string[];
 };
 
-type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'explore' | 'cloud' | 'parity' | 'permissions' | 'models' | 'system';
+type Panel = 'remote' | 'automations' | 'memory' | 'skills' | 'connectors' | 'data' | 'explore' | 'cloud' | 'parity' | 'permissions' | 'models' | 'system' | 'billing';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -209,6 +209,7 @@ export default function AssistantPage() {
   const [error, setError] = useState('');
   const [actionNotice, setActionNotice] = useState('');
   const [agentName, setAgentName] = useState('Agent One');
+  const [billing, setBilling] = useState<any>({});
 
 
   useEffect(() => {
@@ -246,8 +247,23 @@ export default function AssistantPage() {
       }
     }
 
+    async function loadBilling() {
+      try {
+        const response = await fetch('/api/assistant/billing');
+        if (response.ok) {
+          const data = await response.json();
+          if (mounted) {
+            setBilling(data);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     loadTasks();
     loadSettings();
+    loadBilling();
     return () => {
       mounted = false;
     };
@@ -544,6 +560,7 @@ export default function AssistantPage() {
               ['data', 'Data Management'],
               ['explore', 'Explore'],
               ['cloud', 'Cloud Runtime'],
+              ['billing', 'My Plan'],
               ['parity', 'Parity Audit'],
               ['permissions', 'Permissions'],
               ['models', 'Models & Runtime'],
@@ -818,7 +835,7 @@ export default function AssistantPage() {
           </section>
 
           {actionNotice && <div className={styles.resultItem} role="status">{actionNotice}</div>}
-          <FeaturePanel panel={panel} capabilities={capabilities} onAction={runFeatureAction} />
+          <FeaturePanel panel={panel} capabilities={capabilities} onAction={runFeatureAction} billing={billing} />
         </section>
 
         <aside className={styles.panel}>
@@ -927,10 +944,12 @@ function FeaturePanel({
   panel,
   capabilities,
   onAction,
+  billing,
 }: {
   panel: Panel;
   capabilities: AssistantCapabilities;
   onAction: (action: string) => void;
+  billing?: any;
 }) {
   if (panel === 'remote') {
     return (
@@ -1237,6 +1256,40 @@ function FeaturePanel({
           <button type="button" onClick={() => onAction('pause_cloud_session')} className={cx(styles.smallButton, styles.warningButton)}>
             Pause Cloud Session
           </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (panel === 'billing') {
+    return (
+      <section aria-label="Cost transparency dashboard" className={styles.panel}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>My Plan</h2>
+            <p className={styles.eyebrow}>Cost Transparency Dashboard</p>
+          </div>
+          <button type="button" onClick={() => onAction('upgrade_plan')} className={styles.panelHeaderButton}>
+            Upgrade
+          </button>
+        </div>
+        <div className={styles.featureGridTwo}>
+          <div className={styles.featureCard}>
+            <div className={styles.cardTitle}>Current plan</div>
+            <div className={styles.cardDetail}>{billing?.plan || 'Growth'}</div>
+          </div>
+          <div className={styles.featureCard}>
+            <div className={styles.cardTitle}>Estimated next bill</div>
+            <div className={styles.cardDetail}>${billing?.estimatedNextBill?.toFixed(2) || '29.00'}</div>
+          </div>
+          <div className={styles.featureCard}>
+            <div className={styles.cardTitle}>AI actions used this month</div>
+            <div className={styles.cardDetail}>{billing?.aiActionsUsed || 0} / {billing?.aiActionsLimit || 500}</div>
+          </div>
+          <div className={styles.featureCard}>
+            <div className={styles.cardTitle}>Storage used</div>
+            <div className={styles.cardDetail}>{billing?.storageUsedGB?.toFixed(1) || '0.0'}GB / {billing?.storageLimitGB || 50}GB</div>
+          </div>
         </div>
       </section>
     );

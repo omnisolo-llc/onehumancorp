@@ -2305,6 +2305,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     cs_worker.start();
 
 
+    // Start Booking Reengagement Worker
+    let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
+    booking_reengagement_worker.start();
+
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
@@ -2404,7 +2408,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
-    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
+    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone()).with_hub(hub.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
     let sales_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::sales_agent::SalesAgent::new(dept_orchestrator.clone())));
     let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
@@ -3400,9 +3404,20 @@ async fn create_ui_bom_item_handler(
         .route("/api/settings/voice", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let enabled = req.get("voice_receptionist_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
-                let number = req.get("voice_receptionist_number").and_then(|v| v.as_str()).map(|s| s.to_string());
-                let persona = req.get("voice_receptionist_persona").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let current_settings = settings_store.get();
+                let enabled = req.get("voice_receptionist_enabled").and_then(|v| v.as_bool()).unwrap_or(current_settings.voice_receptionist_enabled);
+
+                let number = if let Some(v) = req.get("voice_receptionist_number") {
+                    if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
+                } else {
+                    current_settings.voice_receptionist_number
+                };
+
+                let persona = if let Some(v) = req.get("voice_receptionist_persona") {
+                    if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
+                } else {
+                    current_settings.voice_receptionist_persona
+                };
 
                 if let Err(e) = settings_store.set_voice_settings(enabled, number, persona) {
                     ::server_telemetry::record_error_signal("Failed to save voice settings");
@@ -4048,6 +4063,48 @@ mod tests {
         assert_eq!(current.voice_receptionist_enabled, true);
         assert_eq!(current.voice_receptionist_number, Some("+15551112222".to_string()));
         assert_eq!(current.voice_receptionist_persona, Some("Professional".to_string()));
+
+        // Test unsetting
+        store.set_voice_settings(true, None, None).unwrap();
+        let updated = store.get();
+        assert_eq!(updated.voice_receptionist_enabled, true);
+        assert_eq!(updated.voice_receptionist_number, None);
+        assert_eq!(updated.voice_receptionist_persona, None);
     }
 }
 // resolves #9690
+
+#[tokio::test]
+async fn test_api_settings_voice() {
+    use std::sync::Arc;
+    use serde_json::json;
+
+    let settings_store = Arc::new(crate::settings::Store::new());
+    settings_store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+
+    let json_req = json!({
+        "voice_receptionist_enabled": false
+    });
+
+    let current = settings_store.get();
+
+    let enabled = json_req.get("voice_receptionist_enabled").and_then(|v| v.as_bool()).unwrap_or(current.voice_receptionist_enabled);
+    let number = if let Some(v) = json_req.get("voice_receptionist_number") {
+        if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
+    } else {
+        current.voice_receptionist_number
+    };
+
+    let persona = if let Some(v) = json_req.get("voice_receptionist_persona") {
+        if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
+    } else {
+        current.voice_receptionist_persona
+    };
+
+    settings_store.set_voice_settings(enabled, number, persona).unwrap();
+
+    let updated = settings_store.get();
+    assert_eq!(updated.voice_receptionist_enabled, false);
+    assert_eq!(updated.voice_receptionist_number, Some("+15551112222".to_string()));
+    assert_eq!(updated.voice_receptionist_persona, Some("Professional".to_string()));
+}

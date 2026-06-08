@@ -47,7 +47,42 @@ export default function MyPlanPage() {
       return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
+
+
+  const handleCancelSubscription = async () => {
+    if (!window.confirm("Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing cycle.")) {
+        return;
+    }
+    setActionMessage('Cancellation review started. Confirm account ownership before changing subscription status.');
+    try {
+
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/billing/cancel-subscription', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setActionMessage('Subscription canceled successfully.');
+            // Reload plan data
+            const res2 = await fetch('/api/billing/my-plan', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res2.ok) {
+                setPlanData(await res2.json());
+            }
+        } else {
+            setActionMessage('Failed to cancel subscription. Please try again or contact support.');
+        }
+    } catch (e) {
+        setActionMessage('Failed to cancel subscription.');
+    }
+  };
+
   const formatStorage = (bytes: number) => {
+
       const mb = bytes / (1024 * 1024);
       if (mb < 1) return "< 1 MB";
       if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
@@ -80,7 +115,7 @@ export default function MyPlanPage() {
                 </div>
                 <div>
                     <h2 id="my-plan-next-bill" className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill:</h2>
-                    <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
+                    <p className="text-3xl font-bold font-outfit text-gray-900">${((planData?.next_bill_estimated || 0) / 100).toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
                     <button onClick={() => router.push('/pricing')} className="w-full min-h-[44px] py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
@@ -167,7 +202,7 @@ export default function MyPlanPage() {
                 <p className="text-sm text-gray-500 mt-1">Get a PDF copy of your recent billing statements.</p>
             </button>
             <button
-                onClick={() => setActionMessage('Cancellation review started. Confirm account ownership before changing subscription status.')}
+                onClick={handleCancelSubscription}
                 className="p-6 rounded-2xl shadow-sm bg-red-50/50 backdrop-blur-lg border border-red-100/50 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left"
             >
                 <h3 className="font-medium text-red-600">Cancel Subscription</h3>

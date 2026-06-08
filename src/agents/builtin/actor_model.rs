@@ -412,6 +412,188 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_actor_model_pure_conversation() {
+        let system = Arc::new(ActorSystem::new());
+        let coord_llm = Arc::new(MockLlm {
+            response_text: "Just conversation, no tools".to_string(),
+            calls: Arc::new(Mutex::new(1)), // Start at 1 so MockLlm bypasses the tool_call logic
+        });
+
+        let coord_agent = Arc::new(Agent::new(coord_llm, vec![]));
+
+        let coord_actor = AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: AgentRunConfig::default(),
+        };
+
+        let (coord_tx, coord_rx) = mpsc::channel(10);
+        system.register(coord_actor.name(), coord_tx).await;
+        coord_actor.start(coord_rx, system.clone());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        system.register("ProductionHarness".to_string(), test_tx).await;
+
+        system.send(ActorMessage {
+            sender: "ProductionHarness".to_string(),
+            recipient: "Coordinator".to_string(),
+            content: "Hello there".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-pure".to_string(),
+            original_sender: "ProductionHarness".to_string(),
+        }).await.unwrap();
+
+        if let Some(reply) = test_rx.recv().await {
+            assert_eq!(reply.sender, "Coordinator");
+            assert_eq!(reply.content, "Just conversation, no tools");
+            assert_eq!(reply.recipient, "ProductionHarness");
+        } else {
+            panic!("Did not receive reply");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_actor_model_tool_results_routing() {
+        let system = Arc::new(ActorSystem::new());
+        let coord_llm = Arc::new(MockLlm {
+            response_text: "Final response after tool result".to_string(),
+            calls: Arc::new(Mutex::new(1)), // Start at 1 so MockLlm bypasses tool_calls
+        });
+
+        let coord_agent = Arc::new(Agent::new(coord_llm, vec![]));
+
+        let coord_actor = AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: AgentRunConfig::default(),
+        };
+
+        let (coord_tx, coord_rx) = mpsc::channel(10);
+        system.register(coord_actor.name(), coord_tx).await;
+        coord_actor.start(coord_rx, system.clone());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        system.register("ProductionHarness".to_string(), test_tx).await;
+
+        let tool_results = vec![
+            ohc_builtin_agent_core::types::ToolResult {
+                tool_call_id: "call_1".to_string(),
+                content: "Tool completed successfully".to_string(),
+                error: "".to_string(),
+            }
+        ];
+
+        system.send(ActorMessage {
+            sender: "ToolActor".to_string(),
+            recipient: "Coordinator".to_string(),
+            content: "Tool execution completed".to_string(),
+            tool_calls: vec![],
+            tool_results,
+            correlation_id: "tx-tools".to_string(),
+            original_sender: "ProductionHarness".to_string(),
+        }).await.unwrap();
+
+        if let Some(reply) = test_rx.recv().await {
+            assert_eq!(reply.sender, "Coordinator");
+            assert_eq!(reply.content, "Final response after tool result");
+            assert_eq!(reply.recipient, "ProductionHarness");
+        } else {
+            panic!("Did not receive reply");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_actor_model_routing_convention() {
+        let system = Arc::new(ActorSystem::new());
+        let coord_llm = Arc::new(MockLlm {
+            response_text: "@OtherActor Can you handle this?".to_string(),
+            calls: Arc::new(Mutex::new(1)), // bypass tool calls
+        });
+
+        let coord_agent = Arc::new(Agent::new(coord_llm, vec![]));
+
+        let coord_actor = AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: AgentRunConfig::default(),
+        };
+
+        let (coord_tx, coord_rx) = mpsc::channel(10);
+        system.register(coord_actor.name(), coord_tx).await;
+        coord_actor.start(coord_rx, system.clone());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        // Register the *target* actor to intercept the routed message
+        system.register("OtherActor".to_string(), test_tx).await;
+
+        system.send(ActorMessage {
+            sender: "ProductionHarness".to_string(),
+            recipient: "Coordinator".to_string(),
+            content: "Hello".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-route".to_string(),
+            original_sender: "ProductionHarness".to_string(),
+        }).await.unwrap();
+
+        if let Some(reply) = test_rx.recv().await {
+            assert_eq!(reply.sender, "Coordinator");
+            assert_eq!(reply.content, "Can you handle this?"); // @ prefix removed
+            assert_eq!(reply.recipient, "OtherActor");
+        } else {
+            panic!("Did not receive reply to OtherActor");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_actor_model_llm_error() {
+        let system = Arc::new(ActorSystem::new());
+
+        struct FailingLlm;
+        #[async_trait::async_trait]
+        impl LlmClient for FailingLlm {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Err("Simulated LLM Failure".into())
+            }
+        }
+
+        let coord_llm = Arc::new(FailingLlm);
+        let coord_agent = Arc::new(Agent::new(coord_llm, vec![]));
+
+        let coord_actor = AgentActor {
+            name: "Coordinator".to_string(),
+            agent: coord_agent.clone(),
+            config: AgentRunConfig::default(),
+        };
+
+        let (coord_tx, coord_rx) = mpsc::channel(10);
+        system.register(coord_actor.name(), coord_tx).await;
+        coord_actor.start(coord_rx, system.clone());
+
+        let (test_tx, mut test_rx) = mpsc::channel(10);
+        system.register("ProductionHarness".to_string(), test_tx).await;
+
+        system.send(ActorMessage {
+            sender: "ProductionHarness".to_string(),
+            recipient: "Coordinator".to_string(),
+            content: "Hello".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-err".to_string(),
+            original_sender: "ProductionHarness".to_string(),
+        }).await.unwrap();
+
+        if let Some(reply) = test_rx.recv().await {
+            assert_eq!(reply.sender, "Coordinator");
+            assert_eq!(reply.content, "Error: Simulated LLM Failure");
+            assert_eq!(reply.recipient, "ProductionHarness");
+        } else {
+            panic!("Did not receive reply from Coordinator");
+        }
+    }
+
+    #[tokio::test]
     async fn test_actor_model_lifecycle() {
         let system = Arc::new(ActorSystem::new());
         let coord_llm = Arc::new(MockLlm {
