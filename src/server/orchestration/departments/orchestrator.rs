@@ -790,51 +790,118 @@ impl DepartmentOrchestrator {
                 if let Some(payload) = &original_payload {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {
                         if let Some(product_id) = payload.get("context").and_then(|c| c.get("product_id")).and_then(|v| v.as_str()) {
+                            let new_price = payload.get("context").and_then(|c| c.get("new_price")).and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let new_price_cents = (new_price * 100.0) as i64;
                             let discount_amount = payload.get("context").and_then(|c| c.get("discount_amount")).and_then(|v| v.as_f64()).unwrap_or(0.0);
                             let now = Utc::now();
                             let expires_at = now + chrono::Duration::days(2);
                             let id = uuid::Uuid::new_v4().to_string();
 
-                            // Try to insert into active_discounts, but don't fail the approval if it's not present (e.g. SQLite doesn't have the table yet in testing)
-                            if let DbStore::Postgres = &self.db.store {
-                                if let Err(e) = sqlx::query("INSERT INTO active_discounts (id, tenant_id, product_id, discount_amount, expires_at) VALUES ($1, $2, $3, $4, $5)")
-                                    .bind(uuid::Uuid::parse_str(&id).unwrap_or(uuid::Uuid::new_v4()))
-                                    .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or(uuid::Uuid::new_v4()))
-                                    .bind(uuid::Uuid::parse_str(product_id).unwrap_or(uuid::Uuid::new_v4()))
-                                    .bind(discount_amount)
-                                    .bind(expires_at)
-                                    .execute(&self.db.pool)
-                                    .await
-                                {
-                                    tracing::error!("Failed to insert active_discount: {}", e);
-                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
-                                    return Err(format!("Failed to activate smart pricing discount: {}", e));
-                                }
-
-                                // Invalidate Redis edge cache for the product price
-                                let cache_key = format!("ohc:price:{}:{}", tenant_id, product_id);
-                                tracing::info!("Mock redis invalidation for {}", cache_key);
-                                if false {
-
-                                }
-
-                                // Trigger Promoter agent to draft a marketing broadcast
-                                let promo_payload = serde_json::json!({
-                                    "action": "draft_social_post",
-                                    "context": {
-                                        "product_id": product_id,
-                                        "product_name": payload.get("context").and_then(|c| c.get("product_name")).and_then(|v| v.as_str()).unwrap_or(""),
-                                        "discount_amount": discount_amount,
-                                        "reason": "Flash Sale"
+                            let mut success = true;
+                            match &self.db.store {
+                                DbStore::Postgres => {
+                                    if let Err(e) = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
+                                        .bind(new_price)
+                                        .bind(new_price_cents)
+                                        .bind(uuid::Uuid::parse_str(product_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                                        .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                                        .execute(&self.db.pool)
+                                        .await
+                                    {
+                                        tracing::error!("Failed to update product price: {}", e);
+                                        success = false;
                                     }
-                                });
-                                let _ = self.execute_action(
-                                    DepartmentType::Marketing,
-                                    "Draft social media post for Flash Sale".to_string(),
-                                    tenant_id.to_string(),
-                                    ActionRisk::DraftForReview,
-                                    promo_payload
-                                ).await;
+
+                                    // Try to insert into active_discounts, but don't fail the approval if it's not present (e.g. SQLite doesn't have the table yet in testing)
+                                    if success {
+                                        if let Err(e) = sqlx::query("INSERT INTO active_discounts (id, tenant_id, product_id, discount_amount, expires_at) VALUES ($1, $2, $3, $4, $5)")
+                                            .bind(uuid::Uuid::parse_str(&id).unwrap_or(uuid::Uuid::new_v4()))
+                                            .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or(uuid::Uuid::new_v4()))
+                                            .bind(uuid::Uuid::parse_str(product_id).unwrap_or(uuid::Uuid::new_v4()))
+                                            .bind(discount_amount)
+                                            .bind(expires_at)
+                                            .execute(&self.db.pool)
+                                            .await
+                                        {
+                                            tracing::error!("Failed to insert active_discount: {}", e);
+                                            // Optional: let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                            // return Err(format!("Failed to activate smart pricing discount: {}", e));
+                                        }
+
+                                        // Dispatch a reorder job to ohc_job_queue
+                                        let job_id = uuid::Uuid::new_v4().to_string();
+                                        let job_payload = serde_json::json!({
+                                            "product_id": product_id,
+                                            "quantity": 50,
+                                            "reason": "Smart Pricing Reorder"
+                                        });
+                                        if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)")
+                                            .bind(&job_id)
+                                            .bind(tenant_id)
+                                            .bind("inventory_reorder")
+                                            .bind(&job_payload)
+                                            .execute(&self.db.pool)
+                                            .await
+                                        {
+                                            tracing::error!("Failed to insert reorder job: {}", e);
+                                        }
+
+                                        // Trigger Promoter agent to draft a marketing broadcast
+                                        let promo_payload = serde_json::json!({
+                                            "action": "draft_social_post",
+                                            "context": {
+                                                "product_id": product_id,
+                                                "product_name": payload.get("context").and_then(|c| c.get("product_name")).and_then(|v| v.as_str()).unwrap_or(""),
+                                                "discount_amount": discount_amount,
+                                                "reason": "Flash Sale"
+                                            }
+                                        });
+                                        let _ = self.execute_action(
+                                            DepartmentType::Marketing,
+                                            "Draft social media post for Flash Sale".to_string(),
+                                            tenant_id.to_string(),
+                                            ActionRisk::DraftForReview,
+                                            promo_payload
+                                        ).await;
+                                    }
+                                }
+                                DbStore::Sqlite(pool) => {
+                                    if let Err(e) = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
+                                        .bind(new_price)
+                                        .bind(new_price_cents)
+                                        .bind(product_id)
+                                        .bind(tenant_id)
+                                        .execute(pool)
+                                        .await
+                                    {
+                                        tracing::error!("Failed to update product price: {}", e);
+                                        success = false;
+                                    }
+
+                                    if success {
+                                        // Dispatch a reorder job to ohc_job_queue
+                                        let job_id = uuid::Uuid::new_v4().to_string();
+                                        let job_payload = serde_json::json!({
+                                            "product_id": product_id,
+                                            "quantity": 50,
+                                            "reason": "Smart Pricing Reorder"
+                                        });
+                                        if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES (?, ?, ?, ?, 'PENDING', CURRENT_TIMESTAMP)")
+                                            .bind(&job_id)
+                                            .bind(tenant_id)
+                                            .bind("inventory_reorder")
+                                            .bind(&job_payload)
+                                            .execute(pool)
+                                            .await
+                                        {
+                                            tracing::error!("Failed to insert reorder job: {}", e);
+                                        }
+                                    }
+                                }
+                            }
+                            if !success {
+                                let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                return Err("Failed to update product price".to_string());
                             }
                         }
                     }
@@ -892,14 +959,49 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn simulate_smart_pricing(&self, tenant_id: &str) -> Result<(), String> {
+        let (product_id, product_name, price) = match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT id, name, price FROM products WHERE tenant_id = $1 LIMIT 1")
+                    .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let id: String = r.get("id");
+                    let name: String = r.get("name");
+                    let price: f64 = r.get("price");
+                    (id, name, price)
+                } else {
+                    return Err("No product found for tenant".to_string());
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT id, name, price FROM products WHERE tenant_id = ? LIMIT 1")
+                    .bind(tenant_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let id: String = r.get("id");
+                    let name: String = r.get("name");
+                    let price: f64 = r.get("price");
+                    (id, name, price)
+                } else {
+                    return Err("No product found for tenant".to_string());
+                }
+            }
+        };
+
         let payload = serde_json::json!({
             "context": {
                 "smart_pricing": true,
-                "product_id": uuid::Uuid::new_v4().to_string(),
-                "product_name": "Winter Scarf",
-                "old_price": 50.0,
-                "new_price": 42.5,
-                "discount_amount": 7.5,
+                "product_id": product_id,
+                "product_name": product_name,
+                "old_price": price,
+                "new_price": price * 0.85,
+                "discount_amount": price * 0.15,
                 "sales_projection": "+$120",
                 "stagnant_days": 60,
                 "margin_percent": 40
@@ -908,7 +1010,7 @@ impl DepartmentOrchestrator {
 
         self.execute_action(
             DepartmentType::BusinessAdvisory,
-            "Smart Price Suggestion: Winter Scarf".to_string(),
+            format!("Smart Price Suggestion: {}", product_name),
             tenant_id.to_string(),
             ActionRisk::DraftForReview,
             payload
