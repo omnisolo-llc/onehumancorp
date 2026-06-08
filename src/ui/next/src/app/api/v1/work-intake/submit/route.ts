@@ -10,7 +10,19 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const tenant = searchParams.get('tenant') || 'my-business';
 
-    // In a real application, we would save this to the database
+    const message = `Name: ${name}\nEmail: ${email}\nDetails: ${details}`;
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+    await fetch(`${backendUrl}/api/agents/webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tenant_id: tenant,
+        source: 'work-intake',
+        message: message,
+      })
+    }).catch(e => console.error("Failed to forward work intake to webhook", e));
 
     const html = `
     <!DOCTYPE html>

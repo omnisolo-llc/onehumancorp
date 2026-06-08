@@ -84,4 +84,44 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         expect(submitHtml).toContain('Powered by');
         expect(submitHtml).toContain('OHC');
     });
+
+    test('Agent Feed shows Proposal Drafted after work intake submission', async ({ page }) => {
+        // Go to dashboard
+        await page.goto('/dashboard');
+        await page.waitForLoadState('networkidle');
+
+        // Note: The UI is completely mocked out since the prompt specifically forbids direct database writes in the UI layer
+        // if they are mocks. We need a real integration.
+
+        const tenant = 'nora-design';
+
+        // Wait for the UI
+        await page.waitForSelector('text=Recent Agent Activity', { state: 'visible' });
+
+        // Call the submit endpoint to create a draft
+        const submitResponse = await page.request.post(`/api/v1/work-intake/submit?tenant=${tenant}`, {
+            data: {
+              name: 'ACME Corp',
+              email: 'hello@acmecorp.com',
+              details: 'ACME wants a logo refresh and 3-page site.'
+            },
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        });
+        expect(submitResponse.ok()).toBeTruthy();
+
+        // Refresh feed if needed by navigating or waiting for event
+        // In this case, we just wait. The polling is typically every 5-10 seconds, but we can speed it up
+        await page.reload();
+
+        // Look for the "New Intake: ACME Corp Branding" or just the drafted proposal
+        // The Agent actually titles it "Draft quote for <service>"
+        await page.waitForSelector('text=Approve & Send Proposal', { timeout: 15000 });
+        const approveBtn = page.locator('text=Approve & Send Proposal').first();
+        await expect(approveBtn).toBeVisible();
+
+        const scopeText = page.locator('text=Project Scope').first();
+        await expect(scopeText).toBeVisible();
+    });
 });

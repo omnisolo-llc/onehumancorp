@@ -195,9 +195,32 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined) && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === 'quote_draft') && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      {approval.payload?.context?.smart_pricing === true ? (
+                      {approval.payload?.feature_type === 'quote_draft' ? (
+                        <>
+                          <div className="flex flex-col gap-2 mb-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Project Scope</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{approval.payload.scope}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
+                            <span className="font-bold text-green-600 dark:text-green-400 text-base">
+                              ${Number(approval.payload.suggested_price).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-2">
+                            <span className="text-gray-500 dark:text-gray-400">Timeline:</span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.suggested_time}</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Drafted Proposal</span>
+                            <div className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-gray-700 dark:text-gray-300 italic relative">
+                              "{approval.payload.generated_response}"
+                            </div>
+                          </div>
+                        </>
+                      ) : approval.payload?.context?.smart_pricing === true ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
                             <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
@@ -270,7 +293,34 @@ export function UnifiedAgentFeed() {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {approval.payload?.context?.smart_pricing === true ? (
+                  {approval.payload?.feature_type === 'quote_draft' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send Proposal"
+                        data-testid="approve-and-send-proposal"
+                      >
+                        Approve & Send Proposal
+                      </button>
+                      <button
+                        onClick={() => {}}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="edit-draft"
+                      >
+                        Edit Draft
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Ask Agent to Adjust"
+                        data-testid="ask-agent-adjust"
+                      >
+                        Ask Agent to Adjust
+                      </button>
+                    </div>
+                  ) : approval.payload?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}

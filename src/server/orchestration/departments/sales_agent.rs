@@ -219,6 +219,7 @@ impl Department for SalesAgent {
             "tenant.quote.requested".to_string(),
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
+            "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
         ]
     }
@@ -259,7 +260,7 @@ impl Department for SalesAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
             let planned_intent = match self
                 .quote_intent_planner
                 .plan_quote_intent(&event.tenant_id, &event.payload)
