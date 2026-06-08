@@ -240,7 +240,28 @@ export function UnifiedAgentFeed() {
                           </div>
                         </div>
                       )}
-                      {approval.payload?.context?.smart_pricing === true ? (
+                      {approval.payload?.feature_type === 'restock_and_price_adjust' ? (
+                        <>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Reorder Quantity:</span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {approval.payload.suggested_reorder_quantity} units
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm mb-1">
+                            <span className="text-gray-500 dark:text-gray-400">Old Price:</span>
+                            <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
+                              ${(Number(approval.payload.old_price) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
+                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="smart-pricing-new-price">
+                              ${(Number(approval.payload.new_price) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        </>
+                      ) : approval.payload?.context?.smart_pricing === true ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
                             <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
@@ -333,7 +354,26 @@ export function UnifiedAgentFeed() {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {approval.payload?.feature_type === "quote_draft" ? (
+                  {approval.payload?.feature_type === "restock_and_price_adjust" ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve action"
+                        data-testid="approve-restock-price"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss action"
+                        data-testid="dismiss-restock-price"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === "quote_draft" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}

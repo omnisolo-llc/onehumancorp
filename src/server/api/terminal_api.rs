@@ -358,11 +358,14 @@ pub async fn commit_inventory_handler(
     let pool = crate::db::get_pool();
     if let Ok(mut tx) = pool.begin().await {
         if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-            let current_stock = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+            let current_product = sqlx::query("SELECT inventory_count, title, price FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                 .bind(&req_data.product_id).bind(&tenant_id).fetch_optional(&mut *tx).await.unwrap_or(None);
 
-            if let Some(row) = current_stock {
+            if let Some(row) = current_product {
                 let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                let title: String = sqlx::Row::get(&row, "title");
+                let price: f64 = sqlx::Row::try_get(&row, "price").unwrap_or(0.0);
+
                 if stock < req_data.quantity {
                     let _ = tx.rollback().await;
                     return (axum::http::StatusCode::OK, Json(serde_json::json!({
@@ -375,7 +378,21 @@ pub async fn commit_inventory_handler(
                 let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(new_stock).bind(&req_data.product_id).bind(&tenant_id).execute(&mut *tx).await;
 
-                if new_stock <= 5 {
+                if new_stock == 0 {
+                    let approval_id = uuid::Uuid::new_v4().to_string();
+                    let suggested_price = price * 1.15;
+                    let approval_payload = serde_json::json!({
+                        "feature_type": "restock_and_price_adjust",
+                        "product_id": req_data.product_id,
+                        "product_name": title,
+                        "suggested_reorder_quantity": 50,
+                        "old_price": price,
+                        "new_price": suggested_price
+                    }).to_string();
+                    let description = format!("{} sold out. Draft reorder for 50 units and raise price.", title);
+                    let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'operations', $3, 'DRAFT', 'LOW', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&approval_id).bind(&tenant_id).bind(&description).bind(&approval_payload).execute(&mut *tx).await;
+                } else if new_stock <= 5 {
                     let job_id = uuid::Uuid::new_v4().to_string();
                     let job_payload = serde_json::json!({
                         "product_id": req_data.product_id,

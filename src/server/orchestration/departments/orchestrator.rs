@@ -786,6 +786,63 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("restock_and_price_adjust") {
+                        if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                            let new_price = payload.get("new_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let reorder_quantity = payload.get("suggested_reorder_quantity").and_then(|v| v.as_i64()).unwrap_or(50);
+
+                            if let DbStore::Postgres = &self.db.store {
+                                if let Ok(mut tx) = self.db.pool.begin().await {
+                                    if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
+                                        let _ = sqlx::query("UPDATE products SET price = $1 WHERE id = $2 AND tenant_id = $3")
+                                            .bind(new_price)
+                                            .bind(product_id)
+                                            .bind(tenant_id)
+                                            .execute(&mut *tx)
+                                            .await;
+
+                                        let job_id = Uuid::new_v4().to_string();
+                                        let job_payload = serde_json::json!({
+                                            "product_id": product_id,
+                                            "quantity": reorder_quantity,
+                                            "reason": "auto_restock_depleted_inventory"
+                                        });
+                                        let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'vendor_reorder', $3::jsonb, 'PENDING')")
+                                            .bind(&job_id)
+                                            .bind(tenant_id)
+                                            .bind(&job_payload)
+                                            .execute(&mut *tx)
+                                            .await;
+
+                                        let _ = tx.commit().await;
+                                    }
+                                }
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET price = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(new_price)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+
+                                let job_id = Uuid::new_v4().to_string();
+                                let job_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "quantity": reorder_quantity,
+                                    "reason": "auto_restock_depleted_inventory"
+                                }).to_string();
+                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'vendor_reorder', ?, 'PENDING')")
+                                    .bind(&job_id)
+                                    .bind(tenant_id)
+                                    .bind(&job_payload)
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+
                 // If this is a Smart Pricing approval, execute the price change in the database directly.
                 if let Some(payload) = &original_payload {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {
