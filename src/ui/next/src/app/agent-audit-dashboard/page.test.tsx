@@ -2,30 +2,44 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AgentAuditDashboard from './page';
+import { vi } from 'vitest';
 
 describe('Agent Audit Dashboard', () => {
-  it('renders Agent Audit Dashboard heading', () => {
-    render(<AgentAuditDashboard />);
-    expect(screen.getByRole('heading', { name: 'Agent Audit Dashboard' })).toBeInTheDocument();
+  beforeEach(() => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ entries: [] }),
+      })
+    ) as any;
   });
 
-  it('renders Cost Tracker', () => {
-    render(<AgentAuditDashboard />);
-    expect(screen.getByText('Cost Tracker')).toBeInTheDocument();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('renders Operations', () => {
+  it('renders Agent Audit Dashboard heading', async () => {
     render(<AgentAuditDashboard />);
-    expect(screen.getByText('Operations')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Agent Audit Dashboard' })).toBeInTheDocument();
   });
 
-  it('renders Marketing & Advertising', () => {
+  it('renders Cost Tracker', async () => {
     render(<AgentAuditDashboard />);
-    expect(screen.getByText('Marketing & Advertising')).toBeInTheDocument();
+    expect(await screen.findByText('Cost Tracker')).toBeInTheDocument();
   });
 
-  it('renders Violation Feed', () => {
+  it('renders Operations', async () => {
     render(<AgentAuditDashboard />);
-    expect(screen.getByText('Cross-Agent Feed')).toBeInTheDocument();
+    expect(await screen.findByText('Operations')).toBeInTheDocument();
+  });
+
+  it('renders Marketing & Advertising', async () => {
+    render(<AgentAuditDashboard />);
+    expect(await screen.findByText('Marketing & Advertising')).toBeInTheDocument();
+  });
+
+  it('renders Violation Feed', async () => {
+    render(<AgentAuditDashboard />);
+    expect(await screen.findByText('Cross-Agent Feed')).toBeInTheDocument();
   });
 });
