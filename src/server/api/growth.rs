@@ -26,6 +26,11 @@ pub struct SocialPostRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct CreateTeamInviteResponse {
+    pub invite_link: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostResponse {
     pub posted: bool,
     pub post_id: String,
@@ -1238,19 +1243,21 @@ async fn handle_team_invite_accept(
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
-) -> Result<Json<()>, StatusCode> {
+) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
-        Ok(_) => {
+        Ok(invite) => {
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
-            Ok(Json(()))
+
+            let invite_link = format!("https://ohc.app/invite/{}", invite.id);
+            Ok(Json(CreateTeamInviteResponse { invite_link }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -1297,6 +1304,8 @@ mod tests {
         // Call create handler directly
         let res = handle_create_team_invite(Extension(state.clone()), Json(req)).await;
         assert!(res.is_ok());
+        let create_res_json = res.unwrap().0;
+        assert!(create_res_json.invite_link.starts_with("https://ohc.app/invite/inv-"));
 
         // Call get handler directly
         let query = GetTeamInvitesQuery {
