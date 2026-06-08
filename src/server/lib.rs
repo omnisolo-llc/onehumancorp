@@ -104,6 +104,23 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
     m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
+
+    // New tooltips
+    m.insert("assistant-tooltip".to_string(), "Chat with your AI assistant to manage tasks and schedule meetings.".to_string());
+    m.insert("setup-tooltip".to_string(), "Configure your basic business settings and branding details.".to_string());
+    m.insert("inbox-tooltip".to_string(), "Manage all your customer messages and inquiries from one place.".to_string());
+    m.insert("agents-tooltip".to_string(), "Hire, train, and manage your AI workforce.".to_string());
+    m.insert("analytics-tooltip".to_string(), "View detailed reports and insights about your business performance.".to_string());
+    m.insert("campaigns-tooltip".to_string(), "Create and send marketing campaigns to reach your audience.".to_string());
+    m.insert("settings-tooltip".to_string(), "Adjust your advanced account and application preferences.".to_string());
+    m.insert("ai-usage-tooltip".to_string(), "Monitor your AI resource usage and manage your billing plan.".to_string());
+    m.insert("calendar-tooltip".to_string(), "View and manage your schedule, bookings, and upcoming events.".to_string());
+    m.insert("integrations-tooltip".to_string(), "Connect your OHC account with other tools and services.".to_string());
+    m.insert("cost-tooltip".to_string(), "Review your business expenses and control your spending.".to_string());
+    m.insert("diagnostics-tooltip".to_string(), "Check system health and troubleshoot any technical issues.".to_string());
+    m.insert("changelog-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
+    m.insert("checkout-pay-now-tooltip".to_string(), "Connect your Stripe account to securely accept payments from customers.".to_string());
+
     RwLock::new(m)
     })
 }

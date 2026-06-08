@@ -61,6 +61,7 @@ const secondaryNav: NavItem[] = [
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
+  { label: "Changelog", href: "/changelog", icon: "activity" },
 ];
 
 function ShellIcon({ name }: { name: IconName }) {
@@ -127,6 +128,58 @@ function NavLink({ item }: { item: NavItem }) {
 
   if (item.href === "/orders") {
     return <WithTooltip id="orders-tooltip" defaultText="See what customers bought and track order fulfillment.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/assistant") {
+    return <WithTooltip id="assistant-tooltip" defaultText="Chat with your AI assistant to manage tasks and schedule meetings.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/onboarding") {
+    return <WithTooltip id="setup-tooltip" defaultText="Configure your basic business settings and branding details.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/inbox") {
+    return <WithTooltip id="inbox-tooltip" defaultText="Manage all your customer messages and inquiries from one place.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/agents") {
+    return <WithTooltip id="agents-tooltip" defaultText="Hire, train, and manage your AI workforce.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/business-analytics") {
+    return <WithTooltip id="analytics-tooltip" defaultText="View detailed reports and insights about your business performance.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/dashboard/campaigns") {
+    return <WithTooltip id="campaigns-tooltip" defaultText="Create and send marketing campaigns to reach your audience.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/settings") {
+    return <WithTooltip id="settings-tooltip" defaultText="Adjust your advanced account and application preferences.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/ai-usage-paywall") {
+    return <WithTooltip id="ai-usage-tooltip" defaultText="Monitor your AI resource usage and manage your billing plan.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/calendar") {
+    return <WithTooltip id="calendar-tooltip" defaultText="View and manage your schedule, bookings, and upcoming events.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/integrations") {
+    return <WithTooltip id="integrations-tooltip" defaultText="Connect your OHC account with other tools and services.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/cost-dashboard") {
+    return <WithTooltip id="cost-tooltip" defaultText="Review your business expenses and control your spending.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/diagnostics") {
+    return <WithTooltip id="diagnostics-tooltip" defaultText="Check system health and troubleshoot any technical issues.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/changelog") {
+    return <WithTooltip id="changelog-tooltip" defaultText="See what's new in the latest OneHumanCorp updates.">{link}</WithTooltip>;
   }
 
   return link;
