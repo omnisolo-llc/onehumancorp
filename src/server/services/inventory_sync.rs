@@ -155,6 +155,15 @@ impl InventorySyncService for MyInventorySyncService {
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 
+            // Also deduct from inventory_levels for online channel
+            sqlx::query("UPDATE inventory_levels SET quantity = GREATEST(0, quantity - $1) WHERE product_id = $2 AND tenant_id = $3 AND location = 'online'")
+                .bind(req.quantity)
+                .bind(&req.product_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
             let payload_str = serde_json::json!({
                 "product_id": req.product_id,
                 "quantity_deducted": req.quantity,
@@ -179,9 +188,10 @@ impl InventorySyncService for MyInventorySyncService {
                     "message": format!("Stock for product {} has dropped to {}.", req.product_id, new_stock)
                 }).to_string();
 
-                sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload) VALUES ($1, $2, 'Reorder', 'Pending', 0.9, $3, $4::jsonb)")
                     .bind(job_id)
                     .bind(&tenant_id)
+                    .bind(&req.product_id)
                     .bind(&job_payload)
                     .execute(&mut *tx)
                     .await

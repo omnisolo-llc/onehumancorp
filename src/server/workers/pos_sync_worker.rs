@@ -57,6 +57,13 @@ impl PosSyncWorker {
                     .execute(&mut *tx)
                     .await;
 
+                let _ = sqlx::query("UPDATE inventory_levels SET quantity = GREATEST(0, quantity - $1) WHERE product_id = $2 AND tenant_id = $3 AND location = 'in-store'")
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .bind(&job.tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
                     let ai_payload = serde_json::json!({
@@ -68,11 +75,31 @@ impl PosSyncWorker {
                     }).to_string();
 
                     let _ = sqlx::query(
-                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                         VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                        "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload)
+                         VALUES ($1, $2, 'PosSyncFailure', 'Pending', 0.9, $3, $4::jsonb)"
                     )
                     .bind(&ai_task_id)
                     .bind(&job.tenant_id)
+                    .bind(product_id)
+                    .bind(&ai_payload)
+                    .execute(&mut *tx)
+                    .await;
+                } else if stock - (quantity_deducted as i32) <= 5 {
+                    let ai_task_id = uuid::Uuid::new_v4().to_string();
+                    let ai_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "remaining_stock": stock - (quantity_deducted as i32),
+                        "threshold": 5,
+                        "message": format!("Stock for product {} has dropped to {}.", product_id, stock - (quantity_deducted as i32))
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload)
+                         VALUES ($1, $2, 'Reorder', 'Pending', 0.9, $3, $4::jsonb)"
+                    )
+                    .bind(&ai_task_id)
+                    .bind(&job.tenant_id)
+                    .bind(product_id)
                     .bind(&ai_payload)
                     .execute(&mut *tx)
                     .await;
@@ -110,6 +137,13 @@ impl PosSyncWorker {
                                 .execute(&mut *tx)
                                 .await;
 
+                            let _ = sqlx::query("UPDATE inventory_levels SET quantity = GREATEST(0, quantity - $1) WHERE product_id = $2 AND tenant_id = $3 AND location = 'in-store'")
+                                .bind(qty)
+                                .bind(product_id)
+                                .bind(&job.tenant_id)
+                                .execute(&mut *tx)
+                                .await;
+
                             if is_conflict {
                                 let ai_task_id = uuid::Uuid::new_v4().to_string();
                                 let ai_payload = serde_json::json!({
@@ -121,11 +155,31 @@ impl PosSyncWorker {
                                 }).to_string();
 
                                 let _ = sqlx::query(
-                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                                    "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload)
+                                     VALUES ($1, $2, 'PosSyncFailure', 'Pending', 0.9, $3, $4::jsonb)"
                                 )
                                 .bind(&ai_task_id)
                                 .bind(&job.tenant_id)
+                                .bind(product_id)
+                                .bind(&ai_payload)
+                                .execute(&mut *tx)
+                                .await;
+                            } else if stock - (qty as i32) <= 5 {
+                                let ai_task_id = uuid::Uuid::new_v4().to_string();
+                                let ai_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "remaining_stock": stock - (qty as i32),
+                                    "threshold": 5,
+                                    "message": format!("Stock for product {} has dropped to {}.", product_id, stock - (qty as i32))
+                                }).to_string();
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload)
+                                     VALUES ($1, $2, 'Reorder', 'Pending', 0.9, $3, $4::jsonb)"
+                                )
+                                .bind(&ai_task_id)
+                                .bind(&job.tenant_id)
+                                .bind(product_id)
                                 .bind(&ai_payload)
                                 .execute(&mut *tx)
                                 .await;
@@ -174,6 +228,8 @@ mod tests {
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-1', 'tenant-worker-test', 'Test Prod', 10) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO inventory_levels (id, tenant_id, product_id, location, quantity) VALUES ('inv-lvl-1', 'tenant-worker-test', 'prod-worker-test-1', 'in-store', 5) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, transaction_id, status) VALUES ('worker-tx-id', 'tenant-worker-test', 'tx-test-worker', 'PENDING') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
