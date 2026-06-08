@@ -89,6 +89,22 @@ export default function CostDashboardPage() {
       return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
+
+  const formatStorage = (bytes: number) => {
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) return "< 1 MB";
+      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
+      return parseFloat(mb.toFixed(1)) + " MB";
+  };
+
+
+  const formatStorage = (bytes: number) => {
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) return "< 1 MB";
+      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
+      return parseFloat(mb.toFixed(1)) + " MB";
+  };
+
   const formatCurrency = (cents: number) => {
       return '$' + (cents / 100).toFixed(2);
   };
@@ -135,11 +151,11 @@ export default function CostDashboardPage() {
                   </div>
                   <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                       <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit === null ? '/ Unlimited' : `/ ${myPlanData?.ai_actions_limit}`}</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                       <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : '/ Unlimited'}</span></p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes === null ? '/ Unlimited' : `/ ${formatStorage(myPlanData?.storage_limit_bytes)}`}</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                       <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
