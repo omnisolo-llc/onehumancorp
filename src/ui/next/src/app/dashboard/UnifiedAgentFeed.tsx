@@ -132,7 +132,7 @@ export function UnifiedAgentFeed() {
   }
 
   return (
-    <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full max-w-[375px] mx-auto" aria-label="Unified Agent Feed">
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}

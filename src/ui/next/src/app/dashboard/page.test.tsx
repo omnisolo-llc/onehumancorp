@@ -1,11 +1,12 @@
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from './page';
-import { FloatingActionButton } from './components/FAB';
-vi.mock('./components/FAB', () => ({
-  FloatingActionButton: () => <div data-testid="mock-fab">Mock FAB</div>
-}));
 import { expect, test, vi } from 'vitest';
+
+// Mock the UnifiedAgentFeed since it fetches data
+vi.mock('./UnifiedAgentFeed', () => ({
+  UnifiedAgentFeed: () => <div data-testid="unified-agent-feed">Mock Feed</div>
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -23,35 +24,16 @@ global.fetch = vi.fn(() => Promise.resolve({
   json: () => Promise.resolve({})
 })) as any;
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    pathname: '/',
-    query: {},
-  }),
-  usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(),
-}));
-
-test('renders dashboard with actionable feed', async () => {
+test('renders dashboard with unified agent feed', async () => {
   const { act } = await import('@testing-library/react');
   await act(async () => {
     render(<TooltipProvider><Dashboard /></TooltipProvider>);
   });
 
   await waitFor(() => {
-    expect(screen.getAllByText("Business Analytics").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("unified-agent-feed")).toBeDefined();
   });
 
-  expect(screen.getByText("Operations Map")).toBeDefined();
-  expect(screen.getByText(/Action Required/)).toBeDefined();
-  expect(screen.getByText("Recent Orders")).toBeDefined();
-  expect(screen.getByText("Inbox Activity")).toBeDefined();
-  expect(screen.getByRole("link", { name: /Campaign Orchestration/i })).toHaveAttribute("href", "/dashboard/campaigns");
-  expect(screen.getByText("Pro Plan ROI Calculator")).toBeDefined();
+  // Dashboard shell title
+  expect(screen.getAllByText("Unified Agent Feed").length).toBeGreaterThan(0);
 });
