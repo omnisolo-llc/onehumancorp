@@ -276,6 +276,232 @@ mod chaos_tests {
         assert_eq!(successful_sends + failed_sends, 20, "All messages should be accounted for (success or safe failure)");
     }
 
+    struct PartialFailureMesh;
+
+    #[async_trait]
+    impl TeammateMesh for PartialFailureMesh {
+        async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+            Err("Simulated partial mesh failure on publish".to_string())
+        }
+        async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+            Err("Simulated partial mesh failure on publish_with_ack".to_string())
+        }
+        async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+        async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+            Ok(true) // Lock succeeds, but publish fails!
+        }
+        async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> {
+            Ok(())
+        }
+        async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+            Ok(vec![])
+        }
+        async fn ping(&self) -> Result<(), String> {
+            Ok(())
+        }
+        async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+        async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> {
+            Err("Simulated partial mesh failure on publish_state_handoff".to_string())
+        }
+        async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_timeout_cascade_prevention() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        // Simulate a scenario where lock acquisition takes 1.9s out of a 2s timeout
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(1900));
+
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        // Use a mock StateManager configuration
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        // Initialize state manager with the delayed mesh
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+
+        let start = std::time::Instant::now();
+
+        // This attempts to acquire lock (takes 1.9s) and then query DB.
+        // The DB query might be instantaneous, but we can configure `state_manager_timeout()` in our environment
+        // We use temp_env to safely mock the environment variable without concurrent race conditions
+        temp_env::with_var("OHC_STATE_MANAGER_TIMEOUT_MS", Some("2000"), || async {
+            let result = state_manager.pull_available_tasks(10).await;
+            let elapsed = start.elapsed();
+
+            // Timeout cascade prevention means it should either succeed within 2s,
+            // or safely timeout without panicking or cascading failure.
+            assert!(elapsed < std::time::Duration::from_millis(2500));
+            assert!(result.is_ok(), "Operation should complete or degrade gracefully");
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_state_corruption_recovery() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        // Simulate a task getting stuck in IN_PROGRESS because the worker crashed before completion
+        // or the payload data was somehow corrupted.
+
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        // Create the necessary table schema
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS swarm_tasks (
+                id TEXT PRIMARY KEY,
+                mission_id TEXT,
+                title TEXT,
+                status TEXT,
+                dependencies TEXT,
+                payload TEXT,
+                tenant_id TEXT,
+                locked_until TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            )",
+        )
+        .execute(&dummy_sqlite_pool)
+        .await
+        .unwrap();
+
+        // Insert a task stuck in IN_PROGRESS with a corrupted dependency JSON
+        let task_id = "corrupted-task-id";
+        sqlx::query(
+            "INSERT INTO swarm_tasks (id, status, title, payload, dependencies)
+             VALUES (?, 'IN_PROGRESS', 'Stuck Task', 'corrupted { json[', 'bad_deps_format')"
+        )
+        .bind(task_id)
+        .execute(&dummy_sqlite_pool)
+        .await
+        .unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool.clone()),
+        });
+
+        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LatencyMockMesh::new(10));
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), latency_mesh);
+
+        // This attempts to pull tasks, and should gracefully skip or handle the corrupted task
+        // We verify that the pull doesn't crash on deserialization errors
+        let result = state_manager.pull_available_tasks(10).await;
+
+        assert!(result.is_ok(), "StateManager must not panic when encountering corrupted rows");
+        let tasks = result.unwrap();
+        // Since it's IN_PROGRESS, it shouldn't be pulled as PENDING, but even if it was,
+        // it shouldn't panic the system.
+        assert_eq!(tasks.len(), 0);
+
+        // Now simulate a task that is PENDING but has corrupted dependencies
+        sqlx::query(
+            "INSERT INTO swarm_tasks (id, status, title, payload, dependencies)
+             VALUES (?, 'PENDING', 'Pending Corrupt Task', '{}', 'invalid_json')"
+        )
+        .bind("pending-corrupt")
+        .execute(&dummy_sqlite_pool)
+        .await
+        .unwrap();
+
+        let result = state_manager.pull_available_tasks(10).await;
+        assert!(result.is_ok(), "StateManager must not panic when pulling a PENDING task with corrupt dependencies");
+
+        // Let's verify the system safely ignored or handled the corrupted dependency list.
+        // It might be parsed as an empty array, or the row might be skipped.
+        // As long as it returns gracefully, recovery/degradation is successful.
+    }
+
+    #[tokio::test]
+    async fn test_partial_mesh_failure() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS swarm_tasks (
+                id TEXT PRIMARY KEY,
+                mission_id TEXT,
+                title TEXT,
+                status TEXT,
+                dependencies TEXT,
+                payload TEXT,
+                tenant_id TEXT,
+                locked_until TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            )",
+        )
+        .execute(&dummy_sqlite_pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                entity_id TEXT,
+                entity_type TEXT,
+                from_state TEXT,
+                to_state TEXT,
+                agent_id TEXT,
+                reason TEXT,
+                occurred_at TEXT
+            )",
+        )
+        .execute(&dummy_sqlite_pool)
+        .await
+        .unwrap();
+
+        let task_id = "test-partial-task";
+        sqlx::query(
+            "INSERT INTO swarm_tasks (id, status, title, tenant_id)
+             VALUES (?, 'PENDING', 'Partial Task', 'default_tenant')"
+        )
+        .bind(task_id)
+        .execute(&dummy_sqlite_pool)
+        .await
+        .unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        // Use PartialFailureMesh directly with the StateManager
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(PartialFailureMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
+
+        let result = state_manager.transition_state(
+            task_id,
+            "default_tenant",
+            "PENDING",
+            "IN_PROGRESS",
+            Some("agent1"),
+            None,
+        ).await;
+
+        assert!(result.is_ok(), "StateManager should complete successfully even if mesh has partial failures that don't abort transactions");
+    }
+
     #[tokio::test]
     async fn test_partition_tolerance() {
         let transport = Arc::new(DroppingMockTransport::new(100));

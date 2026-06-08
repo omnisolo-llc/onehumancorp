@@ -56,7 +56,7 @@ impl MyDashboardService {
             tokio::spawn(async move {
                 if let Ok(agents) = s.fetch_agents_impl(&org_id_clone, mobile_optimized).await {
                     if let Some(c) = AGENTS_CACHE.get() {
-                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(3600)).await;
+                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(86400)).await;
                     }
                 }
             });
@@ -64,7 +64,7 @@ impl MyDashboardService {
         }
 
         let agents = self.fetch_agents_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(3600)).await;
+        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(86400)).await;
         Ok(agents)
     }
 
@@ -105,7 +105,7 @@ impl MyDashboardService {
             tokio::spawn(async move {
                 if let Ok(meetings) = s.fetch_meetings_impl(&org_id_clone, mobile_optimized).await {
                     if let Some(c) = MEETINGS_CACHE.get() {
-                        c.set(&cache_key_bg, meetings, std::time::Duration::from_secs(5)).await;
+                        c.set(&cache_key_bg, meetings, std::time::Duration::from_secs(15)).await;
                     }
                 }
             });
@@ -113,7 +113,7 @@ impl MyDashboardService {
         }
 
         let meetings = self.fetch_meetings_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(15)).await;
         Ok(meetings)
     }
 
@@ -175,7 +175,7 @@ impl MyDashboardService {
         }
 
         let q = if mobile_optimized {
-            "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata_json FROM products WHERE organization_id = $1 LIMIT 10"
+            "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
         } else {
             "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
         };
@@ -187,17 +187,15 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("organization_id").unwrap_or_default() },
+                            organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
-                            description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
+                            description: r.try_get("description").unwrap_or_default(),
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                            fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
-                            metadata_json: if mobile_optimized { String::new() } else {
-                                match r.try_get::<serde_json::Value, _>("metadata") {
+                            fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                            metadata_json: match r.try_get::<serde_json::Value, _>("metadata") {
                                     Ok(v) => v.to_string(),
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
-                                }
                             },
                         };
                         results.push(p);
@@ -209,17 +207,15 @@ impl MyDashboardService {
                     for r in rows {
                         let p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("organization_id").unwrap_or_default() },
+                            organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
-                            description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
+                            description: r.try_get("description").unwrap_or_default(),
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                            fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
-                            metadata_json: if mobile_optimized { String::new() } else {
-                                match r.try_get::<serde_json::Value, _>("metadata") {
+                            fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                            metadata_json: match r.try_get::<serde_json::Value, _>("metadata") {
                                     Ok(v) => v.to_string(),
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
-                                }
                             },
                         };
                         results.push(p);
@@ -242,7 +238,7 @@ impl MyDashboardService {
         }
 
         let q = if mobile_optimized {
-            "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
+            "SELECT id, '' as tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
         } else {
             "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10"
         };
@@ -255,10 +251,10 @@ impl MyDashboardService {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             product_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
-                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
+                            status: r.try_get("status").unwrap_or_default(),
                             created_at_unix: 0,
                         };
                         results.push(o);
@@ -271,10 +267,10 @@ impl MyDashboardService {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             product_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
-                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
+                            status: r.try_get("status").unwrap_or_default(),
                             created_at_unix: 0,
                         };
                         results.push(o);
@@ -479,20 +475,12 @@ impl DashboardService for MyDashboardService {
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let mut bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
 
         if req.mobile_optimized {
-            for p in &mut products {
-                p.fulfillment_strategy = String::new();
-                p.metadata_json = String::new();
-                p.description = String::new();
-            }
-            for o in &mut orders {
-                o.organization_id = String::new();
-            }
             for b in &mut bookings {
                 b.organization_id = String::new();
             }

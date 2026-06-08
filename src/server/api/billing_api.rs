@@ -189,8 +189,9 @@ pub async fn my_plan_handler(
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
     let base_bill = tier.base_price();
-
-    let next_bill_estimated = base_bill as i32;
+    let llm_cost_cents = tracker.get_tenant_cost_cents(&tenant_id);
+    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
+    let next_bill_estimated = total_cost_cents as i32;
 
     let resp = MyPlanResponse {
         current_plan: plan_name,

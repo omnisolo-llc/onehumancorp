@@ -12,6 +12,7 @@ use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
 
+
 #[derive(Serialize)]
 pub struct ApprovalsResponse {
     pub pending_approvals: Vec<ApprovalRequest>,
@@ -41,10 +42,30 @@ where
     Router::new()
         .route("/", get(list_approvals))
         .route("/activity", get(list_activity_feed))
+        .route("/ledger", get(list_ledger_entries))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
+        .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
+}
+
+async fn simulate_stockout_reorder(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    match orchestrator.simulate_stockout_restock_and_price(&tenant_id).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate stockout reorder: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
 }
 
 async fn simulate_quote_draft(
@@ -169,3 +190,22 @@ async fn decide_approval(
     }
 }
 // Support for AI Agent Department Architecture
+
+
+async fn list_ledger_entries(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Query(query): Query<PaginationQuery>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "entries": [] }))).into_response(),
+    };
+
+    let limit = query.limit.unwrap_or(50);
+
+    match orchestrator.get_ledger_entries(&tenant_id, limit as i64).await {
+        Ok(entries) => (StatusCode::OK, Json(serde_json::json!({ "entries": entries }))).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}

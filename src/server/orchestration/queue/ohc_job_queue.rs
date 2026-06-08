@@ -154,7 +154,7 @@ impl OHCJobQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_retry;
-                let new_run_after = (chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64)).to_rfc3339();
+                let new_run_after = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
                 sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_retry)
                     .bind(new_run_after)
