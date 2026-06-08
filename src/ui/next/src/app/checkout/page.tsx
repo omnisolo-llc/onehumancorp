@@ -5,10 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 
-export default function CheckoutPage() {
+import { Suspense } from "react";
+
+function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
+  const discountParam = searchParams?.get("discount");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
@@ -367,7 +370,7 @@ export default function CheckoutPage() {
             >
               {isProcessing
                 ? "Processing..."
-                : "Subscribe Monthly (Wallet Pay)"}
+                : discountParam ? `Subscribe & Save ${discountParam}%` : "Subscribe & Save"}
             </button>
           </WithTooltip>
 
@@ -594,5 +597,13 @@ export default function CheckoutPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-inter text-gray-500">Loading Checkout...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
