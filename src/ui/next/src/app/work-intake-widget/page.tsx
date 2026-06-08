@@ -177,7 +177,7 @@ export default function WorkIntakeWidgetPage() {
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
-            <div className="bg-white rounded-[24px] shadow-2xl p-8 max-w-xl w-full relative z-10 animate-fade-in-up">
+            <div className="app-card rounded-[24px] shadow-2xl p-8 max-w-xl w-full relative z-10 animate-fade-in-up">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}

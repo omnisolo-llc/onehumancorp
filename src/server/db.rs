@@ -163,8 +163,32 @@ impl DB {
                 }
             }
 
+
             let mut conn_opts =
                 SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                use std::os::unix::fs::PermissionsExt;
+                if let Some(path_str) = database_url.strip_prefix("sqlite://").or_else(|| database_url.strip_prefix("sqlite:")) {
+                    let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                    if db_path.exists() {
+                         let mut perms = std::fs::metadata(&db_path)?.permissions();
+                         if perms.mode() & 0o777 != 0o600 {
+                             perms.set_mode(0o600);
+                             std::fs::set_permissions(&db_path, perms)?;
+                         }
+                    } else if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
+                         let _file = std::fs::OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .mode(0o600)
+                            .open(&db_path)?;
+                    }
+                }
+            }
+
 
             // sqlite-vec is optional at runtime. The memory repository probes for
             // vec_distance_cosine and falls back to in-process cosine sorting when
