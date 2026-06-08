@@ -27,6 +27,88 @@ struct AiProviderTestResult {
     message: String,
 }
 
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StartOnboardingRequest {
+    business_type: String,
+    company_name: String,
+    company_description: String,
+    selling_categories: Vec<String>,
+    payment_pref: String,
+    admin_email: String,
+    website_template: String,
+    first_product_name: String,
+    first_product_price: String,
+    domain_choice: String,
+    admin_name: String,
+    admin_password: String,
+    price_type: String,
+    location: String,
+    target_audience: String,
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StartOnboardingResponse {
+    success: bool,
+    message: String,
+    organization_id: String,
+}
+
+#[tauri::command]
+async fn submit_onboarding(request: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+    // In Tauri standalone, we can connect locally.
+    // For a real production app we would read this from app config,
+    // but the task asks to hit the real Rust backend to create the onboarding payload.
+    // E2E Playwright environments run this at 18789 or dynamic ports, but for Tauri
+    // native we proxy it properly.
+
+    let url = match std::env::var("OHC_API_URL") {
+        Ok(v) => format!("{}/api/onboarding/start", v),
+        Err(_) => "http://127.0.0.1:18789/api/onboarding/start".to_string(),
+    };
+
+    let payload = serde_json::json!({
+        "business_type": request.business_type,
+        "company_name": request.company_name,
+        "company_description": request.company_description,
+        "selling_categories": request.selling_categories,
+        "payment_pref": request.payment_pref,
+        "admin_email": request.admin_email,
+        "website_template": request.website_template,
+        "first_product_name": request.first_product_name,
+        "first_product_price": request.first_product_price,
+        "domain_choice": request.domain_choice,
+        "admin_name": request.admin_name,
+        "admin_password": request.admin_password,
+        "price_type": request.price_type,
+        "location": request.location,
+        "target_audience": request.target_audience
+    });
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let resp = client.post(&url)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.status().is_success() {
+        let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+        Ok(StartOnboardingResponse {
+            success: result["success"].as_bool().unwrap_or(false),
+            message: result["message"].as_str().unwrap_or("").to_string(),
+            organization_id: result["organization_id"].as_str().unwrap_or("").to_string(),
+        })
+    } else {
+        Err(format!("Onboarding failed: {}", resp.status()))
+    }
+}
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
@@ -266,6 +348,7 @@ pub fn run() {
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
+            submit_onboarding,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

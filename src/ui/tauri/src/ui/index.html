@@ -14,16 +14,33 @@
         justify-content: center;
         height: 100vh;
       }
-      .container {
-        background: rgba(255, 255, 255, 0.6);
-        backdrop-filter: blur(20px);
-        padding: 40px;
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #000;
+        }
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+        }
+        h1, p {
+          color: #f5f5f7 !important;
+        }
+      }
+      .container {
+        padding: 40px 24px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
         max-width: 400px;
         width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
       }
       h1 {
         margin-top: 0;
@@ -35,8 +52,9 @@
         color: #86868b;
         font-size: 14px;
         margin-bottom: 30px;
+        line-height: 1.5;
       }
-      button {
+      .btn-primary {
         background-color: #0066FF;
         color: white;
         border: none;
@@ -46,28 +64,110 @@
         font-weight: 600;
         cursor: pointer;
         width: 100%;
+        min-height: 54px; /* 44px min touch target */
         transition: background-color 0.2s, transform 0.1s;
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+        margin-bottom: 16px;
       }
-      button:hover {
+      .btn-primary:hover {
         background-color: #0052cc;
       }
-      button:active {
+      .btn-primary:active {
         transform: scale(0.98);
+      }
+      .btn-secondary {
+        background-color: transparent;
+        color: #0066FF;
+        border: 1px solid #0066FF;
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        min-height: 54px;
+        transition: background-color 0.2s, transform 0.1s;
+      }
+      .btn-secondary:hover {
+        background-color: rgba(0, 102, 255, 0.1);
+      }
+      .btn-secondary:active {
+        transform: scale(0.98);
+      }
+      .error-msg {
+        color: #ff3b30;
+        font-size: 12px;
+        margin-bottom: 12px;
+        font-weight: 600;
+        display: none;
       }
     </style>
   </head>
   <body>
-    <div class="container">
+    <div class="container glassmorphism">
       <h1>Welcome to OHC</h1>
-      <p>Let's get your workspace set up.</p>
-      <button id="start-btn">Start Onboarding</button>
+      <p>Zero tech skills needed. We do the heavy lifting. Let's get your workspace set up.</p>
+
+      <div class="error-msg" id="submit-error"></div>
+
+      <button id="start-btn" class="btn-primary">Start Onboarding</button>
+      <button id="instant-btn" class="btn-secondary">Instant Build</button>
     </div>
     <script>
       const startBtn = document.getElementById('start-btn');
       if (startBtn) {
         startBtn.addEventListener('click', () => {
            window.location.href = "setup.html";
+        });
+      }
+      const instantBtn = document.getElementById('instant-btn');
+      if (instantBtn) {
+        instantBtn.addEventListener('click', async () => {
+           instantBtn.innerText = "Building...";
+           instantBtn.disabled = true;
+
+           try {
+              const tauri = window.__TAURI__;
+              if (!tauri) {
+                throw new Error("Tauri API not found. Please run this inside the Tauri shell.");
+              }
+
+              const invoke = tauri.core.invoke;
+              const request = {
+                businessType: "Local Business",
+                companyName: "My Instant Business",
+                companyDescription: "Default instant business",
+                sellingCategories: ["services"],
+                paymentPref: "online",
+                adminEmail: "admin@instant.ohc",
+                websiteTemplate: "Modern",
+                firstProductName: "",
+                firstProductPrice: "",
+                domainChoice: "subdomain",
+                adminName: "Admin",
+                adminPassword: "password123",
+                priceType: "fixed",
+                location: "Remote",
+                targetAudience: "Anyone"
+              };
+
+              const result = await invoke("submit_onboarding", { request });
+
+              if (result && result.success) {
+                localStorage.setItem('businessName', 'My Instant Business');
+                localStorage.setItem('tenant_id', result.organizationId || 'tauri-e2e-tenant');
+                window.location.href = "success.html";
+              } else {
+                throw new Error(result?.message || "Unknown error occurred.");
+              }
+           } catch (error) {
+              console.error("Instant build failed:", error);
+              const submitError = document.getElementById('submit-error');
+              submitError.innerText = "Error launching store: " + error.toString();
+              submitError.style.display = 'block';
+              instantBtn.innerText = "Instant Build";
+              instantBtn.disabled = false;
+           }
         });
       }
     </script>
