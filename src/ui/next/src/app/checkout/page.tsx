@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
@@ -595,5 +595,13 @@ export default function CheckoutPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <React.Suspense fallback={<div>Loading checkout...</div>}>
+      <CheckoutPageContent />
+    </React.Suspense>
   );
 }
