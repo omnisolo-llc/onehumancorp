@@ -7,6 +7,7 @@ exports_files(
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
+        "inventory_sync.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -19,6 +20,7 @@ rust_library(
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
+        "inventory_sync.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
