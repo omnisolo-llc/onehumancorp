@@ -3811,7 +3811,7 @@ async fn create_ui_bom_item_handler(
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
-        .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
+        .route("/api/help/:article_id", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
             let m = registry.read().unwrap();
