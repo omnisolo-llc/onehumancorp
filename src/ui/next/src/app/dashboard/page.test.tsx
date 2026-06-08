@@ -1,12 +1,15 @@
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from './page';
-import { expect, test, vi } from 'vitest';
+import { FloatingActionButton } from './components/FAB';
+vi.mock('./components/FAB', () => ({
+  FloatingActionButton: () => <div data-testid="mock-fab">Mock FAB</div>
+}));
 
-// Mock the UnifiedAgentFeed since it fetches data
 vi.mock('./UnifiedAgentFeed', () => ({
   UnifiedAgentFeed: () => <div data-testid="unified-agent-feed">Mock Feed</div>
 }));
+import { expect, test, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -24,16 +27,31 @@ global.fetch = vi.fn(() => Promise.resolve({
   json: () => Promise.resolve({})
 })) as any;
 
-test('renders dashboard with unified agent feed', async () => {
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    pathname: '/',
+    query: {},
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+test('renders dashboard with actionable feed', async () => {
   const { act } = await import('@testing-library/react');
   await act(async () => {
     render(<TooltipProvider><Dashboard /></TooltipProvider>);
   });
 
   await waitFor(() => {
+    expect(screen.getAllByText("Business Analytics").length).toBeGreaterThan(0);
     expect(screen.getByTestId("unified-agent-feed")).toBeDefined();
   });
 
-  // Dashboard shell title
-  expect(screen.getAllByText("Unified Agent Feed").length).toBeGreaterThan(0);
+  expect(screen.getByTestId("unified-agent-feed")).toBeDefined();
 });
