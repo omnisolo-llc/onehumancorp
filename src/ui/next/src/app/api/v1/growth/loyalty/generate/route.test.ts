@@ -1,76 +1,48 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
-
-const mockBackendUrl = 'http://localhost:8080';
-vi.stubGlobal('process', { env: { OHC_BACKEND_URL: mockBackendUrl } });
+import { describe, it, expect } from 'vitest';
 
 describe('POST /api/v1/growth/loyalty/generate', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
+  it('generates the embed code successfully', async () => {
+    const request = new Request('http://localhost:3000/api/v1/growth/loyalty/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        programName: 'VIP Club',
+        rewardValue: '$20 OFF',
+        requiredPoints: '200',
+        theme: 'dark',
+        hasPro: false
+      })
+    });
+
+    const response = await POST(request);
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.embed_code).toContain('VIP Club');
+    expect(json.embed_code).toContain('$20 OFF');
+    expect(json.embed_code).toContain('200');
+    expect(json.embed_code).toContain('dark');
+    expect(json.embed_code).toContain('data-branding="true"');
+    expect(json.embed_code).toContain('<!-- ⚡ Powered by OHC -->');
   });
 
-  it('returns 200 and data if backend is successful', async () => {
-    const mockData = { id: 'prog_123', share_url: 'https://ohc.com/l/123' };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockData,
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const req = new Request('http://localhost/api/v1/growth/loyalty/generate', {
+  it('escapes user input to prevent XSS', async () => {
+    const request = new Request('http://localhost:3000/api/v1/growth/loyalty/generate', {
       method: 'POST',
-      body: JSON.stringify({ reward_type: 'points', reward_value: 100 }),
-      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        programName: '<script>alert(1)</script>',
+        rewardValue: '$20 OFF',
+        requiredPoints: '200',
+        theme: 'dark',
+        hasPro: true
+      })
     });
 
-    const res = await POST(req);
-    expect(res.status).toBe(200);
+    const response = await POST(request);
+    const json = await response.json();
 
-    const data = await res.json();
-    expect(data).toEqual(mockData);
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${mockBackendUrl}/v1/growth/loyalty/generate`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reward_type: 'points', reward_value: 100 }),
-      }
-    );
-  });
-
-  it('returns error status if backend fails', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const req = new Request('http://localhost/api/v1/growth/loyalty/generate', {
-      method: 'POST',
-      body: JSON.stringify({ reward_type: 'points', reward_value: -100 }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const res = await POST(req);
-    expect(res.status).toBe(403);
-    const data = await res.json();
-    expect(data.error).toBe('Failed to generate loyalty program');
-  });
-
-  it('returns 500 on fetch error', async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error('Network error'));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const req = new Request('http://localhost/api/v1/growth/loyalty/generate', {
-      method: 'POST',
-      body: JSON.stringify({ reward_type: 'points', reward_value: 100 }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const res = await POST(req);
-    expect(res.status).toBe(500);
-    const data = await res.json();
-    expect(data.error).toBe('Internal Server Error');
+    expect(response.status).toBe(200);
+    expect(json.embed_code).not.toContain('<script>alert(1)</script>');
+    expect(json.embed_code).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
   });
 });
