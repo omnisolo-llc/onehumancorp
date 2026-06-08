@@ -27,7 +27,181 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
+        .route("/session/start", axum::routing::post(start_terminal_session_handler))
+        .route("/session/update", axum::routing::post(update_terminal_session_status_handler))
+        .route("/session/end", axum::routing::post(end_terminal_session_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Deserialize)]
+pub struct StartTerminalSessionRequest {
+    pub device_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct StartTerminalSessionResponse {
+    pub session_id: String,
+    pub success: bool,
+    pub error_message: String,
+}
+
+pub async fn start_terminal_session_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<StartTerminalSessionRequest>,
+) -> Json<StartTerminalSessionResponse> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated".to_string() })
+    };
+
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let pool = crate::db::get_pool();
+
+    let res = sqlx::query(
+        "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+         ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0 RETURNING id"
+    )
+    .bind(&session_id)
+    .bind(&tenant_id)
+    .bind(&req_data.device_id)
+    .fetch_one(&pool)
+    .await;
+
+    match res {
+        Ok(row) => {
+            let returned_id: String = sqlx::Row::get(&row, "id");
+            Json(StartTerminalSessionResponse {
+                session_id: returned_id,
+                success: true,
+                error_message: "".to_string(),
+            })
+        }
+        Err(e) => {
+            tracing::error!("Failed to start terminal session: {}", e);
+            Json(StartTerminalSessionResponse {
+                session_id: "".to_string(),
+                success: false,
+                error_message: e.to_string(),
+            })
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateTerminalSessionStatusRequest {
+    pub session_id: String,
+    pub status: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct UpdateTerminalSessionStatusResponse {
+    pub success: bool,
+    pub error_message: String,
+}
+
+pub async fn update_terminal_session_status_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<UpdateTerminalSessionStatusRequest>,
+) -> Json<UpdateTerminalSessionStatusResponse> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Unauthenticated".to_string() })
+    };
+
+    let pool = crate::db::get_pool();
+
+    let res = sqlx::query(
+        "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
+    )
+    .bind(&req_data.status)
+    .bind(&req_data.session_id)
+    .bind(&tenant_id)
+    .execute(&pool)
+    .await;
+
+    match res {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                Json(UpdateTerminalSessionStatusResponse { success: true, error_message: "".to_string() })
+            } else {
+                Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Session not found".to_string() })
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to update terminal session status: {}", e);
+            Json(UpdateTerminalSessionStatusResponse { success: false, error_message: e.to_string() })
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct EndTerminalSessionRequest {
+    pub session_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct EndTerminalSessionResponse {
+    pub success: bool,
+    pub error_message: String,
+}
+
+pub async fn end_terminal_session_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<EndTerminalSessionRequest>,
+) -> Json<EndTerminalSessionResponse> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Json(EndTerminalSessionResponse { success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Json(EndTerminalSessionResponse { success: false, error_message: "Unauthenticated".to_string() })
+    };
+
+    let pool = crate::db::get_pool();
+
+    let res = sqlx::query(
+        "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(&req_data.session_id)
+    .bind(&tenant_id)
+    .execute(&pool)
+    .await;
+
+    match res {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                Json(EndTerminalSessionResponse { success: true, error_message: "".to_string() })
+            } else {
+                Json(EndTerminalSessionResponse { success: false, error_message: "Session not found".to_string() })
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to end terminal session: {}", e);
+            Json(EndTerminalSessionResponse { success: false, error_message: e.to_string() })
+        }
+    }
 }
 
 
@@ -212,6 +386,17 @@ pub async fn commit_inventory_handler(
 
                     let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                         .bind(job_id).bind(&tenant_id).bind(&job_payload).execute(&mut *tx).await;
+
+                    let approval_id = uuid::Uuid::new_v4().to_string();
+                    let approval_payload = serde_json::json!({
+                        "feature_type": "low_stock_restock",
+                        "product_id": req_data.product_id,
+                        "remaining_stock": new_stock,
+                        "suggested_action": "Restock Item"
+                    }).to_string();
+                    let description = format!("Inventory for {} is low ({} remaining). Draft a restock order.", req_data.product_id, new_stock);
+                    let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'operations', $3, 'DRAFT', 'LOW', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&approval_id).bind(&tenant_id).bind(&description).bind(&approval_payload).execute(&mut *tx).await;
                 }
 
                 let _ = tx.commit().await;
@@ -277,6 +462,7 @@ pub struct PosOfflineTransaction {
 
 #[derive(serde::Deserialize)]
 pub struct SyncOfflineTransactionsRequest {
+    pub session_id: Option<String>,
     pub transactions: Vec<PosOfflineTransaction>,
 }
 
@@ -324,12 +510,12 @@ pub async fn sync_offline_transactions_handler(
 
     let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
 
-    // Update terminal_sessions
-    let session_id = uuid::Uuid::new_v4().to_string();
+    // Update pos_terminal_sessions
+    let session_id = req_data.session_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let _ = sqlx::query(
-        "INSERT INTO terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+        "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
          VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-         ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = terminal_sessions.offline_changes_count + $4"
+         ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
     )
     .bind(&session_id)
     .bind(&tenant_id)

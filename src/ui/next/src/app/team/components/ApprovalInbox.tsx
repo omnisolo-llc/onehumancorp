@@ -179,25 +179,29 @@ export default function ApprovalInbox({
                         Customer Inquiry
                       </div>
 
-                      <div className="text-xs text-blue-700 font-medium">
-                        {req.payload.original_message}
+                      <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
+                        "{req.payload.original_message}"
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 relative mt-2">
-                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">
-                          AI Proposed Reply
-                        </div>
-                        <div className="text-xs text-gray-700 italic">
-                          {req.payload.generated_response}
-                        </div>
+                      <div className="text-blue-800 font-semibold text-sm mt-2 flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        AI Draft
                       </div>
-
-                      <div className="flex gap-2 mt-1">
-                         <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium truncate max-w-full">
-                           Context: {req.payload.context_used}
-                         </span>
+                      <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
+                        {req.payload.generated_response}
                       </div>
-
                     </div>
                   )}
 
@@ -501,6 +505,42 @@ export default function ApprovalInbox({
                           <div className="flex justify-between">
                             <span className="text-xs text-gray-500">Suggested Time:</span>
                             <span className="text-xs font-medium text-gray-800">{req.payload.suggested_time}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {req.payload?.feature_type === "low_stock_restock" && (
+                    <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        </svg>
+                        Low Stock Alert
+                      </div>
+                      <div className="text-xs text-orange-700 font-medium">
+                        Inventory for <span className="font-semibold">{req.payload.product_id}</span> is critically low.
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-orange-100 relative mt-2">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-xs text-gray-500">Remaining Stock:</span>
+                            <span className="text-xs font-semibold text-orange-600">{req.payload.remaining_stock}</span>
+                          </div>
+                          <div className="text-xs text-gray-700 italic mt-2">
+                            System suggests: "{req.payload.suggested_action}"
                           </div>
                         </div>
                       </div>

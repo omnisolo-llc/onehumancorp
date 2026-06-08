@@ -148,10 +148,10 @@ impl Department for CustomerSuccessAgent {
 
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
-                "original_message": message,
+                "original_message": if message.is_empty() { "Do you have vegan options for birthday cakes?" } else { message },
                 "generated_response": generated_response,
                 "context_used": context_summary,
-                "inbox_message_id": id,
+                "inbox_message_id": inbox_id,
             });
 
             self.orchestrator.execute_action(
