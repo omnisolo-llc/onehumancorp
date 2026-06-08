@@ -20,7 +20,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForLoadState('domcontentloaded');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start Onboarding' });
+    const startButton = page.locator('button', { hasText: 'Start My Business' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
@@ -61,13 +61,13 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(audienceInput).toHaveClass(/min-h-\[54px\]/);
     await expect(audienceInput).toHaveClass(/glassmorphism/);
     await audienceInput.fill("Tech enthusiasts and developers");
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     // Step 4: Review Details
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
 
     // Check Review inputs have correct classes too
-    const reviewNameInput = page.locator('input[value="My Awesome E2E Business"]');
+    const reviewNameInput = page.locator("input").filter({ hasValue: "My Awesome E2E Business" }).first();
     await expect(reviewNameInput).toHaveClass(/min-h-\[54px\]/);
 
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -115,7 +115,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start Onboarding' });
+    const startButton = page.locator('button', { hasText: 'Start My Business' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
@@ -132,7 +132,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start Onboarding' });
+    const startButton = page.locator('button', { hasText: 'Start My Business' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
@@ -151,7 +151,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.locator('button', { hasText: 'Start Onboarding' });
+    const startButton = page.locator('button', { hasText: 'Start My Business' });
     if (await startButton.isVisible()) {
         await startButton.click();
     }
@@ -171,6 +171,6 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Need to trigger manual configuration
     // This is tested by injecting a state or clicking a manual setup link
-    // But since it's hidden under Start Onboarding, let's just make sure the component loads.
+    // But since it's hidden under Start My Business, let's just make sure the component loads.
   });
 });
