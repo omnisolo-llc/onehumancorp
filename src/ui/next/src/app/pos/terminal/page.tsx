@@ -97,10 +97,11 @@ export default function TerminalPage() {
             }
 
             if (posTransactions.length > 0) {
+              const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
               const res = await fetch('/api/pos/transactions/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(posTransactions)
+                body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
               });
               if (res.ok) {
                 const data = await res.json();
