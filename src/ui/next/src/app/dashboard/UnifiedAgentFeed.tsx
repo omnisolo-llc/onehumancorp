@@ -298,6 +298,7 @@ export function UnifiedAgentFeed() {
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
                         aria-label="Approve proposal"
+                        data-testid="approve-proposal"
                       >
                         Approve
                       </button>
@@ -306,6 +307,7 @@ export function UnifiedAgentFeed() {
                           onClick={() => {}}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                           aria-label="Edit proposal"
+                          data-testid="edit-proposal"
                         >
                           Edit
                         </button>
@@ -313,6 +315,7 @@ export function UnifiedAgentFeed() {
                           onClick={() => handleDecision(approval.id, false)}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                           aria-label="Reject proposal"
+                          data-testid="reject-proposal"
                         >
                           Decline
                         </button>
