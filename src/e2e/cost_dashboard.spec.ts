@@ -54,7 +54,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const aiActionsCard = proPage.locator('div', { has: proPage.locator('text="AI Actions Used"') }).first();
-    await expect(aiActionsCard.locator('text=/ Unlimited')).toBeVisible();
+    await expect(aiActionsCard.locator('text=/ Unlimited').first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -69,7 +69,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('text="Storage Used"') }).first();
-    await expect(storageCard.locator('text=/ Unlimited')).toBeVisible();
+    await expect(storageCard.locator('text=/ Unlimited').first()).toBeVisible();
 
     await proPage.close();
     await context.close();
