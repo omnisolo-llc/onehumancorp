@@ -106,35 +106,51 @@ impl BookingReengagementWorker {
 
                 let (job_id, tenant_id, payload) = task;
                 let customer_id = payload.get("customer_id").and_then(|c| c.as_str()).unwrap_or("");
-                let product_id = payload.get("product_id").and_then(|p| p.as_str()).unwrap_or("");
+                let _product_id = payload.get("product_id").and_then(|p| p.as_str()).unwrap_or("");
 
-                // 1. Check if a newer booking exists for this customer and product.
-                let has_recent_booking = match &db.store {
+                // 1. Check if customer is dormant: has historically booked more than once, but not in the last 14 days.
+                let is_dormant = match &db.store {
                     crate::db::DbStore::Postgres => {
-                        sqlx::query_scalar::<_, i64>(
-                            "SELECT COUNT(*) FROM bookings WHERE tenant_id = $1 AND customer_id = $2 AND product_id = $3 AND created_at > (SELECT created_at FROM ohc_job_queue WHERE id = $4)"
+                        sqlx::query_scalar::<_, Option<bool>>(
+                            r#"
+                            WITH customer_stats AS (
+                                SELECT COUNT(*) as total_bookings, MAX(start_time) as last_booking
+                                FROM bookings
+                                WHERE tenant_id = $1 AND customer_id = $2
+                            )
+                            SELECT (total_bookings > 1 AND last_booking < CURRENT_TIMESTAMP - INTERVAL '14 days')
+                            FROM customer_stats;
+                            "#
                         )
                         .bind(&tenant_id)
                         .bind(&customer_id)
-                        .bind(&product_id)
-                        .bind(&job_id)
                         .fetch_one(&pool)
                         .await
-                        .unwrap_or(0) > 0
+                        .unwrap_or(Some(false))
+                        .unwrap_or(false)
                     },
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                         sqlx::query_scalar::<_, i64>(
-                            "SELECT COUNT(*) FROM bookings WHERE tenant_id = ? AND customer_id = ? AND product_id = ? AND created_at > (SELECT created_at FROM ohc_job_queue WHERE id = ?)"
+                         sqlx::query_scalar::<_, Option<bool>>(
+                            r#"
+                            WITH customer_stats AS (
+                                SELECT COUNT(*) as total_bookings, MAX(start_time) as last_booking
+                                FROM bookings
+                                WHERE tenant_id = ? AND customer_id = ?
+                            )
+                            SELECT (total_bookings > 1 AND last_booking < datetime('now', '-14 days'))
+                            FROM customer_stats;
+                            "#
                         )
                         .bind(&tenant_id)
                         .bind(&customer_id)
-                        .bind(&product_id)
-                        .bind(&job_id)
                         .fetch_one(sqlite_pool)
                         .await
-                        .unwrap_or(0) > 0
+                        .unwrap_or(Some(false))
+                        .unwrap_or(false)
                     }
                 };
+
+                let has_recent_booking = !is_dormant; // Map logic for the rest of the worker
 
                 // 2. If no new booking exists, draft a re-engagement message and push to Agent Feed (shared_tasks).
                 if !has_recent_booking {
