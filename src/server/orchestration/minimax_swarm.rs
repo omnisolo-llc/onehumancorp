@@ -38,7 +38,7 @@ impl AgentLlm for crate::minimax::MinimaxClient {
     }
 }
 
-pub fn agent_templates() -> Vec<AgentTemplate> {
+pub fn workbuddy_style_agent_templates() -> Vec<AgentTemplate> {
     vec![
         AgentTemplate {
             id: "strategy_lead".to_string(),
@@ -139,7 +139,7 @@ pub fn minimax_agent_workspace_from_env() -> Result<MinimaxAgentWorkspace<crate:
 
     Ok(MinimaxAgentWorkspace::new(
         crate::minimax::MinimaxClient::new(api_key),
-        agent_templates(),
+        workbuddy_style_agent_templates(),
     ))
 }
 
@@ -164,7 +164,7 @@ fn agent_prompt(
     let handoff_json = serde_json::to_string(&template.handoff_to).map_err(|err| err.to_string())?;
 
     Ok(format!(
-        "You are an OHC agent in a five-agent workspace. Agent id: {agent_id}. Role: {role}. Mission: {mission}. Task: {task}. Prior agent transcript JSON: {prior_json}. You must collaborate with the prior agents and hand off to exactly these next agents: {handoff_json}. Return strict JSON only with keys agent_id, role, contribution, handoff_to, confidence. contribution must mention at least one prior agent when prior transcript is non-empty, and must be concise but specific.",
+        "You are an OHC WorkBuddy-style agent in a five-agent workspace. Agent id: {agent_id}. Role: {role}. Mission: {mission}. Task: {task}. Prior agent transcript JSON: {prior_json}. You must collaborate with the prior agents and hand off to exactly these next agents: {handoff_json}. Return strict JSON only with keys agent_id, role, contribution, handoff_to, confidence. contribution must mention at least one prior agent when prior transcript is non-empty, and must be concise but specific.",
         agent_id = template.id,
         role = template.role,
         mission = template.mission,
@@ -349,8 +349,8 @@ mod tests {
     }
 
     #[test]
-    fn templates_define_five_collaborating_agents() {
-        let templates = agent_templates();
+    fn workbuddy_style_templates_define_five_collaborating_agents() {
+        let templates = workbuddy_style_agent_templates();
 
         assert_eq!(templates.len(), 5);
         assert_eq!(templates[0].id, "strategy_lead");
@@ -470,7 +470,7 @@ mod tests {
 
     #[tokio::test]
     async fn workspace_repairs_non_strict_agent_json_before_accepting_turn() {
-        let templates = agent_templates();
+        let templates = workbuddy_style_agent_templates();
         let llm = ScriptedLlm::new(vec![
             Ok("agent_id: strategy_lead, contribution: plan".to_string()),
             Ok(r#"{"agent_id":"strategy_lead","role":"Strategy Lead","contribution":"Plan accepted after repair with launch workstreams defined.","handoff_to":["market_researcher","offer_designer"],"confidence":0.8}"#.to_string()),
@@ -505,14 +505,14 @@ mod tests {
             .run("Create a launch plan for a neighborhood bakery adding subscription pastry boxes.")
             .await
             .expect("live Minimax agent workspace should complete");
-        tracing::info!("{}", serde_json::to_string_pretty(&transcript).unwrap());
+        println!("{}", serde_json::to_string_pretty(&transcript).unwrap());
 
         assert_eq!(transcript.turns.len(), 5);
         assert!(transcript
             .turns
             .iter()
             .all(|turn| has_substantive_contribution(&turn.contribution)));
-        for (turn, template) in transcript.turns.iter().zip(agent_templates()) {
+        for (turn, template) in transcript.turns.iter().zip(workbuddy_style_agent_templates()) {
             assert_eq!(turn.handoff_to, template.handoff_to);
         }
         for idx in 1..transcript.turns.len() {

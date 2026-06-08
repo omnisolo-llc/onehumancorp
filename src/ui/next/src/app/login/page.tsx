@@ -1,21 +1,9 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 export default function Login() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-
-  const goDashboard = () => {
-    if (username.trim()) {
-      try {
-        localStorage.setItem("user_name", username.trim());
-      } catch {
-        // ignore
-      }
-    }
-    router.push('/dashboard');
-  };
+  const goDashboard = () => router.push('/dashboard');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 font-outfit">
@@ -26,8 +14,6 @@ export default function Login() {
           <input
             type="text"
             placeholder="Email or Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
             className="w-full p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
           />
           <input

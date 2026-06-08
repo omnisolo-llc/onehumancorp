@@ -4,7 +4,6 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
-use axum::http::StatusCode;
 use crate::utils::cache::HybridCache;
 
 pub static MY_PLAN_CACHE: OnceLock<HybridCache<MyPlanResponse>> = OnceLock::new();
@@ -21,12 +20,6 @@ pub struct MyPlanResponse {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct AgentCostRow {
-    pub agent_id: String,
-    pub cost_cents: i64,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
     pub total_costs: i64,
@@ -34,16 +27,15 @@ pub struct CostDashboardResponse {
     pub storage_cost: i64,
     pub payment_fees: i64,
     pub network_cost: i64,
-    pub compute_cost: i64,
     pub bandwidth_savings: i64,
     pub cache_hit_rate: f64,
     pub cost_per_1k_tokens: f64,
     pub period_start: String,
     pub period_end: String,
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
-    pub agent_costs: Vec<AgentCostRow>,
     pub department_tier_usage: DepartmentTierUsageResponse,
 }
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
 pub struct DepartmentTierUsageResponse {
     pub current_plan: String,
@@ -73,77 +65,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
         .route("/department-tier-usage", axum::routing::get(department_tier_usage_handler))
-        .route("/create-checkout-session", axum::routing::post(create_checkout_session_handler))
-        .route("/cancel-subscription", axum::routing::post(cancel_subscription_handler))
         .with_state(hub)
-}
-
-#[derive(serde::Deserialize)]
-pub struct CreateCheckoutSessionRequest {
-    pub tier: String,
-}
-
-#[derive(serde::Serialize)]
-pub struct CreateCheckoutSessionResponse {
-    pub checkout_url: String,
-}
-
-pub async fn create_checkout_session_handler(
-    _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> Result<Json<CreateCheckoutSessionResponse>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return Err(StatusCode::UNAUTHORIZED),
-    };
-
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
-    let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
-
-    let amount_usd = match req.tier.to_lowercase().as_str() {
-        "starter" => 29.0,
-        "pro" => 79.0,
-        "business" => 299.0,
-        _ => return Err(StatusCode::BAD_REQUEST),
-    };
-
-    if let Some(client) = &hub.tracker().stripe_client {
-        // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd).await {
-            Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    } else {
-        // Fallback for tests / missing Stripe config
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
-    }
-}
-
-pub async fn cancel_subscription_handler(
-    _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> Result<Json<serde_json::Value>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return Err(StatusCode::UNAUTHORIZED),
-    };
-
-    // We assume the subscription ID can be derived from the tenant, or we fetch the user's active sub
-    // For this implementation, we simulate cancelling a generic subscription ID
-    let sub_id = format!("sub_{}", tenant_id);
-
-    if let Some(client) = &hub.tracker().stripe_client {
-        match client.cancel_subscription(&sub_id).await {
-            Ok(sub) => Ok(Json(serde_json::json!({ "status": sub.status, "message": "Subscription canceled successfully." }))),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    } else {
-        Ok(Json(serde_json::json!({ "status": "canceled", "message": "Subscription canceled successfully." })))
-    }
 }
 
 pub async fn my_plan_handler(
@@ -159,7 +81,7 @@ pub async fn my_plan_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(MyPlanResponse { current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
+        None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
     };
 
     let cache = MY_PLAN_CACHE.get_or_init(|| HybridCache::new(None));
@@ -189,9 +111,20 @@ pub async fn my_plan_handler(
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
     let base_bill = tier.base_price();
-    let llm_cost_cents = tracker.get_tenant_cost_cents(&tenant_id);
-    let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
-    let next_bill_estimated = total_cost_cents as i32;
+
+    let now = chrono::Utc::now();
+    use chrono::Datelike;
+    let days_elapsed = now.day() as u32;
+    // rough total days
+    let total_days = 30;
+
+    let projected_cost = ::server_pricing::calculator::calculate_projected_monthly_cost(
+        base_bill,
+        days_elapsed,
+        total_days
+    );
+
+    let next_bill_estimated = projected_cost as i32;
 
     let resp = MyPlanResponse {
         current_plan: plan_name,
@@ -218,7 +151,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], department_tier_usage: empty_department_tier_usage_response() })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -264,20 +197,11 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let agent_costs_future = tokio::task::spawn({
-        let pool = crate::db::get_pool();
-        let t_id = tenant_id.clone();
-        async move {
-            crate::pricing::cost_aggregator::aggregate_agent_costs(&pool, &t_id).await
-        }
-    });
-
-    let (storage_res, auditor_res, trend_res, agent_costs_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future);
+    let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
-    let trend = trend_res.unwrap_or_else(|_| vec![]);
-    let agent_costs = agent_costs_res.unwrap_or_else(|_| vec![]);
+    let trend = trend_res.unwrap_or_default();
 
     let cache_hit_rate = if total_tokens + cached_tokens > 0 {
         (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -306,14 +230,12 @@ pub async fn cost_dashboard_handler(
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
-        compute_cost: (compute_cost_f64 * 100.0).round() as i64,
         bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
         cache_hit_rate: (cache_hit_rate * 100.0).round() / 100.0,
         cost_per_1k_tokens: (cost_per_1k_tokens * 10000.0).round() / 10000.0,
         period_start,
         period_end,
         trend,
-        agent_costs: agent_costs.into_iter().map(|r| AgentCostRow { agent_id: r.agent_id, cost_cents: r.cost_cents }).collect(),
         department_tier_usage,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
@@ -334,7 +256,7 @@ pub async fn department_tier_usage_handler(
     Json(department_tier_usage_for_tenant(&hub, &tenant_id).await)
 }
 
-pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
+async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
     let tier = hub
         .tracker()
         .get_tenant_tier(tenant_id)
@@ -344,21 +266,16 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
     let period = current_usage_period();
     let departments = load_department_records(&hub.pool, tenant_id).await.unwrap_or_default();
 
-    let mut futures = Vec::new();
+    let mut usage_by_key = HashMap::new();
     for department in &departments {
         for key in department_usage_keys(department) {
-            let tracker = hub.tracker();
-            let tenant_id = tenant_id.to_string();
-            futures.push(async move {
-                let used = tracker.get_agent_actions_used(&tenant_id, &key).await.unwrap_or(0);
-                (key, used)
-            });
+            let used = hub
+                .tracker()
+                .get_agent_actions_used(tenant_id, &key)
+                .await
+                .unwrap_or(0);
+            usage_by_key.insert(key, used);
         }
-    }
-
-    let mut usage_by_key = HashMap::new();
-    for (key, used) in futures::future::join_all(futures).await {
-        usage_by_key.insert(key, used);
     }
 
     build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
@@ -450,7 +367,7 @@ fn current_usage_period() -> String {
 
 fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
     DepartmentTierUsageResponse {
-        current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(),
+        current_plan: "Free".to_string(),
         period: current_usage_period(),
         departments: vec![],
     }
@@ -468,62 +385,6 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
 #[cfg(test)]
 mod department_tier_usage_tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_department_tier_usage_for_tenant_concurrency() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(500))
-            .connect(&database_url)
-            .await;
-
-        let pool = match pool {
-            Ok(p) => p,
-            Err(_) => return, // If no real database available in CI, skip safely
-        };
-
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            return;
-        }
-
-        let tenant_id = format!("test_tenant_{}", uuid::Uuid::new_v4());
-
-        // Start a transaction so we can rollback and not pollute the DB
-        let mut tx = pool.begin().await.unwrap();
-
-        sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .unwrap();
-
-        let (event_tx, _rx) = tokio::sync::mpsc::channel(100);
-        // Using pool instead of tx since Hub needs pool, but since it's a test we just clean up after.
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-
-        sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type, settings) VALUES ($1, $2, 'marketing', '{}'), ($3, $4, 'operations', '{}')")
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind(&tenant_id)
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .unwrap();
-
-        tx.commit().await.unwrap();
-
-        let start = std::time::Instant::now();
-        let response = department_tier_usage_for_tenant(&hub, &tenant_id).await;
-        let elapsed = start.elapsed();
-
-        // Assert concurrency latency (should be very fast since no actual usage)
-        assert!(elapsed.as_millis() < 500, "Should execute concurrently and quickly");
-        assert_eq!(response.current_plan, plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string());
-
-        // Teardown
-        sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM organizations WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-    }
 
     #[test]
     fn department_tier_usage_uses_only_persisted_departments_and_real_usage_keys() {

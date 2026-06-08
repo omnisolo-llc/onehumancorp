@@ -1,9 +1,5 @@
 use ::server_ohc::app::pos_service_server::PosService;
-use ::server_ohc::app::{
-    EndTerminalSessionRequest, EndTerminalSessionResponse, StartTerminalSessionRequest,
-    StartTerminalSessionResponse, SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
-    UpdateTerminalSessionStatusRequest, UpdateTerminalSessionStatusResponse,
-};
+use ::server_ohc::app::{SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse};
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -95,7 +91,7 @@ impl PosService for MyPosService {
 
                 let job_res = sqlx::query(
                     "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                     VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+                     VALUES ($1, $2, 'pos_offline_sync', $3::jsonb)"
                 )
                 .bind(&job_id)
                 .bind(&tenant_id_clone)
@@ -138,169 +134,6 @@ impl PosService for MyPosService {
             synced_count,
             failed_transaction_ids: failed_ids,
         }))
-    }
-
-    async fn start_terminal_session(
-        &self,
-        request: Request<StartTerminalSessionRequest>,
-    ) -> Result<Response<StartTerminalSessionResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
-        let auth_tenant = match auth_info {
-            Some(info) => info.org_id,
-            None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
-            }
-        };
-
-        if auth_tenant.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
-
-        let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
-
-        let session_id = uuid::Uuid::new_v4().to_string();
-        let pool = crate::db::get_pool();
-
-        let res = sqlx::query(
-            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
-             ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0 RETURNING id"
-        )
-        .bind(&session_id)
-        .bind(&tenant_id)
-        .bind(&req.device_id)
-        .fetch_one(&pool)
-        .await;
-
-        match res {
-            Ok(row) => {
-                let returned_id: String = sqlx::Row::get(&row, "id");
-                Ok(Response::new(StartTerminalSessionResponse {
-                    session_id: returned_id,
-                    success: true,
-                    error_message: "".to_string(),
-                }))
-            }
-            Err(e) => {
-                tracing::error!("Failed to start terminal session: {}", e);
-                Ok(Response::new(StartTerminalSessionResponse {
-                    session_id: "".to_string(),
-                    success: false,
-                    error_message: e.to_string(),
-                }))
-            }
-        }
-    }
-
-    async fn update_terminal_session_status(
-        &self,
-        request: Request<UpdateTerminalSessionStatusRequest>,
-    ) -> Result<Response<UpdateTerminalSessionStatusResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
-        let auth_tenant = match auth_info {
-            Some(info) => info.org_id,
-            None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
-            }
-        };
-
-        if auth_tenant.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
-
-        let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
-
-        let pool = crate::db::get_pool();
-
-        let res = sqlx::query(
-            "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
-        )
-        .bind(&req.status)
-        .bind(&req.session_id)
-        .bind(&tenant_id)
-        .execute(&pool)
-        .await;
-
-        match res {
-            Ok(result) => {
-                if result.rows_affected() > 0 {
-                    Ok(Response::new(UpdateTerminalSessionStatusResponse {
-                        success: true,
-                        error_message: "".to_string(),
-                    }))
-                } else {
-                    Ok(Response::new(UpdateTerminalSessionStatusResponse {
-                        success: false,
-                        error_message: "Session not found".to_string(),
-                    }))
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to update terminal session status: {}", e);
-                Ok(Response::new(UpdateTerminalSessionStatusResponse {
-                    success: false,
-                    error_message: e.to_string(),
-                }))
-            }
-        }
-    }
-
-    async fn end_terminal_session(
-        &self,
-        request: Request<EndTerminalSessionRequest>,
-    ) -> Result<Response<EndTerminalSessionResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
-        let auth_tenant = match auth_info {
-            Some(info) => info.org_id,
-            None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
-            }
-        };
-
-        if auth_tenant.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
-
-        let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
-
-        let pool = crate::db::get_pool();
-
-        let res = sqlx::query(
-            "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
-        )
-        .bind(&req.session_id)
-        .bind(&tenant_id)
-        .execute(&pool)
-        .await;
-
-        match res {
-            Ok(result) => {
-                if result.rows_affected() > 0 {
-                    Ok(Response::new(EndTerminalSessionResponse {
-                        success: true,
-                        error_message: "".to_string(),
-                    }))
-                } else {
-                    Ok(Response::new(EndTerminalSessionResponse {
-                        success: false,
-                        error_message: "Session not found".to_string(),
-                    }))
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to end terminal session: {}", e);
-                Ok(Response::new(EndTerminalSessionResponse {
-                    success: false,
-                    error_message: e.to_string(),
-                }))
-            }
-        }
     }
 }
 

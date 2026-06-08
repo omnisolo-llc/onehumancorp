@@ -29,7 +29,7 @@ export default function BusinessAnalytics() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       <title>Business Analytics | OHC</title>
 
-      <header className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Analytics 📊</h1>
          <div className="flex items-center gap-3">
              <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
@@ -44,7 +44,7 @@ export default function BusinessAnalytics() {
         <section>
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Core Performance (Last 30 Days)</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="app-card p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Total Revenue</div>
               <div className="text-2xl font-bold font-outfit text-gray-900">$8,450.00</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
@@ -53,7 +53,7 @@ export default function BusinessAnalytics() {
               </div>
             </div>
 
-            <div className="app-card p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Average Order Value</div>
               <div className="text-2xl font-bold font-outfit text-gray-900">$45.50</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
@@ -62,7 +62,7 @@ export default function BusinessAnalytics() {
               </div>
             </div>
 
-            <div className="app-card p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Orders</div>
               <div className="text-2xl font-bold font-outfit text-gray-900">185</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
@@ -71,7 +71,7 @@ export default function BusinessAnalytics() {
               </div>
             </div>
 
-            <div className="app-card p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Conversion Rate</div>
               <div className="text-2xl font-bold font-outfit text-gray-900">4.2%</div>
               <div className="text-xs font-semibold text-red-500 mt-2 flex items-center gap-1">
@@ -90,7 +90,7 @@ export default function BusinessAnalytics() {
            </h2>
 
            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-md select-none pointer-events-none opacity-50' : ''}`}>
-               <div className="app-card p-6 rounded-2xl shadow-sm border border-gray-100 h-72 flex flex-col">
+               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-72 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Revenue Forecast</h3>
                    <div className="flex-1 flex flex-col justify-end gap-2 pb-4 border-b border-gray-100 relative">
                         {/* Mock area chart */}
@@ -106,7 +106,7 @@ export default function BusinessAnalytics() {
                    </div>
                </div>
 
-               <div className="app-card p-6 rounded-2xl shadow-sm border border-gray-100 h-72 flex flex-col">
+               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-72 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Customer Cohort Retention</h3>
                    <div className="flex-1 flex flex-col gap-2">
                        <div className="flex justify-between items-center text-xs">
@@ -150,7 +150,7 @@ export default function BusinessAnalytics() {
 
            {!hasPro && (
                <div className="absolute inset-0 z-10 flex items-center justify-center">
-                   <div className="bg-white/90 p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
+                   <div className="bg-white/90 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
                        <div className="text-4xl mb-3">🔮</div>
                        <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">See The Future</h3>
                        <p className="text-sm text-gray-600 mb-6">Unlock predictive AI insights to forecast revenue, track cohort retention, and optimize your growth strategy.</p>
@@ -169,7 +169,7 @@ export default function BusinessAnalytics() {
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="app-card w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">

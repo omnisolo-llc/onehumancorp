@@ -2,17 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 
 export default function AutoCatalogPage() {
-  return (
-    <React.Suspense fallback={<div className="p-4">Loading...</div>}>
-      <AutoCatalogContent />
-    </React.Suspense>
-  );
-}
-
-function AutoCatalogContent() {
   const [loading, setLoading] = useState(false);
   const [subscriptionMode, setSubscriptionMode] = useState(false);
   const [subscriptionInterval, setSubscriptionInterval] = useState('monthly');
@@ -28,10 +19,6 @@ function AutoCatalogContent() {
   } | null>(null);
   const [published, setPublished] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const [textMode, setTextMode] = useState(searchParams.get('mode') === 'text');
-  const [promptText, setPromptText] = useState('');
-
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -81,39 +68,6 @@ function AutoCatalogContent() {
       } finally {
         setLoading(false);
       }
-    }
-  };
-
-
-  const handleGenerate = async () => {
-    if (!promptText.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/generate-offering', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: promptText }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(data.message || 'Generation failed.');
-        return;
-      }
-      setProductData({
-        title: data.title || '',
-        description: data.description || '',
-        price: data.price || '0.00',
-        category: data.item_type || 'Product',
-        isSubscription: data.is_subscription || false,
-        subscriptionInterval: 'monthly',
-      });
-      setSubscriptionMode(data.is_subscription || false);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to generate offering details.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -188,34 +142,7 @@ function AutoCatalogContent() {
         </div>
       )}
 
-      {!loading && !productData && textMode && (
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6 text-center">What do you want to offer?</h2>
-          <textarea
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            placeholder="e.g., Guitar lessons for beginners, 1 hour"
-            className="w-full h-32 p-4 rounded-xl border border-gray-300 shadow-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-gray-800 mb-4"
-          />
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={!promptText.trim()}
-            className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[8px] shadow-md hover:bg-blue-600 transition-colors disabled:opacity-50"
-          >
-            Generate
-          </button>
-          <button
-            type="button"
-            onClick={() => setTextMode(false)}
-            className="mt-4 text-sm font-semibold text-gray-500 hover:text-gray-700"
-          >
-            Or upload a photo instead
-          </button>
-        </div>
-      )}
-
-      {!loading && !productData && !textMode && (
+      {!loading && !productData && (
         <div className="flex-1 flex flex-col items-center justify-center">
           <button
             type="button"
@@ -230,15 +157,8 @@ function AutoCatalogContent() {
             <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
           </label>
           <p className="text-sm text-gray-500 mt-4 text-center">
-            The Promoter agent will magically remove the background, write the description, and suggest a price.
+            Our AI Auto-Catalog Agent will instantly write the title, description, and suggest a price.
           </p>
-          <button
-            type="button"
-            onClick={() => setTextMode(true)}
-            className="mt-4 text-sm font-semibold text-[#0066FF] hover:text-blue-700"
-          >
-            Or describe your offering
-          </button>
         </div>
       )}
 
@@ -252,7 +172,7 @@ function AutoCatalogContent() {
               <div className="h-20 bg-gray-200 rounded-md animate-pulse w-full"></div>
               <div className="h-10 bg-gray-200 rounded-md animate-pulse w-1/3"></div>
            </div>
-           <p className="text-sm font-semibold text-blue-600 animate-pulse text-center">The Promoter is working its magic...</p>
+           <p className="text-sm font-semibold text-blue-600 animate-pulse text-center">AutoDream AI is analyzing your photo...</p>
         </div>
       )}
 
@@ -268,7 +188,7 @@ function AutoCatalogContent() {
            <div className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
                 style={{
                    background: 'rgba(255, 255, 255, 0.65)',
-                   backdropFilter: 'blur(20px) saturate(200%)',
+                   backdropFilter: 'blur(30px) saturate(210%)',
                    border: '1px solid rgba(255, 255, 255, 0.4)'
                 }}>
               <div className="absolute top-2 right-2 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
@@ -323,7 +243,7 @@ function AutoCatalogContent() {
                           <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.isSubscription ? 'transform translate-x-4' : ''}`}></div>
                       </div>
                       <div className="ml-3 text-gray-800 font-semibold text-sm">
-                          Enable Subscribe & Save
+                          Offer as Subscription
                       </div>
                   </label>
 
@@ -345,11 +265,11 @@ function AutoCatalogContent() {
                               </select>
                           </div>
                           <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Discount %</label>
+                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cutoff day</label>
                               <input
                                   type="number"
-                                  value={productData?.subscriptionDiscount || ''}
-                                  onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
+                                  value={subscriptionCutoff}
+                                  onChange={(e) => setSubscriptionCutoff(e.target.value)}
                                   className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                               />
                           </div>
@@ -360,9 +280,9 @@ function AutoCatalogContent() {
 
            <button
              onClick={handlePublish}
-             className="w-full py-[11px] min-h-[44px] bg-[#0066FF] text-white font-bold rounded-[8px] shadow-md hover:bg-blue-600 transition-colors text-lg flex items-center justify-center gap-2"
+             className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[8px] shadow-md hover:bg-blue-600 transition-colors text-lg"
            >
-             Looks Good
+             {subscriptionMode ? 'Publish Subscription' : 'Publish Product'}
            </button>
         </div>
       )}

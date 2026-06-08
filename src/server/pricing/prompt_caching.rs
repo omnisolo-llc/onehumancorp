@@ -37,7 +37,6 @@ impl PromptCache {
     }
 
     pub fn get_with_cost_cents(&self, prompt: &str) -> (Option<CachedResponse>, i64) {
-        tracing::info!("💰 Miser telemetry: Prompt cache lookup");
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
@@ -50,7 +49,7 @@ impl PromptCache {
                     .unwrap_or_else(|_| "0.0001".to_string())
                     .parse::<f64>()
                     .unwrap_or(0.0001);
-                (r.token_count as f64 * fallback_ratio * 100.0).round() as i64
+                (r.token_count as f64 * fallback_ratio).round() as i64
             } else {
                 (ratio * 100.0).round() as i64
             }

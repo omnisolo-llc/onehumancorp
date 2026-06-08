@@ -9,7 +9,7 @@ function sse(data: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
   const tenantId = request.headers.get('x-tenant-id') || 'default';
   const userId = request.headers.get('x-user-id') || 'default';
   const authHeader = request.headers.get('authorization');

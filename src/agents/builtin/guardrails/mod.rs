@@ -1,4 +1,3 @@
-/// Master Catalog B.9. Guardrails  Safety
 pub mod openai_hooks;
 pub mod anthropic_hooks;
 

@@ -295,52 +295,13 @@ impl VectorRepository {
                     }
 
                     let query_emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                    all_records.sort_by(|a, b| {
+                        let dist_a = cosine_distance(&a.embedding, &query_emb);
+                        let dist_b = cosine_distance(&b.embedding, &query_emb);
+                        dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                    });
 
-                    #[derive(Clone)]
-                    struct HeapEntry {
-                        record: EmbeddingRecord,
-                        distance: f32,
-                    }
-
-                    impl PartialEq for HeapEntry {
-                        fn eq(&self, other: &Self) -> bool {
-                            self.distance == other.distance
-                        }
-                    }
-
-                    impl Eq for HeapEntry {}
-
-                    impl PartialOrd for HeapEntry {
-                        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                            self.distance.partial_cmp(&other.distance)
-                        }
-                    }
-
-                    impl Ord for HeapEntry {
-                        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                            self.distance.partial_cmp(&other.distance).unwrap_or(std::cmp::Ordering::Equal)
-                        }
-                    }
-
-                    let mut heap = std::collections::BinaryHeap::with_capacity(limit as usize + 1);
-                    for record in all_records {
-                        let dist = cosine_distance(&record.embedding, &query_emb);
-                        // We want a max-heap of the smallest distances (so we keep the closest `limit` items).
-                        // Since BinaryHeap is a max-heap, storing positive distances means the max distance is at the top.
-                        // Wait, we want smallest distances. So we should pop the largest distance.
-                        heap.push(HeapEntry { record, distance: dist });
-                        if heap.len() > limit as usize {
-                            heap.pop();
-                        }
-                    }
-
-                    // The heap now contains the `limit` items with the smallest distances.
-                    // We need to extract them and reverse them so the absolute closest is first.
-                    let sorted_entries = heap.into_sorted_vec();
-                    // into_sorted_vec returns ascending order, so the smallest distances are at the beginning.
-                    // Since it's a max-heap, the elements were ordered by distance, smallest to largest.
-
-                    results = sorted_entries.into_iter().map(|e| e.record).collect();
+                    results = all_records.into_iter().take(limit as usize).collect();
 
                     if !results.is_empty() {
                         let ids_to_update: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
@@ -382,7 +343,7 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn delete(&self, id: &str) -> Result<(), String> {
+    #[allow(dead_code)]    pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE id = $1")
@@ -624,32 +585,14 @@ impl VectorRepository {
 
                     let mut match_count = 0;
                     'outer: for (_, records) in grouped_records {
-                        // Pre-calculate vector magnitudes to optimize cosine distance checks
-                        let magnitudes: Vec<f32> = records.iter().map(|r| {
-                            r.embedding.iter().map(|&val| val * val).sum::<f32>().sqrt()
-                        }).collect();
-
                         for i in 0..records.len() {
-                            let mag_a = magnitudes[i];
-                            // Skip completely zero vectors to avoid division by zero early
-                            if mag_a == 0.0 { continue; }
-
                             for j in (i + 1)..records.len() {
-                                let mag_b = magnitudes[j];
-                                if mag_b == 0.0 { continue; }
-
                                 let a = &records[i];
                                 let b = &records[j];
-
-                                // Cosine distance = 1.0 - (dot_product / (mag_a * mag_b))
-                                // If distance < 0.05, then dot_product / (mag_a * mag_b) > 0.95
-                                let dot_product: f32 = a.embedding.iter().zip(b.embedding.iter()).map(|(x, y)| x * y).sum();
-                                let similarity = dot_product / (mag_a * mag_b);
-                                let distance = 1.0 - similarity;
-
+                                // Ensure a consistent ordering to avoid duplicate pairs in different orders
+                                let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
+                                let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
                                 if distance < 0.05 {
-                                    // Ensure a consistent ordering to avoid duplicate pairs in different orders
-                                    let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
                                     conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
                                     if match_count >= 10 {
@@ -2469,7 +2412,6 @@ mod determine_conflict_winner_tests {
     }
 }
 // Trigger PR for Memory Consolidation Feature
-// Memory Consolidation logic is fully implemented and tested in e2e_consolidation_tests module.
 
 #[cfg(test)]
 mod e2e_consolidation_tests {

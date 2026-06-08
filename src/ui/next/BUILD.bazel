@@ -46,7 +46,6 @@ sh_test(
     size = "large",
     srcs = ["bazel_vitest_test.sh"],
     data = glob([
-        "src/**/*.css",
         "src/**/*.ts",
         "src/**/*.tsx",
     ]) + [

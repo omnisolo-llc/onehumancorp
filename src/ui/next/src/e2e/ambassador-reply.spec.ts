@@ -5,9 +5,9 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // 1. Connect Instagram via Integrations
     // Start from login to satisfy the rules
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill('test@example.com');
+    await page.getByPlaceholder('Email or Username').fill('maya@ohc.test');
     await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
+    await page.getByRole('button', { name: 'Login' }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
     await page.goto('/integrations');
@@ -52,12 +52,6 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     const inquiryLocator = page.getByText('Do you have vegan chocolate cake available for Saturday?').first();
     const approveButton = page.getByRole('button', { name: 'Approve' }).first();
     await expect(page.getByText(/All Caught Up!|Do you have vegan chocolate cake available for Saturday?/)).toBeVisible({ timeout: 15000 });
-
-    // Since we are now using LLM generation, we wait for a draft to be generated in the UI
-    const draftLocator = page.getByText(/Draft Reply/i).first();
-    if (await draftLocator.isVisible()) {
-       await expect(draftLocator).toBeVisible();
-    }
 
     if (await approveButton.isVisible()) {
       await approveButton.click();

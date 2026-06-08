@@ -32,17 +32,19 @@ while IFS= read -r -d '' path; do
       ;;
   esac
 
-  if [ -f "$path" ]; then
-    if git diff --numstat --no-index /dev/null "$path" 2>/dev/null | grep -q "^-"; then
-      case "$path" in
-        *.png|*.jpg|*.jpeg|*.gif|*.ico|*.icns|*.woff|*.woff2|*.ttf|src/server/auth/.ohc_jwt_secret)
-          # Allowed binary files
-          ;;
-        *)
-          report "forbidden binary file is tracked: $path"
-          ;;
-      esac
-    fi
+  if [ -f "$path" ] && command -v file >/dev/null 2>&1; then
+    mime="$(file -b --mime-type -- "$path")"
+    mode="$(git ls-files -s -- "$path" | awk '{print $1}')"
+    case "$mime" in
+      application/x-executable|application/x-pie-executable|application/x-mach-binary|application/x-dosexec|application/vnd.microsoft.portable-executable)
+        report "compiled executable binary is tracked: $path ($mime)"
+        ;;
+      application/octet-stream)
+        if [ "$mode" = "100755" ]; then
+          report "executable binary-like artifact is tracked: $path ($mime)"
+        fi
+        ;;
+    esac
   fi
 done < <(git ls-files -z)
 

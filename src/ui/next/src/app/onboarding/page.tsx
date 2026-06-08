@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
-type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save' | 'sparkles';
+type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
 
 function SetupIcon({ name }: { name: SetupIconName }) {
   const paths: Record<SetupIconName, string[]> = {
@@ -11,7 +11,6 @@ function SetupIcon({ name }: { name: SetupIconName }) {
     launch: ['M13 10V3L4 14h7v7l9-11h-7z'],
     next: ['M5 12h14', 'M13 6l6 6-6 6'],
     save: ['M5 4h12l2 2v16H5z', 'M8 4v7h8V4', 'M8 18h8'],
-    sparkles: ['M21 12l-3-1 1-3 1 3 3 1-3 1-1 3-1-3zM8 21l-3-4-4-3 4-3 3-4 3 4 4 3-4 3z'],
   };
 
   return (
@@ -38,8 +37,6 @@ export default function OnboardingWizard() {
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
     location, setLocation,
-    targetAudience, setTargetAudience,
-    bio, setBio,
     businessType, setBusinessType,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
@@ -57,7 +54,6 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
-  const initialStateLoaded = useRef(false);
 
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -70,7 +66,6 @@ export default function OnboardingWizard() {
       businessName,
       whatYouSell,
       location,
-      targetAudience,
       businessType,
       categories,
       websiteTemplate,
@@ -98,27 +93,6 @@ export default function OnboardingWizard() {
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
-
-  const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = process.env.NODE_ENV === 'test' ? 10 : 500) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-           let errMsg = `HTTP error! status: ${response.status}`;
-           try {
-              const result = await response.clone().json();
-              errMsg = result.error || result.message || errMsg;
-           } catch (e) {}
-           throw new Error(errMsg);
-        }
-        return response;
-      } catch (err: any) {
-        if (i === retries - 1) throw err;
-        await new Promise(res => setTimeout(res, backoff * Math.pow(2, i)));
-      }
-    }
-    throw new Error('Max retries reached');
-  };
 
   const handleSaveDraft = async () => {
     setIsLoading(true);
@@ -148,7 +122,7 @@ export default function OnboardingWizard() {
         aiAutoRespond
       };
 
-      const res = await fetchWithRetry('/api/onboarding/draft', {
+      const res = await fetch('/api/onboarding/draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,6 +131,10 @@ export default function OnboardingWizard() {
         },
         body: JSON.stringify({ wizardState })
       });
+
+      if (!res.ok) {
+        throw new Error('Draft endpoint failed');
+      }
 
       setSaveMessage('Draft Saved!');
       setTimeout(() => setSaveMessage(''), 3000);
@@ -190,7 +168,6 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
         if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.targetAudience) setTargetAudience(data.wizardState.targetAudience);
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
@@ -202,22 +179,18 @@ export default function OnboardingWizard() {
         if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
         if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
-        initialStateLoaded.current = true;
       }
     })
     .catch(err => console.error('Failed to load onboarding state', err))
-    .finally(() => {
-      initialStateLoaded.current = true;
-      setIsLoaded(true);
-    });
+    .finally(() => setIsLoaded(true));
   }, []);
 
   // Sync state to backend
   useEffect(() => {
-    if (!isLoaded || !initialStateLoaded.current) return;
+    if (!isLoaded) return;
 
     // Only save if we are past the initial state
-    if (step === 1 && !businessName && !whatYouSell && !location && !targetAudience) return;
+    if (step === 1 && !businessName && !whatYouSell && !location) return;
 
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -229,7 +202,6 @@ export default function OnboardingWizard() {
       businessName,
       whatYouSell,
       location,
-      targetAudience,
       businessType,
       categories,
       websiteTemplate,
@@ -254,7 +226,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    targetAudience, businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
+    businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
     adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
@@ -266,7 +238,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
+      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -287,20 +259,9 @@ export default function OnboardingWizard() {
       setBusinessName(intakeData.business_name || 'My Business');
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-      const mappedCategories = intakeData.categories || ['physical'];
-      setCategories(mappedCategories);
+      setCategories(intakeData.categories || ['physical']);
 
-      // Auto-configure AI Departments based on inferred business context
-      const newAgents = ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'];
-      if (mappedCategories.includes('physical') || mappedCategories.includes('digital') || mappedCategories.includes('subscriptions')) {
-        newAgents.push('Sales');
-      }
-      if (mappedCategories.includes('services') || mappedCategories.includes('food') || mappedCategories.includes('physical')) {
-        newAgents.push('Customer Success');
-      }
-      setAiAgents(newAgents);
-
-      setStep(2); await syncStateToBackend({ step: 2, aiAgents: newAgents }); // Go to review step
+      setStep(2); await syncStateToBackend({ step: 2 }); // Go to review step
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -347,7 +308,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const startRes = await fetchWithRetry('/api/onboarding/start', {
+      const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -368,8 +329,7 @@ export default function OnboardingWizard() {
           first_product_price: firstProductPrice,
           domain_choice: domainChoice || 'subdomain',
           price_type: 'fixed',
-          location: location || '',
-          target_audience: targetAudience || ''
+          location: location || ''
         })
       });
 
@@ -387,8 +347,7 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant', result.organization_id);
       }
       setStep(5);
-      syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
-      fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
+        syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
 
     } catch (err: any) {
       console.error(err);
@@ -406,10 +365,10 @@ export default function OnboardingWizard() {
   const getProgress = () => {
     // There are 5 steps, let's make it a more gradual fill
     if (step === 1) {
-      if (chatStep === 1) return 25;
-      if (chatStep === 2) return 35;
-      if (chatStep === 3) return 45;
-      if (chatStep === 4) return 50;
+      if (chatStep === 0) return 10;
+      if (chatStep === 1) return 20;
+      if (chatStep === 2) return 30;
+      if (chatStep === 3) return 40;
     }
     if (step === 2) return 60;
     if (step === 3) return 80;
@@ -419,7 +378,7 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] flex items-center justify-center p-4">
       <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
@@ -440,184 +399,6 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 0 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">10-Minute Setup Wizard</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
-                Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
-              </p>
-
-              <div className="flex flex-col gap-4 w-full">
-                <button
-                  className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all"
-                  onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
-                >
-                  Start My Business
-                </button>
-
-                <button
-                  className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-                  onClick={() => { setStep(10); syncStateToBackend({ step: 10 }); }}
-                >
-                  Instant Build
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 10 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <div className="flex items-center justify-between mb-6 w-full">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Our AI will handle the rest in 30 seconds.
-                </p>
-              </div>
-
-              <div className="space-y-4 flex-1 w-full">
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full glassmorphism min-h-[54px] p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
-                  placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
-                  rows={6}
-                />
-              </div>
-
-              <div className="mt-auto pt-6 w-full">
-                <button
-                  onClick={async () => {
-                    if (!bio.trim()) return;
-                    setIsLoading(true);
-                    let completed = false;
-                    const finishWithFallback = async () => {
-                      if (completed) return;
-                      completed = true;
-                      setBusinessName('My Business');
-                      setBusinessType('Online Store');
-                      setFirstProductName('First Product');
-                      setFirstProductPrice('10.00');
-
-                      try {
-                        const tenantIdStr = localStorage.getItem('tenant_id') || 'default';
-                        const userIdStr = localStorage.getItem('user_id') || 'default';
-
-                        const startRes = await fetchWithRetry('/api/onboarding/start', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
-                          body: JSON.stringify({
-                            company_name: 'My Business',
-                            admin_email: adminEmail || 'admin@example.com',
-                            admin_name: adminName || 'Admin',
-                            admin_password: adminPassword || 'password123',
-                            business_type: 'Online Store',
-                            first_product_name: 'First Product',
-                            first_product_price: '10.00',
-                            price_type: 'physical',
-                            location: 'Unknown',
-                            ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                            auto_respond: true
-                          })
-                        });
-                        const startData = await startRes.json();
-                        setStartResult(startData);
-                        setIsLoading(false);
-                        setStep(5);
-                        syncStateToBackend({ step: 5 });
-                      } catch (e) {
-                        setIsLoading(false);
-                        setError('Failed to launch. Please try again.');
-                      }
-                    };
-                    const safetyTimeout = window.setTimeout(finishWithFallback, 15000);
-
-                    try {
-                      const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'default' : 'default';
-                      const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'default' : 'default';
-
-                      const res = await fetch('/api/onboarding/intake', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'X-Tenant-ID': tenantIdStr,
-                          'X-User-ID': userIdStr,
-                        },
-                        body: JSON.stringify({ description: bio }),
-                      });
-
-                      const data = await res.json();
-                      if (res.ok) {
-                        completed = true;
-                        window.clearTimeout(safetyTimeout);
-
-                        const inferredBusinessName = data.business_name || 'My Business';
-                        const inferredBusinessType = data.business_type || 'Online Store';
-                        const inferredProductName = data.initial_products?.[0]?.name || 'First Product';
-                        const inferredProductPrice = data.initial_products?.[0]?.price || '10.00';
-                        const inferredLocation = data.location || 'Unknown';
-
-                        setBusinessName(inferredBusinessName);
-                        setBusinessType(inferredBusinessType);
-                        setFirstProductName(inferredProductName);
-                        setFirstProductPrice(inferredProductPrice);
-
-                        const startRes = await fetch('/api/onboarding/start', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
-                          body: JSON.stringify({
-                            company_name: inferredBusinessName,
-                            admin_email: adminEmail || 'admin@example.com',
-                            admin_name: adminName || 'Admin',
-                            admin_password: adminPassword || 'password123',
-                            business_type: inferredBusinessType,
-                            first_product_name: inferredProductName,
-                            first_product_price: inferredProductPrice,
-                            price_type: 'physical',
-                            location: inferredLocation,
-                            ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                            auto_respond: true
-                          })
-                        });
-
-                        const startData = await startRes.json();
-                        setStartResult(startData);
-                        setIsLoading(false);
-                        setStep(5);
-                        syncStateToBackend({ step: 5 });
-                      } else {
-                        console.error('Failed to parse intake:', data);
-                        finishWithFallback();
-                      }
-                    } catch (err) {
-                      console.error(err);
-                      finishWithFallback();
-                    }
-                  }}
-                  disabled={!bio.trim() || isLoading}
-                  className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5 text-white backdrop-filter backdrop-blur-md rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Generating...
-                    </span>
-                  ) : <IconLabel icon="launch">Generate Storefront</IconLabel>}
-                </button>
-              </div>
-            </div>
-          )}
-
           {step === 1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
@@ -625,6 +406,31 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
+
+              {chatStep === 0 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in text-center">
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Let's get your business online in under 10 minutes.
+                  </p>
+                  <button
+                    role="link"
+                    onClick={() => { setChatStep(1); syncStateToBackend({ chatStep: 1 }); }}
+                    className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  >
+                    Start Onboarding
+                  </button>
+                </div>
+              )}
+
+              {chatStep > 0 && (
+                <>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                    Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                  </p>
+                </>
+              )}
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
@@ -650,7 +456,6 @@ export default function OnboardingWizard() {
                         autoFocus
                         enterKeyHint="next"
                         autoCapitalize="words"
-                        autoComplete="organization"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
@@ -665,7 +470,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -730,7 +535,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -791,12 +596,14 @@ export default function OnboardingWizard() {
                               setValidationError('Please tell us your location.');
                               return;
                             }
-                            setValidationError('');
-                            setChatStep(4); syncStateToBackend({ chatStep: 4 });
+                            if (!isLoading) {
+                              setValidationError('');
+                              handleIntake();
+                            }
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -810,75 +617,9 @@ export default function OnboardingWizard() {
                           return;
                         }
                         setValidationError('');
-                        setChatStep(4); syncStateToBackend({ chatStep: 4 });
-                      }}
-                      disabled={!location.trim()}
-                      className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 4 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { setChatStep(3); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                      This helps our AI generate the perfect storefront copy and select the best tools for your business.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-                        enterKeyHint="next"
-                        autoCapitalize="words"
-                        value={targetAudience}
-                        onChange={(e) => setTargetAudience(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (!targetAudience.trim()) {
-                              setValidationError('Please tell us your target audience.');
-                              return;
-                            }
-                            setValidationError('');
-                            handleIntake();
-                          }
-                        }}
-                        placeholder="e.g. Local families, Tech startups"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (!targetAudience.trim()) {
-                          setValidationError('Please tell us your target audience.');
-                          return;
-                        }
-                        setValidationError('');
                         handleIntake();
                       }}
-                      disabled={!targetAudience.trim() || isLoading}
+                      disabled={!location.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
@@ -889,7 +630,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : <IconLabel icon="launch">Next</IconLabel>}
+                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
                     </button>
                   </div>
                 </div>
@@ -928,9 +669,13 @@ export default function OnboardingWizard() {
                     value={businessName}
                     onChange={(e) => {
                       setBusinessName(e.target.value);
-                      setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
+                      if (e.target.value.trim().length < 3) {
+                        setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
+                      } else {
+                        setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
+                      }
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
                   {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
@@ -943,9 +688,13 @@ export default function OnboardingWizard() {
                     value={businessType}
                     onChange={(e) => {
                       setBusinessType(e.target.value);
-                      setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
+                      if (e.target.value.trim().length === 0) {
+                        setValidationErrors(prev => ({ ...prev, businessType: 'Business Type is required to configure your agents.' }));
+                      } else {
+                        setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
+                      }
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
                   {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
@@ -957,7 +706,7 @@ export default function OnboardingWizard() {
                     autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -969,7 +718,7 @@ export default function OnboardingWizard() {
                         autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                    <div>
@@ -980,13 +729,15 @@ export default function OnboardingWizard() {
                         value={firstProductPrice}
                         onChange={(e) => {
                            setFirstProductPrice(e.target.value);
-                           if (e.target.value.trim().length > 0 && !/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
+                           if (e.target.value.trim().length === 0) {
+                              setValidationErrors(prev => ({ ...prev, firstProductPrice: 'A price is needed to set up your Stripe catalog.' }));
+                           } else if (!/^\d+(\.\d{1,2})?$/.test(e.target.value)) {
                               setValidationErrors(prev => ({ ...prev, firstProductPrice: 'Invalid price.' }));
                            } else {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
                         }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
@@ -997,30 +748,19 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => {
-                    let hasError = false;
-                    const newErrors: Record<string, string> = { ...validationErrors };
                     if (businessName.trim().length < 3) {
-                      newErrors.businessName = 'Must be at least 3 characters.';
-                      hasError = true;
-                    }
-                    if (businessType.trim().length === 0) {
-                      newErrors.businessType = 'Business Type is required to configure your agents.';
-                      hasError = true;
-                    }
-                    if (firstProductPrice.trim().length === 0) {
-                      newErrors.firstProductPrice = 'A price is needed to set up your Stripe catalog.';
-                      hasError = true;
-                    }
-
-                    if (hasError || Object.keys(newErrors).length > 0) {
-                      setValidationErrors(newErrors);
+                      setValidationErrors(prev => ({ ...prev, businessName: 'Must be at least 3 characters.' }));
                       setValidationError('Please fix the errors before continuing.');
                       return;
                     }
-
+                    if (Object.keys(validationErrors).length > 0) {
+                      setValidationError('Please fix the errors before continuing.');
+                      return;
+                    }
                     setValidationError('');
                     setStep(3); syncStateToBackend({ step: 3 });
                   }}
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <IconLabel icon="next">Continue</IconLabel>
@@ -1094,7 +834,6 @@ export default function OnboardingWizard() {
                         type="text"
                         enterKeyHint="next"
                         autoCapitalize="words"
-                        autoComplete="name"
                         value={adminName}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1106,7 +845,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminName && <p className="text-red-500 text-xs mt-1">{validationErrors.adminName}</p>}
                     </div>
@@ -1116,8 +855,6 @@ export default function OnboardingWizard() {
                         type="email"
                         enterKeyHint="next"
                         autoCapitalize="none"
-                        inputMode="email"
-                        autoComplete="email"
                         value={adminEmail}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1131,7 +868,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="you@example.com"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
@@ -1140,7 +877,6 @@ export default function OnboardingWizard() {
                       <input
                         type="password"
                         enterKeyHint="done"
-                        autoComplete="new-password"
                         value={adminPassword}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1154,7 +890,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminPassword && <p className="text-red-500 text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>
@@ -1162,20 +898,29 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Auto-Configured AI Departments</label>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
-                    Here are the AI departments we've configured for you.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {aiAgents.map(agent => (
-                      <div
-                        key={agent}
-                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                        {agent}
-                      </div>
-                    ))}
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Select AI Team</label>
+                  <div className="space-y-2">
+                    {['Sales Agent', 'Support Agent', 'Marketing Agent'].map(agent => {
+                       const isSelected = aiAgents.includes(agent);
+                       return (
+                         <div
+                           key={agent}
+                           onClick={() => {
+                             if (isSelected) {
+                               setAiAgents(aiAgents.filter(a => a !== agent));
+                             } else {
+                               setAiAgents([...aiAgents, agent]);
+                             }
+                           }}
+                           className={`p-3 rounded-[8px] border cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white'}`}
+                         >
+                           <span className="font-semibold text-sm">{agent}</span>
+                           <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#0066FF] bg-[#0066FF]' : 'border-gray-400'}`}>
+                              {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                           </div>
+                         </div>
+                       );
+                    })}
                   </div>
                 </div>
 
@@ -1216,7 +961,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism rounded-[16px] shadow-2xl p-8">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-[16px] border border-white/20 p-8 shadow-2xl">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
@@ -1252,10 +997,10 @@ export default function OnboardingWizard() {
                 </div>
 
                 <a
-                  href="/assistant"
-                  className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  href="/dashboard"
+                  className="flex w-full items-center justify-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  <IconLabel icon="sparkles">Open Assistant</IconLabel>
+                  <IconLabel icon="dashboard">Go to Dashboard</IconLabel>
                 </a>
                 <a
                   href="/builder"

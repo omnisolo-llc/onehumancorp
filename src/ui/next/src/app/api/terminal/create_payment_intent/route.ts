@@ -6,7 +6,7 @@ function clientSecret(payload: any): string | undefined {
 }
 
 export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
 
   try {
     const body = await req.json();

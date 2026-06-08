@@ -11,7 +11,6 @@ rust_library(
     srcs = glob(["**/*.rs"]),
     crate_root = "mod.rs",
     visibility = ["//visibility:public"],
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     deps = [
         "//src/server/domain:server_domain",
         "//src/server/integrations/twilio:server_integrations_twilio",
@@ -34,7 +33,6 @@ rust_library(
 rust_test(
     name = "voice_test",
     crate = ":voice",
-    rustc_flags = ["--cfg=ohc_bazel_package"],
     deps = [
         "@crates//:tokio",
     ],

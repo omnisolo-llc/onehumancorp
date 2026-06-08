@@ -188,7 +188,6 @@ async function tagClickTargets(page: Page) {
     const visibleTargets = elements.filter((element) => {
       const style = window.getComputedStyle(element);
       if (element.closest('[aria-hidden="true"]')) return false;
-      if (element.closest('nextjs-portal')) return false;
       return style.pointerEvents !== 'none' && style.opacity !== '0';
     });
     visibleTargets.forEach((element, index) => {
@@ -215,7 +214,6 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
       const style = window.getComputedStyle(element);
       const rect = element.getBoundingClientRect();
       if (element.closest('[aria-hidden="true"]')) return false;
-      if (element.closest('nextjs-portal')) return false;
       return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
     }).map((element, index) => {
       const tag = element.tagName.toLowerCase();
@@ -648,7 +646,6 @@ test.describe('comprehensive UI contract', () => {
               const style = window.getComputedStyle(element);
               if (element.closest('[data-ui-overlay="true"]')) return false;
               if (element.closest('[aria-hidden="true"]')) return false;
-              if (element.closest('nextjs-portal')) return false;
               return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
             })
             .map((element, index) => {

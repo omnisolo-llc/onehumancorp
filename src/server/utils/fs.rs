@@ -35,22 +35,10 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
     #[cfg(unix)]
     options.mode(_mode);
 
-    let mut file = match options.open(&tmp_name) {
-        Ok(f) => f,
-        Err(e) => return Err(e),
-    };
+    let mut file = options.open(&tmp_name)?;
 
-    if let Err(e) = file.write_all(data) {
-        drop(file);
-        let _ = fs::remove_file(&tmp_name);
-        return Err(e);
-    }
-
-    if let Err(e) = file.sync_all() {
-        drop(file);
-        let _ = fs::remove_file(&tmp_name);
-        return Err(e);
-    }
+    file.write_all(data)?;
+    file.sync_all()?;
     drop(file); // Close file
 
     if let Err(e) = fs::rename(&tmp_name, filename) {

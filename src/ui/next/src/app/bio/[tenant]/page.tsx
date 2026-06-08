@@ -98,7 +98,7 @@ export default function LinkInBioPublicPage() {
 
                      <div className="mt-auto pt-12 pb-6 w-full flex justify-center">
                          <a href={`/onboarding?ref=${tenantId}`} className="text-sm font-semibold tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
-                             ⚡ Powered by OHC
+                             Powered by OHC
                          </a>
                      </div>
                  </div>

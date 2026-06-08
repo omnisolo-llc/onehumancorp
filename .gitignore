@@ -4,7 +4,6 @@
 # Binaries for programs and plugins
 *.exe
 *.exe~
-*.orig
 *.dll
 *.so
 *.dylib
@@ -56,7 +55,6 @@ go.work.sum
 
 .claude-code/
 .kilo/
-.superpowers/
 
 # Editor/IDE
 # .idea/

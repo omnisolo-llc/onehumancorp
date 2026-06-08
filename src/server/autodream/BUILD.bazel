@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "mod.rs",
+        "store.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -12,6 +13,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "mod.rs",
+        "store.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

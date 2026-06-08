@@ -1,36 +1,28 @@
+import { describe, expect, it } from 'vitest';
 import { GET } from './route';
-import { describe, it, expect } from 'vitest';
 
-describe('GET /api/v1/growth/storefront/embed', () => {
-  it('returns valid HTML with tenant embedded', async () => {
-    const response = await GET(new Request('http://localhost/api/v1/growth/storefront/embed?tenant=mystore'));
+describe('storefront embed API', () => {
+  it('sanitizes tenant and host values before rendering HTML', async () => {
+    const response = await GET(new Request('http://localhost/api/v1/growth/storefront/embed?tenant=<script>alert(1)</script>', {
+      headers: {
+        host: 'bad.example"><script>alert(1)</script>',
+        'x-forwarded-proto': 'javascript',
+      },
+    }));
+
     expect(response.status).toBe(200);
     const html = await response.text();
-    expect(html).toContain('mystore');
-    expect(html).toContain('Powered by');
-    expect(html).toContain('OHC');
-    expect(html).toContain('ref=mystore');
-  });
 
-  it('escapes user input to prevent XSS vulnerabilities', async () => {
-    const response = await GET(new Request('http://localhost/api/v1/growth/storefront/embed?tenant=<script>alert(1)</script>'));
-    const html = await response.text();
-
-    // The raw script tag should NOT be present
     expect(html).not.toContain('<script>alert(1)</script>');
-
-    // The escaped version SHOULD be present in the title and content
-    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-
-    // The URL-encoded version SHOULD be present in the referral link and og:image
-    expect(html).toContain('ref=%3Cscript%3Ealert(1)%3C%2Fscript%3E');
     expect(html).toContain('https://ohc.app/api/v1/growth/storefront/og-card?tenant=%3Cscript%3Ealert(1)%3C%2Fscript%3E');
+    expect(html).toContain('href="https://ohc.app/checkout?tenant=%3Cscript%3Ealert(1)%3C%2Fscript%3E"');
   });
 
-  it('uses default tenant if none is provided', async () => {
-    const response = await GET(new Request('http://localhost/api/v1/growth/storefront/embed'));
-    const html = await response.text();
-    expect(html).toContain('demo');
-    expect(html).toContain('ref=demo');
+  it('sets hardening headers for embeddable HTML', async () => {
+    const response = await GET(new Request('http://localhost/api/v1/growth/storefront/embed?tenant=store'));
+
+    expect(response.headers.get('content-security-policy')).toContain("default-src 'none'");
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
   });
 });

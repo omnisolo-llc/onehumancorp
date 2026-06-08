@@ -2,11 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Grandmother UX End-to-End Flow Validation', () => {
   test('first-time user sees plain language dashboard headers', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[placeholder="Email or Username"]', 'Maya');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    await expect(page.getByText('Welcome back, Maya.')).toBeVisible();
+    await page.goto('/dashboard');
+    await expect(page.getByText('Welcome back, Human.')).toBeVisible();
     await expect(page.getByText('Your agents are working on your behalf.')).toBeVisible();
   });
 

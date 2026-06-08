@@ -28,13 +28,13 @@ impl AconStrategy {
     }
 
     /// Applies the ACON strategy to a mutable list of messages.
-    pub fn apply(&self, messages: &mut [Message]) {
+    pub fn apply(&self, messages: &mut Vec<Message>) {
         let msg_count = messages.len();
         if msg_count > self.config.preserve_recent_messages_count + 1 {
             let threshold = msg_count - self.config.preserve_recent_messages_count;
-            for msg in messages.iter_mut().take(threshold) {
-                if msg.role == Role::Tool {
-                    for tr in &mut msg.tool_results {
+            for i in 0..threshold {
+                if messages[i].role == Role::Tool {
+                    for tr in &mut messages[i].tool_results {
                         if tr.error.is_empty()
                             && !tr.content.starts_with("[ACON:")
                             && !tr.content.is_empty()
@@ -50,7 +50,7 @@ impl AconStrategy {
     }
 }
 
-pub fn apply_acon_strategy(messages: &mut [Message], config: &AconConfig) {
+pub fn apply_acon_strategy(messages: &mut Vec<Message>, config: &AconConfig) {
     let strategy = AconStrategy::new(config.clone());
     strategy.apply(messages);
 }

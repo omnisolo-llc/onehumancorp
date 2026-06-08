@@ -2,37 +2,36 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { campaignName, discountOffer, theme, productName, customerLocation, timeAgo, hasPro } = await request.json();
+    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
 
-    // In a real implementation, this would validate the user's Pro status and tenant
-    const scriptTag = `<script src="https://ohc.app/widgets/discount-share.js" async></script>`;
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+    });
+    const authHeader = request.headers.get('authorization');
+    if (authHeader) {
+      headers.set('authorization', authHeader);
+    }
+    const cookie = request.headers.get('cookie');
+    if (cookie) {
+      headers.set('cookie', cookie);
+    }
 
-    // Using a rudimentary escape function inline to avoid cross-file dependency complexity for this example.
-    const escapeHtml = (unsafe: string) => {
-        if (!unsafe) return unsafe;
-        return unsafe
-             .replace(/&/g, "&amp;")
-             .replace(/</g, "&lt;")
-             .replace(/>/g, "&gt;")
-             .replace(/"/g, "&quot;")
-             .replace(/'/g, "&#039;");
-    };
+    const backendRes = await fetch(`${backendUrl}/api/v1/growth/discount_share/generate`, {
+      method: 'POST',
+      headers,
+    });
 
-    const safeCampaignName = escapeHtml(campaignName) || 'Special Offer';
-    const safeDiscountOffer = escapeHtml(discountOffer) || '10';
-    const safeTheme = escapeHtml(theme) || 'light';
-    const safeProduct = escapeHtml(productName) || 'A product';
-    const safeLocation = escapeHtml(customerLocation) || 'Someone';
-    const safeTime = escapeHtml(timeAgo) || 'just now';
-
-    const divTag = `<div id="ohc-discount-share" data-campaign="${safeCampaignName}" data-discount="${safeDiscountOffer}" data-theme="${safeTheme}" data-product="${safeProduct}" data-location="${safeLocation}" data-time="${safeTime}" data-branding="${!hasPro}"></div>`;
-    const branding = !hasPro ? '\n<!-- ⚡ Powered by OHC -->' : '';
-
-    const embedCode = `<!-- Discount Share Widget -->\n${divTag}\n${scriptTag}${branding}`;
-
-    return NextResponse.json({ embed_code: embedCode });
+    if (backendRes.ok) {
+        const data = await backendRes.json();
+        return NextResponse.json(data);
+    } else {
+        return NextResponse.json(
+            { error: 'Failed to generate discount share link' },
+            { status: backendRes.status }
+        );
+    }
   } catch (error) {
-    console.error("Error generating discount share snippet:", error);
+    if (process.env.NODE_ENV !== "test") console.error("Error generating discount share link:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }

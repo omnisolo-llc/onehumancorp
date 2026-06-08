@@ -16,7 +16,7 @@ export default function GrowthReferralWidget() {
       const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
 
       const res = await fetch('/api/v1/growth/team-invites', {
-
+        body: JSON.stringify({ team_id: 'test-team', inviter_id: 'test-user' }),
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,18 +56,17 @@ export default function GrowthReferralWidget() {
   };
 
   return (
-    <div className="ohc-growth-card glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
+    <div className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
       <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="flex-1">
           <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-semibold">
             <span>🚀 Sovereign-to-Cloud Bridge</span>
           </div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-            Grow Your Team
+            Invite your network, grow together
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
-            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-            Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space while maintaining Zero Data Leakage locally.
+          <p className="text-gray-600 dark:text-gray-300 text-sm">
+            Share your unique invite link with other business owners. When they sign up, you both get premium credits.
           </p>
         </div>
 

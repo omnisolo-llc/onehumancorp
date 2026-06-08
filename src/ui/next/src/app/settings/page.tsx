@@ -29,47 +29,30 @@ export default function SettingsPage() {
     voice_receptionist_persona: "Friendly",
   });
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [agentName, setAgentName] = useState("Agent One");
-
-
   useEffect(() => {
-    Promise.all([
-      fetch("/api/settings/delivery")
-        .then(res => res.json())
-        .then(data => {
-           setDeliverySettings({
-             delivery_enabled: data.delivery_enabled || false,
-             delivery_radius: data.delivery_radius || 5.0,
-             delivery_fee: data.delivery_fee || 8.50,
-           });
-        })
-        .catch(e => console.error("Failed to load delivery settings", e)),
+    fetch("/api/settings/delivery")
+      .then(res => res.json())
+      .then(data => {
+         setDeliverySettings({
+           delivery_enabled: data.delivery_enabled || false,
+           delivery_radius: data.delivery_radius || 5.0,
+           delivery_fee: data.delivery_fee || 8.50,
+         });
+      })
+      .catch(e => console.error("Failed to load delivery settings", e));
 
-      fetch("/api/assistant/settings")
-        .then(res => res.json())
-        .then(data => {
-          if (data?.settings?.agentName) {
-            setAgentName(data.settings.agentName);
-          }
-        })
-        .catch(e => console.error("Failed to load assistant settings", e)),
-
-      fetch("/api/settings/voice")
-        .then(res => res.json())
-        .then(data => {
-          if (data) {
-            setVoiceSettings({
-              voice_receptionist_enabled: data.voice_receptionist_enabled || false,
-              voice_receptionist_number: data.voice_receptionist_number || "",
-              voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
-            });
-          }
-        })
-        .catch(e => console.error("Failed to load voice settings", e))
-    ]).finally(() => {
-      setIsLoading(false);
-    });
+    fetch("/api/settings/voice")
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setVoiceSettings({
+            voice_receptionist_enabled: data.voice_receptionist_enabled || false,
+            voice_receptionist_number: data.voice_receptionist_number || "",
+            voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
+          });
+        }
+      })
+      .catch(e => console.error("Failed to load voice settings", e));
   }, []);
 
   const handleDeliverySettingChange = async (key: string, value: any) => {
@@ -155,19 +138,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAgentNameChange = async (value: string) => {
-    setAgentName(value);
-    try {
-      await fetch("/api/assistant/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentName: value }),
-      });
-    } catch (e) {
-      console.error("Failed to save agent settings", e);
-    }
-  };
-
   const handleProvisionVoiceNumber = async () => {
     try {
       const res = await fetch("/api/settings/voice/provision", {
@@ -182,38 +152,66 @@ export default function SettingsPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <AppShell title="Settings">
-        <div className="flex h-64 items-center justify-center">
-          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        </div>
-      </AppShell>
-    );
-  }
-
   return (
-    <AppShell title="Settings">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold font-outfit text-gray-900">Workspace Settings</h1>
-          <p className="app-list-subtitle">Manage integrations, local routing, and security.</p>
-        </header>
-
+    <AppShell
+      title="Settings"
+      subtitle="Application preferences, notification channels, and account controls."
+      statusItems={[
+        { label: "SMS", value: isVerified ? "Verified" : "Not verified", tone: isVerified ? "good" : "neutral" },
+        { label: "Alerts", value: String(Object.values(preferences).filter(Boolean).length), tone: "neutral" },
+      ]}
+      actions={[{ label: "Dashboard", href: "/dashboard" }]}
+    >
+      <div id="settings-screen" className="app-grid two">
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
-              <div className="app-panel-title">SMS Notifications & Security</div>
-              <div className="app-list-subtitle">Get texts for critical events. Verify your phone number to enable.</div>
+              <div className="app-panel-title">General Notifications</div>
+              <div className="app-list-subtitle">Baseline notification preferences.</div>
             </div>
           </div>
           <div className="app-panel-body">
             <div className="space-y-4">
-              <label className="block text-sm font-semibold text-gray-700">Mobile Number</label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" className="rounded" /> Enable Email Notifications
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" className="rounded" /> Enable Push Notifications
+              </label>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="app-metric-label">Timezone</span>
+                  <select className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800">
+                    <option>UTC</option>
+                    <option>EST</option>
+                    <option>PST</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="app-metric-label">Language</span>
+                  <select className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800">
+                    <option>English</option>
+                    <option>Spanish</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Critical SMS Alerts</div>
+              <div className="app-list-subtitle">Immediate text alerts for urgent events.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+            <div className="space-y-4">
               <input
-                aria-label="Mobile Number"
-                type="tel"
-                placeholder="+1 (555) 000-0000"
+                aria-label="Mobile Phone Number"
+                type="text"
+                placeholder="Mobile Phone Number (e.g. +1234567890)"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={isVerified}
@@ -254,42 +252,32 @@ export default function SettingsPage() {
                   ["failed_payment", "Failed Payments"],
                   ["new_order", "New Orders"],
                 ].map(([key, label]) => (
-                  <label key={key} className="flex items-center gap-3">
+                  <label key={key} className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
+                    <span>{label}</span>
                     <input
                       aria-label={label}
                       type="checkbox"
-                      disabled={!isVerified}
-                      checked={(preferences as any)[key]}
+                      checked={preferences[key as keyof typeof preferences]}
                       onChange={(e) => handlePreferenceChange(key, e.target.checked)}
+                      disabled={!isVerified}
                       className="rounded"
                     />
-                    <span className={`text-sm ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
                   </label>
                 ))}
-                <label className="flex items-center gap-3">
-                  <input
-                    aria-label="Enable Email Notifications"
-                    type="checkbox"
-                    checked={(preferences as any)["email_notifications"] || false}
-                    onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
-                    className="rounded"
-                  />
-                  <span className="text-sm text-gray-800">Enable Email Notifications</span>
-                </label>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="app-grid two">
-          <div className="app-panel">
-            <div className="app-panel-header">
-              <div>
-                <div className="app-panel-title">Local Delivery Setup</div>
-                <div className="app-list-subtitle">Configure delivery radius and rates.</div>
-              </div>
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Local Delivery (DoorDash Drive)</div>
+              <div className="app-list-subtitle">Configure white-label delivery powered by DoorDash.</div>
             </div>
-            <div className="app-panel-body space-y-4">
+          </div>
+          <div className="app-panel-body">
+            <div className="space-y-4">
               <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
                 <span>Enable Local Delivery</span>
                 <input
@@ -327,16 +315,17 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </section>
 
-          <div className="app-panel">
-            <div className="app-panel-header">
-              <div>
-                <div className="app-panel-title">AI Voice Receptionist</div>
-                <div className="app-list-subtitle">Let OHC handle your business calls.</div>
-              </div>
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Autonomous Voice Receptionist</div>
+              <div className="app-list-subtitle">Never miss a call. Let AI answer, book appointments, and take orders.</div>
             </div>
-            <div className="app-panel-body">
-              <div className="space-y-4">
+          </div>
+          <div className="app-panel-body">
+            <div className="space-y-4">
               <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
                 <span>Enable AI Voice Receptionist</span>
                 <input
@@ -362,12 +351,10 @@ export default function SettingsPage() {
                         <option value="Efficient">Fast & Efficient</option>
                       </select>
                     </label>
-
                     <div className="block">
                       <span className="app-metric-label">Assigned Phone Number</span>
                       <div className="mt-2 flex gap-2">
                         <input
-                          aria-label="Assigned Phone Number"
                           type="text"
                           readOnly
                           value={voiceSettings.voice_receptionist_number || "Not assigned"}
@@ -385,40 +372,26 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
-          </div>
         </section>
 
         <section className="app-panel">
           <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Agent Settings</div>
-              <div className="app-list-subtitle">Configure your AI agent's identity.</div>
-            </div>
-          </div>
-          <div className="app-panel-body">
-            <label className="block">
-              <span className="app-metric-label">Agent Name</span>
-              <input
-                type="text"
-                value={agentName}
-                onChange={(e) => handleAgentNameChange(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
-                placeholder="Agent One"
-              />
-            </label>
-          </div>
-        </section>
-
-        <section className="app-panel">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Change Password</div>
-            </div>
+            <div className="app-panel-title">Profile</div>
           </div>
           <div className="app-panel-body grid gap-3">
-            <input aria-label="Current Password" type="password" placeholder="Current Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <input aria-label="New Password" type="password" placeholder="New Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <input aria-label="Confirm Password" type="password" placeholder="Confirm Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <input type="text" placeholder="Display Name" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <textarea placeholder="Bio" className="h-24 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+          </div>
+        </section>
+
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div className="app-panel-title">Security</div>
+          </div>
+          <div className="app-panel-body grid gap-3">
+            <input type="password" placeholder="Current Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <input type="password" placeholder="New Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <input type="password" placeholder="Confirm Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
             <button onClick={() => router.push("/dashboard")} className="app-button primary w-fit" type="button">
               Save
             </button>

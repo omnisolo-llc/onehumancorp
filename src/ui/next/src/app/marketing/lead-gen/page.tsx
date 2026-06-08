@@ -23,7 +23,7 @@ export default function LeadGenCampaignPage() {
     try {
       // In a real app, we would make a gRPC/REST call here
       // We will create the API route next
-      const res = await fetch('/api/v1/growth/campaign/lead-gen', {
+      const res = await fetch('/api/marketing/lead-gen', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
