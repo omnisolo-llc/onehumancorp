@@ -192,9 +192,51 @@ pub struct IpcBus {
 impl IpcBus {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-        let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
-        let options = options.create_if_missing(true);
-        let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
+        let mut options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
+        options = options.create_if_missing(true);
+
+        // Enforce SQLCipher if we are running locally (unless explicitly disabled or in-memory without key)
+        let key = if let Some(k) = db_url.split("key=").nth(1) {
+            k.split('&').next().unwrap_or("").to_string()
+        } else {
+            std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| "".to_string())
+        };
+
+        if !key.is_empty() {
+            let pragma_key = format!("'{}'", key.replace(''', "''"));
+            options = options.pragma("key", pragma_key);
+            options = options.pragma("cipher", "'sqlcipher'");
+        }
+
+        let pool = SqlitePoolOptions::new()
+            .after_connect(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("PRAGMA secure_delete = ON").await?;
+                    conn.execute("PRAGMA foreign_keys = ON").await?;
+                    Ok(())
+                })
+            })
+            .connect_with(options).await.map_err(|e| e.to_string())?;
+
+        // Harden SQLite database file permissions (if it's a real file)
+        let path_str = db_url.replace("sqlite://", "").replace("sqlite:", "");
+        let path_str = path_str.split('?').next().unwrap_or(path_str.as_str());
+        if !path_str.starts_with(":memory:") && !path_str.starts_with("memory:") && !path_str.is_empty() {
+            let path = std::path::Path::new(&path_str);
+            if path.exists() {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        let mut perms = metadata.permissions();
+                        perms.set_mode(0o600);
+                        let _ = std::fs::set_permissions(&path, perms);
+                    }
+                }
+            }
+        }
+
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS bus_checkpoints (
