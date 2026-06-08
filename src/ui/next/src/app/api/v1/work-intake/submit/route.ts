@@ -10,7 +10,20 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const tenant = searchParams.get('tenant') || 'my-business';
 
-    // In a real application, we would save this to the database
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || 'http://localhost:8000';
+    try {
+        await fetch(`${apiBase}/api/agents/webhook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tenant_id: tenant,
+                message: `I need a quote. ${details}`,
+                source: 'work-intake'
+            })
+        });
+    } catch (err) {
+        console.error('Failed to trigger webhook for work-intake:', err);
+    }
 
     const html = `
     <!DOCTYPE html>

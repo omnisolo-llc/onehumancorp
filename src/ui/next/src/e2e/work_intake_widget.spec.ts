@@ -84,4 +84,51 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         expect(submitHtml).toContain('Powered by');
         expect(submitHtml).toContain('OHC');
     });
+
+    test('filling the intake form creates a drafted proposal in the agent feed', async ({ page, request }) => {
+        // Mock window alert for OAuth connect if any
+        page.on('dialog', dialog => dialog.accept());
+
+        // We use the request context to simulate the external user submitting the form to the webhook
+        const submitResponse = await request.post('/api/v1/work-intake/submit?tenant=my-business', {
+           data: {
+             name: 'Nora Client',
+             email: 'client@example.com',
+             details: 'ACME Corp Branding. Need a logo refresh and a 3-page site.'
+           },
+           headers: {
+             'Content-Type': 'application/x-www-form-urlencoded'
+           }
+        });
+        expect(submitResponse.ok()).toBeTruthy();
+
+        // Now Nora logs in and checks her feed
+        await page.goto('/login');
+        await page.getByPlaceholder('Email or Username').fill('test@example.com');
+        await page.getByPlaceholder('Password').fill('password123');
+        await page.getByRole('button', { name: 'Log In' }).click();
+
+        await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
+
+        // The Unified Agent Feed should now show the new proposal draft
+        await expect(page.getByText('Proposals (1)')).toBeVisible({ timeout: 15000 });
+
+        const proposalCard = page.locator('div').filter({ hasText: 'Draft quote for ACME Corp Branding' }).first();
+        await expect(proposalCard).toBeVisible();
+
+        // Assert scope and price are present
+        await expect(proposalCard.locator('text=Request:')).toBeVisible();
+        await expect(proposalCard.locator('text=ACME Corp Branding')).toBeVisible();
+        await expect(proposalCard.locator('text=Scope:')).toBeVisible();
+        await expect(proposalCard.locator('text=Price:')).toBeVisible();
+
+        // Approve it
+        const approveBtn = proposalCard.getByTestId('approve-proposal');
+        await expect(approveBtn).toBeVisible();
+        await approveBtn.click();
+
+        // Wait for it to disappear from the Proposals feed (or change to 0)
+        await expect(page.getByText('Proposals (0)')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText('All caught up!')).toBeVisible();
+    });
 });
