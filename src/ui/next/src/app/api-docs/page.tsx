@@ -25,9 +25,9 @@ export default function ApiDocsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[20px] saturate-200 font-inter">
-      <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
-        <div className="text-yellow-700 text-sm">
+    <div className="min-h-screen bg-[#F5F5F7]/80 p-4 md:p-8 backdrop-blur-[20px] saturate-200 font-inter">
+      <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-3 md:p-4 mb-8 rounded-r-xl rounded-xl shadow-sm font-inter">
+        <div className="text-yellow-700 text-xs md:text-sm">
           <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
             <span className="font-outfit cursor-help font-bold">Advanced:</span>
           </WithTooltip>{" "}This section is for developers directly integrating with our APIs. Not required for normal use.
@@ -39,7 +39,7 @@ export default function ApiDocsPage() {
         </div>
       )}
       {mounted && !loading && spec && (
-        <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40">
+        <div className="backdrop-blur-[30px] saturate-[210%] bg-white/65 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-2xl dark:bg-[#16161a]/70 dark:border-white/10 p-4 md:p-6 w-full max-w-full overflow-hidden">
           <SwaggerUI spec={spec} />
         </div>
       )}
