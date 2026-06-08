@@ -387,16 +387,14 @@ pub async fn commit_inventory_handler(
                     let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                         .bind(job_id).bind(&tenant_id).bind(&job_payload).execute(&mut *tx).await;
 
-                    let approval_id = uuid::Uuid::new_v4().to_string();
-                    let approval_payload = serde_json::json!({
-                        "feature_type": "low_stock_restock",
+                    let action_request_id = uuid::Uuid::new_v4().to_string();
+                    let payload = serde_json::json!({
                         "product_id": req_data.product_id,
                         "remaining_stock": new_stock,
                         "suggested_action": "Restock Item"
                     }).to_string();
-                    let description = format!("Inventory for {} is low ({} remaining). Draft a restock order.", req_data.product_id, new_stock);
-                    let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'operations', $3, 'DRAFT', 'LOW', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                        .bind(&approval_id).bind(&tenant_id).bind(&description).bind(&approval_payload).execute(&mut *tx).await;
+                    let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&action_request_id).bind(&tenant_id).bind(&req_data.product_id).bind(&payload).execute(&mut *tx).await;
                 }
 
                 let _ = tx.commit().await;
@@ -662,5 +660,51 @@ pub async fn create_payment_intent_handler(
             Err(e) => Json(Err(e)),
         },
         Err(e) => Json(Err(e)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+        // tests go here
+    use sqlx::postgres::PgPoolOptions;
+
+    #[tokio::test]
+    async fn test_commit_inventory_low_stock() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-terminal-test-low";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-test-2', $1, 'Test Prod Terminal', 6) ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let req_data = axum::extract::Json(CommitInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: "prod-terminal-test-2".to_string(),
+            quantity: 2,
+            lock_id: "".to_string(),
+        });
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let _resp = commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        // Verify action request count
+        let action_request_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE tenant_id = $1 AND product_id = 'prod-terminal-test-2' AND action_type = 'Reorder'")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
+        assert!(action_request_count.0 > 0);
     }
 }
