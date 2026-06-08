@@ -24,6 +24,8 @@ export function UnifiedAgentFeed() {
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<ApprovalRequest[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [completedTask, setCompletedTask] = useState<string | null>(null);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -95,8 +97,15 @@ export function UnifiedAgentFeed() {
   }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
-    // Optimistic UI update
-    setApprovals(prev => prev.filter(app => app.id !== id));
+    if (approved) {
+      setCompletedTask(id);
+      setTimeout(() => {
+        setCompletedTask(null);
+        setApprovals(prev => prev.filter(app => app.id !== id));
+      }, 1500);
+    } else {
+      setApprovals(prev => prev.filter(app => app.id !== id));
+    }
 
     try {
       const tenant = tenantId();
@@ -141,7 +150,7 @@ export function UnifiedAgentFeed() {
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
-          className={`flex-1 py-3 text-center text-sm font-semibold transition-colors ${
+          className={`flex-1 min-h-[44px] py-3 text-center text-sm font-semibold transition-colors ${
             activeTab === "proposals"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -151,7 +160,7 @@ export function UnifiedAgentFeed() {
         </button>
         <button
           onClick={() => setActiveTab("activity")}
-          className={`flex-1 py-3 text-center text-sm font-semibold transition-colors ${
+          className={`flex-1 min-h-[44px] py-3 text-center text-sm font-semibold transition-colors ${
             activeTab === "activity"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -178,10 +187,26 @@ export function UnifiedAgentFeed() {
                 </p>
               </div>
             )}
-            {approvals.map((approval) => (
+            {approvals.map((approval) => {
+              const isExpanded = expandedCard === approval.id;
+              const isCompleted = completedTask === approval.id;
+
+              if (isCompleted) {
+                return (
+                  <div key={approval.id} className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4 items-center justify-center min-h-[150px] transition-all duration-500 ease-in-out opacity-0 translate-y-4 animate-[fade-in_0.3s_ease-out_forwards]">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">Task Completed!</span>
+                  </div>
+                )
+              }
+
+              return (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className={`glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4 transition-all duration-300 ease-in-out ${isExpanded ? 'scale-[1.02] bg-white/80 dark:bg-[#16161a]/90 backdrop-blur-[40px]' : ''}`}
+                onClick={() => !isExpanded && setExpandedCard(approval.id)}
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -197,8 +222,8 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {approval.payload?.context && (
-                    <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  {approval.payload?.context && isExpanded && (
+                    <div className="mt-2 flex flex-col gap-1 p-4 bg-gray-50/50 dark:bg-gray-800/30 rounded-lg border border-gray-100 dark:border-gray-700 animate-[fade-in_0.2s_ease-out_forwards]">
                       {approval.payload.context.smart_pricing === true ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
@@ -297,33 +322,35 @@ export function UnifiedAgentFeed() {
                   ) : (
                     <>
                       <button
-                        onClick={() => handleDecision(approval.id, true)}
+                        onClick={(e) => { e.stopPropagation(); handleDecision(approval.id, true); }}
                         className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
                         aria-label="Approve proposal"
                       >
                         Approve
                       </button>
-                      <div className="flex gap-3 w-full">
-                        <button
-                          onClick={() => {}}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                          aria-label="Edit proposal"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                          aria-label="Reject proposal"
-                        >
-                          Decline
-                        </button>
-                      </div>
+                      {isExpanded && (
+                        <div className="flex gap-3 w-full">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); }}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            aria-label="Edit proposal"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDecision(approval.id, false); }}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            aria-label="Reject proposal"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
               </div>
-            ))}
+            )})}
           </>
         )}
 
