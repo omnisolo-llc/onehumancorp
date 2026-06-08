@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use futures::future::join_all;
+use ohc_builtin_agent_core::types::{ChatRequest, Message};
+use std::sync::Arc;
 
 /// GPT Researcher Unique Harness Innovations: Planner + execution agent
 /// Planner generates a research outline (a list of sub-topics or tasks).
@@ -8,7 +8,10 @@ use futures::future::join_all;
 
 #[async_trait::async_trait]
 pub trait ResearcherLlmClient: Send + Sync {
-    async fn chat(&self, req: ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
+    async fn chat(
+        &self,
+        req: ChatRequest,
+    ) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 pub struct PlannerAgent {
@@ -37,11 +40,18 @@ impl PlannerAgent {
         match self.llm.chat(req).await {
             Ok(resp) => {
                 let text = resp.message.content.trim();
-                let clean_text = text.trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                let clean_text = text
+                    .trim_start_matches("```json")
+                    .trim_start_matches("```")
+                    .trim_end_matches("```")
+                    .trim();
 
                 match serde_json::from_str::<Vec<String>>(clean_text) {
                     Ok(tasks) => Ok(tasks),
-                    Err(e) => Err(format!("Failed to parse planner output as JSON array: {}. Output: {}", e, clean_text)),
+                    Err(e) => Err(format!(
+                        "Failed to parse planner output as JSON array: {}. Output: {}",
+                        e, clean_text
+                    )),
                 }
             }
             Err(e) => Err(format!("Planner LLM Error: {}", e)),
@@ -63,7 +73,10 @@ impl ExecutionAgent {
     pub async fn execute_task(&self, main_topic: &str, task: &str) -> Result<String, String> {
         let system_prompt = "You are a specialized research execution agent. Your goal is to write a detailed, factual, and deep section of a research report on a specific sub-topic. Provide detailed analysis and information. Do not include introductory or concluding remarks meant for the whole report, just focus on this section.";
 
-        let user_prompt = format!("Main Topic: {}\nSpecific Task/Sub-topic to research: {}", main_topic, task);
+        let user_prompt = format!(
+            "Main Topic: {}\nSpecific Task/Sub-topic to research: {}",
+            main_topic, task
+        );
 
         let req = ChatRequest {
             model: self.model.clone(),
@@ -75,9 +88,7 @@ impl ExecutionAgent {
         };
 
         match self.llm.chat(req).await {
-            Ok(resp) => {
-                Ok(resp.message.content)
-            }
+            Ok(resp) => Ok(resp.message.content),
             Err(e) => Err(format!("Execution LLM Error: {}", e)),
         }
     }
@@ -111,9 +122,7 @@ impl GptResearcherManager {
             let topic_clone = topic.to_string();
             let executor_clone = self.executor.clone();
 
-            let fut = async move {
-                executor_clone.execute_task(&topic_clone, &task_clone).await
-            };
+            let fut = async move { executor_clone.execute_task(&topic_clone, &task_clone).await };
             futures.push(fut);
         }
 
@@ -143,8 +152,8 @@ impl GptResearcherManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
     use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+    use std::sync::Mutex;
 
     struct MockResearcherLlm {
         responses: Mutex<Vec<String>>,
@@ -152,7 +161,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ResearcherLlmClient for MockResearcherLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().unwrap();
             let content = if !resps.is_empty() {
                 resps.remove(0)
@@ -172,9 +184,7 @@ mod tests {
     #[tokio::test]
     async fn test_gpt_researcher_flow() {
         let planner_llm = Arc::new(MockResearcherLlm {
-            responses: Mutex::new(vec![
-                r#"["Sub-topic 1", "Sub-topic 2"]"#.to_string(),
-            ]),
+            responses: Mutex::new(vec![r#"["Sub-topic 1", "Sub-topic 2"]"#.to_string()]),
         });
         let planner = Arc::new(PlannerAgent::new(planner_llm, "test-model".to_string()));
 
@@ -197,6 +207,9 @@ mod tests {
         // but here join_all will just resolve them in order of task list since we sequentially created the futures.
         // Actually, join_all preserves order of futures array. However, the order of calling `chat` might be non-deterministic due to async execution,
         // so we just check that both details are in the report.
-        assert!(report.contains("Details for Sub-topic 1") || report.contains("Details for Sub-topic 2"));
+        assert!(
+            report.contains("Details for Sub-topic 1")
+                || report.contains("Details for Sub-topic 2")
+        );
     }
 }

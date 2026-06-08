@@ -1,7 +1,7 @@
 /// Master Catalog B.3. Memory
 use crate::memory_store::LongTermMemory;
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use async_trait::async_trait;
+use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
 /// Memory: Short-term, Long-term (SQLite/Redis), Long-term (Anthropic 3-Tier)
 /// A SQLite-backed LongTermMemory implementation for the agent harness.
@@ -18,7 +18,10 @@ impl std::fmt::Debug for SqliteMemoryStore {
 }
 
 impl SqliteMemoryStore {
-    pub async fn new(db_url: &str, llm: std::sync::Arc<dyn crate::llm::LlmClient>) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn new(
+        db_url: &str,
+        llm: std::sync::Arc<dyn crate::llm::LlmClient>,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
             .connect(db_url)
@@ -30,7 +33,7 @@ impl SqliteMemoryStore {
                 content,
                 tags,
                 created_at UNINDEXED
-            )"
+            )",
         )
         .execute(&pool)
         .await?;
@@ -42,7 +45,26 @@ impl SqliteMemoryStore {
                 role UNINDEXED,
                 content,
                 timestamp UNINDEXED
-            )"
+            )",
+        )
+        .execute(&pool)
+        .await?;
+
+        // Anthropic 3-Tier Memory Tables
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS anthropic_index_kv (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )",
+        )
+        .execute(&pool)
+        .await?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS anthropic_topics (
+                topic_name TEXT PRIMARY KEY,
+                content TEXT
+            )",
         )
         .execute(&pool)
         .await?;
@@ -51,7 +73,12 @@ impl SqliteMemoryStore {
     }
 
     /// Stores a raw message into the session search FTS5 table
-    pub async fn store_session_message(&self, session_id: &str, role: &str, content: &str) -> Result<(), String> {
+    pub async fn store_session_message(
+        &self,
+        session_id: &str,
+        role: &str,
+        content: &str,
+    ) -> Result<(), String> {
         let timestamp = chrono::Utc::now().timestamp();
         sqlx::query("INSERT INTO session_messages_fts (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)")
             .bind(session_id)
@@ -61,11 +88,18 @@ impl SqliteMemoryStore {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 
     /// Searches session messages using FTS5 MATCH, returning ranked snippets, and optionally summarizing them using the LLM.
-    pub async fn search_session_messages(&self, session_id: &str, query: &str, limit: usize, summarize: bool) -> Result<Vec<String>, String> {
+    pub async fn search_session_messages(
+        &self,
+        session_id: &str,
+        query: &str,
+        limit: usize,
+        summarize: bool,
+    ) -> Result<Vec<String>, String> {
         let search_pattern = format!("\"{}\"", query);
         // Using SQLite FTS5 snippet function to highlight matches
         let rows = sqlx::query_as::<_, (String,)>("SELECT snippet(session_messages_fts, -1, '[', ']', '...', 64) FROM session_messages_fts WHERE session_id = ? AND session_messages_fts MATCH ? ORDER BY rank LIMIT ?")
@@ -103,7 +137,10 @@ impl SqliteMemoryStore {
                 Ok(vec![format!("Session Search Summary:\n{}", summary)])
             }
             Err(e) => {
-                tracing::warn!("Failed to summarize session messages via LLM, returning raw snippets: {}", e);
+                tracing::warn!(
+                    "Failed to summarize session messages via LLM, returning raw snippets: {}",
+                    e
+                );
                 Ok(raw_results)
             }
         }
@@ -120,18 +157,40 @@ impl LongTermMemory for SqliteMemoryStore {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        // Append to the lightweight index
+        let mut existing_index = self.get_lightweight_index().await?;
+
+        let truncated_content = if content.len() > 150 {
+            format!("{}...", &content[..147])
+        } else {
+            content.to_string()
+        };
+
+        let tags_str = if tags.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", tags.join(", "))
+        };
+        let new_entry = format!("- {}{}\n", truncated_content.replace('\n', " "), tags_str);
+
+        existing_index.push_str(&new_entry);
+        self.update_index(&existing_index).await?;
+
         Ok(())
     }
 
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         // FTS5 session search for long term memory retrieval
         let search_pattern = format!("\"{}\"", query);
-        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?")
-            .bind(search_pattern)
-            .bind(limit as i64)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let rows = sqlx::query_as::<_, (String,)>(
+            "SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?",
+        )
+        .bind(search_pattern)
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         let raw_results: Vec<String> = rows.into_iter().map(|r| r.0).collect();
 
@@ -161,22 +220,109 @@ impl LongTermMemory for SqliteMemoryStore {
                 Ok(vec![format!("Cross-Session Recall Summary:\n{}", summary)])
             }
             Err(e) => {
-                tracing::warn!("Failed to summarize FTS5 results via LLM, returning raw: {}", e);
+                tracing::warn!(
+                    "Failed to summarize FTS5 results via LLM, returning raw: {}",
+                    e
+                );
                 Ok(raw_results)
             }
         }
     }
 
-    async fn store_session_message(&self, session_id: &str, role: &str, content: &str) -> Result<(), String> {
+    async fn store_session_message(
+        &self,
+        session_id: &str,
+        role: &str,
+        content: &str,
+    ) -> Result<(), String> {
         self.store_session_message(session_id, role, content).await
     }
 
-    async fn search_session_messages(&self, session_id: &str, query: &str, limit: usize, summarize: bool) -> Result<Vec<String>, String> {
-        self.search_session_messages(session_id, query, limit, summarize).await
+    async fn search_session_messages(
+        &self,
+        session_id: &str,
+        query: &str,
+        limit: usize,
+        summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        self.search_session_messages(session_id, query, limit, summarize)
+            .await
     }
 
-    fn as_anthropic_accessor(&self) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
-        None
+    async fn get_lightweight_index(&self) -> Result<String, String> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT value FROM anthropic_index_kv WHERE key = 'index'")
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+        Ok(row.map(|r| r.0).unwrap_or_default())
+    }
+
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT content FROM anthropic_topics WHERE topic_name = ?")
+                .bind(&safe_name)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+        row.map(|r| r.0)
+            .ok_or_else(|| format!("Topic '{}' not found", safe_name))
+    }
+
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let search_pattern = format!("\"{}\"", query);
+        let rows = sqlx::query_as::<_, (String,)>("SELECT snippet(session_messages_fts, -1, '[', ']', '...', 64) FROM session_messages_fts WHERE session_messages_fts MATCH ? ORDER BY rank LIMIT ?")
+            .bind(&search_pattern)
+            .bind(limit as i64)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    fn as_anthropic_accessor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
+        Some(std::sync::Arc::new(self.clone()))
+    }
+}
+
+impl SqliteMemoryStore {
+    pub async fn update_index(&self, content: &str) -> Result<(), String> {
+        sqlx::query("INSERT INTO anthropic_index_kv (key, value) VALUES ('index', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+            .bind(content)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        sqlx::query("INSERT INTO anthropic_topics (topic_name, content) VALUES (?, ?) ON CONFLICT(topic_name) DO UPDATE SET content = excluded.content")
+            .bind(&safe_name)
+            .bind(content)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        LongTermMemory::retrieve_topic(self, topic_name).await
+    }
+
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        LongTermMemory::search_transcripts(self, query, limit).await
     }
 }
 
@@ -186,13 +332,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_memory_store() {
-        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        use crate::types::{ChatRequest, ChatResponse, Message, Usage};
         use std::sync::Arc;
 
         struct MockLlm;
         #[async_trait::async_trait]
         impl crate::llm::LlmClient for MockLlm {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant("Summarized cross-session recall"),
                     usage: Usage::default(),
@@ -200,15 +349,26 @@ mod tests {
                     response_id: None,
                 })
             }
-            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![])
             }
         }
         let llm = Arc::new(MockLlm);
-        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm)
+            .await
+            .unwrap();
 
-        store.store("The secret code is 42", vec!["secret".to_string()]).await.unwrap();
-        store.store("The weather is sunny", vec!["weather".to_string()]).await.unwrap();
+        store
+            .store("The secret code is 42", vec!["secret".to_string()])
+            .await
+            .unwrap();
+        store
+            .store("The weather is sunny", vec!["weather".to_string()])
+            .await
+            .unwrap();
 
         let results = store.retrieve("secret", 10).await.unwrap();
         assert_eq!(results.len(), 1);
@@ -217,13 +377,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_session_messages_fts() {
-        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        use crate::types::{ChatRequest, ChatResponse, Message, Usage};
         use std::sync::Arc;
 
         struct MockLlm;
         #[async_trait::async_trait]
         impl crate::llm::LlmClient for MockLlm {
-            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant("Summarized session context regarding plans"),
                     usage: Usage::default(),
@@ -231,26 +394,132 @@ mod tests {
                     response_id: None,
                 })
             }
-            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![])
             }
         }
         let llm = Arc::new(MockLlm);
-        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm)
+            .await
+            .unwrap();
 
         let session_id = "session_123";
-        store.store_session_message(session_id, "user", "I need help planning my Q3 roadmap. We will launch 2 new features.").await.unwrap();
-        store.store_session_message(session_id, "assistant", "Sure, what are the features? I can help structure the plan.").await.unwrap();
-        store.store_session_message("other_session", "user", "Unrelated planning info").await.unwrap();
+        store
+            .store_session_message(
+                session_id,
+                "user",
+                "I need help planning my Q3 roadmap. We will launch 2 new features.",
+            )
+            .await
+            .unwrap();
+        store
+            .store_session_message(
+                session_id,
+                "assistant",
+                "Sure, what are the features? I can help structure the plan.",
+            )
+            .await
+            .unwrap();
+        store
+            .store_session_message("other_session", "user", "Unrelated planning info")
+            .await
+            .unwrap();
 
         // Test raw snippets (no summarization)
-        let raw_snippets = store.search_session_messages(session_id, "planning", 5, false).await.unwrap();
+        let raw_snippets = store
+            .search_session_messages(session_id, "planning", 5, false)
+            .await
+            .unwrap();
         assert_eq!(raw_snippets.len(), 1);
         assert!(raw_snippets[0].contains("[planning]")); // Snippet highlights
 
         // Test summarized results
-        let summarized = store.search_session_messages(session_id, "planning", 5, true).await.unwrap();
+        let summarized = store
+            .search_session_messages(session_id, "planning", 5, true)
+            .await
+            .unwrap();
         assert_eq!(summarized.len(), 1);
         assert!(summarized[0].contains("Summarized session context regarding plans"));
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_3_tier_memory() {
+        use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+        use std::sync::Arc;
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockLlm {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message::assistant("Summarized"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![])
+            }
+        }
+        let llm = Arc::new(MockLlm);
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm)
+            .await
+            .unwrap();
+
+        // 1. Test lightweight index and `store` mechanic
+        store
+            .store(
+                "The architectural decision is to use Glassmorphism.",
+                vec!["ui".to_string(), "design".to_string()],
+            )
+            .await
+            .unwrap();
+        let index = store.get_lightweight_index().await.unwrap();
+        assert!(index.contains("Glassmorphism"));
+        assert!(index.contains("[ui, design]"));
+
+        // 2. Test topics
+        store
+            .write_topic(
+                "system_architecture",
+                "Detailed DB schema information here.",
+            )
+            .await
+            .unwrap();
+        let topic_content = store.retrieve_topic("system_architecture").await.unwrap();
+        assert_eq!(topic_content, "Detailed DB schema information here.");
+        assert!(store.retrieve_topic("nonexistent").await.is_err());
+
+        // 3. Test transcripts
+        store
+            .store_session_message(
+                "session_999",
+                "user",
+                "How do I configure the memory store?",
+            )
+            .await
+            .unwrap();
+        store
+            .store_session_message(
+                "session_999",
+                "assistant",
+                "You use the 3-Tier Anthropic Memory store.",
+            )
+            .await
+            .unwrap();
+
+        let transcripts = store.search_transcripts("Anthropic", 5).await.unwrap();
+        assert_eq!(transcripts.len(), 1);
+        assert!(transcripts[0].contains("[Anthropic]")); // highlighting from FTS snippet
     }
 }

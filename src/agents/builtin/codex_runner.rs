@@ -2,7 +2,6 @@ use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
-
 /// OpenAI Codex & Agents SDK Archetype:
 /// Uses a `Runner` class with async, sync, and streamed modes.
 /// Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.
@@ -15,17 +14,26 @@ pub struct CodexCore {
 
 impl CodexCore {
     pub fn new(agent: Arc<Agent>, runtime_config: AgentRunConfig) -> Self {
-        Self { agent, runtime_config }
+        Self {
+            agent,
+            runtime_config,
+        }
     }
 
-    pub async fn execute(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn execute(
+        &self,
+        message: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut total_cost = 0.0;
         let mut on_event = |e: AgentEvent| {
             if let AgentEvent::CostUpdate { total_cost_usd } = e {
                 total_cost = total_cost_usd;
             }
         };
-        let res = self.agent.run(&self.runtime_config, message, &mut on_event).await;
+        let res = self
+            .agent
+            .run(&self.runtime_config, message, &mut on_event)
+            .await;
         tracing::info!("Session Total Cost: ${:.6}", total_cost);
         res
     }
@@ -45,26 +53,28 @@ impl Runner {
         Self { core }
     }
 
-    pub async fn run_async(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run_async(
+        &self,
+        message: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         self.core.execute(message).await
     }
 
-    pub fn run_sync_blocking(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn run_sync_blocking(
+        &self,
+        message: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let core = self.core.clone();
         let msg = message.to_string();
 
         let handle = tokio::runtime::Handle::try_current();
         if let Ok(rt) = handle {
             tokio::task::block_in_place(move || {
-                rt.block_on(async move {
-                    core.execute(&msg).await
-                })
+                rt.block_on(async move { core.execute(&msg).await })
             })
         } else {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async move {
-                core.execute(&msg).await
-            })
+            rt.block_on(async move { core.execute(&msg).await })
         }
     }
 
@@ -78,12 +88,20 @@ impl Runner {
             let mut on_event = move |event: AgentEvent| {
                 let _ = tx_clone.try_send(event);
             };
-            match core.agent.run(&core.runtime_config, &msg, &mut on_event).await {
+            match core
+                .agent
+                .run(&core.runtime_config, &msg, &mut on_event)
+                .await
+            {
                 Ok(result) => {
                     let _ = tx.send(AgentEvent::TaskComplete { content: result }).await;
                 }
                 Err(e) => {
-                    let _ = tx.send(AgentEvent::TaskError { error: e.to_string() }).await;
+                    let _ = tx
+                        .send(AgentEvent::TaskError {
+                            error: e.to_string(),
+                        })
+                        .await;
                 }
             }
         });
@@ -138,7 +156,10 @@ impl AppServer {
                     jsonrpc: "2.0".to_string(),
                     id: None,
                     result: None,
-                    error: Some(JsonRpcError { code: -32700, message: "Parse error".to_string() }),
+                    error: Some(JsonRpcError {
+                        code: -32700,
+                        message: "Parse error".to_string(),
+                    }),
                     meta: None,
                 };
                 return serde_json::to_string(&err_resp).unwrap();
@@ -151,7 +172,12 @@ impl AppServer {
         // Let's modify `run_agent` to surface cost in the JSON RPC response.
 
         if req.method == "run_expert_team" {
-            let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let initial_message = req
+                .params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
 
             struct LlmClientAdapter {
                 inner: Arc<dyn crate::llm::LlmClient>,
@@ -159,44 +185,112 @@ impl AppServer {
 
             #[async_trait::async_trait]
             impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for LlmClientAdapter {
-                async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                async fn chat(
+                    &self,
+                    req: ohc_builtin_agent_core::types::ChatRequest,
+                ) -> Result<
+                    ohc_builtin_agent_core::types::ChatResponse,
+                    Box<dyn std::error::Error + Send + Sync>,
+                > {
                     self.inner.chat(req).await
                 }
             }
 
-            let adapter = Arc::new(LlmClientAdapter { inner: self.runner.core.agent.llm.clone() });
+            let adapter = Arc::new(LlmClientAdapter {
+                inner: self.runner.core.agent.llm.clone(),
+            });
 
             // Expert Team Implementation
             let experts = vec![
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Industry Researcher".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Financial Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Strategic Analyst".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Process Supervisor".to_string(), llm: adapter.clone() },
-                ohc_builtin_agent_core::expert_team::DomainExpert { role: "Quality Auditor".to_string(), llm: adapter.clone() },
+                ohc_builtin_agent_core::expert_team::DomainExpert {
+                    role: "Industry Researcher".to_string(),
+                    llm: adapter.clone(),
+                },
+                ohc_builtin_agent_core::expert_team::DomainExpert {
+                    role: "Financial Analyst".to_string(),
+                    llm: adapter.clone(),
+                },
+                ohc_builtin_agent_core::expert_team::DomainExpert {
+                    role: "Strategic Analyst".to_string(),
+                    llm: adapter.clone(),
+                },
+                ohc_builtin_agent_core::expert_team::DomainExpert {
+                    role: "Process Supervisor".to_string(),
+                    llm: adapter.clone(),
+                },
+                ohc_builtin_agent_core::expert_team::DomainExpert {
+                    role: "Quality Auditor".to_string(),
+                    llm: adapter.clone(),
+                },
             ];
 
-            let manager = ohc_builtin_agent_core::expert_team::ExpertTeamManager::new("Project Director", experts);
+            let manager = ohc_builtin_agent_core::expert_team::ExpertTeamManager::new(
+                "Project Director",
+                experts,
+            );
 
             // Gate 1: Pre-flight
-            if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(&manager, &initial_message) {
-                let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
+            if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(
+                &manager,
+                &initial_message,
+            ) {
+                let resp = JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id,
+                    result: None,
+                    error: Some(JsonRpcError {
+                        code: -32000,
+                        message: e,
+                    }),
+                    meta: None,
+                };
                 return serde_json::to_string(&resp).unwrap();
             }
 
             let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
-            match manager.execute_parallel_tasks(&initial_message, &mut trace).await {
+            match manager
+                .execute_parallel_tasks(&initial_message, &mut trace)
+                .await
+            {
                 Ok(summaries) => {
                     // Gate 2: Pre-merge
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
+                    if let Err(e) =
+                        ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries)
+                    {
+                        let resp = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            id: req.id,
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32000,
+                                message: e,
+                            }),
+                            meta: None,
+                        };
                         return serde_json::to_string(&resp).unwrap();
                     }
 
-                    let final_output = format!("Combined Executive Summary:\n{}\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n{}", summaries.join("\n"), " word".repeat(20000));
+                    let final_output = format!(
+                        "Combined Executive Summary:\n{}\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n{}",
+                        summaries.join("\n"),
+                        " word".repeat(20000)
+                    );
 
                     // Gate 3: Pre-deliver
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(&final_output, &trace) {
-                        let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
+                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(
+                        &final_output,
+                        &trace,
+                    ) {
+                        let resp = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            id: req.id,
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32000,
+                                message: e,
+                            }),
+                            meta: None,
+                        };
                         return serde_json::to_string(&resp).unwrap();
                     }
 
@@ -210,12 +304,26 @@ impl AppServer {
                     serde_json::to_string(&resp).unwrap()
                 }
                 Err(e) => {
-                    let resp = JsonRpcResponse { jsonrpc: "2.0".to_string(), id: req.id, result: None, error: Some(JsonRpcError { code: -32000, message: e }), meta: None };
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: e,
+                        }),
+                        meta: None,
+                    };
                     serde_json::to_string(&resp).unwrap()
                 }
             }
         } else if req.method == "run_agent" {
-            let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let initial_message = req
+                .params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             let _cfg = AgentRunConfig::default();
 
             let mut total_cost = 0.0;
@@ -225,7 +333,17 @@ impl AppServer {
                 }
             };
 
-            match self.runner.core.agent.run(&self.runner.core.runtime_config, &initial_message, &mut on_event).await {
+            match self
+                .runner
+                .core
+                .agent
+                .run(
+                    &self.runner.core.runtime_config,
+                    &initial_message,
+                    &mut on_event,
+                )
+                .await
+            {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
@@ -241,7 +359,10 @@ impl AppServer {
                         jsonrpc: "2.0".to_string(),
                         id: req.id,
                         result: None,
-                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: e.to_string(),
+                        }),
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
                     serde_json::to_string(&resp).unwrap()
@@ -264,19 +385,23 @@ impl AppServer {
             };
             serde_json::to_string(&resp).unwrap()
         } else if req.method == "record_sona_pattern" {
-            let pattern: crate::sona_patterns::TrajectoryPattern = match serde_json::from_value(req.params.clone()) {
-                Ok(p) => p,
-                Err(e) => {
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id,
-                        result: None,
-                        error: Some(JsonRpcError { code: -32602, message: e.to_string() }),
-                        meta: None,
-                    };
-                    return serde_json::to_string(&resp).unwrap();
-                }
-            };
+            let pattern: crate::sona_patterns::TrajectoryPattern =
+                match serde_json::from_value(req.params.clone()) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        let resp = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            id: req.id,
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32602,
+                                message: e.to_string(),
+                            }),
+                            meta: None,
+                        };
+                        return serde_json::to_string(&resp).unwrap();
+                    }
+                };
             if let Some(matcher) = self.runner.core.agent.sona_matcher.as_ref() {
                 matcher.lock().await.record_pattern(pattern);
             }
@@ -289,8 +414,18 @@ impl AppServer {
             };
             serde_json::to_string(&resp).unwrap()
         } else if req.method == "run_ralph_loop" {
-            let task = req.params.get("task").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let progress_file = req.params.get("progress_file").and_then(|v| v.as_str()).unwrap_or(".ralph_progress.json").to_string();
+            let task = req
+                .params
+                .get("task")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let progress_file = req
+                .params
+                .get("progress_file")
+                .and_then(|v| v.as_str())
+                .unwrap_or(".ralph_progress.json")
+                .to_string();
 
             let ralph = crate::ralph_loop::RalphLoop::new(
                 self.runner.core.agent.clone(),
@@ -314,14 +449,22 @@ impl AppServer {
                         jsonrpc: "2.0".to_string(),
                         id: req.id,
                         result: None,
-                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: e.to_string(),
+                        }),
                         meta: None,
                     };
                     serde_json::to_string(&resp).unwrap()
                 }
             }
         } else if req.method == "get_task" {
-            let task_id = req.params.get("task_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let task_id = req
+                .params
+                .get("task_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             let status = if let Some(cp) = &self.runner.core.agent.checkpointer {
                 match cp.list_checkpoints(&task_id).await {
                     Ok(cps) => {
@@ -351,8 +494,17 @@ impl AppServer {
             };
             serde_json::to_string(&resp).unwrap()
         } else if req.method == "run_scalable_agents" {
-            let count = req.params.get("count").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
-            let message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let count = req
+                .params
+                .get("count")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1) as usize;
+            let message = req
+                .params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
 
             // Integrate the scalable multi-agent cloud orchestrator
             let mode = if count > 10 {
@@ -367,7 +519,10 @@ impl AppServer {
             }
             #[async_trait::async_trait]
             impl crate::scalable_multi_agent::AgentNode for AgentNodeAdapter {
-                async fn execute(&self, chunk: crate::scalable_multi_agent::TaskChunk) -> Result<crate::scalable_multi_agent::TaskResult, String> {
+                async fn execute(
+                    &self,
+                    chunk: crate::scalable_multi_agent::TaskChunk,
+                ) -> Result<crate::scalable_multi_agent::TaskResult, String> {
                     let _cfg = AgentRunConfig::default();
                     match self.runner.run_async(&chunk.payload).await {
                         Ok(res) => Ok(crate::scalable_multi_agent::TaskResult {
@@ -382,10 +537,13 @@ impl AppServer {
             let mut nodes: Vec<Arc<dyn crate::scalable_multi_agent::AgentNode>> = Vec::new();
             // In a real cloud setup, these nodes would be distributed endpoints. Here we mock instances.
             for _ in 0..count {
-                nodes.push(Arc::new(AgentNodeAdapter { runner: self.runner.clone() }));
+                nodes.push(Arc::new(AgentNodeAdapter {
+                    runner: self.runner.clone(),
+                }));
             }
 
-            let orchestrator = crate::scalable_multi_agent::CloudOrchestrator::new(mode, nodes, 3, 100, 60);
+            let orchestrator =
+                crate::scalable_multi_agent::CloudOrchestrator::new(mode, nodes, 3, 100, 60);
             let mut tasks = Vec::new();
             for i in 0..count {
                 tasks.push(crate::scalable_multi_agent::TaskChunk {
@@ -411,7 +569,10 @@ impl AppServer {
                         jsonrpc: "2.0".to_string(),
                         id: req.id,
                         result: None,
-                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: e.to_string(),
+                        }),
                         meta: None,
                     };
                     serde_json::to_string(&resp).unwrap()
@@ -422,7 +583,10 @@ impl AppServer {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
                 result: None,
-                error: Some(JsonRpcError { code: -32601, message: "Method not found".to_string() }),
+                error: Some(JsonRpcError {
+                    code: -32601,
+                    message: "Method not found".to_string(),
+                }),
                 meta: None,
             };
             serde_json::to_string(&resp).unwrap()
@@ -443,7 +607,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             if !resps.is_empty() {
                 Ok(resps.remove(0))
@@ -512,7 +679,9 @@ mod tests {
             events.push(event);
         }
 
-        let has_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
+        let has_complete = events
+            .iter()
+            .any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
         assert!(has_complete);
     }
 
@@ -536,7 +705,15 @@ mod tests {
         let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
         assert_eq!(resp.id.unwrap(), serde_json::json!("1"));
         assert!(resp.error.is_none());
-        assert_eq!(resp.result.unwrap().get("output").unwrap().as_str().unwrap(), "rpc success");
+        assert_eq!(
+            resp.result
+                .unwrap()
+                .get("output")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "rpc success"
+        );
         assert!(resp.meta.unwrap().get("total_cost_usd").is_some());
 
         // Test run_scalable_agents method
@@ -544,7 +721,14 @@ mod tests {
         let resp_json_scalable = app_server.handle_request(req_json_scalable).await;
         let resp_scalable: JsonRpcResponse = serde_json::from_str(&resp_json_scalable).unwrap();
         assert!(resp_scalable.error.is_none());
-        let outputs = resp_scalable.result.unwrap().get("outputs").unwrap().as_array().unwrap().clone();
+        let outputs = resp_scalable
+            .result
+            .unwrap()
+            .get("outputs")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .clone();
         assert_eq!(outputs.len(), 2);
         assert_eq!(outputs[0].as_str().unwrap(), "default output");
         assert_eq!(outputs[1].as_str().unwrap(), "default output");
@@ -554,12 +738,19 @@ mod tests {
         let resp_json_ralph = app_server.handle_request(req_json_ralph).await;
         let resp_ralph: JsonRpcResponse = serde_json::from_str(&resp_json_ralph).unwrap();
         assert!(resp_ralph.error.is_none());
-        assert_eq!(resp_ralph.result.unwrap().get("status").unwrap().as_str().unwrap(), "success");
+        assert_eq!(
+            resp_ralph
+                .result
+                .unwrap()
+                .get("status")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "success"
+        );
 
         // Clean up test file if it exists
         let _ = std::fs::remove_file(".test_ralph_progress.json");
-
-
 
         // Test SONA endpoints
         let record_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "record_sona_pattern", "params": { "id": "p1", "initial_context": "ctx", "successful_tools": ["bash"], "outcome_score": 1.0 }}"#;
@@ -568,7 +759,8 @@ mod tests {
         assert!(resp.error.is_none());
 
         // Get patterns
-        let get_req = r#"{"jsonrpc": "2.0", "id": "2", "method": "get_sona_patterns", "params": {}}"#;
+        let get_req =
+            r#"{"jsonrpc": "2.0", "id": "2", "method": "get_sona_patterns", "params": {}}"#;
         let get_resp = app_server.handle_request(get_req).await;
         let resp2: JsonRpcResponse = serde_json::from_str(&get_resp).unwrap();
         assert!(resp2.error.is_none());
@@ -579,7 +771,17 @@ mod tests {
         let resp_get: JsonRpcResponse = serde_json::from_str(&resp_json_get).unwrap();
         assert!(resp_get.error.is_none());
 
-        assert!(resp_get.result.as_ref().unwrap().get("input").unwrap().as_str().unwrap().contains("Task state: Created or Not Found"));
+        assert!(
+            resp_get
+                .result
+                .as_ref()
+                .unwrap()
+                .get("input")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .contains("Task state: Created or Not Found")
+        );
 
         // Test unknown method
         let req_json_bad = r#"{"jsonrpc": "2.0", "id": "4", "method": "unknown", "params": {}}"#;

@@ -1,7 +1,7 @@
-/// Master Catalog B.5. Prompt Construction
-use std::fmt::Write;
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
+/// Master Catalog B.5. Prompt Construction
+use std::fmt::Write;
 
 pub struct PromptBuilder;
 
@@ -25,24 +25,40 @@ impl PromptBuilder {
                 let mut reminder_text = format!(
                     "[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}]{}",
                     core_objective,
-                    if recent_errors.is_empty() { String::new() } else { format!(" | Recent Tool Errors: {}", recent_errors) }
+                    if recent_errors.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" | Recent Tool Errors: {}", recent_errors)
+                    }
                 );
 
                 if !developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("\n\n[Developer Instructions Reminder: {}]", developer_instructions));
+                    reminder_text.push_str(&format!(
+                        "\n\n[Developer Instructions Reminder: {}]",
+                        developer_instructions
+                    ));
                 }
 
                 final_messages.push(Message::user(reminder_text));
             } else if !developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[Developer Instructions Reminder: {}]", developer_instructions)));
+                final_messages.push(Message::user(format!(
+                    "[Developer Instructions Reminder: {}]",
+                    developer_instructions
+                )));
             }
         } else if !developer_instructions.is_empty() {
-            final_messages.push(Message::user(format!("[Developer Instructions Reminder: {}]", developer_instructions)));
+            final_messages.push(Message::user(format!(
+                "[Developer Instructions Reminder: {}]",
+                developer_instructions
+            )));
         }
     }
 
     fn extract_core_objective(user_instructions: &str) -> String {
-        let first_paragraph = user_instructions.split("\n\n").next().unwrap_or(user_instructions);
+        let first_paragraph = user_instructions
+            .split("\n\n")
+            .next()
+            .unwrap_or(user_instructions);
         if first_paragraph.len() > 1000 {
             let mut end_idx = 997;
             while end_idx > 0 && !first_paragraph.is_char_boundary(end_idx) {
@@ -58,7 +74,8 @@ impl PromptBuilder {
         let mut error_summary = String::new();
         // Look at the last 5 messages for tool errors
         for msg in messages.iter().rev().take(5) {
-            if msg.role == crate::types::Role::User && msg.content.to_lowercase().contains("error") {
+            if msg.role == crate::types::Role::User && msg.content.to_lowercase().contains("error")
+            {
                 if !error_summary.is_empty() {
                     error_summary.push_str(", ");
                 }
@@ -77,7 +94,6 @@ impl PromptBuilder {
         error_summary
     }
 }
-
 
 /// 4. User Instructions (capped at 32 KiB)
 pub struct HierarchicalPromptBuilder {
@@ -212,7 +228,11 @@ mod tests {
         let last_msg = &messages[4];
         assert_eq!(last_msg.role, Role::User);
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Build a web server.]"));
-        assert!(last_msg.content.contains("[Developer Instructions Reminder: Use Rust and be efficient.]"));
+        assert!(
+            last_msg
+                .content
+                .contains("[Developer Instructions Reminder: Use Rust and be efficient.]")
+        );
     }
 
     #[test]
@@ -224,22 +244,19 @@ mod tests {
             Message::assistant("Message 4"),
         ];
 
-        PromptBuilder::apply_lost_in_the_middle_prevention(
-            &mut messages,
-            true,
-            "",
-            "Objective",
-        );
+        PromptBuilder::apply_lost_in_the_middle_prevention(&mut messages, true, "", "Objective");
 
         let last_msg = &messages[4];
-        assert!(last_msg.content.contains("Recent Tool Errors: There was an error: file not found"));
+        assert!(
+            last_msg
+                .content
+                .contains("Recent Tool Errors: There was an error: file not found")
+        );
     }
 
     #[test]
     fn test_apply_lost_in_the_middle_prevention_short_conversation() {
-        let mut messages = vec![
-            Message::user("Message 1"),
-        ];
+        let mut messages = vec![Message::user("Message 1")];
 
         PromptBuilder::apply_lost_in_the_middle_prevention(
             &mut messages,
@@ -251,7 +268,10 @@ mod tests {
         assert_eq!(messages.len(), 2);
         let last_msg = &messages[1];
         assert_eq!(last_msg.role, Role::User);
-        assert_eq!(last_msg.content, "[Developer Instructions Reminder: Dev rules]");
+        assert_eq!(
+            last_msg.content,
+            "[Developer Instructions Reminder: Dev rules]"
+        );
     }
 
     #[test]
@@ -271,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_summarize_recent_tool_errors_char_boundary() {
-        let error_msg = "error: " .to_string() + &"A".repeat(88) + "😊"; // 7 + 88 + 4 = 99 bytes
+        let error_msg = "error: ".to_string() + &"A".repeat(88) + "😊"; // 7 + 88 + 4 = 99 bytes
         let error_msg = error_msg + "BC"; // 101 bytes
         let messages = vec![Message::user(error_msg)];
 
