@@ -6,6 +6,14 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 
 export default function CheckoutPage() {
+  return (
+    <React.Suspense fallback={<div>Loading checkout...</div>}>
+      <CheckoutContent />
+    </React.Suspense>
+  );
+}
+
+function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
