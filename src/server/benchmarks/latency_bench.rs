@@ -1,9 +1,9 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 
 // Benchmark Results from Optimization Run:
-// Parallel Fetch Dashboard: p50: 181 us, p95: 250 us, p99: 307 us
-// API Response Time Standalone Mode (Desktop): p50: 175 us, p95: 257 us, p99: 309 us
-// API Response Time Standalone Mode (Mobile): p50: 148 us, p95: 225 us, p99: 270 us
+// Parallel Fetch Dashboard: p50: 171 us, p95: 251 us, p99: 305 us
+// API Response Time Standalone Mode (Desktop): p50: 237550 us, p95: 256559 us, p99: 256682 us
+// API Response Time Standalone Mode (Mobile): p50: 182146 us, p95: 182844 us, p99: 182910 us
 // Database Query Time Standalone Mode (SQLite): p50: 230 us, p95: 336 us, p99: 405 us
 // AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 7 us, p95: 75 us, p99: 75 us
 // AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 5 us, p95: 24 us, p99: 24 us

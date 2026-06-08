@@ -442,27 +442,139 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let agents = s.fetch_agents(&o, mobile_optimized).await?;
+
+                    let mut original_prompts_len = 0;
+                    let mut compressed_prompts_len = 0;
+                    let mut status_map = std::collections::HashMap::new();
+
+                    let final_agents_payload = agents
+                        .iter()
+                        .map(|a| {
+                            let status_val = match a.status.to_uppercase().as_str() {
+                                "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
+                                "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
+                                "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
+                                "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
+                                _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                            };
+
+                            let role_val = match a.role.to_uppercase().as_str() {
+                                "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
+                                "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
+                                "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
+                                _ => ::server_ohc::common::Role::Unspecified as i32,
+                            };
+
+                            let orig_len = a.name.len();
+                            if orig_len > 0 && !mobile_optimized {
+                                original_prompts_len += orig_len;
+                            }
+
+                            let name = if mobile_optimized {
+                                String::new()
+                            } else {
+                                let compressed = ::server_pricing::compression::reduce_tokens(&a.name);
+                                if orig_len > 0 {
+                                    compressed_prompts_len += compressed.len();
+                                }
+                                compressed
+                            };
+
+                            if !mobile_optimized {
+                                *status_map.entry(a.status.clone()).or_insert(0) += 1;
+                            }
+
+                            ::server_ohc::agent::Agent {
+                                id: a.id.clone(),
+                                name,
+                                role: role_val,
+                                status: status_val,
+                                organization_id: if mobile_optimized { String::new() } else { a.organization_id.clone() },
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    let final_statuses = if mobile_optimized {
+                        Vec::new()
+                    } else {
+                        status_map
+                            .into_iter()
+                            .map(|(status, count)| StatusCount { status, count })
+                            .collect()
+                    };
+
+                    Ok::<_, String>((final_agents_payload, final_statuses, original_prompts_len, compressed_prompts_len))
+                })
             },
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let _meetings = s.fetch_meetings(&o, mobile_optimized).await?;
+                    let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+                    for m in _meetings.iter() {
+                        let mut transcript = Vec::new();
+                        if !mobile_optimized {
+                            for msg in &m.transcript {
+                                transcript.push(::server_ohc::agent::AgentMessage {
+                                    id: msg.id.clone(),
+                                    from_agent_id: msg.from_agent.clone(),
+                                    to_agent_id: msg.to_agent.clone(),
+                                    message_type: msg.r#type.clone(),
+                                    content: msg.content.clone(),
+                                    meeting_id: m.id.clone(),
+                                    occurred_at_unix: msg.occurred_at_unix,
+                                });
+                            }
+                        }
+                        out_meetings.push(::server_ohc::app::MeetingRoom {
+                            id: m.id.clone(),
+                            participants: m.participants.clone(),
+                            transcript,
+                        });
+                    }
+                    if mobile_optimized {
+                        for m in &mut out_meetings {
+                            m.transcript.clear();
+                        }
+                    }
+                    Ok::<_, String>(out_meetings)
+                })
             },
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_cost_summary(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    s.fetch_cost_summary(&o, mobile_optimized).await
+                })
             },
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_products(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let mut products = s.fetch_products(&o, mobile_optimized).await?;
+                    if mobile_optimized {
+                        for p in &mut products {
+                            p.fulfillment_strategy = String::new();
+                        }
+                    }
+                    Ok::<_, String>(products)
+                })
             },
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_orders(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let mut orders = s.fetch_orders(&o, mobile_optimized).await?;
+                    if mobile_optimized {
+                        for o in &mut orders {
+                            o.organization_id = String::new();
+                        }
+                    }
+                    Ok::<_, String>(orders)
+                })
             },
             {
                 let s = self.clone();
@@ -472,115 +584,56 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let org = s.fetch_org(&o, mobile_optimized).await?;
+                    let mapped_org = if mobile_optimized {
+                        org.map(|mut o| {
+                            o.domain = String::new();
+                            o.members = vec![];
+                            o.role_profiles = vec![];
+                            o.ceo_id = String::new();
+                            o.created_at_unix = 0;
+                            o
+                        })
+                    } else {
+                        org
+                    };
+                    Ok::<_, String>(mapped_org)
+                })
             }
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let (final_agents_payload, final_statuses, mut original_prompts_len, mut compressed_prompts_len) = agents_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        if req.mobile_optimized {
-            for p in &mut products {
-                p.fulfillment_strategy = String::new();
-            }
-            for o in &mut orders {
-                o.organization_id = String::new();
-            }
-        }
+        let final_meetings = meetings_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
+        let products = products_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
+        let orders = orders_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
+        let bookings = bookings_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
-        for m in _meetings.iter() {
-            let mut transcript = Vec::new();
-            if !req.mobile_optimized {
-                for msg in &m.transcript {
-                    transcript.push(::server_ohc::agent::AgentMessage {
-                        id: msg.id.clone(),
-                        from_agent_id: msg.from_agent.clone(),
-                        to_agent_id: msg.to_agent.clone(),
-                        message_type: msg.r#type.clone(),
-                        content: msg.content.clone(),
-                        meeting_id: m.id.clone(),
-                        occurred_at_unix: msg.occurred_at_unix,
-                    });
-                }
-            }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
-                id: m.id.clone(),
-                participants: m.participants.clone(),
-                transcript,
-            });
-        }
+        let org = org_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
         let mut final_cost_summary = None;
-        let mut final_statuses = Vec::new();
-        if req.mobile_optimized { final_statuses.clear(); }
-
-        let mut original_prompts_len = 0;
-        let mut compressed_prompts_len = 0;
-
-        let final_agents_payload = agents
-            .iter()
-            .map(|a| {
-                let status_val = match a.status.to_uppercase().as_str() {
-                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
-                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
-                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
-                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
-                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
-                };
-
-                let role_val = match a.role.to_uppercase().as_str() {
-                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
-                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
-                    "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
-                    _ => ::server_ohc::common::Role::Unspecified as i32,
-                };
-
-                let orig_len = a.name.len();
-                if orig_len > 0 && !req.mobile_optimized {
-                    original_prompts_len += orig_len;
-                }
-
-                let name = if req.mobile_optimized {
-                    String::new()
-                } else {
-                    let compressed = ::server_pricing::compression::reduce_tokens(&a.name);
-                    if orig_len > 0 {
-                        compressed_prompts_len += compressed.len();
-                    }
-                    compressed
-                };
-
-                ::server_ohc::agent::Agent {
-                    id: a.id.clone(),
-                    name,
-                    role: role_val,
-                    status: status_val,
-                    organization_id: if req.mobile_optimized { String::new() } else { a.organization_id.clone() },
-                }
-            })
-            .collect::<Vec<_>>();
 
         if !req.mobile_optimized {
-            let mut status_map = std::collections::HashMap::new();
-            for a in agents.iter() {
-                *status_map.entry(a.status.clone()).or_insert(0) += 1;
-            }
-            final_statuses = status_map
-                .into_iter()
-                .map(|(status, count)| StatusCount { status, count })
-                .collect();
-
             if let Some(ref o) = org {
                 let prompt = &o.name;
                 let orig_len = prompt.len();
@@ -617,22 +670,7 @@ impl DashboardService for MyDashboardService {
                 projected_monthly_usd: 0.0,
                 agents: agent_summaries,
             });
-
-
         }
-
-        let org = if req.mobile_optimized {
-            org.map(|mut o| {
-                o.domain = String::new();
-                o.members = vec![];
-                o.role_profiles = vec![];
-                o.ceo_id = String::new();
-                o.created_at_unix = 0;
-                o
-            })
-        } else {
-            org
-        };
 
         Ok(Response::new(DashboardSnapshot {
             organization: org,
