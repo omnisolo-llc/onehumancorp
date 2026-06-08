@@ -40,8 +40,8 @@
   },
   "postcss": {
     "plugins": {
-      "@tailwindcss/postcss": {},
-      "autoprefixer": {}
+      "autoprefixer": {},
+      "tailwindcss": {}
     }
   },
   "pnpm": {
