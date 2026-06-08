@@ -3341,7 +3341,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_end_to_end_pydantic_self_correction_loop() {
-        use crate::types::{ChatRequest, ToolCall, Usage, ToolError, ChatResponse, Message, Role};
+        use crate::tools::ToolExecutor;
+        use crate::types::{ChatRequest, ToolCall, Usage, ChatResponse, Message, Role, ToolResult};
         use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 

@@ -696,10 +696,13 @@ impl DepartmentOrchestrator {
 
                             // Try to insert into active_discounts, but don't fail the approval if it's not present (e.g. SQLite doesn't have the table yet in testing)
                             if let DbStore::Postgres = &self.db.store {
+                                let parsed_id = uuid::Uuid::parse_str(&id).map_err(|e| format!("Invalid id UUID: {}", e))?;
+                                let parsed_tenant = uuid::Uuid::parse_str(tenant_id).map_err(|e| format!("Invalid tenant_id UUID: {}", e))?;
+                                let parsed_product = uuid::Uuid::parse_str(product_id).map_err(|e| format!("Invalid product_id UUID: {}", e))?;
                                 if let Err(e) = sqlx::query("INSERT INTO active_discounts (id, tenant_id, product_id, discount_amount, expires_at) VALUES ($1, $2, $3, $4, $5)")
-                                    .bind(uuid::Uuid::parse_str(&id).unwrap_or(uuid::Uuid::new_v4()))
-                                    .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or(uuid::Uuid::new_v4()))
-                                    .bind(uuid::Uuid::parse_str(product_id).unwrap_or(uuid::Uuid::new_v4()))
+                                    .bind(parsed_id)
+                                    .bind(parsed_tenant)
+                                    .bind(parsed_product)
                                     .bind(discount_amount)
                                     .bind(expires_at)
                                     .execute(&self.db.pool)

@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PostCheckoutShare from './PostCheckoutShare';
 import { vi, describe, it, expect, beforeAll, afterEach } from 'vitest';
