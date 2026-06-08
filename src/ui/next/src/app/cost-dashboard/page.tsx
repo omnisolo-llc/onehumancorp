@@ -106,7 +106,7 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Advisory Summary</h2>
             </div>
@@ -150,7 +150,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header flex justify-between items-center px-6 py-4 border-b border-white/40">
                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
@@ -176,7 +176,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Breakdown Section */}
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Breakdown</h2>
             </div>
@@ -268,7 +268,7 @@ export default function CostDashboardPage() {
             </div>
         </section>
 
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="p-6 md:p-8 shadow-lg bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                 <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">
