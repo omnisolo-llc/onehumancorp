@@ -100,60 +100,39 @@ impl OrgService for MyOrgService {
         let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
-        if let Some((cached, is_stale)) = self.analytics_cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(Response::new(cached));
-            }
-            // If stale, we return the cached value immediately, but kick off a background refresh
-            // Currently analytics_cache is owned by MyOrgService. To avoid lifetimes issues in spawn,
-            // we will just compute if we didn't hit SWR for now or implement it as a normal cache miss
-            // The prompt says "caching strategy" for get_analytics. We should use standard get()
-            // since get_analytics is already using self.analytics_cache.get(&cache_key).await.
-            // The prompt asked for "caching strategy in get_analytics — that's likely the highest-leverage perf win for repeated analytics calls".
-            // Wait, is there a caching issue? Let's check `get_analytics` implementation details for cache bugs.
-        }
-
         if let Some(cached) = self.analytics_cache.get(&cache_key).await {
             return Ok(Response::new(cached));
         }
 
         let hub_for_summary = self.hub.clone();
-        let hub_for_agents = self.hub.clone();
         let org_id_clone = org_id.clone();
         let org_id_for_agents = org_id.clone();
         let org_id_for_summary = org_id.clone();
-        let (agents_res, all_meetings, summary_res, quota_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
+        let (agents, all_meetings, summary_res, quota_res) = tokio::join!(
+            async { self.hub.get_agents_by_org(&org_id_for_agents) },
             self.hub.get_meetings(),
             tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
             self.hub.tracker().check_agent_quota(&org_id_clone)
         );
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
         let quota_result = quota_res;
+        let mut total_msgs = 0;
+        let mut audited_msgs = 0;
+        let mut agent_set = std::collections::HashSet::new();
+        for a in agents.iter() {
+            agent_set.insert(a.id.clone());
+        }
 
-        let org_id_for_metrics = org_id.clone();
-        let total_agents = agents.len() as i32;
-        let (total_msgs, audited_msgs) = tokio::task::spawn_blocking(move || {
-            let mut total_msgs = 0;
-            let mut audited_msgs = 0;
-            let mut agent_set = std::collections::HashSet::new();
-            for a in agents.iter() {
-                agent_set.insert(a.id.clone());
-            }
-
-            for m in all_meetings.iter() {
-                if m.id.starts_with(&org_id_for_metrics) || m.id.contains(&org_id_for_metrics) {
-                    for msg in &m.transcript {
-                        total_msgs += 1;
-                        if agent_set.contains(&msg.from_agent) {
-                            audited_msgs += 1;
-                        }
+        for m in all_meetings.iter() {
+            if m.id.starts_with(&org_id) || m.id.contains(&org_id) {
+                for msg in &m.transcript {
+                    total_msgs += 1;
+                    if agent_set.contains(&msg.from_agent) {
+                        audited_msgs += 1;
                     }
                 }
             }
-            (total_msgs, audited_msgs)
-        }).await.map_err(|e| Status::internal(e.to_string()))?;
+        }
         
         let audit_fidelity_pct = if total_msgs > 0 {
             (audited_msgs as f64 / total_msgs as f64) * 100.0
@@ -161,6 +140,7 @@ impl OrgService for MyOrgService {
             100.0
         };
         
+        let total_agents = agents.len() as i32;
         let total_humans = 10; 
         
         let human_agent_ratio = if total_humans > 0 {

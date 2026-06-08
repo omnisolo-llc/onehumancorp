@@ -43,85 +43,75 @@ pub async fn offline_sync_handler(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let mut futures = Vec::new();
     for mutation in &payload.mutations {
-        let mutation = mutation.clone();
-        let cache_clone = cache.clone();
-        let tenant_id_clone = tenant_id.clone();
-        let db_clone = db.clone();
-        let mesh_clone = mesh.clone();
+        cache.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
-        futures.push(async move {
-            cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
+        let query = "
+            UPDATE products
+            SET inventory_count = GREATEST(0, inventory_count - $1)
+            WHERE id = $2 AND tenant_id = $3
+            RETURNING id
+        ";
 
-            let query = "
-                UPDATE products
-                SET inventory_count = GREATEST(0, inventory_count - $1)
-                WHERE id = $2 AND tenant_id = $3
-                RETURNING id
-            ";
+        let result = sqlx::query(query)
+            .bind(mutation.quantity_deducted)
+            .bind(&mutation.product_id)
+            .bind(&tenant_id)
+            .fetch_optional(&db)
+            .await;
 
-            let result = sqlx::query(query)
-                .bind(mutation.quantity_deducted)
-                .bind(&mutation.product_id)
-                .bind(&tenant_id_clone)
-                .fetch_optional(&db_clone)
+        match result {
+            Ok(Some(_)) => {
+                // Also queue an offline_pos_sync job to record the transaction
+                let job_id = uuid::Uuid::new_v4().to_string();
+                let job_payload = serde_json::json!({
+                    "transaction_id": mutation.transaction_id,
+                    "product_id": mutation.product_id,
+                    "quantity_deducted": mutation.quantity_deducted,
+                    "amount": mutation.amount,
+                    "payment_method": mutation.payment_method,
+                    "payment_intent_id": mutation.payment_intent_id,
+                    "currency": mutation.currency,
+                }).to_string();
+
+                let job_res = sqlx::query(
+                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                     VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+                )
+                .bind(&job_id)
+                .bind(&tenant_id)
+                .bind(&job_payload)
+                .execute(&db)
                 .await;
 
-            match result {
-                Ok(Some(_)) => {
-                    // Also queue an offline_pos_sync job to record the transaction
-                    let job_id = uuid::Uuid::new_v4().to_string();
-                    let job_payload = serde_json::json!({
-                        "transaction_id": mutation.transaction_id,
+                if let Err(e) = job_res {
+                    tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
+                }
+
+                // Publish mesh event
+                let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                    action: "InventoryUpdated".to_string(),
+                    agent_id: "system".to_string(),
+                    status: "".to_string(),
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                    payload: serde_json::json!({
                         "product_id": mutation.product_id,
+                        "transaction_id": mutation.transaction_id,
                         "quantity_deducted": mutation.quantity_deducted,
-                        "amount": mutation.amount,
-                        "payment_method": mutation.payment_method,
-                        "payment_intent_id": mutation.payment_intent_id,
-                        "currency": mutation.currency,
-                    }).to_string();
-
-                    let job_res = sqlx::query(
-                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                         VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
-                    )
-                    .bind(&job_id)
-                    .bind(&tenant_id_clone)
-                    .bind(&job_payload)
-                    .execute(&db_clone)
-                    .await;
-
-                    if let Err(e) = job_res {
-                        tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
-                    }
-
-                    // Publish mesh event
-                    let event = ::server_ohc::orchestration::TeammateMeshEvent {
-                        action: "InventoryUpdated".to_string(),
-                        agent_id: "system".to_string(),
-                        status: "".to_string(),
-                        msg_id: uuid::Uuid::new_v4().to_string(),
-                        payload: serde_json::json!({
-                            "product_id": mutation.product_id,
-                            "transaction_id": mutation.transaction_id,
-                            "quantity_deducted": mutation.quantity_deducted,
-                            "tenant_id": tenant_id_clone
-                        }).to_string().into_bytes(),
-                    };
-                    let _ = mesh_clone.publish("mesh:inventory:updated", event).await;
-                }
-                Ok(None) => {
-                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone);
-                }
-                Err(e) => {
-                    ::server_telemetry::record_error_signal("Failed to deduct inventory for product ");
-                    tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
-                }
+                        "tenant_id": tenant_id
+                    }).to_string().into_bytes(),
+                };
+                let _ = mesh.publish("mesh:inventory:updated", event).await;
             }
-        });
+            Ok(None) => {
+                tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id);
+            }
+            Err(e) => {
+                ::server_telemetry::record_error_signal("Failed to deduct inventory for product ");
+                tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
+            }
+        }
     }
-    futures::future::join_all(futures).await;
 
     (
         StatusCode::OK,
@@ -188,6 +178,12 @@ mod tests {
         let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
+        // The handler enqueues a job now, it doesn't process it synchronously.
+        // We can verify the job was enqueued.
+        let job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(job_count.0, 1);
+
         let req_over = OfflineSyncRequest {
             mutations: vec![
                 OfflineMutation {
@@ -204,5 +200,9 @@ mod tests {
 
         let response2 = offline_sync_handler(state, headers, Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
+
+        let job_count2: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(job_count2.0, 2);
     }
 }

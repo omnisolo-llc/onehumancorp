@@ -25,13 +25,6 @@ export const MasterMenu: React.FC = () => {
     if (key.downArrow) {
       setSelectedIndex(prev => Math.min(options.length - 1, prev + 1));
     }
-    if (key.return) {
-      if (options[selectedIndex] === "Exit") {
-        process.exit(0);
-      } else {
-        console.log(`Executing ${options[selectedIndex]}...`);
-      }
-    }
   });
 
   return (

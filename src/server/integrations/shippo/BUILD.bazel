@@ -12,10 +12,12 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/integrations/core:server_integrations_core",
-        "@crates//:reqwest",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:reqwest",
         "@crates//:tokio",
+        "@crates//:uuid",
+        "@crates//:rand",
     ],
 )
 
@@ -24,5 +26,4 @@ rust_test(
     size = "small",
     crate = ":server_integrations_shippo",
     edition = "2024",
-    deps = ["@crates//:tokio"],
 )

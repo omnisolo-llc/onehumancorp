@@ -34,20 +34,6 @@ mkdir -p "$work_dir"
 
 cp -RL src "$work_dir/src"
 
-for file in \
-  src/server/monitoring/dashboards/hybrid-telemetry.json \
-  deploy/helm/ohc/dashboards/hybrid-telemetry.json \
-  deploy/grafana/dashboards/hybrid-telemetry.json \
-  deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json; do
-  if [[ -f "$runfiles_root/$file" ]]; then
-    mkdir -p "$work_dir/$(dirname "$file")"
-    cp -L "$runfiles_root/$file" "$work_dir/$file"
-  else
-    echo "missing $file" >&2
-    exit 1
-  fi
-done
-
 for file in next-env.d.ts package.json package-lock.json tsconfig.json vitest.setup.ts vitest.config.ts; do
   if [[ -f "$file" ]]; then
     cp -L "$file" "$work_dir/$file"

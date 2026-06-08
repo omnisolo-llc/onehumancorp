@@ -2,7 +2,6 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
-        "dashboards/hybrid-telemetry.json",
         "dummy.rs",
     ],
     visibility = ["//visibility:public"],

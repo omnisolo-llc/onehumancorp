@@ -1,7 +1,7 @@
-use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tokio::sync::broadcast;
+use chrono::Utc;
 
 /// Subagent event types — mirrors Go SubagentEventType.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -123,12 +123,13 @@ impl SubagentRegistry {
 
     pub fn kill(&self, task_id: &str) -> bool {
         let mut tasks = self.tasks.write().expect("lock failed");
-        if let Some(s) = tasks.get_mut(task_id)
-            && s.status == "running" {
+        if let Some(s) = tasks.get_mut(task_id) {
+            if s.status == "running" {
                 s.status = "killed".to_string();
                 s.ended_at = chrono::Utc::now().timestamp_millis();
                 return true;
             }
+        }
         false
     }
 

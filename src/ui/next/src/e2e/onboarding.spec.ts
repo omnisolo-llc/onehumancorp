@@ -8,24 +8,7 @@ test.describe('OnboardingWizard CUJ', () => {
     });
 
     // Universal mock for draft
-    await page.route('**/api/onboarding/draft', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({})
-      });
-    });
-
-    // Universal mock for state
-    await page.route('**/api/onboarding/state', async route => {
-      if (route.request().method() === 'POST') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ ok: true })
-        });
-        return;
-      }
+    await page.route('/api/onboarding/draft', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
