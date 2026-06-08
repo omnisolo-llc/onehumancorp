@@ -6,7 +6,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/cost-dashboard');
+    await page.goto('/plan');
     await page.waitForLoadState('networkidle');
 
     // 3. Check for My Plan components
@@ -34,7 +34,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     // Login as the unlimited admin user
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/cost-dashboard');
+    await proPage.goto('/plan');
     await proPage.waitForLoadState('networkidle');
 
     // Ensure the page renders / Unlimited for AI actions or storage
@@ -50,7 +50,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/cost-dashboard');
+    await proPage.goto('/plan');
     await proPage.waitForLoadState('networkidle');
 
     const aiActionsCard = proPage.locator('div', { has: proPage.locator('text="AI Actions Used"') }).first();
@@ -65,7 +65,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
 
-    await proPage.goto('/cost-dashboard');
+    await proPage.goto('/plan');
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('text="Storage Used"') }).first();
