@@ -155,7 +155,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
                 let _lock_guard = match tokio::time::timeout(crate::orchestration::state::state_manager_timeout(), acquire_future).await {
             Ok(Ok(guard)) => guard,
             Ok(Err(e)) => {
-                if e.contains("is currently locked") || e.contains("Timeout") {
+                if e.contains("is currently locked") || e.contains("Timeout") || e.contains("database is locked") {
                     tracing::warn!("Lock timeout or unavailable in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                     return Ok(vec![]);
                 }
@@ -178,8 +178,8 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
               AND NOT EXISTS (
                   SELECT 1
                   FROM json_array_elements_text(t.dependencies) as dep_id
-                  JOIN swarm_tasks dep ON dep.id::text = dep_id
-                  WHERE dep.status != 'COMPLETED'
+                  LEFT JOIN swarm_tasks dep ON dep.id::text = dep_id
+                  WHERE dep.id IS NULL OR dep.status != 'COMPLETED'
               )
             LIMIT $1
             FOR UPDATE SKIP LOCKED

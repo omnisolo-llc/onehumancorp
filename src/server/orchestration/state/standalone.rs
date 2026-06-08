@@ -211,8 +211,8 @@ impl StateManager for StandaloneStateManager {
                     AND NOT EXISTS (
                         SELECT 1
                         FROM json_each(t.dependencies) as dep_id
-                        JOIN swarm_tasks dep ON dep.id = dep_id.value
-                        WHERE dep.status != 'COMPLETED'
+                        LEFT JOIN swarm_tasks dep ON dep.id = dep_id.value
+                        WHERE dep.id IS NULL OR dep.status != 'COMPLETED'
                     )
                     LIMIT ?
                 )
@@ -236,7 +236,7 @@ impl StateManager for StandaloneStateManager {
         {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") {
+                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") || e.contains("database is locked") || e.contains("Timeout") {
                     tracing::warn!(
                         "Lock timeout or unavailable in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
                     );
