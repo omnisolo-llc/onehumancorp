@@ -9,7 +9,7 @@ test.describe('Ambassador RAG Pipeline', () => {
     await page.goto('/team');
 
     // Wait for the Team dashboard to load
-    await expect(page.locator('text=Your Team')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your Team', exact: true })).toBeVisible();
 
     // The department name for CustomerSuccess is "The Ambassador"
     const ambassadorCard = page.locator('text=The Ambassador');
