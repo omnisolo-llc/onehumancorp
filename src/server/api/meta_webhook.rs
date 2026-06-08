@@ -156,7 +156,7 @@ pub async fn meta_webhook_post_handler(
                             let event = crate::orchestration::departments::types::DepartmentEvent {
                                 id: Uuid::new_v4().to_string(),
                                 tenant_id: tenant_id.clone(),
-                                event_type: "tenant.message.received".to_string(),
+                                event_type: "tenant.omnichannel.message.received".to_string(),
                                 payload: serde_json::json!({
                                     "source": source,
                                     "message": text,
@@ -223,7 +223,7 @@ pub async fn meta_webhook_post_handler(
                                       let event = crate::orchestration::departments::types::DepartmentEvent {
                                           id: Uuid::new_v4().to_string(),
                                           tenant_id: tenant_id.clone(),
-                                          event_type: "tenant.message.received".to_string(),
+                                          event_type: "tenant.omnichannel.message.received".to_string(),
                                           payload: serde_json::json!({
                                               "source": source,
                                               "message": text,
