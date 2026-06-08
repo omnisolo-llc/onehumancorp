@@ -50,6 +50,7 @@ impl CircuitBreaker {
         let mut last_failure = self.last_failure.lock().unwrap();
         *last_failure = Some(Instant::now());
     }
+
 }
 
 static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
@@ -401,6 +402,7 @@ impl MinimaxClient {
 
         Err(format!("failed after 5 retries: {}", last_err))
     }
+
 }
 
 pub struct LocalLLMClient {
