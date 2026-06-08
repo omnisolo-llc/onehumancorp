@@ -20,14 +20,21 @@ pub struct PaymentIntentResponse {
     pub client_secret: String,
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+#[derive(Clone)]
+pub struct TerminalApiState {
+    pub hub: Arc<Hub>,
+    pub orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
+}
+
+pub fn router(hub: Arc<Hub>, orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+    let state = TerminalApiState { hub, orchestrator };
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
-        .with_state(hub)
+        .with_state(state)
 }
 
 
@@ -51,7 +58,7 @@ pub struct CommitInventoryRequest {
 
 pub async fn reserve_inventory_handler(
     _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
+    State(state): State<TerminalApiState>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<ReserveInventoryRequest>,
 ) -> axum::response::Response {
@@ -63,7 +70,7 @@ pub async fn reserve_inventory_handler(
     let lock_id = uuid::Uuid::new_v4().to_string();
     let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
 
-    if let Some(client) = &hub.redis_client {
+    if let Some(client) = &state.hub.redis_client {
         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
             let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 300 };
             let acquired: bool = redis::cmd("SET")
@@ -155,7 +162,7 @@ pub async fn reserve_inventory_handler(
 
 pub async fn commit_inventory_handler(
     _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
+    State(state): State<TerminalApiState>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<CommitInventoryRequest>,
 ) -> axum::response::Response {
@@ -166,7 +173,7 @@ pub async fn commit_inventory_handler(
 
     let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
 
-    if let Some(client) = &hub.redis_client {
+    if let Some(client) = &state.hub.redis_client {
         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
             let current_lock_id: Option<String> = redis::cmd("GET").arg(&lock_key).query_async(&mut conn).await.unwrap_or(None);
             if let Some(cid) = current_lock_id {
@@ -201,7 +208,21 @@ pub async fn commit_inventory_handler(
                 let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(new_stock).bind(&req_data.product_id).bind(&tenant_id).execute(&mut *tx).await;
 
-                if new_stock <= 5 {
+                if new_stock <= 0 {
+                    let payload = serde_json::json!({
+                        "product_id": req_data.product_id,
+                        "remaining_stock": new_stock,
+                        "message": format!("Stock for product {} has dropped to 0.", req_data.product_id)
+                    });
+
+                    let _ = state.orchestrator.execute_action(
+                        crate::orchestration::departments::types::DepartmentType::Operations,
+                        format!("Restock: product {} has sold out", req_data.product_id),
+                        tenant_id.clone(),
+                        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+                        payload
+                    ).await;
+                } else if new_stock <= 5 {
                     let job_id = uuid::Uuid::new_v4().to_string();
                     let job_payload = serde_json::json!({
                         "product_id": req_data.product_id,
@@ -231,7 +252,7 @@ pub async fn commit_inventory_handler(
 }
 pub async fn get_terminal_connection_token_handler(
     _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
+    State(_state): State<TerminalApiState>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
 ) -> Json<Result<TerminalTokenResponse, String>> {
     let tenant_id = match auth_info {
@@ -289,7 +310,7 @@ pub struct SyncOfflineTransactionsResponse {
 
 pub async fn sync_offline_transactions_handler(
     _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
+    State(_state): State<TerminalApiState>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<SyncOfflineTransactionsRequest>,
 ) -> axum::response::Response {
@@ -425,7 +446,7 @@ pub async fn sync_offline_transactions_handler(
 
 pub async fn create_payment_intent_handler(
     _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
+    State(_state): State<TerminalApiState>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<PaymentIntentRequest>,
 ) -> Json<Result<PaymentIntentResponse, String>> {

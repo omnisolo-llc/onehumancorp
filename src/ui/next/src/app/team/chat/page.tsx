@@ -26,7 +26,26 @@ export default function TeamChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const router = useRouter();
 
-  const handleApprove = (msgId: string) => {
+  const handleApprove = async (msgId: string) => {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg || !msg.card) return;
+
+    if (msg.card.description.includes('Restock')) {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+        await fetch('/api/agents/approvals/' + msg.card.id, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ is_approved: true })
+        });
+      } catch (e) {
+        console.error('Failed to approve restock', e);
+      }
+    }
+
     setMessages(prev => prev.map(msg => {
       if (msg.id === msgId && msg.card) {
         return {
