@@ -1166,7 +1166,7 @@ export default function OnboardingWizard() {
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
                     Here are the AI departments we've configured for you.
                   </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-2">
                     {aiAgents.map(agent => (
                       <div
                         key={agent}
