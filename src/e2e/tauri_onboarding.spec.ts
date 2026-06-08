@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 test.describe('Tauri Onboarding Wizard Flow', () => {
-  test('Completes the onboarding flow with assistant setup', async ({ page }) => {
+  test('Completes the onboarding flow with assistant setup and verifies CSS tokens', async ({ page }) => {
 
     // Serve the local files dynamically
     const workspaceRoot = process.env.TEST_WORKSPACE
@@ -11,6 +11,11 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         : process.cwd();
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+    await page.route('/styles.css', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'styles.css'), 'utf-8');
+        await route.fulfill({ contentType: 'text/css', body: content });
+    });
 
     await page.route('/index.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'index.html'), 'utf-8');
@@ -36,16 +41,28 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.goto('/index.html');
 
     await expect(page.getByRole('heading', { name: "Welcome to OHC" })).toBeVisible();
-    await page.getByRole('button', { name: 'Start Onboarding' }).click();
+
+    // Verify glassmorphism style drift on dashboard cards
+    const container = page.locator('.container').first();
+    await expect(container).toBeVisible();
+    await expect(container).toHaveCSS('backdrop-filter', /blur\(30px\)/);
+    await expect(container).toHaveCSS('border-radius', '16px');
+
+    const startBtn = page.getByRole('button', { name: 'Start Onboarding' });
+    await expect(startBtn).toHaveCSS('border-radius', '8px');
+    await startBtn.click();
 
     // Setup page
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+
+    const nameInput = page.getByPlaceholder("e.g. Maya's Bakery");
+    await expect(nameInput).toHaveCSS('border-radius', '8px');
 
     // Verify validation triggers
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#name-error')).toBeVisible();
 
-    await page.getByPlaceholder("e.g. Maya's Bakery").fill("Test Business");
+    await nameInput.fill("Test Business");
     await page.getByRole('button', { name: 'Next' }).click();
 
     // Assistant Setup page
