@@ -6,6 +6,7 @@ exports_files([
     "agent.proto",
     "agent_service.proto",
     "app.proto",
+    "assistant.proto",
     "billing.proto",
     "campaign.proto",
     "common.proto",
@@ -15,6 +16,21 @@ exports_files([
     "organization.proto",
     "skills.proto",
 ], visibility = ["//visibility:public"])
+
+# ── Assistant ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "assistant_proto",
+    srcs = ["assistant.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "assistant",
+    proto = ":assistant_proto",
+    visibility = ["//visibility:public"],
+)
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
 

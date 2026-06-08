@@ -3502,6 +3502,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
+        .route("/api/assistant/workspaces", axum::routing::get(api::assistant::list_workspaces_handler).post(api::assistant::create_workspace_handler).with_state(db.pool.clone()))
+        .route("/api/assistant/tasks", axum::routing::get(api::assistant::list_tasks_handler).post(api::assistant::create_task_handler).with_state(db.pool.clone()))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {

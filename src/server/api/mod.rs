@@ -4,6 +4,7 @@ pub mod mesh_handler;
 pub mod autodream;
 pub mod terminal_api;
 pub mod staff_mesh;
+pub mod assistant;
 
 pub mod billing_webhook;
 pub mod billing_api;
