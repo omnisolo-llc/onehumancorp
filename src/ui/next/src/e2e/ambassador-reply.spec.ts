@@ -24,7 +24,7 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
 
     // 2. Trigger the Ambassador's draft reply via a real API call (no mocks)
     // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
-    const tenantId = 'e2e-tenant';
+    const tenantId = 'default';
     const webhookPayload = {
       tenant_id: tenantId,
       message: 'Do you have vegan chocolate cake available for Saturday?',
