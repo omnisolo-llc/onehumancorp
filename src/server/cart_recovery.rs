@@ -6,6 +6,7 @@ use sqlx::{PgPool, Row};
 use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
+use ohc_builtin_agent::llm::LlmClient;
 
 pub const CART_RECOVERY_JOB_TYPE: &str = "cart_recovery";
 
@@ -20,6 +21,8 @@ pub struct AbandonedCheckoutSession {
     pub customer_email: Option<String>,
     pub customer_phone: Option<String>,
     pub last_touched_at: DateTime<Utc>,
+    pub customer_name: Option<String>,
+    pub business_name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -150,6 +153,33 @@ pub struct CartRecoveryService<S, D> {
     store: Arc<S>,
     dispatcher: Arc<D>,
     config: CartRecoveryConfig,
+    llm: Option<Arc<dyn LlmClient>>,
+}
+
+fn build_recovery_llm_client() -> Option<Arc<dyn LlmClient>> {
+    let key = std::env::var("OHC_LLM_API_KEY")
+        .or_else(|_| std::env::var("OPENAI_API_KEY"))
+        .unwrap_or_default();
+
+    if key.is_empty() {
+        return None;
+    }
+
+    let endpoint = std::env::var("OPENAI_BASE_URL")
+        .or_else(|_| std::env::var("OHC_OPENAI_BASE_URL"))
+        .or_else(|_| std::env::var("OHC_LLM_BASE_URL"))
+        .or_else(|_| std::env::var("OHC_LLM_ENDPOINT"))
+        .ok();
+
+    let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
+
+    let mut config = if let Some(endpoint) = endpoint {
+        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
+    } else {
+        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
+    };
+    config.default_model = Some(model);
+    Some(Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config)))
 }
 
 pub struct CartRecoveryJobProcessor<D> {
@@ -371,11 +401,12 @@ where
     S: CartRecoveryStore,
     D: CartRecoveryDispatcher,
 {
-    pub fn new(store: Arc<S>, dispatcher: Arc<D>, config: CartRecoveryConfig) -> Self {
+    pub fn new(store: Arc<S>, dispatcher: Arc<D>, config: CartRecoveryConfig, llm: Option<Arc<dyn LlmClient>>) -> Self {
         Self {
             store,
             dispatcher,
             config,
+            llm,
         }
     }
 
@@ -402,7 +433,7 @@ where
                 continue;
             }
 
-            let message = recovery_message_for(&session, &self.config.checkout_base_url);
+            let message = recovery_message_for(&session, &self.config.checkout_base_url, self.llm.as_deref()).await;
             match self.dispatcher.dispatch_recovery(&session, &message).await {
                 Ok(receipt) => {
                     self.store.record_recovery_action(&session, &receipt).await?;
@@ -425,16 +456,52 @@ fn is_recoverable_checkout(session: &AbandonedCheckoutSession) -> bool {
             || session.customer_phone.as_deref().is_some_and(|phone| !phone.trim().is_empty()))
 }
 
-fn recovery_message_for(session: &AbandonedCheckoutSession, checkout_base_url: &str) -> RecoveryMessage {
+async fn recovery_message_for(
+    session: &AbandonedCheckoutSession,
+    checkout_base_url: &str,
+    llm: Option<&dyn LlmClient>,
+) -> RecoveryMessage {
     let checkout_url = format!(
         "{}/checkout/recover/{}",
         checkout_base_url.trim_end_matches('/'),
         session.session_id
     );
+    let amount = format!("${:.2}", session.amount_cents as f64 / 100.0);
 
-    // We leave the body empty here so the worker drafts it using LLM,
-    // or if the LLM fails, the worker uses its own fallback.
-    let body = String::new();
+    let default_body = format!(
+        "You left a {amount} checkout unfinished. Resume securely here: {checkout_url}"
+    );
+
+
+    let mut body = default_body.clone();
+
+    if let Some(llm_client) = llm {
+        let customer_name = session.customer_name.as_deref().unwrap_or("Valued Customer");
+        let business_name = session.business_name.as_deref().unwrap_or("our store");
+        let checkout_type = &session.checkout_type;
+
+        let system_prompt = "You are a friendly, highly persuasive assistant acting as the store owner's Cart Recovery Agent. Your goal is to draft a short, personalized follow-up message to a customer who abandoned their cart to encourage them to complete the purchase. Be polite, natural, and helpful. Do NOT use placeholder variables like [Name]. Output only the message body and nothing else.";
+        let user_prompt = format!(
+            "Store Name: {}\nCustomer Name: {}\nAbandoned Cart Value: {}\nAbandoned Items Context (checkout type): {}\nCheckout Link: {}\n\nWrite a short, friendly message encouraging {} to resume their checkout at {}. Mention the items left behind based on the context. If the context is 'full' or unclear, just mention they left something behind. Give them the secure link to finish their purchase.",
+            business_name, customer_name, amount, checkout_type, checkout_url, customer_name, business_name
+        );
+
+        let req = ohc_builtin_agent::types::ChatRequest {
+            model: "default".to_string(),
+            system: system_prompt.to_string(),
+            messages: vec![ohc_builtin_agent::types::Message::user(&user_prompt)],
+            tools: vec![],
+            max_tokens: 500,
+            temperature: 0.7,
+        };
+
+        if let Ok(resp) = llm_client.chat(req).await {
+            let generated = resp.message.content.trim();
+            if !generated.is_empty() {
+                body = format!("{}\n\n⚡ Powered by OHC", generated);
+            }
+        }
+    }
 
     if let Some(email) = session.customer_email.as_ref().filter(|email| !email.trim().is_empty()) {
         RecoveryMessage {
@@ -492,11 +559,15 @@ impl CartRecoveryStore for PostgresCartRecoveryStore {
                 ccs.status,
                 customers.email,
                 customers.phone,
+                customers.name as customer_name,
+                tenants.business_name as business_name,
                 COALESCE(ccs.updated_at, ccs.created_at) AS last_touched_at
             FROM conversational_checkout_sessions ccs
             INNER JOIN customers
                 ON customers.id = ccs.customer_id
                AND customers.tenant_id = ccs.tenant_id
+            INNER JOIN tenants
+                ON tenants.id::text = ccs.tenant_id
             WHERE lower(ccs.status) = 'pending'
               AND COALESCE(ccs.updated_at, ccs.created_at) <= $1
               AND (
@@ -538,6 +609,8 @@ impl CartRecoveryStore for PostgresCartRecoveryStore {
                     customer_email: row.try_get("email").map_err(row_error)?,
                     customer_phone: row.try_get("phone").unwrap_or(None),
                     last_touched_at: row.try_get("last_touched_at").map_err(row_error)?,
+                    customer_name: row.try_get("customer_name").unwrap_or(None),
+                    business_name: row.try_get("business_name").unwrap_or(None),
                 })
             })
             .collect()
@@ -644,7 +717,8 @@ pub async fn run_cart_recovery_scan_once(
 ) -> Result<CartRecoverySummary, CartRecoveryError> {
     let store = Arc::new(PostgresCartRecoveryStore::new(pool.clone()));
     let dispatcher = Arc::new(PostgresQueueRecoveryDispatcher::from_env(pool));
-    let service = CartRecoveryService::new(store, dispatcher, config);
+    let llm = build_recovery_llm_client();
+    let service = CartRecoveryService::new(store, dispatcher, config, llm);
     service.run_once(Utc::now()).await
 }
 
@@ -867,6 +941,8 @@ mod tests {
             customer_email: Some("customer@example.com".to_string()),
             customer_phone: None,
             last_touched_at,
+            customer_name: Some("Alice".to_string()),
+            business_name: Some("Test Store".to_string()),
         }
     }
 
@@ -892,6 +968,7 @@ mod tests {
                 batch_limit: 25,
                 checkout_base_url: "https://checkout.example.com".to_string(),
             },
+            None,
         );
 
         let summary = service.run_once(now).await.unwrap();
@@ -918,6 +995,7 @@ mod tests {
                 batch_limit: 25,
                 checkout_base_url: "https://checkout.example.com".to_string(),
             },
+            None,
         );
 
         let summary = service.run_once(now).await.unwrap();

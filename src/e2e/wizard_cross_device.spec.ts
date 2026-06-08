@@ -6,7 +6,7 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('ohc_wizard_state_v4');
+      localStorage.removeItem('website-builder-storage');
     }, 'storefront');
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
@@ -22,8 +22,14 @@ test.describe('Wizard Cross Device E2E', () => {
 
     // Wait until local storage is updated with the business name
     await expect.poll(async () => {
-      const state = await page.evaluate(() => localStorage.getItem('ohc_wizard_state_v4'));
-      return state ? JSON.parse(state).businessName : '';
+      const stateStr = await page.evaluate(() => localStorage.getItem('website-builder-storage'));
+      if (!stateStr) return '';
+      try {
+        const state = JSON.parse(stateStr);
+        return state.state.businessName;
+      } catch (e) {
+        return '';
+      }
     }, {
       message: 'Wait for local storage to save business name',
       timeout: 5000,
@@ -36,11 +42,11 @@ test.describe('Wizard Cross Device E2E', () => {
     // Inject the exact same local storage state to the new context to test restoration
     // We navigate to dashboard first to have the right origin
     await newPage.goto('/dashboard');
-    const wizardState = await page.evaluate(() => localStorage.getItem('ohc_wizard_state_v4'));
+    const wizardState = await page.evaluate(() => localStorage.getItem('website-builder-storage'));
 
     await newPage.evaluate((state) => {
         if(state) {
-            localStorage.setItem('ohc_wizard_state_v4', state);
+            localStorage.setItem('website-builder-storage', state);
         }
         localStorage.setItem('tenant_id', 'storefront');
         localStorage.setItem('user_id', 'storefront');

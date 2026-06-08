@@ -20,6 +20,7 @@ type ShellAction = {
 type IconName =
   | "activity"
   | "analytics"
+  | "assistant"
   | "calendar"
   | "campaigns"
   | "cost"
@@ -42,6 +43,7 @@ type NavItem = {
 
 const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Assistant", href: "/assistant", icon: "assistant" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
   { label: "Orders", href: "/orders", icon: "orders" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
@@ -65,6 +67,7 @@ function ShellIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, string[]> = {
     activity: ["M4 12h4l2-7 4 14 2-7h4"],
     analytics: ["M5 19V9", "M12 19V5", "M19 19v-7"],
+    assistant: ["M12 2l2.4 7.6 8 1-6.2 5.6 1.8 7.8-7-4.2-7 4.2 1.8-7.8-6.2-5.6 8-1z"],
     calendar: ["M7 3v4", "M17 3v4", "M4 9h16", "M5 5h14v16H5z"],
     campaigns: ["M4 6h10", "M4 12h7", "M4 18h10", "M16 9l4-4", "M20 5v10", "M16 15l4 4"],
     cost: ["M12 3v18", "M17 7.5c-.8-1.1-2.2-1.8-4-1.8-2.3 0-4 1.1-4 2.8 0 4.2 8 1.8 8 6 0 1.7-1.8 2.8-4 2.8-1.9 0-3.5-.7-4.4-1.9"],
@@ -190,6 +193,11 @@ export function AppShell({
                 {action.label}
               </Link>
             ))}
+            <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center and tutorials.">
+              <Link href="/help" className="app-button" aria-label="Help Center" style={{ padding: '0 12px', minWidth: 'auto', borderRadius: '50%' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
+              </Link>
+            </WithTooltip>
           </div>
         </header>
         <main className="app-page">{children}</main>

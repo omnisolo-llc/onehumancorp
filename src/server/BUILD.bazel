@@ -716,6 +716,7 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:uuid",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
     ],
 )
 
