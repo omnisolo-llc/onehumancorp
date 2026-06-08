@@ -254,12 +254,22 @@ export function UnifiedAgentFeed() {
                               ${Number(approval.payload.context.new_price).toFixed(2)}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Sales Projection:</span>
-                            <span className="font-semibold text-indigo-600 dark:text-indigo-400" data-testid="smart-pricing-sales-projection">
-                              {approval.payload.context.sales_projection}
-                            </span>
-                          </div>
+                          {approval.payload.context.sales_projection && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-500 dark:text-gray-400">Sales Projection:</span>
+                              <span className="font-semibold text-indigo-600 dark:text-indigo-400" data-testid="smart-pricing-sales-projection">
+                                {approval.payload.context.sales_projection}
+                              </span>
+                            </div>
+                          )}
+                          {approval.payload.context.reorder_quantity && (
+                            <div className="flex justify-between items-center text-sm mt-1">
+                              <span className="text-gray-500 dark:text-gray-400">Restock Quantity:</span>
+                              <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                {approval.payload.context.reorder_quantity} Units
+                              </span>
+                            </div>
+                          )}
                         </>
                       ) : approval.payload?.feature_type === 'quote_draft' ? (
                         <div className="flex flex-col gap-2">
