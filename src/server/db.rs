@@ -235,25 +235,6 @@ impl DB {
                 })
                 .connect_with(conn_opts)
                 .await?;
-            // Harden SQLite database file permissions (if it's a real file)
-            let path_str = database_url.replace("sqlite://", "").replace("sqlite:", "");
-            let path_str = path_str.split('?').next().unwrap_or(path_str.as_str());
-            if !path_str.starts_with(":memory:") && !path_str.starts_with("memory:") && !path_str.is_empty() {
-                let path = std::path::Path::new(&path_str);
-                if path.exists() {
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::PermissionsExt;
-                        if let Ok(metadata) = std::fs::metadata(&path) {
-                            let mut perms = metadata.permissions();
-                            perms.set_mode(0o600);
-                            let _ = std::fs::set_permissions(&path, perms);
-                        }
-                    }
-                }
-            }
-
-
 
             Ok(DB {
                 pool: dummy_pool,
