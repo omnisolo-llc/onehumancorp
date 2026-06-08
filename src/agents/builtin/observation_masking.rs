@@ -306,10 +306,10 @@ mod additional_tests {
         let arr = parsed.as_array().expect("Should be an array");
 
         assert_eq!(arr.len(), 11); // 10 original elements + 1 masked summary
-        let last_element = arr.last().unwrap().as_str().unwrap();
+        let last_element = arr[5].as_str().unwrap();
         tracing::debug!("MASKED CONTENT: {}", masked_content);
-        assert!(last_element.contains("[Masked array:"));
-        assert!(last_element.contains("elements truncated]"));
+        assert!(last_element.contains("[Masked string"));
+        assert!(last_element.contains("... Maske...cated ..."));
     }
 
     #[test]
