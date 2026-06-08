@@ -14,7 +14,7 @@ function HomeContent() {
 
     const hasOnboarded = localStorage.getItem('has_onboarded');
     if (hasOnboarded) {
-      router.push('/dashboard');
+      router.push('/assistant');
     } else {
       router.push('/onboarding');
     }
