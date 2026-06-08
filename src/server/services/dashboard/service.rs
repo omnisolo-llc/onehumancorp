@@ -166,13 +166,7 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_products(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
-        let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
-        let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-
-        if let Some(products) = cache.get(&cache_key).await {
-            return Ok(products);
-        }
+    async fn fetch_products_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
 
         let q = if mobile_optimized {
             "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
@@ -224,18 +218,38 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
         Ok(results)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_orders(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
-        let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
-        let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+    async fn fetch_products(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
+        let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
+        let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        if let Some(orders) = cache.get(&cache_key).await {
-            return Ok(orders);
+        if let Some((products, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(products);
+            }
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(products) = s.fetch_products_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = PRODUCTS_CACHE.get() {
+                        c.set(&cache_key_bg, products, std::time::Duration::from_secs(3600)).await;
+                    }
+                }
+            });
+            return Ok(products);
         }
+
+        let products = self.fetch_products_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, products.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(products)
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn fetch_orders_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
 
         let q = if mobile_optimized {
             "SELECT id, '' as tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
@@ -279,18 +293,38 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
         Ok(results)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_bookings(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
-        let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
-        let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+    async fn fetch_orders(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
+        let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
+        let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        if let Some(bookings) = cache.get(&cache_key).await {
-            return Ok(bookings);
+        if let Some((orders, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(orders);
+            }
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(orders) = s.fetch_orders_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = ORDERS_CACHE.get() {
+                        c.set(&cache_key_bg, orders, std::time::Duration::from_secs(3600)).await;
+                    }
+                }
+            });
+            return Ok(orders);
         }
+
+        let orders = self.fetch_orders_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(orders)
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn fetch_bookings_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
 
         let q = if mobile_optimized {
             "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, '' as status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
@@ -346,18 +380,38 @@ impl MyDashboardService {
             }
         }
 
-        cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
         Ok(results)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
-        let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
-        let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+    async fn fetch_bookings(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
+        let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
+        let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        if let Some(org) = cache.get(&cache_key).await {
-            return Ok(org);
+        if let Some((bookings, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(bookings);
+            }
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(bookings) = s.fetch_bookings_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = BOOKINGS_CACHE.get() {
+                        c.set(&cache_key_bg, bookings, std::time::Duration::from_secs(3600)).await;
+                    }
+                }
+            });
+            return Ok(bookings);
         }
+
+        let bookings = self.fetch_bookings_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, bookings.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(bookings)
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn fetch_org_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
 
         let q = if mobile_optimized {
             "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
@@ -397,6 +451,32 @@ impl MyDashboardService {
             }
         }
 
+        Ok(org)
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
+        let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
+        let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some((org, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(org);
+            }
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(org) = s.fetch_org_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = ORG_CACHE.get() {
+                        c.set(&cache_key_bg, org, std::time::Duration::from_secs(3600)).await;
+                    }
+                }
+            });
+            return Ok(org);
+        }
+
+        let org = self.fetch_org_impl(org_id, mobile_optimized).await?;
         cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
         Ok(org)
     }
