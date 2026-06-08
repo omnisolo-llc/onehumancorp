@@ -9,6 +9,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
+  const productId = searchParams?.get("product_id") || "prod_123";
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
@@ -113,6 +114,19 @@ export default function CheckoutPage() {
     setCheckoutStatus("Preparing Mercado Pago checkout...");
 
     try {
+      // 1. Reserve inventory lock first
+      const reserveRes = await fetch('/api/pos/terminal/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenant, product_id: productId, quantity: 1, ttl_seconds: 15 })
+      });
+
+      const reserveData = await reserveRes.json();
+      if (!reserveData.success) {
+        setCheckoutStatus(reserveData.error_message || "Item is currently being checked out by another customer");
+        return;
+      }
+
       const response = await fetch("/api/checkout/mercadopago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,6 +141,9 @@ export default function CheckoutPage() {
         throw new Error(data.error || "Mercado Pago checkout unavailable.");
       }
 
+      // NOTE: We don't commit here because MercadoPago redirects the user.
+      // A backend webhook should ideally commit the transaction later.
+
       setCheckoutStatus("Redirecting to Mercado Pago...");
       window.location.assign(data.checkout_url);
     } catch (e) {
@@ -140,6 +157,21 @@ export default function CheckoutPage() {
   const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
     setIsSubscription(isSub);
+
+    // 1. Reserve inventory lock first
+    const reserveRes = await fetch('/api/pos/terminal/reserve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id: tenant, product_id: productId, quantity: 1, ttl_seconds: 15 })
+    });
+
+    const reserveData = await reserveRes.json();
+    if (!reserveData.success) {
+      setCheckoutStatus(reserveData.error_message || "Item is currently being checked out by another customer");
+      setIsProcessing(false);
+      return;
+    }
+
     const fallbackReferralLink = () => {
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
@@ -169,6 +201,17 @@ export default function CheckoutPage() {
     } catch (e) {
       console.error("Failed to generate dynamic referral link", e);
       setReferralLink(fallbackReferralLink());
+    }
+
+    // 2. Commit the inventory
+    try {
+      await fetch('/api/pos/terminal/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenant, product_id: productId, quantity: 1, lock_id: reserveData.lock_id })
+      });
+    } catch (e) {
+      console.error("Failed to commit inventory", e);
     }
 
     setIsProcessing(false);

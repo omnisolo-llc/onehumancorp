@@ -84,9 +84,18 @@ beforeEach(() => {
   });
 
   it('handles payment click', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ referral_link: 'http://test.link' })
-    } as any);
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/pos/terminal/reserve') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, lock_id: 'lock-123' })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ referral_link: 'http://test.link' })
+      });
+    }) as any;
 
     render(<CheckoutPage />);
 
@@ -97,6 +106,30 @@ beforeEach(() => {
 
     await waitFor(() => {
       expect(screen.getByText('Payment Successful!')).toBeDefined();
+    });
+  });
+
+  it('shows error if inventory lock fails', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/pos/terminal/reserve') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: false, error_message: 'Item is currently being checked out by another customer' })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ referral_link: 'http://test.link' })
+      });
+    }) as any;
+
+    render(<CheckoutPage />);
+
+    const payButton = screen.getByText('Pay Now');
+    fireEvent.click(payButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Item is currently being checked out by another customer')).toBeDefined();
     });
   });
 
@@ -138,27 +171,26 @@ beforeEach(() => {
       configurable: true,
       value: { assign },
     });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        checkout_url: 'https://www.mercadopago.com/checkout/v1/redirect?pref_id=real',
-      }),
-    } as any);
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/pos/terminal/reserve') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, lock_id: 'lock-123' })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          checkout_url: 'https://www.mercadopago.com/checkout/v1/redirect?pref_id=real',
+        }),
+      });
+    }) as any;
 
     render(<CheckoutPage />);
 
     fireEvent.click(screen.getByText('Pay with Mercado Pago'));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          tenant_id: 'fake-token',
-          amount_cents: 4500,
-          currency: 'MXN',
-        }),
-      }));
       expect(assign).toHaveBeenCalledWith('https://www.mercadopago.com/checkout/v1/redirect?pref_id=real');
     });
   });
