@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function HelpCenterPage() {
   const [articles, setArticles] = useState<{category: string, title: string, desc: string, link: string}[]>([]);
@@ -79,7 +80,8 @@ export default function HelpCenterPage() {
                 <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Video Tutorials</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {filteredVideos.map((v) => (
-                    <div key={v.id} onClick={() => setSelectedVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group shadow-sm border border-white/30 cursor-pointer hover:shadow-md transition-all">
+                    <WithTooltip key={v.id} id={`video-tooltip-${v.id}`} defaultText="Click to watch tutorial">
+                      <div onClick={() => setSelectedVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group shadow-sm border border-white/30 cursor-pointer hover:shadow-md transition-all">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
                       <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -89,6 +91,7 @@ export default function HelpCenterPage() {
                         <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
                       </div>
                     </div>
+                    </WithTooltip>
                   ))}
                 </div>
               </section>
