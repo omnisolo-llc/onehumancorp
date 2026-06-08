@@ -325,43 +325,42 @@ async fn get_site(
     Path(site_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<SiteStructureResponse>, axum::http::StatusCode> {
-    use std::collections::BTreeMap;
-
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
-    let rows = db::get_site_structure_rows(&pool, tenant_id, site_id)
+    let site = db::get_site(&pool, tenant_id, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
-    let first = rows.first().ok_or(axum::http::StatusCode::NOT_FOUND)?;
-    let response_site_id = first.site_id;
-    let response_domain = first.site_domain.clone();
 
-    let mut pages: BTreeMap<Uuid, SitePageResponse> = BTreeMap::new();
-    for row in rows {
-        let Some(page_id) = row.page_id else {
-            continue;
-        };
-        let page = pages.entry(page_id).or_insert_with(|| SitePageResponse {
-            id: page_id,
-            path: row.page_path.clone().unwrap_or_default(),
-            title: row.page_title.clone().unwrap_or_default(),
-            seo_metadata: row.page_seo_metadata.clone().unwrap_or_else(|| serde_json::json!({})),
-            blocks: Vec::new(),
+    let pages = db::list_pages(&pool, tenant_id, site.id)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut site_pages = Vec::new();
+    for page in pages {
+        let blocks = db::list_blocks(&pool, tenant_id, page.id)
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let block_responses = blocks.into_iter().map(|b| BlockResponse {
+            id: b.id,
+            block_type: b.block_type,
+            content: b.content,
+            sort_order: b.sort_order,
+        }).collect();
+
+        site_pages.push(SitePageResponse {
+            id: page.id,
+            path: page.path,
+            title: page.title,
+            seo_metadata: page.seo_metadata,
+            blocks: block_responses,
         });
-        if let Some(block_id) = row.block_id {
-            page.blocks.push(BlockResponse {
-                id: block_id,
-                block_type: row.block_type.unwrap_or_default(),
-                content: row.block_content.unwrap_or_else(|| serde_json::json!({})),
-                sort_order: row.block_sort_order.unwrap_or_default(),
-            });
-        }
     }
 
     Ok(Json(SiteStructureResponse {
-        id: response_site_id,
-        domain: response_domain,
-        pages: pages.into_values().collect(),
+        id: site.id,
+        domain: site.domain,
+        pages: site_pages,
     }))
 }
 

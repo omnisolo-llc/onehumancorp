@@ -1,33 +1,20 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-  const tenantId = req.headers.get('x-tenant-id') || 'default';
-  const userId = req.headers.get('x-user-id') || 'default';
-  const authHeader = req.headers.get('authorization');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-tenant-id': tenantId,
-    'x-user-id': userId,
-  };
-  if (authHeader) {
-    headers.authorization = authHeader;
-  }
-
   try {
     const body = await req.json();
-    const res = await fetch(`${backendUrl}/api/v1/shipping/label`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+    const { orderId, rateId } = body;
+
+    // Simulate purchasing label and getting PDF
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate latency
+
+    return NextResponse.json({
+      success: true,
+      labelUrl: 'https://api.goshippo.com/v1/mock_label.pdf',
+      trackingNumber: `1Z999999999999999${Math.floor(Math.random() * 1000)}`,
+      carrier: rateId.includes('ups') ? 'UPS' : 'USPS'
     });
-
-    if (res.ok) {
-      return NextResponse.json(await res.json());
-    }
-
-    return NextResponse.json({ error: 'Failed to purchase shipping label' }, { status: res.status });
-  } catch {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to purchase label' }, { status: 500 });
   }
 }

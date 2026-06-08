@@ -24,6 +24,21 @@
   "panels": [
     {
       "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+      },
+      "transparent": true
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
@@ -33,9 +48,10 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
       },
-      "transparent": true
+      "transparent": true,
+      "id": 1
     },
     {
       "gridPos": {
@@ -46,7 +62,7 @@
       },
       "id": 2,
       "options": {
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  OHC Premium Telemetry\n</div>",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -64,8 +80,7 @@
         "y": 3
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -254,8 +269,7 @@
         "y": 12
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -589,8 +603,7 @@
         "y": 29
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -1298,8 +1311,7 @@
         "y": 62
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -1646,8 +1658,7 @@
         "y": 79
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 24,
@@ -2088,8 +2099,7 @@
         "y": 104
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -2552,8 +2562,7 @@
         "y": 129
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 27,
@@ -2874,8 +2883,7 @@
         "y": 146
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 34,
@@ -3218,7 +3226,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Latency",
           "range": true,
           "refId": "A"
@@ -3426,8 +3434,7 @@
         "y": 171
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -3747,7 +3754,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Seconds",
           "range": true,
           "refId": "A"

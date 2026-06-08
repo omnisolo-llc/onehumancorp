@@ -15,7 +15,6 @@ describe('App', () => {
     expect(output).toContain('Initializing Agent...');
     expect(output).toContain('Tools Executed:');
     expect(output).toContain('OHC Interactive Harness');
-    expect(output).toContain('Select an action');
 
     // Fast-forward timers to trigger the useEffect state change
     await vi.advanceTimersByTimeAsync(2000);

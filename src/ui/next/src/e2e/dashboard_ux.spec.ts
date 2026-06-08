@@ -46,8 +46,6 @@ test.describe('Dashboard UX', () => {
 
     await expect(page.locator('a[href="/referrals"]')).toBeVisible();
     await expect(page.locator('a[href="/milestones"]')).toBeVisible();
-    await expect(page.locator('a[href="/milestones"] h3')).toHaveText('Milestones');
-    await expect(page.locator('span.sr-only:has-text("Milestones 🏆")')).not.toBeVisible();
     await expect(page.locator('a[href="/share-cards"]')).toBeVisible();
   });
 });

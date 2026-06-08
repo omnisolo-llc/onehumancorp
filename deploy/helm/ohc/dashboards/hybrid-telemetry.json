@@ -33,7 +33,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
       },
       "transparent": true
     },
@@ -46,7 +46,7 @@
       },
       "id": 2,
       "options": {
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
+        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  OHC Premium Telemetry\n</div>",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -3218,7 +3218,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Latency",
           "range": true,
           "refId": "A"
@@ -3747,7 +3747,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Seconds",
           "range": true,
           "refId": "A"

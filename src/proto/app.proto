@@ -197,7 +197,6 @@ service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
-  rpc SyncCalendar(SyncCalendarRequest) returns (SyncCalendarResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -221,8 +220,6 @@ message ReserveTimeSlotRequest {
   string product_id = 3;
   string start_time = 4; // RFC3339
   string end_time = 5; // RFC3339
-  bool requires_deposit = 6;
-  string timezone = 7;
 }
 
 message ReserveTimeSlotResponse {
@@ -274,12 +271,4 @@ message SyncOfflineTransactionsResponse {
 
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
-}
-
-message SyncCalendarRequest {
-  string tenant_id = 1;
-}
-
-message SyncCalendarResponse {
-  string status = 1;
 }

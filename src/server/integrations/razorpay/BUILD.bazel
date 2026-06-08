@@ -10,11 +10,7 @@ rust_library(
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
-    deps = [
-        "//src/server/integrations/core:server_integrations_core",
-        "@crates//:reqwest",
-        "@crates//:serde_json",
-    ],
+    deps = ["//src/server/integrations/core:server_integrations_core"],
 )
 
 rust_test(
@@ -22,5 +18,4 @@ rust_test(
     size = "small",
     crate = ":server_integrations_razorpay",
     edition = "2024",
-    deps = ["@crates//:tokio"],
 )

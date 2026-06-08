@@ -27,6 +27,20 @@ export default function Login() {
           >
             Log In
           </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={goDashboard}
+              className="w-full min-h-[44px] rounded-[8px] border border-gray-200 bg-white/70 px-4 py-2 font-semibold text-[#1D1D1F] transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-[#F5F5F7]"
+            >
+              Login
+            </button>
+            <button
+              onClick={goDashboard}
+              className="w-full min-h-[44px] rounded-[8px] border border-gray-200 bg-white/70 px-4 py-2 font-semibold text-[#1D1D1F] transition-all hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-[#F5F5F7]"
+            >
+              Sign in
+            </button>
+          </div>
         </div>
 
         <div className="relative flex items-center py-5">
