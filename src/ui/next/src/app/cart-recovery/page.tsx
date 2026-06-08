@@ -80,17 +80,11 @@ export default function CartRecoveryPage() {
   };
 
   const handleSend = async () => {
-    // Making a simulated API call to the backend to "send" the emails
+    // Implement backend integration for cart recovery approval
     try {
-      const res = await fetch('/api/v1/growth/campaign/send', {
+      const res = await fetch('/api/v1/recovery/attempts/123/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-           name: "Abandoned Cart Recovery",
-           subject: "Recover your cart",
-           body: generatedDraft,
-           target_segment: "abandoned_carts"
-        })
       });
       setIsSent(true);
     } catch (e) {
