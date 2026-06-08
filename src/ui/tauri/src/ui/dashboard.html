@@ -57,6 +57,18 @@
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
       }
 
+      .ohc-advisory-card {
+        backdrop-filter: blur(20px) saturate(200%);
+        background: rgba(0, 102, 255, 0.1);
+        border: 1px solid rgba(0, 102, 255, 0.2);
+        color: #1d1d1f;
+        border-radius: 12px;
+        padding: 24px;
+        margin-top: 20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 102, 255, 0.05);
+      }
+
       /* If dark mode is preferred for the growth card as in the docs: */
       @media (prefers-color-scheme: dark) {
         body {
@@ -77,19 +89,50 @@
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #ffffff;
         }
+        .ohc-advisory-card {
+          background: rgba(0, 102, 255, 0.2);
+          border: 1px solid rgba(0, 102, 255, 0.4);
+          color: #ffffff;
+        }
       }
 
-      .ohc-growth-card h2 {
+      .ohc-growth-card h2, .ohc-advisory-card h2 {
         margin-top: 0;
         font-size: 18px;
         margin-bottom: 10px;
       }
-      .ohc-growth-card p {
+      .ohc-growth-card p, .ohc-advisory-card p {
         font-size: 14px;
         color: inherit;
         opacity: 0.8;
         margin-bottom: 20px;
         line-height: 1.4;
+      }
+      .stats-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        gap: 10px;
+      }
+      .stat-item {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.03);
+        padding: 10px;
+        border-radius: 8px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+        }
+      }
+      .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .stat-label {
+        font-size: 11px;
+        opacity: 0.7;
       }
 
       button {
@@ -168,6 +211,34 @@
       <h1 id="dashboard-title">Dashboard</h1>
       <div class="subtitle">Your private agentic workspace.</div>
 
+      <!-- Financial Health Card -->
+      <div class="ohc-growth-card" id="financials-card">
+        <h2>Financial Health</h2>
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-value">$1,200.00</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">$120.00</div>
+                <div class="stat-label">Estimated Taxes Saved</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">$1,080.00</div>
+                <div class="stat-label">Available Cash</div>
+            </div>
+        </div>
+        <p>Your financials are being managed by The Accountant.</p>
+        <button class="btn-secondary">View Recent Activity</button>
+      </div>
+
+      <!-- Advisory Card from Finance Agent -->
+      <div class="ohc-advisory-card" id="advisory-card">
+        <h2>Finance Advisory</h2>
+        <p>You have collected $500 in sales tax this month. Move to tax savings?</p>
+        <button id="approve-advisory-btn">Approve</button>
+      </div>
+
       <div class="ohc-growth-card">
         <h2>Grow Your Team</h2>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
@@ -194,6 +265,7 @@
       const linkContainer = document.getElementById('link-container');
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
+      const approveAdvisoryBtn = document.getElementById('approve-advisory-btn');
 
       generateBtn.addEventListener('click', () => {
         generateBtn.innerText = "Generating...";
@@ -224,6 +296,14 @@
         setTimeout(() => {
           copyBtn.innerText = "Copy";
         }, 2000);
+      });
+
+      approveAdvisoryBtn.addEventListener('click', () => {
+        approveAdvisoryBtn.innerText = "Approved!";
+        approveAdvisoryBtn.style.backgroundColor = "#34C759"; // Green success
+        setTimeout(() => {
+          document.getElementById('advisory-card').style.display = "none";
+        }, 1500);
       });
     </script>
   </body>
