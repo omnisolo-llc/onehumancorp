@@ -5,7 +5,7 @@ interface PoweredByOHCProps {
 }
 
 export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
-  const referralUrl = `/onboarding?ref=${tenantId}&source=footer_widget`;
+  const referralUrl = `/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=footer_widget`;
 
   return (
     <div className="flex justify-center items-center mt-8 pb-4">

@@ -115,7 +115,7 @@ export default function CheckoutPage() {
     const fallbackReferralLink = () => {
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
-      return `${origin}/onboarding?ref=${tenant}`;
+      return `${origin}/api/v1/growth/referrals/click?target=/bio/${tenant}&ref=${tenant}&source=checkout_referral`;
     };
     const normalizeReferralLink = (rawLink: string) => {
       if (
