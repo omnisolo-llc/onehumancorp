@@ -600,7 +600,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div>Loading checkout...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-inter text-gray-500">Loading Checkout...</div>}>
       <CheckoutContent />
     </Suspense>
   );

@@ -214,12 +214,15 @@ pub struct ChangelogSection {
     pub version: String,
     #[serde(rename = "contentLines")]
     pub content_lines: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screenshot_url: Option<String>,
 }
 
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
     vec![
         ChangelogSection {
             version: "Version 1.0 (Latest)".to_string(),
+            screenshot_url: Some("/dashboard_with_charts.png".to_string()),
             content_lines: vec![
                 "### 🌟 New Features".to_string(),
                 "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.".to_string(),

@@ -37,6 +37,7 @@ export default function WebsiteBuilderPage() {
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const handleSaveDraft = async () => {
     setStatus("generating"); // Just show some loading state or disable button
@@ -124,11 +125,15 @@ export default function WebsiteBuilderPage() {
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load builder state', err));
+    .catch(err => console.error('Failed to load builder state', err))
+    .finally(() => {
+      setIsLoaded(true);
+    });
   }, []);
 
   // Sync full state to backend
   useEffect(() => {
+    if (!isLoaded) return;
     // Only save if there's actual state
     if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
       const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
