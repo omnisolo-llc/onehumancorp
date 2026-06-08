@@ -235,12 +235,57 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.cart.abandoned".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
 
+
+        if event.event_type == "tenant.cart.abandoned" {
+            let session_id = event.payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let _customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let amount_str = format!("${:.2}", amount_cents as f64 / 100.0);
+
+            // Use Minimax directly via HTTP or via Hub to reason
+            let prompt = format!(
+                "You are the Cart Recovery Agent for OneHumanCorp within the Marketing & Advertising department.                 A customer abandoned their cart with a value of {}.                 Write a highly personalized, persuasive, and friendly 1-2 sentence recovery message encouraging them to complete their purchase.                 Do not include placeholders, just the message body.",
+                amount_str
+            );
+
+            let mut draft_body = "We noticed you left some items behind! Complete your order now and don't miss out.".to_string();
+
+            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                    prompt,
+                    from_agent_id: "Cart Recovery Agent".into(),
+                };
+                if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                    draft_body = res.into_inner().content.trim().trim_matches('"').to_string();
+                }
+            }
+
+            let action_payload = serde_json::json!({
+                "action_type": "cart_recovery.dispatch",
+                "session_id": session_id,
+                "draft_body": draft_body,
+                "amount": amount_str,
+            });
+
+            // execute_action signature: dept, description, tenant_id, risk, payload
+            let _ = self.orchestrator()?.execute_action(
+                DepartmentType::Marketing,
+                format!("Draft cart recovery message for session {}", session_id),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await;
+
+            return Ok(());
+        }
 
         if event.event_type == "tenant.job.completed" {
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");

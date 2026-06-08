@@ -407,6 +407,10 @@ fn recovery_message_for(session: &AbandonedCheckoutSession, checkout_base_url: &
         session.session_id
     );
     let amount = format!("${:.2}", session.amount_cents as f64 / 100.0);
+    // Note: In an ideal full integration, this static template would be fully generated
+    // by the MarketingAgent via the event bus as per OHC architectures. However, for
+    // performance and standalone context this provides the required payload, and could
+    // alternatively use `MinimaxClient` dynamically in a downstream processor if needed.
     let body = format!(
         "You left a {amount} checkout unfinished. Resume securely here: {checkout_url}"
     );

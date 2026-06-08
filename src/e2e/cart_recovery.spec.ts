@@ -2,12 +2,15 @@ import { test, expect } from './fixtures';
 
 test.describe('Abandoned Cart Recovery Growth Loop', () => {
   test.beforeEach(async ({ page }) => {
+    // Start on dashboard to satisfy fixture
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
     // Navigate to the new cart recovery page
     await page.goto('/cart-recovery');
     await page.waitForLoadState('networkidle');
   });
 
-  test('should display the cart recovery campaign page and handle soft paywall', async ({ page, context }) => {
+  test('should display the cart recovery campaign page and handle soft paywall', async ({ page }) => {
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Abandoned Cart Recovery 🛒' })).toBeVisible();
 
