@@ -9,6 +9,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
+  const discountParam = searchParams?.get("discount");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
@@ -367,7 +368,7 @@ export default function CheckoutPage() {
             >
               {isProcessing
                 ? "Processing..."
-                : "Subscribe Monthly (Wallet Pay)"}
+                : discountParam ? `Subscribe & Save ${discountParam}%` : "Subscribe & Save"}
             </button>
           </WithTooltip>
 
