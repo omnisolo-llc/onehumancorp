@@ -107,20 +107,6 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
 }
 
 impl SalesAgent {
-    async fn generate_embedding(&self, text: &str) -> Vec<f32> {
-        match std::env::var("OHC_SALES_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-            .as_deref()
-        {
-            Ok("minimax") => {
-                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                crate::minimax::MinimaxClient::new(api_key).generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
-            }
-            _ => {
-                crate::minimax::LocalLLMClient::new().generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
-            }
-        }
-    }
     pub fn new(orchestrator: Arc<DepartmentOrchestrator>) -> Self {
         Self::with_quote_intent_planner(
             orchestrator,
@@ -233,7 +219,6 @@ impl Department for SalesAgent {
             "tenant.quote.requested".to_string(),
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
-            "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
         ]
     }
@@ -274,7 +259,7 @@ impl Department for SalesAgent {
             return Ok(());
         }
 
-                if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let planned_intent = match self
                 .quote_intent_planner
                 .plan_quote_intent(&event.tenant_id, &event.payload)
@@ -289,65 +274,18 @@ impl Department for SalesAgent {
             };
 
             if let Some(intent) = planned_intent {
-                let query_embedding = self.generate_embedding(&intent.original_message).await;
-
-                let context_records = self
-                    .orchestrator
-                    .query_long_term_memory(&event.tenant_id, &query_embedding, 3)
-                    .await.unwrap_or_default();
-
                 let service = self
                     .orchestrator
                     .get_service_by_name_like(&event.tenant_id, &intent.service_name)
                     .await?;
-
-                let (service_name, mut price) = service.unwrap_or((intent.service_name, 75.0));
-
-                let mut context_summary = String::new();
-                for r in context_records {
-                    context_summary.push_str(&r);
-                    context_summary.push_str(" ");
-                }
-
-                let prompt = format!(
-                    "You are a sales agent drafting a project proposal for a new inquiry. Inquiry: {}. Service: {}. Base Price: {}. Past context: {}. Output strict JSON with keys: scope, suggested_time, suggested_price, drafted_message. Do not use markdown.",
-                    intent.original_message, service_name, price, context_summary
-                );
-
-                let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                    .as_deref()
-                {
-                    Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                        crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await.unwrap_or_default()
-                    }
-                    _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_default()
-                    }
-                };
-
-                let mut scope = format!("{} including labor and standard materials.", service_name);
-                let mut suggested_time = "Tomorrow at 2 PM".to_string();
-                let mut drafted_message = format!("Based on our past projects, I can offer {} starting at ${:.2}. Should I send over the formal agreement?", service_name, price);
-
-                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
-                    if let Some(s) = parsed.get("scope").and_then(|v| v.as_str()) {
-                        scope = s.to_string();
-                    }
-                    if let Some(t) = parsed.get("suggested_time").and_then(|v| v.as_str()) {
-                        suggested_time = t.to_string();
-                    }
-                    if let Some(p) = parsed.get("suggested_price").and_then(|v| v.as_f64()) {
-                        price = p;
-                    }
-                    if let Some(m) = parsed.get("drafted_message").and_then(|v| v.as_str()) {
-                        drafted_message = m.to_string();
-                    }
-                }
-
+                let (service_name, price) = service.unwrap_or((intent.service_name, 75.0));
                 let risk =
                     risk_for_service_price(self.get_config(&event.tenant_id).as_ref(), price);
+
+                let drafted_message = format!(
+                    "Hi! Yes, I have an opening tomorrow at 2 PM. The base callout fee is ${}. Would you like me to book this slot?",
+                    price
+                );
 
                 ::server_telemetry::record_business_event(
                     &event.tenant_id,
@@ -359,8 +297,8 @@ impl Department for SalesAgent {
                     "feature_type": "quote_draft",
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
-                    "scope": scope,
-                    "suggested_time": suggested_time,
+                    "scope": format!("{} including labor and standard materials.", service_name),
+                    "suggested_time": "Tomorrow at 2 PM",
                     "generated_response": drafted_message,
                     "service": service_name.clone(),
                     "price": price,
@@ -383,9 +321,7 @@ impl Department for SalesAgent {
         }
 
         // Query memory context
-        let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-        let query_embedding = self.generate_embedding(message).await;
-
+        let query_embedding = vec![0.5, 0.5, 0.5]; // Mock embedding
         let _context = self
             .orchestrator
             .query_long_term_memory(&event.tenant_id, &query_embedding, 5)
@@ -417,9 +353,10 @@ impl Department for SalesAgent {
         self.configs.insert(_tenant_id, _config);
     }
 
-    async fn query_memory(&self, query: &str) -> Result<Vec<String>, String> {
-        let embedding = self.generate_embedding(query).await;
-
+    async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
+        let embedding = vec![0.5, 0.5, 0.5];
+        // Note: We need a tenant_id here, but the trait signature doesn't provide one.
+        // We'll pass a dummy one or extract it if available.
         self.orchestrator
             .query_long_term_memory("default_tenant", &embedding, 5)
             .await

@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  let body: any = {};
   try {
-    body = await request.json();
+    const body = await request.json();
 
     // In production, BACKEND_URL would be defined. For local dev we use the default 8080.
     const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
@@ -27,10 +26,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error generating abandoned cart message:", error);
     // Fallback if fetch fails completely
-    // Extract body from request if possible, or use defaults
-    const name = body?.customer_name || 'there';
-    const value = body?.cart_value || '$0.00';
-    const message = `Hi ${name},\n\nWe noticed you left some items in your cart totaling ${value}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: /checkout\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
+    const message = `Hi there,\n\nWe noticed you left some items in your cart. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: /checkout\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
     return NextResponse.json({ message });
   }
 }

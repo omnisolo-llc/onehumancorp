@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const tier = searchParams?.get("tier");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
@@ -62,7 +60,7 @@ export default function CheckoutPage() {
 
       const response = await fetch("/api/checkout/delivery-quote", {
         method: "POST",
-        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await response.json();
@@ -82,33 +80,7 @@ export default function CheckoutPage() {
 
   const [isSubscription, setIsSubscription] = useState(false);
 
-
-  const handlePlanUpgrade = async () => {
-    setIsProcessing(true);
-    setCheckoutStatus("Preparing Stripe Checkout...");
-    try {
-      const response = await fetch("/api/billing/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
-        },
-        body: JSON.stringify({ tier }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.checkout_url) {
-        throw new Error(data.message || "Failed to create checkout session");
-      }
-      window.location.assign(data.checkout_url);
-    } catch (e) {
-      console.error("Failed to start checkout", e);
-      setCheckoutStatus("Stripe Checkout is temporarily unavailable.");
-      setIsProcessing(false);
-    }
-  };
-
   const startMercadoPagoCheckout = async () => {
-
     setIsMercadoPagoProcessing(true);
     setCheckoutStatus("Preparing Mercado Pago checkout...");
 
@@ -203,59 +175,6 @@ export default function CheckoutPage() {
         id="checkout-screen"
         className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6"
       >
-        {tier ? (
-            <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-6" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderRadius: "16px" }}>
-              <div className="flex justify-between items-center pb-4 border-b">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Plan Upgrade
-                </h2>
-                <span className="text-sm text-gray-500">Subscription</span>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div className="w-20 h-20 bg-indigo-50 rounded-xl flex-shrink-0 flex items-center justify-center text-3xl">
-                  🚀
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">
-                    OHC {tier} Plan
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Monthly subscription
-                  </p>
-                  <div className="mt-2 text-sm font-medium text-gray-900">
-                    {tier.toLowerCase() === 'starter' ? '$29.00 / month' : tier.toLowerCase() === 'pro' ? '$79.00 / month' : '$299.00 / month'}
-                  </div>
-                </div>
-              </div>
-
-              {checkoutStatus && (
-                <p className="text-sm font-medium text-indigo-700" role="status">
-                  {checkoutStatus}
-                </p>
-              )}
-
-              <WithTooltip id="checkout-plan-upgrade-tooltip" defaultText={"Click here to securely subscribe to the " + tier + " plan."}>
-                <button
-                  onClick={handlePlanUpgrade}
-                  disabled={isProcessing}
-                  className={"w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm " + (isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700')}
-                >
-                  {isProcessing ? 'Processing...' : 'Pay with Stripe'}
-                </button>
-              </WithTooltip>
-
-              <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without subscribing.">
-                <button
-                  onClick={() => router.push('/pricing')}
-                  className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </WithTooltip>
-              <PoweredByOHC tenantId={tenant} />
-            </div>
-        ) : (
-          <>
         <div
           className="p-6 shadow-sm flex flex-col gap-4 mb-4"
           style={{
@@ -441,8 +360,6 @@ export default function CheckoutPage() {
           </WithTooltip>
           <PoweredByOHC tenantId={tenant} />
         </div>
-        </>
-        )}
       </main>
 
       {/* Post-Purchase Referral Modal */}

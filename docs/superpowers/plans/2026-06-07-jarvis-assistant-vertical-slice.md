@@ -1,6 +1,6 @@
 # Jarvis Assistant Vertical Slice Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the primary `/assistant` Jarvis workstation surface with tested API contracts for tasks, artifacts, changes, remote control, automations, memory, skills, connectors, and Expert Center navigation.
 
@@ -20,20 +20,20 @@
 - Create: `src/ui/next/src/app/api/assistant/memory/route.ts`
 - Test: `src/ui/next/src/app/api/assistant/route.test.ts`
 
-- [x] **Step 1: Write failing API tests**
+- [ ] **Step 1: Write failing API tests**
 
 Create tests for task creation/listing, remote intake, automation creation, and memory edit/forget/import. The first run should fail because the modules do not exist.
 
-- [x] **Step 2: Run API tests and verify RED**
+- [ ] **Step 2: Run API tests and verify RED**
 
 Run: `cd src/ui/next && npm test -- src/app/api/assistant/route.test.ts`
 Expected: FAIL with missing module errors for assistant API routes.
 
-- [x] **Step 3: Implement in-memory assistant API store and routes**
+- [ ] **Step 3: Implement in-memory assistant API store and routes**
 
 Implement typed task, artifact, change, automation, remote, and memory helpers. Keep response shapes stable and small.
 
-- [x] **Step 4: Run API tests and verify GREEN**
+- [ ] **Step 4: Run API tests and verify GREEN**
 
 Run: `cd src/ui/next && npm test -- src/app/api/assistant/route.test.ts`
 Expected: PASS.
@@ -44,20 +44,20 @@ Expected: PASS.
 - Create: `src/ui/next/src/app/assistant/page.tsx`
 - Test: `src/ui/next/src/app/assistant/page.test.tsx`
 
-- [x] **Step 1: Write failing UI tests**
+- [ ] **Step 1: Write failing UI tests**
 
 Create tests asserting the workstation renders, links to `/agents`, exposes WorkBuddy-parity controls, submits a task payload, updates task/results state, and handles remote/memory/automation panels.
 
-- [x] **Step 2: Run UI tests and verify RED**
+- [ ] **Step 2: Run UI tests and verify RED**
 
 Run: `cd src/ui/next && npm test -- src/app/assistant/page.test.tsx`
 Expected: FAIL with missing route/component.
 
-- [x] **Step 3: Implement the `/assistant` page**
+- [ ] **Step 3: Implement the `/assistant` page**
 
 Build a client component with left task rail, center conversation/composer, right results tabs, and utility panels. Use existing app styling patterns without deleting `/agents`.
 
-- [x] **Step 4: Run UI tests and verify GREEN**
+- [ ] **Step 4: Run UI tests and verify GREEN**
 
 Run: `cd src/ui/next && npm test -- src/app/assistant/page.test.tsx`
 Expected: PASS.
@@ -69,17 +69,17 @@ Expected: PASS.
 - Verify: assistant UI tests
 - Verify: existing `/agents` tests remain compatible
 
-- [x] **Step 1: Run focused assistant tests**
+- [ ] **Step 1: Run focused assistant tests**
 
 Run: `cd src/ui/next && npm test -- src/app/api/assistant/route.test.ts src/app/assistant/page.test.tsx`
 Expected: PASS.
 
-- [x] **Step 2: Run Expert Center regression tests**
+- [ ] **Step 2: Run Expert Center regression tests**
 
 Run: `cd src/ui/next && npm test -- src/app/agents/page.test.tsx`
 Expected: PASS.
 
-- [x] **Step 3: Commit implementation**
+- [ ] **Step 3: Commit implementation**
 
 Run: `git add docs/superpowers/plans/2026-06-07-jarvis-assistant-vertical-slice.md src/ui/next/src/app/api/assistant src/ui/next/src/app/assistant && git commit -m "feat: add jarvis assistant surface"`
 Expected: Commit succeeds.

@@ -2305,10 +2305,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     cs_worker.start();
 
 
-    // Start Booking Reengagement Worker
-    let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
-    booking_reengagement_worker.start();
-
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
@@ -2408,7 +2404,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
-    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone()).with_hub(hub.clone())));
+    let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
     let sales_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::sales_agent::SalesAgent::new(dept_orchestrator.clone())));
     let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
@@ -2678,9 +2674,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
-                    "original_message": row.get::<String, _>("original_content"),
+                    "original_content": row.get::<String, _>("original_content"),
                     "translated_from_language": row.get::<String, _>("translated_from_language"),
-                    "generated_response": row.get::<String, _>("draft_reply"),
+                    "draft_reply": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
                     "created_at": created_at_str,
                 })
@@ -2940,9 +2936,9 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
-                        "original_message": row.get::<String, _>("original_content"),
+                        "original_content": row.get::<String, _>("original_content"),
                         "translated_from_language": row.get::<String, _>("translated_from_language"),
-                        "generated_response": row.get::<String, _>("draft_reply"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),
@@ -2971,9 +2967,9 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
-                        "original_message": row.get::<String, _>("original_content"),
+                        "original_content": row.get::<String, _>("original_content"),
                         "translated_from_language": row.get::<String, _>("translated_from_language"),
-                        "generated_response": row.get::<String, _>("draft_reply"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),

@@ -3,8 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('Expert Team Feature CUJ', () => {
 
   test('Persona: Business Owner uses Expert Team successfully', async ({ page }) => {
+    // 1. Owner opens the Expert Team page
     await page.goto('/expert-team');
-    await expect(page.getByRole('heading', { name: /Expert Team/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Tencent Workbuddy: Expert Team/i })).toBeVisible();
 
     // 2. Owner enters task
     const input = page.getByPlaceholder(/e.g. Write a comprehensive/i);

@@ -12,13 +12,6 @@ pub async fn guest_auth_middleware(
     mut req: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
-    if ::server_config::get().multitenant {
-        return axum::response::Response::builder()
-            .status(axum::http::StatusCode::UNAUTHORIZED)
-            .body(axum::body::Body::from("Guest auth is not allowed in cloud mode"))
-            .unwrap();
-    }
-
     let tenant_id = req.headers().get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("storefront").to_string();
     let user_id = req.headers().get("x-user-id").and_then(|v| v.to_str().ok()).unwrap_or("test-user").to_string();
 

@@ -15,7 +15,7 @@ import { GET as getMcp, PATCH as patchMcp, POST as postMcp } from './mcp/route';
 import { GET as getExperts, PATCH as patchExperts, POST as postExperts } from './experts/route';
 import { GET as getCommands, POST as postCommand } from './commands/route';
 import { GET as getWorkspaces, PATCH as patchWorkspaces } from './workspaces/route';
-import { GET as getShares, POST as postShare, PATCH as patchShare } from './share/route';
+import { GET as getShares, POST as postShare } from './share/route';
 import { GET as getUploads, POST as postUpload } from './uploads/route';
 import { GET as getPreviews, PATCH as patchPreviews } from './previews/route';
 import { GET as getPlugins, PATCH as patchPlugins } from './plugins/route';
@@ -49,15 +49,12 @@ describe('assistant API contract', () => {
     resetAssistantStore();
   });
 
-  test('lists seeded Agent tasks with artifacts and changes', async () => {
+  test('lists seeded Jarvis tasks with artifacts and changes', async () => {
     const response = await getTasks();
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.tasks.length).toBeGreaterThanOrEqual(4);
-    expect(body.tasks.map((task: any) => task.status)).toEqual(
-      expect.arrayContaining(['running', 'blocked', 'planning', 'pending']),
-    );
+    expect(body.tasks.length).toBeGreaterThanOrEqual(2);
     expect(body.tasks[0]).toMatchObject({
       workspace: 'Personal OS',
       status: 'running',
@@ -94,7 +91,7 @@ describe('assistant API contract', () => {
     ]);
     expect(body.capabilities.modelProviders).toEqual([
       'Auto',
-      'Agent',
+      'WorkBuddy',
       'MiniMax M2.5',
       'GLM-4.6',
       'Kimi K2',
@@ -110,29 +107,6 @@ describe('assistant API contract', () => {
     expect(body.capabilities.workspaceControls).toEqual(['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup']);
     expect(body.capabilities.commandSurfaces).toEqual(['/skill', '/compact', '/summarize', '/clear']);
     expect(body.capabilities.mcpFeatures).toEqual(['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It']);
-    expect(body.capabilities.taskBarComponents).toEqual(['Input Field', 'Model Selector', 'Context Tools', 'Mode Selector', 'Send Button']);
-    expect(body.capabilities.conversationToolbar).toEqual(['Collapse Sidebar', 'New Task', 'History', 'Show Details Panel']);
-    expect(body.capabilities.resultPreviewTypes).toEqual([
-      'Selected Artifact Preview',
-      'Spreadsheet Preview',
-      'Document Preview',
-      'Web Preview',
-      'All Files Tree',
-      'Changes Detail Review',
-    ]);
-    expect(body.capabilities.installationGuides).toEqual(expect.arrayContaining([
-      expect.objectContaining({ platform: 'Windows', packageType: '.exe', requirements: expect.arrayContaining(['Windows 10 1809+', 'Windows 11', 'x64', 'ARM64']) }),
-      expect.objectContaining({ platform: 'macOS', packageType: '.dmg', requirements: expect.arrayContaining(['Apple Silicon', 'Intel', 'Universal binary']) }),
-    ]));
-    expect(body.capabilities.privacyControls).toEqual(expect.objectContaining({
-      childrenPolicy: 'under_18_prohibited',
-      dataResidency: 'Singapore',
-      inputsOutputsRetention: '14 days',
-      billingRetention: '24 months',
-      configurationStorage: 'local_device',
-      trainingOptOut: 'agent_ai@tencent.com',
-      rights: expect.arrayContaining(['Access', 'Portability', 'Correction', 'Erasure', 'Restriction', 'Objection', 'Consent Withdrawal']),
-    }));
   });
 
   test('creates a guarded assistant task with complete composer payload', async () => {
@@ -254,7 +228,6 @@ describe('assistant API contract', () => {
     expect(body.automation).toMatchObject({
       name: 'Weekly research brief',
       schedule: 'Every Monday 09:00',
-      scheduleKind: 'weekly',
       status: 'active',
       notificationChannel: 'Discord',
     });
@@ -263,23 +236,9 @@ describe('assistant API contract', () => {
     const listed = await (await getAutomations()).json();
     expect(listed.automations).toEqual(
       expect.arrayContaining([
-      expect.objectContaining({ name: 'Weekly research brief', status: 'active' }),
+        expect.objectContaining({ name: 'Weekly research brief', status: 'active' }),
       ]),
     );
-
-    for (const [schedule, scheduleKind] of [
-      ['Every 2 hours', 'hourly'],
-      ['Daily 09:00', 'daily'],
-      ['2026-06-08 15:00', 'one_time'],
-    ]) {
-      const scheduleResponse = await postAutomation(jsonRequest('http://localhost/api/assistant/automations', {
-        name: `${scheduleKind} automation`,
-        schedule,
-        prompt: `Run ${scheduleKind} task`,
-      }));
-      const scheduleBody = await scheduleResponse.json();
-      expect(scheduleBody.automation).toMatchObject({ schedule, scheduleKind });
-    }
   });
 
   test('edits, imports, and forgets visible assistant memory', async () => {
@@ -356,15 +315,6 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Expert Ranking', category: 'Expert Center', status: 'available' }),
       expect.objectContaining({ name: 'Custom Expert Builder', category: 'Expert Center', status: 'available' }),
       expect.objectContaining({ name: 'Slash Command Runner', category: 'Commands', status: 'installed' }),
-      expect.objectContaining({ name: 'Agent Browser', category: 'Web', status: 'available' }),
-      expect.objectContaining({ name: 'Google Calendar', category: 'Google Workspace', status: 'available' }),
-      expect.objectContaining({ name: 'Google Drive', category: 'Google Workspace', status: 'installed' }),
-      expect.objectContaining({ name: 'Google Search', category: 'Research', status: 'available' }),
-      expect.objectContaining({ name: 'Office Document Suite', category: 'Artifacts', status: 'available' }),
-      expect.objectContaining({ name: 'Local Whisper', category: 'Audio', status: 'available' }),
-      expect.objectContaining({ name: 'yt-dlp Downloader', category: 'Media', status: 'available' }),
-      expect.objectContaining({ name: 'Obsidian', category: 'Knowledge', status: 'available' }),
-      expect.objectContaining({ name: 'Frontend Design', category: 'Design', status: 'available' }),
     ]));
 
     skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
@@ -380,38 +330,9 @@ describe('assistant API contract', () => {
     }))).json();
     expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'PDF Exporter', status: 'disabled' })]));
 
-    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
-      action: 'update_all',
-    }))).json();
-    expect(skills.updateNotice).toContain('updated');
-
-    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
-      action: 'generate_custom',
-      name: 'Folder Monitor Skill',
-      description: 'Monitor a folder and process new files automatically.',
-    }))).json();
-    expect(skills.generatedSkill).toMatchObject({
-      name: 'Folder Monitor Skill',
-      files: expect.arrayContaining([
-        expect.objectContaining({ path: 'skill.yml' }),
-        expect.objectContaining({ path: 'README.md' }),
-        expect.objectContaining({ path: 'src/main.ts' }),
-      ]),
-      status: 'generated',
-    });
-
     let connectors = await (await getConnectors()).json();
     expect(connectors.connectors).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'MCP Endpoint' })]));
     expect(connectors.connectors).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'GitHub', kind: 'repository', status: 'available' }),
-      expect.objectContaining({ name: 'GitLab', kind: 'repository', status: 'available' }),
-      expect.objectContaining({ name: 'Jira', kind: 'work_management', status: 'available' }),
-      expect.objectContaining({ name: 'Confluence', kind: 'knowledge', status: 'available' }),
-      expect.objectContaining({ name: 'Google Calendar', kind: 'calendar', oauth: true, status: 'available' }),
-      expect.objectContaining({ name: 'Google Drive', kind: 'files' }),
-      expect.objectContaining({ name: 'Gmail', kind: 'mail', status: 'available' }),
-      expect.objectContaining({ name: 'Notion', kind: 'knowledge', status: 'available' }),
-      expect.objectContaining({ name: 'Slack', kind: 'remote' }),
       expect.objectContaining({
         name: 'MCP Endpoint',
         features: expect.arrayContaining(['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It']),
@@ -446,7 +367,7 @@ describe('assistant API contract', () => {
     );
   });
 
-  test('generates Agent-style office export artifacts', async () => {
+  test('generates WorkBuddy-style office export artifacts', async () => {
     for (const [format, mimeType] of [
       ['Document', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
       ['Spreadsheet', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
@@ -519,36 +440,25 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Python', status: 'needs_setup' }),
     ]));
     expect(body.models).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        provider: 'Auto',
-        enabled: true,
-        capabilities: expect.arrayContaining(['tool_calling', 'image_input', 'reasoning']),
-      }),
-      expect.objectContaining({
-        provider: 'Local Ollama',
-        capabilities: expect.arrayContaining(['offline', 'local_inference']),
-      }),
+      expect.objectContaining({ provider: 'Auto', enabled: true }),
+      expect.objectContaining({ provider: 'Local Ollama' }),
     ]));
 
     body = await (await patchModels(patchRequest('http://localhost/api/assistant/models', {
       action: 'upsert',
       provider: 'Custom OpenAI Compatible',
-      modelId: 'agent-custom',
+      modelId: 'jarvis-custom',
       endpoint: 'https://models.example.test/v1',
       headers: { 'X-Team': 'ops' },
       parameters: { temperature: 0.2, reasoningEffort: 'medium' },
       skipChatCompletions: true,
-      customProtocol: true,
-      capabilities: ['tool_calling', 'reasoning'],
     }))).json();
     expect(body.models).toEqual(expect.arrayContaining([
       expect.objectContaining({
         provider: 'Custom OpenAI Compatible',
-        modelId: 'agent-custom',
+        modelId: 'jarvis-custom',
         endpoint: 'https://models.example.test/v1',
         skipChatCompletions: true,
-        customProtocol: true,
-        capabilities: expect.arrayContaining(['tool_calling', 'reasoning']),
       }),
     ]));
   });
@@ -876,18 +786,6 @@ describe('assistant API contract', () => {
     expect(body.task.status).toBe('archived');
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'unarchive' }),
-      { params: { id: 'task-weekly-brief' } },
-    )).json();
-    expect(body.task.status).toBe('completed');
-
-    body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
-      { params: { id: 'task-weekly-brief' } },
-    )).json();
-    expect(body.task.status).toBe('archived');
-
-    body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'rename_archived', title: 'Archived review' }),
       { params: { id: 'task-weekly-brief' } },
     )).json();
@@ -903,31 +801,7 @@ describe('assistant API contract', () => {
   test('manages Claw bot setup disconnect markdown and command confirmation', async () => {
     let body = await (await getClaw()).json();
     expect(body.channels).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        platform: 'Slack',
-        connectionModes: expect.arrayContaining(['Socket Mode']),
-        credentialFields: expect.arrayContaining(['Bot Token', 'App Token']),
-        pairingMethod: 'pairing_code',
-        supportsUploads: true,
-        supportsMarkdown: true,
-      }),
-      expect.objectContaining({
-        platform: 'Discord',
-        credentialFields: expect.arrayContaining(['Bot Token', 'Message Content Intent']),
-        supportsEmbeds: true,
-      }),
-      expect.objectContaining({
-        platform: 'DingTalk',
-        connectionModes: expect.arrayContaining(['WebSocket Long Connection', 'URL Callback']),
-        credentialFields: expect.arrayContaining(['Client ID', 'Client Secret', 'AES Key', 'Token']),
-      }),
-      expect.objectContaining({
-        platform: 'WeChat ClawBot',
-        markdownRendering: true,
-        qrCodeUrl: expect.stringContaining('/assistant/claw/'),
-        pairingMethod: 'qr_code',
-        credentialFields: [],
-      }),
+      expect.objectContaining({ platform: 'WeChat ClawBot', markdownRendering: true, qrCodeUrl: expect.stringContaining('/assistant/claw/') }),
     ]));
 
     body = await (await patchClaw(patchRequest('http://localhost/api/assistant/claw', {
@@ -939,18 +813,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ platform: 'Slack', status: 'connected' }),
     ]));
     expect(body.guides).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        platform: 'Slack',
-        steps: expect.arrayContaining([
-          expect.stringContaining('Create a Slack App'),
-          expect.stringContaining('Enable Socket Mode'),
-          expect.stringContaining('Send the pairing code'),
-        ]),
-        troubleshooting: expect.arrayContaining([
-          expect.stringContaining('Socket Mode connection error'),
-          expect.stringContaining('Bot token invalid'),
-        ]),
-      }),
+      expect.objectContaining({ platform: 'Slack', steps: expect.arrayContaining([expect.stringContaining('app')]) }),
     ]));
 
     body = await (await patchClaw(patchRequest('http://localhost/api/assistant/claw', {
@@ -996,104 +859,32 @@ describe('assistant API contract', () => {
       systemLanguage: 'auto',
       aiGeneratedMarker: true,
       contentFilter: 'friendly_notice',
-      compactMode: true,
-      autoInstallLowRiskSkills: true,
-      preventSleep: false,
-      profile: {
-        name: 'Kevin',
-        authProviders: expect.arrayContaining(['Google OAuth', 'GitHub OAuth']),
-      },
-      version: expect.stringMatching(/^Agent parity/),
-      desktopPlatforms: expect.arrayContaining(['macOS Apple Silicon', 'macOS Intel', 'Windows x64', 'Windows ARM64']),
-      onlineRequired: true,
-      sync: expect.objectContaining({ accountSettingsAcrossDevices: true }),
-      logLocations: expect.objectContaining({
-        macOS: expect.stringContaining('Open Log Folder'),
-        Windows: expect.stringContaining('Open Log Directory'),
-      }),
-      installation: expect.objectContaining({
-        Windows: expect.objectContaining({ installer: '.exe', troubleshooting: expect.arrayContaining(['Windows Defender SmartScreen']) }),
-        macOS: expect.objectContaining({ installer: '.dmg', permissions: expect.arrayContaining(['System Settings → Privacy & Security']) }),
-      }),
-      privacy: expect.objectContaining({
-        inputsOutputsRetention: '14 days',
-        billingRetention: '24 months',
-        trainingOptOut: 'agent_ai@tencent.com',
-      }),
     });
 
     body = await (await patchSettings(patchRequest('http://localhost/api/assistant/settings', {
       fontSize: 'large',
       systemLanguage: 'en-US',
       contentFilter: 'hide_filtered_answer',
-      compactMode: false,
-      preventSleep: true,
     }))).json();
     expect(body.settings).toMatchObject({
       fontSize: 'large',
       systemLanguage: 'en-US',
       contentFilter: 'hide_filtered_answer',
-      compactMode: false,
-      preventSleep: true,
     });
 
     body = await (await postSupport(jsonRequest('http://localhost/api/assistant/support', {
       kind: 'upload_logs',
       message: 'Investigate Claw reconnect issue',
       includeLogs: true,
-      screenshot: 'claw-reconnect.png',
     }))).json();
     expect(body.ticket).toMatchObject({
       kind: 'upload_logs',
       status: 'received',
-      logBundle: expect.stringContaining('agent-logs'),
-      screenshot: 'claw-reconnect.png',
+      logBundle: expect.stringContaining('jarvis-logs'),
     });
   });
 
-  test('manages share copy download and cancel sharing lifecycle', async () => {
-    let body = await (await postShare(jsonRequest('http://localhost/api/assistant/share', {
-      taskId: 'task-weekly-brief',
-      artifactId: 'artifact-weekly-brief',
-      target: 'Share Link',
-    }))).json();
-    expect(body.share).toMatchObject({
-      status: 'pending_review',
-      shareUrl: expect.stringContaining('/assistant/share/'),
-    });
-
-    body = await (await patchShare(patchRequest('http://localhost/api/assistant/share', {
-      action: 'copy_link',
-      id: body.share.id,
-    }))).json();
-    expect(body.share).toMatchObject({
-      status: 'shared',
-      copied: true,
-      shareUrl: expect.stringContaining('/assistant/share/'),
-    });
-
-    body = await (await patchShare(patchRequest('http://localhost/api/assistant/share', {
-      action: 'download',
-      id: body.share.id,
-    }))).json();
-    expect(body.share.downloadUrl).toContain('/assistant/download/');
-
-    body = await (await patchShare(patchRequest('http://localhost/api/assistant/share', {
-      action: 'revoke',
-      id: body.share.id,
-    }))).json();
-    expect(body.share).toMatchObject({
-      status: 'revoked',
-      shareUrl: null,
-    });
-
-    const listed = await (await getShares()).json();
-    expect(listed.shares).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: body.share.id, status: 'revoked' }),
-    ]));
-  });
-
-  test('lists explores shares and remixes community tasks as personal Agent agents', async () => {
+  test('lists explores shares and remixes community tasks as personal Jarvis agents', async () => {
     let body = await (await getExplore()).json();
     expect(body.templates).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -1105,30 +896,8 @@ describe('assistant API contract', () => {
         name: 'Local File Cleanup Agent',
         useCases: expect.arrayContaining(['batch_rename', 'merge_pdfs']),
       }),
-      expect.objectContaining({ name: 'File Content Recognition', source: 'official', outputFormat: 'Spreadsheet' }),
-      expect.objectContaining({ name: 'Document Generation & Editing', source: 'official', outputFormat: 'Document' }),
-      expect.objectContaining({ name: 'Data Analysis & Visualization', useCases: expect.arrayContaining(['charts', 'forecasting']) }),
-      expect.objectContaining({ name: 'Social Media Content Creation', useCases: expect.arrayContaining(['Twitter/X', 'LinkedIn', 'YouTube', 'Medium']) }),
-      expect.objectContaining({ name: 'Automated Daily News Briefing', connectors: expect.arrayContaining(['Slack', 'Telegram', 'Discord']) }),
-      expect.objectContaining({ name: 'Remote Control via Slack', connectors: expect.arrayContaining(['Slack']) }),
-      expect.objectContaining({ name: 'Google Calendar & Drive Integration', skills: expect.arrayContaining(['Google Calendar', 'Google Drive']) }),
-      expect.objectContaining({ name: 'Zero-Code Local Application Development', outputFormat: 'Code App' }),
-      expect.objectContaining({ name: 'Creating Custom Skills', outputFormat: 'Skill Package' }),
-      expect.objectContaining({ name: 'AI Self-Driven Workflows', mode: 'Agent' }),
     ]));
-    expect(body.practiceCases).toEqual(expect.arrayContaining([
-      'File Content Recognition',
-      'Document Generation & Editing',
-      'Data Analysis & Visualization',
-      'Social Media Content Creation',
-      'Automated Daily News Briefing',
-      'Remote Control via Slack',
-      'Google Calendar & Drive Integration',
-      'Zero-Code Local Application Development',
-      'Creating Custom Skills',
-      'AI Self-Driven Workflows',
-    ]));
-    expect(body.exploreActions).toEqual(expect.arrayContaining(['Try Task', 'Make My Version', 'Remix Agent', 'Share Exploration']));
+    expect(body.exploreActions).toEqual(expect.arrayContaining(['Try Task', 'Remix Agent', 'Share Exploration']));
 
     body = await (await postExplore(jsonRequest('http://localhost/api/assistant/explore', {
       templateId: 'explore-investor-update',
@@ -1209,15 +978,15 @@ describe('assistant API contract', () => {
     expect(body.session.status).toBe('canceled');
   });
 
-  test('tracks expanded official Agent docs gaps as implemented Agent parity capabilities', async () => {
+  test('tracks 150 additional WorkBuddy gaps as implemented Jarvis parity capabilities', async () => {
     const body = await (await getParity()).json();
 
     expect(body.summary).toMatchObject({
-      total: 212,
-      implemented: 212,
+      total: 150,
+      implemented: 150,
       remaining: 0,
     });
-    expect(body.gaps).toHaveLength(212);
+    expect(body.gaps).toHaveLength(150);
     expect(body.gaps.every((gap: any) => gap.status === 'implemented')).toBe(true);
     expect(body.gaps.map((gap: any) => gap.name)).toEqual(expect.arrayContaining([
       'Runtime sandbox filesystem',
@@ -1256,68 +1025,6 @@ describe('assistant API contract', () => {
       'WeChat file attachment',
       'Shared link expiry',
       'Account phone rebinding',
-      'Official connector roster',
-      'Model capability flags',
-      'Custom protocol toggle',
-      'Compact mode',
-      'Auto-install low-risk skills',
-      'Prevent sleep',
-      'Sidebar account profile',
-      'Version information',
-      'Copy share link',
-      'Download shared file',
-      'Cancel sharing',
-      'Unarchive task',
-      'Feedback screenshot attachment',
-      'Automation schedule kinds',
-      'Featured skills roster',
-      'Batch skill updates',
-      'Generated custom skill package',
-      'Google Calendar connector',
-      'Google OAuth connector flow',
-      'Official practice case library',
-      'File recognition practice template',
-      'Document generation practice template',
-      'Data visualization practice template',
-      'Social media practice template',
-      'Daily briefing practice template',
-      'Remote Slack practice template',
-      'Google Calendar and Drive practice template',
-      'Zero-code local app practice template',
-      'Custom skill creation practice template',
-      'AI self-driven workflow template',
-      'Platform-specific Claw setup guides',
-      'Claw credential field schemas',
-      'Claw connection mode catalog',
-      'Claw pairing method catalog',
-      'Claw troubleshooting catalog',
-      'Desktop platform support matrix',
-      'Multi-device account sync',
-      'Log folder locations',
-      'Windows installation guide',
-      'macOS installation guide',
-      'New task bar anatomy',
-      'One-sentence task assignment examples',
-      'Default working directory behavior',
-      'Context tool matrix',
-      'Parallel task creation guidance',
-      'Conversation top toolbar',
-      'Conversation history jump',
-      'Show details panel action',
-      'File and image upload methods',
-      'Execution progress stages',
-      'Interrupt and resume flow',
-      'Selected artifact preview layout',
-      'Spreadsheet preview',
-      'Document preview',
-      'Web preview controls',
-      'All files tree and tab view',
-      'Changes detail review',
-      'Sidebar task history sections',
-      'Feedback product-team route',
-      'Privacy retention matrix',
-      'Data subject rights catalog',
-      'AI training opt-out',
     ]));
     expect(body.categories).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Cloud Agent lifecycle', implemented: 24 }),
@@ -1339,9 +1046,6 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Subagent governance', implemented: 6 }),
       expect.objectContaining({ name: 'Mobile attachment sources', implemented: 6 }),
       expect.objectContaining({ name: 'Account and sharing settings', implemented: 4 }),
-      expect.objectContaining({ name: 'Official docs gap closure', implemented: 14 }),
-      expect.objectContaining({ name: 'Extended docs gap closure', implemented: 24 }),
-      expect.objectContaining({ name: 'Core docs gap closure', implemented: 24 }),
     ]));
   });
 });

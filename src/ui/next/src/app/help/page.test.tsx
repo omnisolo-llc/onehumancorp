@@ -90,8 +90,7 @@ describe('HelpCenterPage', () => {
     await user.type(searchInput, 'nonexistentxyz123');
 
     await waitFor(() => {
-      expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
-      expect(screen.getByText(/"nonexistentxyz123"/)).toBeInTheDocument();
+      expect(screen.getByText('No results found matching "nonexistentxyz123"')).toBeInTheDocument();
     });
   });
 

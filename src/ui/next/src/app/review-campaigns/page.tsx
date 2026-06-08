@@ -19,32 +19,18 @@ export default function ReviewCampaignsPage() {
     }
   }, []);
 
-    const handleGenerate = async () => {
+  const handleGenerate = () => {
     setIsGenerating(true);
-    try {
-      const response = await fetch('/api/v1/growth/campaign/generate-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_name: productName })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setGeneratedDraft(data.message);
-      } else {
-        throw new Error('API failed');
-      }
-    } catch(e) {
-      setGeneratedDraft(
-        `Subject: How are you loving your ${productName || 'recent purchase'}?\n\n` +
-        `Hi [Customer Name],\n\n` +
-        `Thank you so much for shopping with us! We noticed you recently received your ${productName || 'order'} and we hope you are absolutely loving it.\n\n` +
-        `As a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.\n\n` +
-        `Click here to leave a review: [Review Link]\n\n` +
-        `To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!\n\n` +
-        `Warmly,\n` +
-        `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team\n\n⚡ Powered by OHC`
-      );
-    }
+    setGeneratedDraft(
+      `Subject: How are you loving your ${productName || 'recent purchase'}?\n\n` +
+      `Hi [Customer Name],\n\n` +
+      `Thank you so much for shopping with us! We noticed you recently received your ${productName || 'order'} and we hope you are absolutely loving it.\n\n` +
+      `As a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.\n\n` +
+      `Click here to leave a review: [Review Link]\n\n` +
+      `To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!\n\n` +
+      `Warmly,\n` +
+      `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team`
+    );
     setIsGenerating(false);
     setIsSent(false);
   };

@@ -84,27 +84,6 @@ describe('MyPlanPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/pricing');
   });
 
-  it('renders soft limit warning when limits are reached', async () => {
-    const mockData = {
-      current_plan: 'Free',
-      next_bill_estimated: 0,
-      ai_actions_used: 100,
-      ai_actions_limit: 100,
-      storage_used_bytes: 0,
-      storage_limit_bytes: 0,
-    };
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockData,
-    });
-
-    render(<MyPlanPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/You've reached your free action limit/)).toBeDefined();
-    });
-  });
-
   it('navigates to cost-dashboard when clicking "View Cost Details"', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

@@ -4,7 +4,6 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
-use axum::http::StatusCode;
 use crate::utils::cache::HybridCache;
 
 pub static MY_PLAN_CACHE: OnceLock<HybridCache<MyPlanResponse>> = OnceLock::new();
@@ -73,77 +72,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
         .route("/department-tier-usage", axum::routing::get(department_tier_usage_handler))
-        .route("/create-checkout-session", axum::routing::post(create_checkout_session_handler))
-        .route("/cancel-subscription", axum::routing::post(cancel_subscription_handler))
         .with_state(hub)
-}
-
-#[derive(serde::Deserialize)]
-pub struct CreateCheckoutSessionRequest {
-    pub tier: String,
-}
-
-#[derive(serde::Serialize)]
-pub struct CreateCheckoutSessionResponse {
-    pub checkout_url: String,
-}
-
-pub async fn create_checkout_session_handler(
-    _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> Result<Json<CreateCheckoutSessionResponse>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return Err(StatusCode::UNAUTHORIZED),
-    };
-
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
-    let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
-
-    let amount_usd = match req.tier.to_lowercase().as_str() {
-        "starter" => 29.0,
-        "pro" => 79.0,
-        "business" => 299.0,
-        _ => return Err(StatusCode::BAD_REQUEST),
-    };
-
-    if let Some(client) = &hub.tracker().stripe_client {
-        // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd).await {
-            Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    } else {
-        // Fallback for tests / missing Stripe config
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
-    }
-}
-
-pub async fn cancel_subscription_handler(
-    _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> Result<Json<serde_json::Value>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return Err(StatusCode::UNAUTHORIZED),
-    };
-
-    // We assume the subscription ID can be derived from the tenant, or we fetch the user's active sub
-    // For this implementation, we simulate cancelling a generic subscription ID
-    let sub_id = format!("sub_{}", tenant_id);
-
-    if let Some(client) = &hub.tracker().stripe_client {
-        match client.cancel_subscription(&sub_id).await {
-            Ok(sub) => Ok(Json(serde_json::json!({ "status": sub.status, "message": "Subscription canceled successfully." }))),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    } else {
-        Ok(Json(serde_json::json!({ "status": "canceled", "message": "Subscription canceled successfully." })))
-    }
 }
 
 pub async fn my_plan_handler(
@@ -159,7 +88,7 @@ pub async fn my_plan_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(MyPlanResponse { current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
+        None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
     };
 
     let cache = MY_PLAN_CACHE.get_or_init(|| HybridCache::new(None));
@@ -444,7 +373,7 @@ fn current_usage_period() -> String {
 
 fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
     DepartmentTierUsageResponse {
-        current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(),
+        current_plan: "Free".to_string(),
         period: current_usage_period(),
         departments: vec![],
     }
@@ -512,7 +441,7 @@ mod department_tier_usage_tests {
 
         // Assert concurrency latency (should be very fast since no actual usage)
         assert!(elapsed.as_millis() < 500, "Should execute concurrently and quickly");
-        assert_eq!(response.current_plan, plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string());
+        assert_eq!(response.current_plan, "Free");
 
         // Teardown
         sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();

@@ -8,7 +8,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const payload = await request.json().catch(() => null);
   try {
-    return NextResponse.json(mutateSkill(payload || {}));
+    return NextResponse.json({ skills: mutateSkill(payload || {}) });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'skill could not be updated' }, { status: 400 });
   }

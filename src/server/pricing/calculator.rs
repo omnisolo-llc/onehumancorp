@@ -175,7 +175,6 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
 
 // Advanced heuristic: estimate savings when fallback logic kicks in or tokens are dynamically truncated
 pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_tokens: i64, model: &str) -> f64 {
-    tracing::info!("💰 Miser telemetry: Calculating token efficiency for model: {}", model);
     if original_tokens <= truncated_tokens {
         return 0.0;
     }
