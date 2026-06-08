@@ -35,6 +35,7 @@ export default function OnboardingWizard() {
     step, setStep,
     chatStep, setChatStep,
     businessDescription, setBusinessDescription,
+    businessGoal, setBusinessGoal,
     businessName, setBusinessName,
     whatYouSell, setWhatYouSell,
     location, setLocation,
@@ -408,8 +409,9 @@ export default function OnboardingWizard() {
     if (step === 1) {
       if (chatStep === 1) return 25;
       if (chatStep === 2) return 35;
-      if (chatStep === 3) return 45;
-      if (chatStep === 4) return 50;
+      if (chatStep === 3) return 40;
+      if (chatStep === 4) return 45;
+      if (chatStep === 5) return 50;
     }
     if (step === 2) return 60;
     if (step === 3) return 80;
