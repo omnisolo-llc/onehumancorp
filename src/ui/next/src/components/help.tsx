@@ -257,6 +257,7 @@ export function HelpWidget() {
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
+
                   <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Details", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
