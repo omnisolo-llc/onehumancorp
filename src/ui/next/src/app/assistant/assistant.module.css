@@ -167,6 +167,40 @@
   margin-top: 12px;
 }
 
+.taskTools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.filterMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  color: #6b7588;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.inlineButton {
+  border: 0;
+  background: transparent;
+  color: #0f766e;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 760;
+  padding: 0;
+  text-align: right;
+}
+
+.inlineButton:hover {
+  color: #115e59;
+  text-decoration: underline;
+}
+
 .taskList,
 .messageList,
 .resultList,
@@ -240,6 +274,18 @@
   border-color: #fecaca;
   background: #fef2f2;
   color: #b91c1c;
+}
+
+.statusPlanning {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.statusPending {
+  border-color: #e9d5ff;
+  background: #faf5ff;
+  color: #7e22ce;
 }
 
 .statusNeutral {
@@ -507,6 +553,8 @@
 
 .resultActions {
   margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5eaf1;
 }
 
 .emptyText {
@@ -515,11 +563,23 @@
 
 @media (max-width: 1120px) {
   .workstation {
-    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-columns: minmax(204px, 0.72fr) minmax(300px, 1.25fr) minmax(248px, 0.82fr);
+    gap: 12px;
   }
 
-  .workstation > aside:last-child {
-    grid-column: 1 / -1;
+  .panel {
+    padding: 14px;
+  }
+
+  .formGridThree,
+  .formGridFour,
+  .featureGridTwo,
+  .featureGridThree {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -556,13 +616,29 @@
 }
 
 @media (max-width: 520px) {
-  .tabGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .headerInner {
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+
+  .utilityNav {
+    flex-wrap: nowrap;
+    margin-left: -14px;
+    margin-right: -14px;
+    overflow-x: auto;
+    padding: 0 14px 6px;
+    scrollbar-width: thin;
+  }
+
+  .panelButton {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 
   .primaryLink,
   .secondaryButton,
-  .panelButton,
   .startButton {
     width: 100%;
   }
