@@ -71,7 +71,7 @@ export default function MilestonesPage() {
         </button>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8">
+      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8 backdrop-blur-xl bg-white/60 shadow-sm border border-white/50 rounded-2xl">
 
         {/* Milestones List */}
         <section className="w-full md:w-1/2 flex flex-col gap-4">
@@ -126,6 +126,7 @@ export default function MilestonesPage() {
                                     src={cardUrl}
                                     alt={activeM.title}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => { e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjYzMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSI0OCIgZmlsbD0iIzk0YTNiOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q291bGQgbm90IGxvYWQgbWlsZXN0b25lIGNhcmQ8L3RleHQ+PC9zdmc+'; }}
                                 />
                             </div>
 
@@ -173,6 +174,13 @@ export default function MilestonesPage() {
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                                     Share on X
                                 </a>
+                                <button
+                                    onClick={() => router.push('/referrals?ref=milestone')}
+                                    className="w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 flex items-center justify-center gap-2 mt-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                    Invite a friend and get a $50 credit
+                                </button>
                             </div>
                         </div>
                     );
