@@ -750,11 +750,15 @@ impl DashboardService for MyDashboardService {
 
         let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             sqlx::query(
-                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3"
+                "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)
+                 VALUES ($3, $4, $1, $2, CURRENT_TIMESTAMP)
+                 ON CONFLICT (tenant_id, user_id) DO UPDATE
+                 SET current_step = EXCLUDED.current_step, state_json = EXCLUDED.state_json, updated_at = CURRENT_TIMESTAMP"
             )
             .bind(state.current_step)
             .bind(state_json_val)
             .bind(&state.organization_id)
+            .bind(&state.user_id)
             .execute(&self.db.pool)
             .await
         }).await;
