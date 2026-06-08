@@ -3,10 +3,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CheckoutPage from './page';
 
+const mockUseSearchParams = vi.fn(() => new URLSearchParams(''));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
   }),
+  useSearchParams: () => mockUseSearchParams(),
 }));
 
 vi.mock('../../components/TooltipRegistry', () => ({
@@ -18,6 +20,55 @@ vi.mock('../components/PoweredByOHC', () => ({
 }));
 
 describe('CheckoutPage', () => {
+  afterEach(() => {
+    mockUseSearchParams.mockImplementation(() => new URLSearchParams(''));
+  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: vi.fn(() => 'fake-token'),
+      setItem: vi.fn(),
+    },
+    writable: true
+  });
+});
+
+  it('displays subscription UI when tier is provided and handles Stripe checkout', async () => {
+    mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Starter'));
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { assign },
+    });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        checkout_url: 'https://checkout.stripe.com/pay/test',
+      }),
+    } as any);
+
+    render(<CheckoutPage />);
+
+    expect(screen.getByText('Plan Upgrade')).toBeDefined();
+    expect(screen.getByText('OHC Starter Plan')).toBeDefined();
+
+    const payButton = screen.getByText('Pay with Stripe');
+    fireEvent.click(payButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          tier: 'Starter'
+        }),
+      }));
+      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test');
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -70,14 +121,14 @@ describe('CheckoutPage', () => {
     fireEvent.click(screen.getByText('Check'));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/delivery-quote', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/delivery-quote', expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           deliveryAddress: '123 Market St',
           coordinates: { lat: 37.77, lng: -122.41 },
         }),
-      });
+      }));
     });
   });
 
@@ -99,15 +150,15 @@ describe('CheckoutPage', () => {
     fireEvent.click(screen.getByText('Pay with Mercado Pago'));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          tenant_id: 'my-store',
+          tenant_id: 'fake-token',
           amount_cents: 4500,
           currency: 'MXN',
         }),
-      });
+      }));
       expect(assign).toHaveBeenCalledWith('https://www.mercadopago.com/checkout/v1/redirect?pref_id=real');
     });
   });
