@@ -1,3 +1,4 @@
+/// Master Catalog B.11. Subagent Orchestration
 use crate::agent::{Agent, AgentRunConfig};
 use crate::types::Message;
 use std::sync::Arc;

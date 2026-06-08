@@ -4,6 +4,7 @@ ALTER TABLE IF EXISTS agent_approvals DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inbox_messages DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customers DISABLE ROW LEVEL SECURITY;
@@ -175,6 +176,12 @@ VALUES
   ('e2e-agent-marketing', 'e2e-tenant', 'e2e-message-vegan-options', 'customer', 'e2e-agent-marketing', 'customer_question', 'Do you have vegan options for birthday cakes?', 'e2e-room-ops')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status)
+VALUES
+  ('e2e-inbox-msg-1', 'e2e-tenant', 'Instagram DM', 'Do you have vegan options for birthday cakes?', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending'),
+  ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending')
+ON CONFLICT DO NOTHING;
+
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents ENABLE ROW LEVEL SECURITY;
@@ -184,6 +191,7 @@ ALTER TABLE IF EXISTS customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inbox_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 ENABLE ROW LEVEL SECURITY;
@@ -200,6 +208,7 @@ ALTER TABLE IF EXISTS customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS orders FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inbox_messages FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;

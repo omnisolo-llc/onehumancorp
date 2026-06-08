@@ -45,7 +45,7 @@ export default function WebsiteBuilderPage() {
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const res = await fetch('/api/onboarding/state', {
+      const res = await fetch('/api/onboarding/draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,6 +60,8 @@ export default function WebsiteBuilderPage() {
       if (res.ok) {
         setSaveMessage("Draft Saved!");
         setTimeout(() => setSaveMessage(""), 3000);
+      } else {
+        console.error('Failed to save draft response not ok');
       }
     } catch (e) {
       console.error('Failed to save draft', e);
@@ -86,11 +88,17 @@ export default function WebsiteBuilderPage() {
     const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
     setTenantId(tenantIdStr);
     const userId = localStorage.getItem('user_id') || 'test-user';
-    fetch('/api/onboarding/state', {
-      headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId }
-    })
-    .then(res => res.json())
-    .then(data => {
+
+    Promise.all([
+      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null),
+      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+    ])
+    .then(([draftData, stateData]) => {
+      const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.builderState) {
         if (data.builderState.bio) setBio(data.builderState.bio);
         if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
@@ -98,6 +106,7 @@ export default function WebsiteBuilderPage() {
       }
       if (data && data.wizardState) {
         if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
+        if (data.wizardState.wizardStep !== undefined) setWizardStep(data.wizardState.wizardStep);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
@@ -488,12 +497,14 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setUserPassword(e.target.value)}
                     />
                     <button
-                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
+                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim() || !userEmail.includes('@') || userPassword.length < 8}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(7)}
                     >
                       Next
                     </button>
+                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-red-500 text-xs text-center mt-1">Please enter a valid email address.</p>}
+                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-red-500 text-xs text-center mt-1">Password must be at least 8 characters.</p>}
                   </div>
                 </>
               )}
