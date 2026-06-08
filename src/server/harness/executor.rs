@@ -101,16 +101,16 @@ mod tests {
     async fn test_dynamic_config_update() {
         let mut task = LocalShellTask::new(None);
 
-        let result1 = task.execute("curl http://example.com").await;
+        let result1 = task.execute("echo hello").await;
         assert!(result1.is_ok());
 
         let policy = r#"{
-            "disabled_commands": ["curl"]
+            "disabled_commands": ["echo"]
         }"#;
 
         task.update_config(policy).await.unwrap();
 
-        let result2 = task.execute("curl http://example.com").await;
+        let result2 = task.execute("echo hello").await;
         assert!(result2.is_err());
 
         let msg = result2.unwrap_err();
