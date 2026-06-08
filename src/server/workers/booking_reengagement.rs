@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use crate::db::DB;
 use std::time::Duration;
-use chrono::Utc;
+
 use uuid::Uuid;
 use sqlx::Row;
 use serde_json::json;
