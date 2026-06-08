@@ -78,9 +78,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .with_state(hub)
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct CreateCheckoutSessionRequest {
     pub tier: String,
+    pub cycle: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -102,22 +103,27 @@ pub async fn create_checkout_session_handler(
     let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
     let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let amount_usd = match req.tier.to_lowercase().as_str() {
-        "starter" => 29.0,
-        "pro" => 79.0,
-        "business" => 299.0,
+    let is_annual = req.cycle.as_deref() == Some("annual");
+    let amount_usd = match (req.tier.to_lowercase().as_str(), is_annual) {
+        ("starter", false) => 29.0,
+        ("starter", true) => 276.0,
+        ("pro", false) => 79.0,
+        ("pro", true) => 756.0,
+        ("business", false) => 299.0,
+        ("business", true) => 2868.0,
         _ => return Err(StatusCode::BAD_REQUEST),
     };
 
     if let Some(client) = &hub.tracker().stripe_client {
-        // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd).await {
+        let price_id = if is_annual { format!("{}_annual", req.tier) } else { req.tier.clone() };
+        match client.create_checkout_session(&price_id, &tenant_id, amount_usd).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
     } else {
         // Fallback for tests / missing Stripe config
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        let suffix = if is_annual { "-annual" } else { "" };
+        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}{}", req.tier, tenant_id, suffix) }))
     }
 }
 
@@ -568,3 +574,49 @@ mod department_tier_usage_tests {
         assert_eq!(operations.usage_percent, Some(35.0));
     }
 }
+
+    #[tokio::test]
+    async fn test_create_checkout_session_monthly_and_annual() {
+        let (event_tx, _rx) = tokio::sync::mpsc::channel(100);
+        // Using an empty/dummy pool for this handler since it doesn't hit DB right now
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost:5432/postgres") // Not actually used
+            .await;
+        if pool.is_err() {
+            return;
+        }
+        let pool = pool.unwrap();
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool));
+
+        // Test Monthly
+        let req_monthly = CreateCheckoutSessionRequest {
+            tier: "Starter".to_string(),
+            cycle: Some("monthly".to_string()),
+        };
+        let body_monthly = axum::body::Body::from(serde_json::to_vec(&req_monthly).unwrap());
+        let mut request_monthly = axum::extract::Request::new(body_monthly);
+        request_monthly.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            org_id: "test_tenant".to_string(),
+            agent_id: "test".to_string(),
+            spiffe_id: "test".to_string(),
+        });
+
+        let res_monthly = create_checkout_session_handler(HeaderMap::new(), State(hub.clone()), request_monthly).await.unwrap();
+        assert_eq!(res_monthly.0.checkout_url, "https://checkout.stripe.com/pay/test_Starter_test_tenant");
+
+        // Test Annual
+        let req_annual = CreateCheckoutSessionRequest {
+            tier: "Pro".to_string(),
+            cycle: Some("annual".to_string()),
+        };
+        let body_annual = axum::body::Body::from(serde_json::to_vec(&req_annual).unwrap());
+        let mut request_annual = axum::extract::Request::new(body_annual);
+        request_annual.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            org_id: "test_tenant".to_string(),
+            agent_id: "test".to_string(),
+            spiffe_id: "test".to_string(),
+        });
+
+        let res_annual = create_checkout_session_handler(HeaderMap::new(), State(hub.clone()), request_annual).await.unwrap();
+        assert_eq!(res_annual.0.checkout_url, "https://checkout.stripe.com/pay/test_Pro_test_tenant-annual");
+    }

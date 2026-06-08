@@ -9,6 +9,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
+  const cycle = searchParams?.get("cycle") || "monthly";
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
@@ -93,7 +94,7 @@ export default function CheckoutPage() {
           "Content-Type": "application/json",
           ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
         },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, cycle }),
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
@@ -220,10 +221,12 @@ export default function CheckoutPage() {
                     OHC {tier} Plan
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    Monthly subscription
+                    {cycle === 'annual' ? 'Annual subscription' : 'Monthly subscription'}
                   </p>
                   <div className="mt-2 text-sm font-medium text-gray-900">
-                    {tier.toLowerCase() === 'starter' ? '$29.00 / month' : tier.toLowerCase() === 'pro' ? '$79.00 / month' : '$299.00 / month'}
+                    {cycle === 'annual'
+                      ? (tier.toLowerCase() === 'starter' ? '$276.00 / year' : tier.toLowerCase() === 'pro' ? '$756.00 / year' : '$2,868.00 / year')
+                      : (tier.toLowerCase() === 'starter' ? '$29.00 / month' : tier.toLowerCase() === 'pro' ? '$79.00 / month' : '$299.00 / month')}
                   </div>
                 </div>
               </div>
