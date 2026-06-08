@@ -14,6 +14,23 @@ message Agent {
   string organization_id = 5;
 }
 
+enum InteractionType {
+  TASK = 0;
+  STATUS = 1;
+  HANDOFF = 2;
+  APPROVAL = 3;
+}
+
+message AgentInteraction {
+  string id = 1;
+  string sender_id = 2;
+  string recipient_id = 3;
+  string meeting_id = 4;
+  InteractionType type = 5;
+  bytes payload = 6;
+  map<string, string> metadata = 7;
+}
+
 message AgentMessage {
   string id = 1;
   string from_agent_id = 2;
@@ -27,4 +44,5 @@ message AgentMessage {
 service AgentOrchestration {
   rpc RegisterAgent(Agent) returns (Agent);
   rpc PublishMessage(AgentMessage) returns (AgentMessage);
+  rpc StreamInteractions(stream AgentInteraction) returns (stream AgentInteraction);
 }

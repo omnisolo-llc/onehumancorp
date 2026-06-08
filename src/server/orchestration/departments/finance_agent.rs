@@ -19,7 +19,7 @@ impl Department for FinanceAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.payment.received".to_string()]
+        vec!["tenant.payment.received".to_string(), "tenant.payment.deposit_received".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {

@@ -162,7 +162,18 @@ impl DepartmentOrchestrator {
     pub async fn dispatch_event(&self, event: DepartmentEvent) -> Result<(), String> {
         let topic = format!("department_event:{}", event.event_type);
         let payload = serde_json::to_vec(&event).map_err(|e| e.to_string())?;
-        self.mesh.publish(&topic, payload).await?;
+
+        let agent_interaction = crate::ohc::agent::AgentInteraction {
+            id: event.id.clone(),
+            sender_id: "orchestrator".to_string(),
+            recipient_id: "".to_string(),
+            meeting_id: "".to_string(),
+            r#type: crate::ohc::agent::InteractionType::Task as i32,
+            payload: payload.clone(),
+            metadata: std::collections::HashMap::new(),
+        };
+        let interaction_payload = prost::Message::encode_to_vec(&agent_interaction);
+        self.mesh.publish(&topic, interaction_payload).await?;
 
         let subscriptions = self.event_subscriptions.read().await;
         if let Some(dep_types) = subscriptions.get(&event.event_type) {
@@ -586,7 +597,7 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
-        let lock_key = format!("ohc:lock:agent_approval:{}", request_id);
+        let lock_key = format!("ohc:lock:{}:approval:{}", tenant_id, request_id);
 
         let lock_acquired = self.mesh.acquire_lock(&lock_key, "orchestrator", 60).await;
         if let Ok(acquired) = lock_acquired {
