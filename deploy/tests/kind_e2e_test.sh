@@ -182,12 +182,14 @@ fi
 
 # ── Add Helm repos ─────────────────────────────────────────────────────────────
 log "Adding Helm repos ..."
-helm repo add valkey https://valkey.io/valkey-helm/ 2>/dev/null || true
+helm repo add valkey https://valkey-io.github.io/valkey-helm/ 2>/dev/null || true
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
 helm repo update valkey prometheus-community 2>/dev/null || true
 
 log "Building chart dependencies ..."
-helm dependency build "${CHART_DIR}" --skip-refresh
+for i in 1 2 3 4 5; do
+  helm dependency build "${CHART_DIR}" --skip-refresh && break || sleep 5
+done
 
 wait_for_backend() {
   local backend_url="$1"

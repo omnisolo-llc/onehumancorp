@@ -7,7 +7,7 @@ appVersion: "0.4.42"
 dependencies:
   - name: valkey
     version: "0.9.4"
-    repository: "https://valkey.io/valkey-helm/"
+    repository: "https://valkey-io.github.io/valkey-helm/"
     condition: valkey.enabled
   - name: kube-prometheus-stack
     version: "58.1.3"
