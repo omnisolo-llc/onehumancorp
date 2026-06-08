@@ -187,7 +187,17 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update valkey prometheus-community 2>/dev/null || true
 
 log "Building chart dependencies ..."
-helm dependency build "${CHART_DIR}" --skip-refresh
+for i in {1..5}; do
+  if helm dependency build "${CHART_DIR}" --skip-refresh; then
+    break
+  fi
+  echo "helm dependency build failed, retrying in 5 seconds... (Attempt $i of 5)"
+  sleep 5
+  if [[ $i -eq 5 ]]; then
+    echo "helm dependency build failed after 5 attempts"
+    exit 1
+  fi
+done
 
 wait_for_backend() {
   local backend_url="$1"
