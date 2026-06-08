@@ -186,11 +186,18 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
+    let hub_clone_for_dept = hub.clone();
+    let tenant_id_clone_for_dept = tenant_id.clone();
+    let department_tier_future = async move {
+        department_tier_usage_for_tenant(&hub_clone_for_dept, &tenant_id_clone_for_dept).await
+    };
+
+    let (storage_res, auditor_res, trend_res, department_tier_res) = tokio::join!(storage_future, auditor_future, trend_future, department_tier_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
     let trend = trend_res.unwrap_or_default();
+    let department_tier_usage = department_tier_res;
 
     let cache_hit_rate = if total_tokens + cached_tokens > 0 {
         (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -209,8 +216,6 @@ pub async fn cost_dashboard_handler(
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
-
-    let department_tier_usage = department_tier_usage_for_tenant(&hub, &tenant_id).await;
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
