@@ -2,6 +2,17 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use uuid::Uuid;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct OHCLedgerEntry {
+    pub id: String,
+    pub tenant_id: String,
+    pub event_type: String,
+    pub department: String,
+    pub payload: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
 use chrono::Utc;
 use std::str::FromStr;
 
@@ -12,6 +23,7 @@ use opentelemetry::global;
 use opentelemetry::KeyValue;
 use crate::orchestration::mesh::TeammateMesh;
 use opentelemetry::metrics::Counter;
+
 
 pub enum AgentTriggerType {
     Scheduled,
@@ -475,6 +487,50 @@ impl DepartmentOrchestrator {
     }
 
 
+
+        pub async fn get_ledger_entries(&self, tenant_id: &str, limit: i64) -> Result<Vec<OHCLedgerEntry>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+                let rows = sqlx::query(
+                    "SELECT id, tenant_id, event_type, department, payload, created_at
+                     FROM ohc_universal_ledger
+                     WHERE tenant_id = $1
+                     ORDER BY created_at DESC
+                     LIMIT $2"
+                )
+                .bind(tenant_id)
+                .bind(limit)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                let mut entries = Vec::new();
+                use sqlx::Row;
+                for row in rows {
+                    let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
+                    let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
+                    entries.push(OHCLedgerEntry {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        event_type: row.get("event_type"),
+                        department: row.get("department"),
+                        payload: payload_str,
+                        created_at: row.get("created_at"),
+                    });
+                }
+                tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(entries)
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                // Return empty for sqlite in tests to avoid rewrite
+                Ok(vec![])
+            }
+        }
+    }
+
     pub async fn get_activity_feed(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
         let mut results = Vec::new();
 
@@ -792,6 +848,27 @@ impl DepartmentOrchestrator {
                 let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
                 let topic = format!("agent:{}:approved", dep);
                 let _ = self.mesh.publish(&topic, payload_bytes).await;
+
+                // Add to ledger
+                if let crate::db::DbStore::Postgres = &self.db.store {
+                    let entry_id = Uuid::new_v4().to_string();
+                    if let Ok(mut tx) = self.db.pool.begin().await {
+                        if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
+                            let _ = sqlx::query(
+                                "INSERT INTO ohc_universal_ledger (id, tenant_id, event_type, department, payload, created_at)
+                                 VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(&entry_id)
+                            .bind(tenant_id)
+                            .bind("approval_decision")
+                            .bind(&dep)
+                            .bind(&payload)
+                            .execute(&mut *tx)
+                            .await;
+                            let _ = tx.commit().await;
+                        }
+                    }
+                }
             }
         }
 

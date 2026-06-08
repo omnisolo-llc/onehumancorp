@@ -33,7 +33,7 @@ describe('MyPlanPage', () => {
   it('renders plan data after fetching', async () => {
     const mockData = {
       current_plan: 'Pro',
-      next_bill_estimated: 79.0,
+      next_bill_estimated: 7900,
       ai_actions_used: 50,
       ai_actions_limit: 1000,
       storage_used_bytes: 1024 * 1024 * 500, // 500 MB
@@ -82,6 +82,27 @@ describe('MyPlanPage', () => {
     const upgradeButtons = screen.getAllByText(/Upgrade Plan/i);
     fireEvent.click(upgradeButtons[0]);
     expect(mockPush).toHaveBeenCalledWith('/pricing');
+  });
+
+  it('renders soft limit warning when limits are reached', async () => {
+    const mockData = {
+      current_plan: 'Free',
+      next_bill_estimated: 0,
+      ai_actions_used: 100,
+      ai_actions_limit: 100,
+      storage_used_bytes: 0,
+      storage_limit_bytes: 0,
+    };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockData,
+    });
+
+    render(<MyPlanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/You've reached your free action limit/)).toBeDefined();
+    });
   });
 
   it('navigates to cost-dashboard when clicking "View Cost Details"', async () => {

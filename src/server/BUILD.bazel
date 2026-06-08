@@ -280,6 +280,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:memory.rs",
     "//src/server/workers:pos_sync_worker.rs",
     "//src/server/workers:calendar_sync.rs",
+    "//src/server/workers:booking_reengagement.rs",
     "//src/server/workers:mod.rs",
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
@@ -715,6 +716,7 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:uuid",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
     ],
 )
 
