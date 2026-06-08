@@ -37,17 +37,27 @@
         color: var(--text-primary);
       }
       .container {
+<<<<<<< HEAD
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+=======
         background: var(--glass-bg);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
+>>>>>>> 381ef37f (feat(ui): update Tauri onboarding to multi-step wizard with premium glass UI)
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
         max-width: 400px;
         width: 100%;
+<<<<<<< HEAD
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
+=======
         box-sizing: border-box;
         border: 1px solid var(--glass-border);
+>>>>>>> 381ef37f (feat(ui): update Tauri onboarding to multi-step wizard with premium glass UI)
       }
       h1 {
         margin-top: 0;
@@ -71,8 +81,14 @@
       input {
         width: 100%;
         padding: 14px;
+<<<<<<< HEAD
+        min-height: 44px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+=======
         margin-bottom: 24px;
         border: 1px solid var(--glass-border);
+>>>>>>> 381ef37f (feat(ui): update Tauri onboarding to multi-step wizard with premium glass UI)
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
@@ -89,6 +105,7 @@
         color: white;
         border: none;
         padding: 14px 24px;
+        min-height: 44px;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
@@ -104,6 +121,51 @@
       button:active:not(:disabled) {
         transform: scale(0.98);
       }
+<<<<<<< HEAD
+
+      .error-msg {
+        color: #FF3B30;
+        font-size: 12px;
+        margin-top: -15px;
+        margin-bottom: 15px;
+        display: none;
+        text-align: left;
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+      }
+      .animate-shake {
+        animation: shake 0.2s ease-in-out 0s 2;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #16161a;
+        }
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+          color: #F5F5F7;
+        }
+        p {
+          color: #A1A1A6;
+        }
+        input {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #F5F5F7;
+        }
+        input:focus {
+          border-color: #0066FF;
+          background: rgba(255, 255, 255, 0.15);
+        }
+=======
       button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -124,10 +186,19 @@
       .dot.active {
         background-color: var(--primary-accent);
         opacity: 1;
+>>>>>>> 381ef37f (feat(ui): update Tauri onboarding to multi-step wizard with premium glass UI)
       }
     </style>
   </head>
   <body>
+<<<<<<< HEAD
+    <div class="container" id="form-container">
+      <h1>What's the name of your business?</h1>
+      <p>We'll use this to set up your workspace.</p>
+      <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
+      <div id="name-error" class="error-msg">Please enter a name for your business.</div>
+      <button id="next-btn">Next</button>
+=======
     <div class="container">
       <div class="progress-dots" id="progress-dots">
         <div class="dot active"></div>
@@ -155,9 +226,38 @@
         <input type="text" id="business-location" placeholder="e.g. Portland, OR" />
         <button id="finish-btn" disabled>Generate My Business</button>
       </div>
+>>>>>>> 381ef37f (feat(ui): update Tauri onboarding to multi-step wizard with premium glass UI)
     </div>
 
     <script>
+<<<<<<< HEAD
+      const nextBtn = document.getElementById('next-btn');
+      const nameInput = document.getElementById('business-name');
+      const nameError = document.getElementById('name-error');
+      const container = document.getElementById('form-container');
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+           const name = nameInput.value.trim();
+           if (name) {
+               nameError.style.display = 'none';
+               localStorage.setItem('businessName', name);
+               window.location.href = "assistant.html";
+           } else {
+               nameError.style.display = 'block';
+               container.classList.remove('animate-shake');
+               void container.offsetWidth; // trigger reflow
+               container.classList.add('animate-shake');
+           }
+        });
+      }
+
+      nameInput.addEventListener('input', () => {
+          if (nameInput.value.trim()) {
+              nameError.style.display = 'none';
+          }
+      });
+=======
       let currentStep = 1;
       const totalSteps = 3;
 
@@ -218,6 +318,7 @@
 
       // Initialize
       document.getElementById('business-name').focus();
+>>>>>>> 381ef37f (feat(ui): update Tauri onboarding to multi-step wizard with premium glass UI)
     </script>
   </body>
 </html>
