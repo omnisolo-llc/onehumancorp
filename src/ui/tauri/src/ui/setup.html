@@ -17,6 +17,7 @@
       .container {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -98,6 +99,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         h1 {
@@ -123,7 +125,7 @@
       <h1>What's the name of your business?</h1>
       <p>We'll use this to set up your workspace.</p>
       <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
-      <div id="name-error" class="error-msg">Please enter a name for your business.</div>
+      <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
       <button id="next-btn">Next</button>
     </div>
     <script>
@@ -149,8 +151,9 @@
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
            const name = nameInput.value.trim();
-           if (name) {
+           if (name.length >= 3) {
                nameError.style.display = 'none';
+               nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                if (window.__TAURI__ && window.__TAURI__.core) {
                  nextBtn.disabled = true;
                  nextBtn.innerText = "Saving...";
@@ -170,6 +173,7 @@
                }
            } else {
                nameError.style.display = 'block';
+               nameInput.style.borderColor = '#FF3B30';
                container.classList.remove('animate-shake');
                void container.offsetWidth; // trigger reflow
                container.classList.add('animate-shake');
@@ -178,8 +182,16 @@
       }
 
       nameInput.addEventListener('input', () => {
-          if (nameInput.value.trim()) {
+          if (nameInput.value.trim().length >= 3) {
               nameError.style.display = 'none';
+              nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
           }
       });
     </script>
