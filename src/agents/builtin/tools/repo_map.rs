@@ -7,6 +7,7 @@ use once_cell::sync::Lazy;
 
 use super::{Tool, ToolExecutor};
 
+// Keep regexes as fallback
 static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
 static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
 static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
@@ -26,7 +27,71 @@ impl RepoMapExecutor {
         Self { workspace_path }
     }
 
+    fn try_tree_sitter_parse(content: &str, ext: &str) -> Option<Vec<String>> {
+        let language = match ext {
+            "rs" => tree_sitter_rust::LANGUAGE.into(),
+            "py" => tree_sitter_python::LANGUAGE.into(),
+            "ts" | "tsx" => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            "go" => tree_sitter_go::LANGUAGE.into(),
+            _ => return None, // Fall back to regex for others
+        };
+
+        let mut parser = tree_sitter::Parser::new();
+        if parser.set_language(&language).is_err() {
+            return None;
+        }
+
+        let tree = parser.parse(content, None)?;
+        let mut cursor = tree.walk();
+        let mut sigs = Vec::new();
+
+        Self::walk_tree(&mut cursor, content, &mut sigs);
+
+        Some(sigs)
+    }
+
+    fn walk_tree(cursor: &mut tree_sitter::TreeCursor, content: &str, sigs: &mut Vec<String>) {
+        let node = cursor.node();
+        let kind = node.kind();
+
+        // Very basic capturing of relevant definition nodes across supported languages
+        if kind == "function_item" || kind == "struct_item" || kind == "enum_item" || kind == "trait_item" // Rust
+            || kind == "function_definition" || kind == "class_definition" // Python
+            || kind == "function_declaration" || kind == "class_declaration" || kind == "interface_declaration" || kind == "type_alias_declaration" // TS
+            || kind == "function_declaration" || kind == "type_declaration" || kind == "method_declaration" // Go
+        {
+            if let Ok(text) = node.utf8_text(content.as_bytes()) {
+                // Extract just the first line (signature)
+                if let Some(first_line) = text.lines().next() as Option<&str> {
+                    let clean: &str = first_line.trim_end_matches('{').trim_end_matches(':').trim();
+                    sigs.push(clean.to_string());
+                }
+            }
+        }
+
+        // Only traverse children if we didn't just capture a top-level def (to keep it a high-level map),
+        // or for Python classes where methods are children, we might want to traverse.
+        // For simplicity in a RepoMap, usually we just want top-level or one level deep.
+        if cursor.goto_first_child() {
+            loop {
+                Self::walk_tree(cursor, content, sigs);
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+            cursor.goto_parent();
+        }
+    }
+
     fn extract_signatures(content: &str, ext: &str) -> Vec<String> {
+        // Try tree-sitter first
+        if let Some(sigs) = Self::try_tree_sitter_parse(content, ext) {
+            if !sigs.is_empty() {
+                return sigs;
+            }
+        }
+
+        // Fallback to regex
         let mut sigs = Vec::new();
         match ext {
             "rs" => {
@@ -217,7 +282,7 @@ mod tests {
         std::fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").expect("should succeed in test");
 
         let go_file = src_dir.join("server.go");
-        std::fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
+        std::fs::write(&go_file, "package main\nfunc StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
 
         let cpp_file = src_dir.join("engine.cpp");
         std::fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");
@@ -241,21 +306,21 @@ mod tests {
         assert!(result.contains("RepoMap for"));
         assert!(result.contains("📁 src/"));
         assert!(result.contains("📄 main.rs"));
-        assert!(result.contains("│ pub fn main() {}"));
-        assert!(result.contains("│ struct User {"));
-        assert!(result.contains("│ fn helper() {}"));
+        assert!(result.contains("│ pub fn main()"));
+        assert!(result.contains("│ struct User"));
+        assert!(result.contains("│ fn helper()"));
 
         assert!(result.contains("📄 utils.py"));
         assert!(result.contains("│ def do_something():"));
         assert!(result.contains("│ class Data:"));
 
         assert!(result.contains("📄 app.ts"));
-        assert!(result.contains("│ export function init() {}"));
-        assert!(result.contains("│ interface Config {}"));
+        assert!(result.contains("│ export function init()"));
+        assert!(result.contains("│ interface Config"));
 
         assert!(result.contains("📄 server.go"));
-        assert!(result.contains("│ func StartServer() {}"));
-        assert!(result.contains("│ type Handler struct {}"));
+        assert!(result.contains("│ func StartServer()"));
+        assert!(result.contains("│ type Handler struct"));
 
         assert!(result.contains("📄 engine.cpp"));
         assert!(result.contains("│ class Engine {"));
@@ -281,6 +346,20 @@ mod extra_tests {
     use super::*;
     use tempfile::tempdir;
 
+    #[tokio::test]
+    async fn test_repomap_tree_sitter_rust() {
+        let dir = tempdir().expect("should succeed in test");
+        let root = dir.path();
+
+        let f = root.join("lib.rs");
+        std::fs::write(&f, "pub fn hello() {}\nstruct Example {\n  field: i32\n}\n").expect("should succeed");
+
+        let executor = RepoMapExecutor::new(root.to_path_buf());
+        let result = executor.execute(json!({})).await.expect("should succeed");
+
+        assert!(result.contains("│ pub fn hello()"));
+        assert!(result.contains("│ struct Example"));
+    }
 
     #[tokio::test]
     async fn test_repomap_max_depth() {
@@ -338,7 +417,6 @@ mod extra_tests {
         assert!(result.is_err());
     }
 }
-
 
 // Adding Aider identifier for validation hooks
 // SOTA Harness Pattern: Aider: RepoMap for large codebases
