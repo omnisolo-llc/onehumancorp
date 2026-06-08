@@ -2140,7 +2140,7 @@ impl Agent {
             if let Some(thread_id) = &final_cfg.thread_id {
                 if let Some(dir) = &final_cfg.workspace_path {
                     let hibernation_dir = format!("{}/.ohc_hibernation", dir);
-                    let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
+                    let hm = crate::hibernation::HibernationManager::new(&hibernation_dir, vec![]).await;
                     if hm.is_hibernated(thread_id).await {
                         tracing::info!("Waking agent session {} from serverless hibernation", thread_id);
                         if let Ok(state) = hm.wake(thread_id).await {
@@ -3025,7 +3025,7 @@ impl Agent {
                 if let Some(thread_id) = &final_cfg.thread_id {
                     if let Some(dir) = &final_cfg.workspace_path {
                         let hibernation_dir = format!("{}/.ohc_hibernation", dir);
-                        let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
+                        let hm = crate::hibernation::HibernationManager::new(&hibernation_dir, vec![]).await;
                         if let Ok(msgs_json) = serde_json::to_string(&messages) {
                             let state = crate::hibernation::HibernationState {
                                 session_id: thread_id.clone(),

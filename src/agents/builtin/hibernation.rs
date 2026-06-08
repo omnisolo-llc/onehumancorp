@@ -16,44 +16,102 @@ pub struct HibernationState {
 
 pub struct HibernationManager {
     storage_dir: String,
+    fallback_dirs: Vec<String>,
 }
 
 impl HibernationManager {
-    pub async fn new(storage_dir: &str) -> Self {
+    pub async fn new(storage_dir: &str, fallback_dirs: Vec<String>) -> Self {
         if !Path::new(storage_dir).exists() {
             let _ = tokio::fs::create_dir_all(storage_dir).await;
         }
+        for dir in &fallback_dirs {
+            if !Path::new(dir).exists() {
+                let _ = tokio::fs::create_dir_all(dir).await;
+            }
+        }
         Self {
             storage_dir: storage_dir.to_string(),
+            fallback_dirs,
         }
     }
 
     pub async fn hibernate(&self, session_id: &str, state: &HibernationState) -> Result<(), String> {
         let path = format!("{}/{}.json", self.storage_dir, session_id);
         let data = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
-        tokio::fs::write(path, data).await.map_err(|e| e.to_string())?;
+        tokio::fs::write(&path, &data).await.map_err(|e| e.to_string())?;
+
+        // Multi-region failover / "spin" strategy: write to all fallback directories for redundancy
+        for dir in &self.fallback_dirs {
+            let fallback_path = format!("{}/{}.json", dir, session_id);
+            let _ = tokio::fs::write(&fallback_path, &data).await;
+        }
+
         Ok(())
     }
 
     pub async fn wake(&self, session_id: &str) -> Result<HibernationState, String> {
         let path = format!("{}/{}.json", self.storage_dir, session_id);
-        if !tokio::fs::try_exists(&path).await.unwrap_or(false) {
-            return Err(format!("Session {} not found", session_id));
+
+        let mut primary_failed = false;
+        let mut last_err = String::new();
+
+        if tokio::fs::try_exists(&path).await.unwrap_or(false) {
+            if let Ok(data) = tokio::fs::read_to_string(&path).await {
+                if let Ok(state) = serde_json::from_str::<HibernationState>(&data) {
+                    return Ok(state);
+                } else {
+                    primary_failed = true;
+                    last_err = format!("Failed to parse JSON in primary directory for session {}", session_id);
+                }
+            } else {
+                primary_failed = true;
+                last_err = format!("Failed to read file in primary directory for session {}", session_id);
+            }
+        } else {
+            primary_failed = true;
+            last_err = format!("Session {} not found in primary directory", session_id);
         }
-        let data = tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())?;
-        let state: HibernationState = serde_json::from_str(&data).map_err(|e| e.to_string())?;
-        Ok(state)
+
+        if primary_failed {
+            for dir in &self.fallback_dirs {
+                let fallback_path = format!("{}/{}.json", dir, session_id);
+                if tokio::fs::try_exists(&fallback_path).await.unwrap_or(false) {
+                    if let Ok(data) = tokio::fs::read_to_string(&fallback_path).await {
+                        if let Ok(state) = serde_json::from_str::<HibernationState>(&data) {
+                            return Ok(state);
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(last_err)
     }
 
     pub async fn is_hibernated(&self, session_id: &str) -> bool {
         let path = format!("{}/{}.json", self.storage_dir, session_id);
-        tokio::fs::try_exists(&path).await.unwrap_or(false)
+        if tokio::fs::try_exists(&path).await.unwrap_or(false) {
+            return true;
+        }
+        for dir in &self.fallback_dirs {
+            let fallback_path = format!("{}/{}.json", dir, session_id);
+            if tokio::fs::try_exists(&fallback_path).await.unwrap_or(false) {
+                return true;
+            }
+        }
+        false
     }
 
     pub async fn clear(&self, session_id: &str) -> Result<(), String> {
         let path = format!("{}/{}.json", self.storage_dir, session_id);
         if tokio::fs::try_exists(&path).await.unwrap_or(false) {
-            tokio::fs::remove_file(path).await.map_err(|e| e.to_string())?;
+            tokio::fs::remove_file(&path).await.map_err(|e| e.to_string())?;
+        }
+        for dir in &self.fallback_dirs {
+            let fallback_path = format!("{}/{}.json", dir, session_id);
+            if tokio::fs::try_exists(&fallback_path).await.unwrap_or(false) {
+                let _ = tokio::fs::remove_file(&fallback_path).await;
+            }
         }
         Ok(())
     }
@@ -66,7 +124,7 @@ mod tests {
     #[tokio::test]
     async fn test_serverless_persistence_hibernation() {
         let dir = format!("/tmp/hibernation_test_{}", uuid::Uuid::new_v4());
-        let manager = HibernationManager::new(&dir).await;
+        let manager = HibernationManager::new(&dir, vec![]).await;
         let session_id = "sess-123";
 
         let state = HibernationState {
@@ -98,12 +156,12 @@ mod tests {
     #[tokio::test]
     async fn test_hibernation_wake_not_found() {
         let dir = format!("/tmp/hibernation_test_{}", uuid::Uuid::new_v4());
-        let manager = HibernationManager::new(&dir).await;
+        let manager = HibernationManager::new(&dir, vec![]).await;
         let session_id = "non-existent-sess";
 
         let result = manager.wake(session_id).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Session non-existent-sess not found");
+        assert_eq!(result.unwrap_err(), "Session non-existent-sess not found in primary directory");
 
         let _ = tokio::fs::remove_dir_all(dir).await;
     }
@@ -111,7 +169,7 @@ mod tests {
     #[tokio::test]
     async fn test_hibernation_clear_not_found() {
         let dir = format!("/tmp/hibernation_test_{}", uuid::Uuid::new_v4());
-        let manager = HibernationManager::new(&dir).await;
+        let manager = HibernationManager::new(&dir, vec![]).await;
         let session_id = "non-existent-sess";
 
         // Clearing a non-existent session should return Ok
@@ -124,7 +182,7 @@ mod tests {
     #[tokio::test]
     async fn test_hibernation_corrupt_data() {
         let dir = format!("/tmp/hibernation_test_{}", uuid::Uuid::new_v4());
-        let manager = HibernationManager::new(&dir).await;
+        let manager = HibernationManager::new(&dir, vec![]).await;
         let session_id = "corrupt-sess";
 
         let path = format!("{}/{}.json", dir, session_id);
@@ -132,7 +190,7 @@ mod tests {
 
         let result = manager.wake(session_id).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("expected value"));
+        assert!(result.unwrap_err().contains("Failed to parse JSON in primary directory"));
 
         let _ = tokio::fs::remove_dir_all(dir).await;
     }
