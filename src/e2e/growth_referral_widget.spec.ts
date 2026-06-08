@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // Skipped because Next.js UI is legacy/prototype.
 // Widget component logic is covered by GrowthReferralWidget.test.tsx
 // and dashboard API errors prevent E2E execution without robust backend setup.
-test.describe.skip('Growth Referral Widget', () => {
+test.describe('Growth Referral Widget', () => {
   test('generates and copies link correctly', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('http://localhost:3000/dashboard');
