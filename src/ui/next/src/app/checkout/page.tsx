@@ -158,19 +158,27 @@ function CheckoutContent() {
       return rawLink;
     };
 
-    // Fetch dynamic referral link
+    // Fetch dynamic affiliate link
     try {
-      const response = await fetch("/api/v1/growth/referrals/generate", {
+      const response = await fetch("/api/v1/growth/affiliate/generate-link", {
         method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            customer_id: "guest", // Assuming a guest checkout for now
+            discount_percentage: 20,
+            commission_percentage: 10
+        })
       });
       const data = await response.json();
-      if (data && data.referral_link) {
-        setReferralLink(normalizeReferralLink(data.referral_link));
+      if (data && data.affiliate_link) {
+        setReferralLink(normalizeReferralLink(data.affiliate_link));
       } else {
         setReferralLink(fallbackReferralLink());
       }
     } catch (e) {
-      console.error("Failed to generate dynamic referral link", e);
+      console.error("Failed to generate dynamic affiliate link", e);
       setReferralLink(fallbackReferralLink());
     }
 
@@ -468,26 +476,26 @@ function CheckoutContent() {
               <p className="text-gray-600 mb-6 text-sm leading-relaxed">
                 You're in! We'll text you a magic link to manage your
                 subscription anytime. Love what you bought? Share with your
-                friends! When they buy, they get 10% off and you earn a{" "}
-                <strong className="text-gray-900">$10 credit</strong>.
+                friends! When they buy, they get 20% off and you earn a{" "}
+                <strong className="text-gray-900">10% commission</strong>.
               </p>
             ) : (
               <p className="text-gray-600 mb-6 text-sm leading-relaxed">
                 Your order is confirmed. Love what you bought? Share with your
-                friends! When they buy, they get 10% off and you earn a{" "}
-                <strong className="text-gray-900">$10 credit</strong>.
+                friends! When they buy, they get 20% off and you earn a{" "}
+                <strong className="text-gray-900">10% commission</strong>.
               </p>
             )}
 
             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-xl">🎁</span>
+                <span className="text-xl">💰</span>
                 <h3 className="font-bold text-indigo-900 font-outfit text-sm">
-                  Post-Checkout Viral Share
+                  Become an Affiliate
                 </h3>
               </div>
               <p className="text-indigo-800 text-xs font-medium">
-                Give a 10% discount to friends and get a $10 credit when they
+                Give a 20% discount to friends and get a 10% commission when they
                 make their first purchase! ⚡ Powered by OHC
               </p>
             </div>
@@ -530,7 +538,7 @@ function CheckoutContent() {
 
               <div className="flex flex-col gap-3 mb-6">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -545,7 +553,7 @@ function CheckoutContent() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -560,7 +568,7 @@ function CheckoutContent() {
                   X (Twitter)
                 </a>
                 <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#1877F2]/80 text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#166fe5] transition-all"

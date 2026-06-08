@@ -85,7 +85,7 @@ beforeEach(() => {
 
   it('handles payment click', async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ referral_link: 'http://test.link' })
+      json: () => Promise.resolve({ affiliate_link: 'http://test.link' })
     } as any);
 
     render(<CheckoutPage />);
