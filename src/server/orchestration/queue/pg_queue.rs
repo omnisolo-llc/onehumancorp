@@ -153,7 +153,8 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if let Some(row) = job_opt {
             ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
-            let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
+            let redacted_payload = ::server_telemetry::redact_interface_pii(serde_json::to_value(&payload_val).unwrap_or_else(|_| serde_json::json!({})));
+            let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
 
             let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
@@ -218,7 +219,8 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 // Poison pill
                 let tenant_id: String = r.try_get("tenant_id").unwrap_or_default();
                 let payload: serde_json::Value = r.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
-                let payload_str = serde_json::to_string(&payload).unwrap_or_default();
+                let redacted_payload = ::server_telemetry::redact_interface_pii(serde_json::to_value(&payload).unwrap_or_else(|_| serde_json::json!({})));
+                let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)")
                     .bind(uuid::Uuid::new_v4().to_string())
                     .bind(&tenant_id)

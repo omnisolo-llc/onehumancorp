@@ -95,7 +95,7 @@ impl TaskDecompositionService {
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let deps_str =
-                    serde_json::to_string(&task.dependencies).map_err(|e| e.to_string())?;
+                    serde_json::to_string(&::server_telemetry::redact_interface_pii(serde_json::to_value(&task.dependencies).unwrap_or_else(|_| serde_json::json!([])))).map_err(|e| e.to_string())?;
                 let payload_str = if task.payload.is_empty() {
                     "{}"
                 } else {
@@ -496,7 +496,7 @@ impl TaskDecompositionService {
                     priority: row.get("priority"),
                     payload: {
                         let val: serde_json::Value = row.get("payload");
-                        serde_json::to_string(&val).unwrap_or_else(|_| "{}".to_string())
+                        serde_json::to_string(&::server_telemetry::redact_interface_pii(serde_json::to_value(&val).unwrap_or_else(|_| serde_json::json!({})))).unwrap_or_else(|_| "{}".to_string())
                     },
                     locked_until: {
                         let locked: Option<chrono::DateTime<chrono::Utc>> =
@@ -506,7 +506,7 @@ impl TaskDecompositionService {
                     ultraplan_phase: row.get("ultraplan_phase"),
                     deliberation_log: {
                         let val: serde_json::Value = row.get("deliberation_log");
-                        Some(serde_json::to_string(&val).unwrap_or_else(|_| "[]".to_string()))
+                        Some(serde_json::to_string(&::server_telemetry::redact_interface_pii(serde_json::to_value(&val).unwrap_or_else(|_| serde_json::json!([])))).unwrap_or_else(|_| "[]".to_string()))
                     },
                     depth: row.get("depth"),
                     created_at: dt_created,
@@ -632,7 +632,8 @@ impl TaskDecompositionService {
                 let model: Option<String> = old_status_row.try_get("model").unwrap_or(None);
                 let org_id: String = old_status_row.try_get("organization_id").unwrap_or_else(|_| organization_id_opt.unwrap_or_default());
 
-                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
+                let redacted_error = ::server_telemetry::redact_interface_pii(serde_json::json!({"error": reason}));
+                let payload_update = serde_json::to_string(&redacted_error)
                     .unwrap_or_else(|_| "{}".to_string());
 
                 sqlx::query(
@@ -698,7 +699,8 @@ impl TaskDecompositionService {
                 };
 
                 // SQLite json patching
-                let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
+                let redacted_error = ::server_telemetry::redact_interface_pii(serde_json::json!({"error": reason}));
+                let payload_update = serde_json::to_string(&redacted_error)
                     .unwrap_or_else(|_| "{}".to_string());
                 sqlx::query(
                     "UPDATE shared_tasks_decomposition SET status = 'FAILED', payload = json_patch(COALESCE(payload, '{}'), ?), updated_at = ? WHERE id = ?"

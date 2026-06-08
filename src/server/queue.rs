@@ -162,7 +162,8 @@ impl TaskQueue for PostgresTaskQueue {
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
         payload_map["attempts"] = serde_json::json!(job.retry_count);
         payload_map["max_attempts"] = serde_json::json!(job.max_retries);
-        let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+        let redacted_payload = ::server_telemetry::redact_interface_pii(payload_map.clone());
+        let new_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, &job.tenant_id).await.map_err(|e| e.to_string())?;
@@ -216,7 +217,8 @@ impl TaskQueue for PostgresTaskQueue {
             payload_map["agent_role"] = serde_json::Value::String(job.job_type.clone());
             payload_map["attempts"] = serde_json::json!(job.retry_count);
             payload_map["max_attempts"] = serde_json::json!(job.max_retries);
-            let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+            let redacted_payload = ::server_telemetry::redact_interface_pii(payload_map.clone());
+        let new_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
             let org_id = if job.tenant_id.is_empty() {
                 payload_map["tenant_id"].as_str().unwrap_or("").to_string()
             } else {
@@ -264,7 +266,8 @@ impl TaskQueue for PostgresTaskQueue {
         payload_map["attempts"] = serde_json::json!(job.retry_count);
         payload_map["max_attempts"] = serde_json::json!(job.max_retries);
         
-        let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+        let redacted_payload = ::server_telemetry::redact_interface_pii(payload_map.clone());
+        let new_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
         
         let org_id = if job.tenant_id.is_empty() {
             payload_map["tenant_id"].as_str().unwrap_or("").to_string()
@@ -367,7 +370,8 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
-        let error_payload = serde_json::to_string(&serde_json::json!({"error": reason}))
+        let redacted_error = ::server_telemetry::redact_interface_pii(serde_json::json!({"error": reason}));
+        let error_payload = serde_json::to_string(&redacted_error)
             .unwrap_or_else(|_| "{}".to_string());
         sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = COALESCE(payload::jsonb, '{}'::jsonb) || $2::jsonb WHERE id = $1 AND tenant_id = $3")
             .bind(job_id)
@@ -568,7 +572,8 @@ impl QueueManager {
 
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
-        let payload_str = serde_json::to_string(&job.payload).unwrap_or_default();
+        let redacted_payload = ::server_telemetry::redact_interface_pii(serde_json::to_value(&job.payload).unwrap_or_else(|_| serde_json::json!({})));
+        let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
         
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, &job.tenant_id).await?;
@@ -663,7 +668,8 @@ impl QueueManager {
 
 
     pub async fn requeue(&self, job_id: &str, tenant_id: &str, payload: serde_json::Value) -> Result<(), sqlx::Error> {
-        let payload_str = serde_json::to_string(&payload).unwrap_or_default();
+        let redacted_payload = ::server_telemetry::redact_interface_pii(payload.clone());
+        let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
         // Since SubAgentJob's polling uses `status = 'QUEUED'`, and some implementations might not filter by scheduled_at,
         // we can still add a simple delay by using tokio::time::sleep here or rely on the caller to backoff,
         // or actually update the scheduled_at column if the poll query respects it.
@@ -806,7 +812,8 @@ impl TaskQueueService {
     }
 
     pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
-        let payload_str = serde_json::to_string(&task.payload).unwrap_or_default();
+        let redacted_payload = ::server_telemetry::redact_interface_pii(serde_json::to_value(&task.payload).unwrap_or_else(|_| serde_json::json!({})));
+        let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
         let deps_str = serde_json::to_string(&task.dependencies).unwrap_or_else(|_| "[]".to_string());
         
         let mut tx = self.pool.begin().await?;
@@ -880,7 +887,8 @@ impl TaskQueueService {
 
 
     pub async fn fail_task(&self, task_id: &str, reason: &str) -> Result<(), sqlx::Error> {
-        let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
+        let redacted_error = ::server_telemetry::redact_interface_pii(serde_json::json!({"error": reason}));
+        let payload_update = serde_json::to_string(&redacted_error).unwrap_or_else(|_| "{}".to_string());
         // We could merge this better using jsonb operators or just save status
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await?;
@@ -1053,7 +1061,8 @@ impl TaskQueue for SqliteTaskQueue {
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
         payload_map["attempts"] = serde_json::json!(job.retry_count);
         payload_map["max_attempts"] = serde_json::json!(job.max_retries);
-        let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+        let redacted_payload = ::server_telemetry::redact_interface_pii(payload_map.clone());
+        let new_payload = serde_json::to_string(&redacted_payload).unwrap_or_default();
 
         sqlx::query("UPDATE local_queue_jobs SET status = 'QUEUED', payload = ? WHERE id = ? AND tenant_id = ?")
             .bind(new_payload)

@@ -79,7 +79,8 @@ impl OHCJobQueue {
         if let Some(row) = job_opt {
             use sqlx::Row;
             let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
-            let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
+            let redacted_payload = ::server_telemetry::redact_interface_pii(serde_json::to_value(&payload_val).unwrap_or_else(|_| serde_json::json!({})));
+            let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
 
             let job = OHCJob {
                 id: row.get("id"),
@@ -134,7 +135,8 @@ impl OHCJobQueue {
                 // Dead letter
                 let tenant_id: String = r.try_get("tenant_id").unwrap_or_default();
                 let payload: serde_json::Value = r.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
-                let payload_str = serde_json::to_string(&payload).unwrap_or_default();
+                let redacted_payload = ::server_telemetry::redact_interface_pii(serde_json::to_value(&payload).unwrap_or_else(|_| serde_json::json!({})));
+                let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)")
                     .bind(uuid::Uuid::new_v4().to_string())
                     .bind(&tenant_id)

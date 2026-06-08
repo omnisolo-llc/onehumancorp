@@ -32,7 +32,9 @@ impl TaskQueue for RedisTaskQueue {
         let mut conn = self.get_connection().await?;
         let mut pipe = redis::pipe();
         for job in jobs {
-            let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+            let mut sanitized_job = job.clone();
+            sanitized_job.payload = serde_json::to_string(&::server_telemetry::redact_interface_pii(serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({})))).unwrap_or_else(|_| "{}".to_string());
+            let payload_json = serde_json::to_string(&sanitized_job).map_err(|e| e.to_string())?;
             pipe.cmd("ZADD").arg(&self.queue_name).arg(job.next_retry_at.timestamp_millis()).arg(payload_json);
         }
         let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
@@ -41,7 +43,9 @@ impl TaskQueue for RedisTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
-        let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
+        let mut sanitized_job = job.clone();
+            sanitized_job.payload = serde_json::to_string(&::server_telemetry::redact_interface_pii(serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({})))).unwrap_or_else(|_| "{}".to_string());
+            let payload_json = serde_json::to_string(&sanitized_job).map_err(|e| e.to_string())?;
 
         let _: () = redis::cmd("ZADD")
             .arg(&self.queue_name)

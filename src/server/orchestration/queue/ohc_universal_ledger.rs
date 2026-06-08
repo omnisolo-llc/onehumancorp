@@ -66,7 +66,8 @@ impl OHCUniversalLedger {
         use sqlx::Row;
         for row in rows {
             let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
-            let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
+            let redacted_payload = ::server_telemetry::redact_interface_pii(serde_json::to_value(&payload_val).unwrap_or_else(|_| serde_json::json!({})));
+            let payload_str = serde_json::to_string(&redacted_payload).unwrap_or_default();
             entries.push(OHCLedgerEntry {
                 id: row.get("id"),
                 tenant_id: row.get("tenant_id"),
