@@ -89,7 +89,7 @@ export default function FulfillmentHub() {
                 ) : (
                   <div className="space-y-3">
                     {toPack.map((order) => (
-                      <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden group">
+                      <div key={order.id} className="app-card rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden group">
                         <div className="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -133,7 +133,7 @@ export default function FulfillmentHub() {
                 ) : (
                   <div className="space-y-3">
                     {awaitingPickup.map((order) => (
-                      <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden">
+                      <div key={order.id} className="app-card rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden">
                          <div className="absolute top-0 left-0 w-1 h-full bg-green-400"></div>
                         <div className="flex justify-between items-start mb-2">
                           <div>
