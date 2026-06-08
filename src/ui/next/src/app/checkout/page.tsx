@@ -205,7 +205,7 @@ export default function CheckoutPage() {
         className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6"
       >
         {tier ? (
-            <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-6" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", borderRadius: "16px" }}>
+            <div className="app-card p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-6">
               <div className="flex justify-between items-center pb-4 border-b">
                 <h2 className="text-lg font-semibold text-gray-900">
                   Plan Upgrade
@@ -449,7 +449,7 @@ export default function CheckoutPage() {
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+          <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
 

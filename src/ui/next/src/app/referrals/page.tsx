@@ -51,7 +51,7 @@ export default function ReferralsPage() {
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:p-8 mt-16 md:mt-0">
         <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-8">Referral Dashboard</h1>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8 relative overflow-hidden">
+        <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-bl-full -z-10"></div>
 
           <div className="max-w-2xl">
@@ -160,7 +160,7 @@ export default function ReferralsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                 <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Embed on Your Website</h3>
                 <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OHC storefront widget directly to your existing website.</p>
                 <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
@@ -184,7 +184,7 @@ export default function ReferralsPage() {
                 </button>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+            <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Manage Data</h3>
                <p className="text-sm text-gray-600 mb-6">Track your referral performance, view recent invites, or export your growth data.</p>
 
