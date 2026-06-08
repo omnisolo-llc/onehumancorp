@@ -52,9 +52,7 @@ export default function AiUsagePaywallPage() {
   }, []);
 
   const handleShareOnX = () => {
-    const text = encodeURIComponent("I just hit an AI usage milestone running my business with OHC! ⚡ Powered by OHC");
-    const url = encodeURIComponent("https://ohc.store/growth-loop");
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer');
+    router.push('/growth-loop?ref=twitter');
   };
 
   const handleUpgrade = () => {
@@ -155,9 +153,9 @@ export default function AiUsagePaywallPage() {
       </div>
 
       <div className="mt-4 text-center">
-        <a href="https://ohc.store" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">
+        <button onClick={() => router.push('/about-ohc')} className="inline-flex items-center gap-1 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">
           ⚡ Powered by OHC
-        </a>
+        </button>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
