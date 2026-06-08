@@ -3880,6 +3880,9 @@ async fn create_ui_bom_item_handler(
         })))
         .merge(meta_webhook_router)
         .merge(health_router)
+        .merge(crate::api::work_feed::router(std::sync::Arc::new(crate::api::work_feed::AppState {
+            db_pool: db.pool.clone(),
+        })))
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")
