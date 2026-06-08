@@ -88,4 +88,23 @@ describe('MilestonesPage', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/referrals?ref=milestone');
   });
+
+  it('contains WhatsApp and Facebook share buttons', async () => {
+    await act(async () => {
+      render(<MilestonesPage />);
+    });
+
+    const milestoneTitle = screen.getByText('First Sale!');
+    const container = milestoneTitle.closest('div.glassmorphism');
+
+    await act(async () => {
+        fireEvent.click(container!);
+    });
+
+    const whatsappButton = screen.getByText('Share to WhatsApp');
+    expect(whatsappButton).toBeDefined();
+
+    const facebookButton = screen.getByText('Share on Facebook');
+    expect(facebookButton).toBeDefined();
+  });
 });
