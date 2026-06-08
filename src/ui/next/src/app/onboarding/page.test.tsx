@@ -148,7 +148,7 @@ describe('OnboardingWizard', () => {
     });
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
-    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
+    const generateBtn = screen.getByRole('button', { name: /Next/i });
     expect(generateBtn).not.toBeDisabled();
     await user.click(generateBtn);
   });
@@ -210,7 +210,7 @@ describe('OnboardingWizard', () => {
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole('button', { name: /Next/i });
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
@@ -308,7 +308,7 @@ describe('OnboardingWizard', () => {
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole('button', { name: /Next/i });
 
     await user.click(button);
 
@@ -583,7 +583,7 @@ describe('OnboardingWizard', () => {
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
 
-    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
+    const generateBtn = screen.getByRole('button', { name: /Next/i });
     expect(generateBtn).not.toBeDisabled();
 
     // Note: handleIntake uses fetch which is either mocked or fails, but we just want to test
