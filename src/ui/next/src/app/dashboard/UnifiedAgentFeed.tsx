@@ -261,7 +261,26 @@ export function UnifiedAgentFeed() {
                             </span>
                           </div>
                         </>
-                      ) : approval.payload?.feature_type === 'quote_draft' ? (
+                      ) : approval.payload?.feature_type === 'inventory_sold_out_reorder_and_price_adjust' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve"
+                        data-testid="approve-proposal"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss proposal"
+                        data-testid="reject-proposal"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === 'quote_draft' ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 dark:text-gray-400">Context:</span>
@@ -404,6 +423,25 @@ export function UnifiedAgentFeed() {
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Dismiss restock"
                         data-testid="dismiss-restock"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === 'inventory_sold_out_reorder_and_price_adjust' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve"
+                        data-testid="approve-proposal"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss proposal"
+                        data-testid="reject-proposal"
                       >
                         Dismiss
                       </button>

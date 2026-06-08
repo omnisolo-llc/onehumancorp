@@ -45,6 +45,7 @@ where
         .route("/ledger", get(list_ledger_entries))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
+        .route("/simulate-stock-out", post(simulate_stock_out))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
 }
@@ -77,6 +78,37 @@ async fn simulate_quote_draft(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate quote draft: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+
+async fn simulate_stock_out(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "inventory_sold_out_reorder_and_price_adjust",
+        "product_id": "test_product",
+        "new_price": 46.00
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::Operations,
+        "Red Dress sold out in 2 days. Demand is high. Operations Agent drafted a reorder for 50 units. Finance Agent suggests raising price from $40 to $46.".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate stock out: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }

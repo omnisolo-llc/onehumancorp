@@ -742,6 +742,48 @@ impl DepartmentOrchestrator {
 
             if approved {
                 if let Some(payload) = &original_payload {
+
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("inventory_sold_out_reorder_and_price_adjust") {
+                        let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                        let new_price = payload.get("new_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let new_price_cents = (new_price * 100.0) as i64;
+
+                        match &self.db.store {
+                            DbStore::Postgres => {
+                                let _ = sqlx::query("UPDATE products SET price_cents = $1, price = $2 WHERE id = $3 AND tenant_id = $4")
+                                    .bind(new_price_cents)
+                                    .bind(new_price)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await;
+                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, $3, $4)")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind("reorder_stock")
+                                    .bind(serde_json::json!({"product_id": product_id, "quantity": 50}))
+                                    .execute(&self.db.pool)
+                                    .await;
+                            }
+                            DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query("UPDATE products SET price_cents = ?, price = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(new_price_cents)
+                                    .bind(new_price)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES (?, ?, ?, ?)")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind("reorder_stock")
+                                    .bind(serde_json::json!({"product_id": product_id, "quantity": 50}).to_string())
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+                    }
+
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;
