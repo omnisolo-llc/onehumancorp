@@ -835,6 +835,42 @@ impl DepartmentOrchestrator {
                                     ActionRisk::DraftForReview,
                                     promo_payload
                                 ).await;
+
+                                // Dispatch a Reorder job to the job queue
+                                let reorder_job_id = uuid::Uuid::new_v4().to_string();
+                                let quantity = payload.get("context").and_then(|c| c.get("suggested_reorder_quantity")).and_then(|v| v.as_i64()).unwrap_or(50);
+                                let reorder_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "quantity": quantity,
+                                    "action": "Reorder",
+                                    "reason": "Restock based on smart pricing suggestion"
+                                });
+                                if let Err(e) = sqlx::query(
+                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)"
+                                )
+                                .bind(&reorder_job_id)
+                                .bind(tenant_id)
+                                .bind("Reorder")
+                                .bind(reorder_payload)
+                                .execute(&self.db.pool)
+                                .await {
+                                    tracing::error!("Failed to enqueue Reorder job: {}", e);
+                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                    return Err(format!("Failed to enqueue Reorder job: {}", e));
+                                }
+
+                                // Update base price
+                                let new_price = payload.get("context").and_then(|c| c.get("new_price")).and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                if let Err(e) = sqlx::query("UPDATE products SET price = $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(new_price)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await {
+                                    tracing::error!("Failed to update product price: {}", e);
+                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                    return Err(format!("Failed to update product price: {}", e));
+                                }
                             }
                         }
                     }

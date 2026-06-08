@@ -94,16 +94,38 @@ export default function TeamChatPage() {
       if (response.ok) {
 
         const msgId = Date.now().toString() + '-system';
+
+        let cardData: ActionCard = {
+          id: Date.now().toString() + '-card',
+          department: data.agent || 'The Manager',
+          description: data.description || `Drafted action based on: "${userMsg}"`,
+          status: 'pending'
+        };
+
+        if (data.feature_type === 'smart_pricing') {
+          cardData = {
+            ...cardData,
+            feature_type: 'smart_pricing',
+            suggested_price: data.new_price || 0,
+            scope: data.sales_projection || '+0',
+            description: data.description || 'Smart Price Suggestion',
+          };
+          // Hack to pass old price for UI
+          (cardData as any).old_price = data.old_price || 0;
+        } else if (data.feature_type === 'quote_draft') {
+          cardData = {
+            ...cardData,
+            feature_type: 'quote_draft',
+            suggested_price: data.suggested_price || 0,
+            scope: data.scope || '',
+          };
+        }
+
         setMessages(prev => prev.filter(msg => msg.id !== pendingMsgId).concat({
           id: msgId,
           role: 'system',
           content: "I've drafted an action for your approval.",
-          card: {
-            id: Date.now().toString() + '-card',
-            department: data.agent || 'The Manager',
-            description: data.description || `Drafted action based on: "${userMsg}"`,
-              status: 'pending'
-            }
+          card: cardData
         }));
 
       } else {
@@ -200,6 +222,28 @@ export default function TeamChatPage() {
                         <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
                         <p className="text-sm font-bold text-gray-900 mb-4">Calculated Total: ${msg.card.suggested_price || 0}</p>
                       </div>
+                    ) : msg.card.feature_type === 'smart_pricing' ? (
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 mb-1">{msg.card.description}</p>
+                        <div className="flex justify-between items-center text-xs mb-1">
+                          <span className="text-gray-500">Current Price:</span>
+                          <span className="font-semibold text-gray-400 line-through">
+                            ${Number((msg.card as any).old_price || 0).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs mb-1">
+                          <span className="text-gray-500">Suggested Price:</span>
+                          <span className="font-bold text-green-600 text-sm" data-testid="smart-pricing-new-price">
+                            ${Number(msg.card.suggested_price || 0).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs mb-4">
+                          <span className="text-gray-500">Sales Projection:</span>
+                          <span className="font-semibold text-indigo-600" data-testid="smart-pricing-sales-projection">
+                            {msg.card.scope}
+                          </span>
+                        </div>
+                      </div>
                     ) : (
                       <>
                         <p className="text-sm font-semibold text-gray-900 mb-1">{msg.card.department}</p>
@@ -212,9 +256,9 @@ export default function TeamChatPage() {
                         <button
                           onClick={() => handleApprove(msg.id)}
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
-                          data-testid="approve-action-btn"
+                          data-testid={msg.card.feature_type === 'smart_pricing' ? 'approve-run-sale' : 'approve-action-btn'}
                         >
-                          {msg.card.feature_type === 'quote_draft' ? 'Approve & Send' : 'Approve & Execute'}
+                          {msg.card.feature_type === 'quote_draft' ? 'Approve & Send' : msg.card.feature_type === 'smart_pricing' ? 'Approve & Run Sale' : 'Approve & Execute'}
                         </button>
                         <button
                           type="button"
@@ -223,7 +267,7 @@ export default function TeamChatPage() {
                         >
                           Edit Details
                         </button>
-                        {msg.card.feature_type === 'quote_draft' && (
+                        {(msg.card.feature_type === 'quote_draft' || msg.card.feature_type === 'smart_pricing') && (
                            <button
                              type="button"
                              onClick={() => setMessages(prev => prev.filter(m => m.id !== msg.id))}
