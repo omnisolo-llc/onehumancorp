@@ -151,9 +151,10 @@ where
                 if guard.len() >= self.max_local_capacity {
                     // Random sample 5 keys and evict the one with lowest access count.
                     // This avoids O(N) iteration while providing reasonable eviction quality.
-                    let offset = EVICTION_SEED.fetch_add(7, Ordering::Relaxed) % guard.len();
+                    // Hash map iteration order is arbitrary, so taking the first 5
+                    // is a fast O(1) random sample for LFU eviction.
                     let mut sampled_keys = Vec::new();
-                    for (k, entry) in guard.iter().skip(offset).chain(guard.iter()).take(5) {
+                    for (k, entry) in guard.iter().take(5) {
                         sampled_keys.push((k.clone(), entry.access_count.load(Ordering::Relaxed)));
                     }
 
