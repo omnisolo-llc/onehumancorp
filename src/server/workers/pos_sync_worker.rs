@@ -57,6 +57,25 @@ impl PosSyncWorker {
                     .execute(&mut *tx)
                     .await;
 
+                let new_stock = std::cmp::max(0, stock - quantity_deducted as i32);
+                if new_stock <= 5 {
+                    let existing_action: Option<(String,)> = sqlx::query_as("SELECT id FROM agent_action_requests WHERE product_id = $1 AND tenant_id = $2 AND status = 'Pending' AND action_type = 'RestockItem'")
+                        .bind(product_id).bind(&job.tenant_id).fetch_optional(&mut *tx).await.unwrap_or(None);
+                    if existing_action.is_none() {
+                        let action_id = uuid::Uuid::new_v4().to_string();
+                        let action_payload = serde_json::json!({
+                            "reason": "Low inventory detected during offline POS sync",
+                            "current_stock": new_stock
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload) VALUES ($1, $2, 'RestockItem', 'Pending', 0.95, $3, $4::jsonb)"
+                        )
+                        .bind(&action_id).bind(&job.tenant_id).bind(product_id).bind(&action_payload)
+                        .execute(&mut *tx).await;
+                    }
+                }
+
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
                     let ai_payload = serde_json::json!({
@@ -109,6 +128,25 @@ impl PosSyncWorker {
                                 .bind(&job.tenant_id)
                                 .execute(&mut *tx)
                                 .await;
+
+                            let new_stock = std::cmp::max(0, stock - qty as i32);
+                            if new_stock <= 5 {
+                                let existing_action: Option<(String,)> = sqlx::query_as("SELECT id FROM agent_action_requests WHERE product_id = $1 AND tenant_id = $2 AND status = 'Pending' AND action_type = 'RestockItem'")
+                                    .bind(product_id).bind(&job.tenant_id).fetch_optional(&mut *tx).await.unwrap_or(None);
+                                if existing_action.is_none() {
+                                    let action_id = uuid::Uuid::new_v4().to_string();
+                                    let action_payload = serde_json::json!({
+                                        "reason": "Low inventory detected during offline POS sync",
+                                        "current_stock": new_stock
+                                    }).to_string();
+
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload) VALUES ($1, $2, 'RestockItem', 'Pending', 0.95, $3, $4::jsonb)"
+                                    )
+                                    .bind(&action_id).bind(&job.tenant_id).bind(product_id).bind(&action_payload)
+                                    .execute(&mut *tx).await;
+                                }
+                            }
 
                             if is_conflict {
                                 let ai_task_id = uuid::Uuid::new_v4().to_string();
@@ -218,5 +256,62 @@ mod tests {
         let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE event_type = 'offline_pos_sync'")
             .fetch_one(&pool).await.unwrap();
         assert!(ledger_count.0 > 0);
+    }
+
+    #[tokio::test]
+    async fn test_pos_sync_worker_low_stock_restock() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let worker = PosSyncWorker::new(db.clone());
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test2', 'Worker Test Tenant 2') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-low', 'tenant-worker-test2', 'Low Stock Prod', 6) ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, transaction_id, status) VALUES ('worker-tx-id2', 'tenant-worker-test2', 'tx-test-worker2', 'PENDING') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        let job_payload = serde_json::json!({
+            "transaction_id": "tx-test-worker2",
+            "mutation": {
+                "product_id": "prod-worker-test-low",
+                "quantity_deducted": 2,
+                "amount": 5000,
+                "transaction_id": "tx-test-worker2"
+            }
+        });
+
+        let job = crate::queue::Job {
+            id: "job-2".to_string(),
+            tenant_id: "tenant-worker-test2".to_string(),
+            job_type: "offline_pos_sync".to_string(),
+            payload: job_payload.to_string(),
+            status: "PROCESSING".to_string(),
+            retry_count: 0,
+            max_retries: 3,
+            next_retry_at: Utc::now(),
+            locked_until: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            parent_task_id: "".to_string(),
+        };
+
+        let handle = worker.handle(job);
+        let res = handle.await.unwrap();
+        assert!(res.is_ok());
+
+        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-worker-test-low'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 4); // 6 - 2 = 4 (<= 5)
+
+        // Verify agent_action_requests was created
+        let action_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE product_id = 'prod-worker-test-low' AND status = 'Pending'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(action_count.0, 1);
     }
 }
