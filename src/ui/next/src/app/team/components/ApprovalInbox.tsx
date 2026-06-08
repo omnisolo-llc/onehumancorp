@@ -135,7 +135,7 @@ export default function ApprovalInbox({
               return (
                 <div
                   key={req.id}
-                  className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                  className="app-card rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span
@@ -179,7 +179,7 @@ export default function ApprovalInbox({
                         Customer Inquiry
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
+                      <div className="app-card p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
                         "{req.payload.original_message}"
                       </div>
 
@@ -227,7 +227,7 @@ export default function ApprovalInbox({
                         Sales are approaching €10,000. New tax rules require an
                         updated Privacy Policy.
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
+                      <div className="app-card p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
                         Drafting updated European privacy policy...
                       </div>
                     </div>
@@ -257,7 +257,7 @@ export default function ApprovalInbox({
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-white p-2 rounded border border-indigo-50">
+                        <div className="app-card p-2 rounded border border-indigo-50">
                           <span className="text-gray-400 block mb-1">
                             Original (EN)
                           </span>
@@ -267,7 +267,7 @@ export default function ApprovalInbox({
                             $25.00
                           </div>
                         </div>
-                        <div className="bg-white p-2 rounded border border-indigo-100 ring-1 ring-indigo-500/20">
+                        <div className="app-card p-2 rounded border border-indigo-100 ring-1 ring-indigo-500/20">
                           <span className="text-indigo-400 block mb-1">
                             Preview (ES)
                           </span>
@@ -340,7 +340,7 @@ export default function ApprovalInbox({
                         {req.payload.service_name}
                       </div>
 
-                      <div className="bg-white rounded-lg border border-blue-100 overflow-hidden shadow-sm">
+                      <div className="app-card rounded-lg border border-blue-100 overflow-hidden shadow-sm">
                         {req.payload.media_url && (
                           <div className="w-full h-40 bg-gray-100 relative">
                             <img
@@ -445,7 +445,7 @@ export default function ApprovalInbox({
                         <span className="font-semibold">{req.payload.product_name}</span>
                       </div>
 
-                      <div className="bg-white rounded-lg border border-pink-100 overflow-hidden shadow-sm">
+                      <div className="app-card rounded-lg border border-pink-100 overflow-hidden shadow-sm">
                         {req.payload.image_url && (
                           <div className="w-full h-40 bg-gray-100 relative">
                             <img
@@ -489,7 +489,7 @@ export default function ApprovalInbox({
                         {req.payload.customer_inquiry}
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 relative mt-2">
+                      <div className="app-card p-3 rounded-lg border border-blue-100 relative mt-2">
                         <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">
                           AI Proposed Quote
                         </div>
@@ -533,7 +533,7 @@ export default function ApprovalInbox({
                         Inventory for <span className="font-semibold">{req.payload.product_id}</span> is critically low.
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-orange-100 relative mt-2">
+                      <div className="app-card p-3 rounded-lg border border-orange-100 relative mt-2">
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-xs text-gray-500">Remaining Stock:</span>
@@ -569,7 +569,7 @@ export default function ApprovalInbox({
                         Sarah left a $45 Vegan Chocolate Cake in her cart.
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-rose-100 relative">
+                      <div className="app-card p-3 rounded-lg border border-rose-100 relative">
                         <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2">
                           AI Draft
                         </div>
@@ -629,7 +629,7 @@ export default function ApprovalInbox({
         {selectedReview && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
-              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              className="app-card rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
               style={{
                 animation: "slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)",
               }}
