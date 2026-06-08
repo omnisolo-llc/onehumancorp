@@ -62,13 +62,13 @@ impl Eq for DistNode {}
 
 impl PartialOrd for DistNode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.dist.partial_cmp(&self.dist)
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for DistNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+        other.dist.partial_cmp(&self.dist).unwrap_or(Ordering::Equal)
     }
 }
 
@@ -89,13 +89,13 @@ impl Eq for MaxDistNode {}
 
 impl PartialOrd for MaxDistNode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.dist.partial_cmp(&other.dist)
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for MaxDistNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+        self.dist.partial_cmp(&other.dist).unwrap_or(Ordering::Equal)
     }
 }
 
@@ -318,12 +318,12 @@ impl AgentDB {
     }
 
     /// KNN search using the HNSW index.
-    pub fn search(&self, query: &Vec<f32>, top_k: usize) -> Vec<Vector> {
+    pub fn search(&self, query: &[f32], top_k: usize) -> Vec<Vector> {
         if self.enter_point.is_none() {
             return Vec::new();
         }
 
-        let q = Vector::new("query".to_string(), query.clone(), "".to_string());
+        let q = Vector::new("query".to_string(), query.to_owned(), "".to_string());
         let mut ep = vec![self.enter_point.clone().unwrap()];
 
         // Search down to level 1
