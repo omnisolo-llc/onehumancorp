@@ -223,7 +223,7 @@ impl DB {
             // Force full encryption of the database
             conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
 
-            let sqlite_pool = SqlitePoolOptions::new()
+let sqlite_pool_result = SqlitePoolOptions::new()
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -235,7 +235,32 @@ impl DB {
                     })
                 })
                 .connect_with(conn_opts)
-                .await?;
+                .await;
+
+            let sqlite_pool = sqlite_pool_result?;
+
+#[cfg(unix)]
+            {
+                if let Some(path_str) = path_str_opt {
+                    use std::os::unix::fs::PermissionsExt;
+                    let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+                    let db_path_str = db_path.to_string_lossy();
+                    let wal_path = std::path::PathBuf::from(format!("{}-wal", db_path_str));
+                    let shm_path = std::path::PathBuf::from(format!("{}-shm", db_path_str));
+
+                    for p in [wal_path, shm_path].iter() {
+                        if p.exists() {
+                            if let Ok(metadata) = std::fs::metadata(p) {
+                                let mut perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o600 {
+                                    perms.set_mode(0o600);
+                                    let _ = std::fs::set_permissions(p, perms);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             Ok(DB {
                 pool: dummy_pool,

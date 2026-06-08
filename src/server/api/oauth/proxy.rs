@@ -18,9 +18,18 @@ pub struct OAuthCallbackQuery {
 pub async fn handle_oauth_callback(
     Query(query): Query<OAuthCallbackQuery>,
 ) -> impl IntoResponse {
-    // In Standalone mode, we receive the callback and need to route it.
+// In Standalone mode, we receive the callback and need to route it.
     // In Cloud mode, we just process it directly.
-    let state = query.state;
+    let state = query.state.clone();
+    let code = query.code.clone();
+
+    if state.trim().is_empty() || code.trim().is_empty() {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            "Missing code or state.",
+        )
+            .into_response();
+    }
 
     // Check if this looks like a proxy request for a standalone instance
     if state.starts_with("standalone_") {
@@ -44,10 +53,26 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
+// Security Hardening: Ensure we never leak OAuth tokens to insecure endpoints
+            if tunnel_base_url.starts_with("http://") {
+                let is_localhost = tunnel_base_url.starts_with("http://localhost:")
+                    || tunnel_base_url.starts_with("http://127.0.0.1:")
+                    || tunnel_base_url == "http://localhost"
+                    || tunnel_base_url == "http://127.0.0.1";
+
+                if !is_localhost {
+                    return (
+                        axum::http::StatusCode::BAD_REQUEST,
+                        "Insecure tunnel_base_url. HTTPS is required.",
+                    )
+                        .into_response();
+                }
+            }
+
             let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
                 tunnel_base_url,
                 urlencoding::encode(&tunnel_id),
-                urlencoding::encode(&query.code),
+                urlencoding::encode(&code),
                 urlencoding::encode(&actual_state));
             for (k, v) in query.extra {
                 redirect_url.push_str(&format!("&{}={}", urlencoding::encode(&k), urlencoding::encode(&v)));
