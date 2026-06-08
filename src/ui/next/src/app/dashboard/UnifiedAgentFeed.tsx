@@ -262,7 +262,31 @@ export function UnifiedAgentFeed() {
                           </div>
                         </div>
                       )}
-                      {approval.payload?.context?.smart_pricing === true && (
+                      {approval.payload?.feature_type === 'stockout_restock_and_price' ? (
+                        <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-4 flex flex-col gap-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
+                            <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
+                               ${Number(approval.payload.old_price).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
+                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="stockout-new-price">
+                               ${Number(approval.payload.new_price).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Reorder Quantity:</span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400 text-base" data-testid="stockout-reorder">
+                               {approval.payload.suggested_reorder_quantity} Units
+                            </span>
+                          </div>
+                          <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mt-2">
+                            {approval.payload.message}
+                          </div>
+                        </div>
+                      ) : approval.payload?.context?.smart_pricing === true ? (
                         <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl p-4 flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
@@ -283,7 +307,7 @@ export function UnifiedAgentFeed() {
                             </span>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                       {approval.payload?.context?.weekly_health_report === true && (
                         <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-4 flex flex-col gap-2">
                           <div className="text-sm text-gray-700 dark:text-gray-300">
@@ -328,6 +352,11 @@ export function UnifiedAgentFeed() {
                             Price optimization suggested.
                          </div>
                        )}
+                       {approval.payload?.feature_type === 'stockout_restock_and_price' && (
+                         <div className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                            Stockout reorder & price adjustment.
+                         </div>
+                       )}
                     </div>
                   )}
                 </div>
@@ -345,16 +374,16 @@ export function UnifiedAgentFeed() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                       </svg>
                     </button>
-                  ) : approval.payload?.feature_type === 'promo_advisory' ? (
+                  ) : approval.payload?.feature_type === 'promo_advisory' || approval.payload?.context?.weekly_health_report === true ? (
                     <div className="flex flex-col gap-3 w-full">
                       {expandedActionId === approval.id ? (
                         <button
                           onClick={() => handleDecision(approval.id, true)}
                           className="w-full min-h-[56px] px-6 rounded-2xl bg-[#0066FF] text-white font-bold text-lg hover:bg-[#0052CC] transition-all shadow-xl flex items-center justify-center"
-                          aria-label="Approve & Send"
+                          aria-label={approval.payload?.context?.weekly_health_report === true ? "Approve" : "Approve & Send"}
                           data-testid="approve-send-promo"
                         >
-                          Approve & Send
+                          {approval.payload?.context?.weekly_health_report === true ? "Approve" : "Approve & Send"}
                         </button>
                       ) : (
                         <button
@@ -390,6 +419,24 @@ export function UnifiedAgentFeed() {
                           aria-label="Discard"
                         >
                           Discard
+                        </button>
+                    </div>
+                  ) : approval.payload?.feature_type === 'stockout_restock_and_price' || approval.payload?.remaining_stock !== undefined || approval.payload?.context?.smart_pricing === true ? (
+                    <div className="flex flex-col gap-3 w-full">
+                       <button
+                          onClick={() => expandedActionId === approval.id ? handleDecision(approval.id, true) : setExpandedActionId(approval.id)}
+                          className="w-full min-h-[56px] px-6 rounded-2xl bg-[#0066FF] text-white font-bold text-lg hover:bg-[#0052CC] transition-all shadow-xl flex items-center justify-center"
+                          aria-label={expandedActionId === approval.id ? "Approve" : "Review Proposal"}
+                          data-testid="approve-stockout"
+                        >
+                          {expandedActionId === approval.id ? "Approve" : "Review Proposal"}
+                        </button>
+                        <button
+                          onClick={() => handleDecision(approval.id, false)}
+                          className="w-full min-h-[48px] px-6 rounded-2xl border border-gray-200 dark:border-gray-800 text-gray-500 font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                          aria-label="Dismiss"
+                        >
+                          Dismiss
                         </button>
                     </div>
                   ) : (
