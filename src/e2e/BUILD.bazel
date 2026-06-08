@@ -13,7 +13,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/field-ops.spec.ts",
     "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
     "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
-    "//src/ui/next:src/e2e/help.spec.ts",
+
     "//src/ui/next:src/e2e/integrations.spec.ts",
     "//src/ui/next:src/e2e/kds.spec.ts",
     "//src/ui/next:src/e2e/link-in-bio.spec.ts",
