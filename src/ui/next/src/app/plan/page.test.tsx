@@ -33,7 +33,7 @@ describe('MyPlanPage', () => {
   it('renders plan data after fetching', async () => {
     const mockData = {
       current_plan: 'Pro',
-      next_bill_estimated: 79.0,
+      next_bill_estimated: 7900,
       ai_actions_used: 50,
       ai_actions_limit: 1000,
       storage_used_bytes: 1024 * 1024 * 500, // 500 MB
