@@ -25,13 +25,7 @@ exports_files([
     "playwright.config.ts",
     "package.json",
     "package-lock.json",
-] + glob(["e2e/*.spec.ts"]))
-
-filegroup(
-    name = "root_e2e_specs",
-    srcs = glob(["e2e/*.spec.ts"]),
-    visibility = ["//visibility:public"],
-)
+])
 
 config_setting(
     name = "linux",

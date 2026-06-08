@@ -350,7 +350,7 @@ export function HelpWidget() {
                      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                    </div>
                 </div>
-                <div className="bg-white/60 backdrop-blur-[20px] saturate-200 border border-white/50 p-5 rounded-2xl shadow-sm mb-6">
+                <div className="app-card border border-white/50 p-5 rounded-2xl shadow-sm mb-6">
                   <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-md mb-2">LATEST</span>
                   <h4 className="font-bold font-outfit text-gray-900 text-base mb-2">New AI Store Builder</h4>
                   <p className="text-sm text-gray-600 leading-relaxed mb-4">You can now generate a complete storefront from just a short description of your business. Try it out in the Storefront Builder.</p>
