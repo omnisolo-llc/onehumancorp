@@ -5,10 +5,13 @@ import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import StripeTerminalClient from './StripeTerminalClient';
 
-// Offline storage helper for staff data
+// Offline storage helper
 const OfflineStore = {
   getStaff: () => JSON.parse(localStorage.getItem('ohc_offline_staff') || '[]'),
   setStaff: (staff: any[]) => localStorage.setItem('ohc_offline_staff', JSON.stringify(staff)),
+
+  getProducts: () => JSON.parse(localStorage.getItem('ohc_offline_products') || '[]'),
+  setProducts: (products: any[]) => localStorage.setItem('ohc_offline_products', JSON.stringify(products)),
 
   getEvents: () => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'),
   addEvent: (event: any) => {
@@ -25,8 +28,19 @@ const OfflineStore = {
     transactions.push(tx);
     localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions));
   },
-  clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
+  clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]'),
+
+  getAgentApprovals: () => JSON.parse(localStorage.getItem('ohc_offline_agent_approvals') || '[]'),
+  setAgentApprovals: (approvals: any[]) => localStorage.setItem('ohc_offline_agent_approvals', JSON.stringify(approvals)),
 };
+
+interface Product {
+  id: string;
+  title: string;
+  price_cents: number;
+  inventory_count: number;
+  image_url?: string;
+}
 
 export default function TerminalPage() {
   const { t } = useTranslation();
@@ -36,45 +50,52 @@ export default function TerminalPage() {
   const [clockedIn, setClockedIn] = useState(false);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
-  const [offlineConversion, setOfflineConversion] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
   const [orderStatus, setOrderStatus] = useState('');
-  const [reserving, setReserving] = useState(false);
-
-  useEffect(() => {
-    if (navigator.onLine) {
-      fetch('/api/staff')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            OfflineStore.setStaff(data);
-          } else if (data && data.staff) {
-            OfflineStore.setStaff(data.staff);
-          }
-        })
-        .catch(console.error);
-    }
-  }, []);
   const [isOffline, setIsOffline] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<{product: Product, quantity: number}[]>([]);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [agentNotification, setAgentNotification] = useState<any | null>(null);
 
   // Network listener
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
-
-    // Set initial state safely
     setIsOffline(!navigator.onLine);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // Background sync
+  // Initial Data Fetch
+  useEffect(() => {
+    if (navigator.onLine) {
+      // Fetch Staff
+      fetch('/api/staff')
+        .then(res => res.json())
+        .then(data => {
+          const staff = Array.isArray(data) ? data : data.staff || [];
+          OfflineStore.setStaff(staff);
+        }).catch(console.error);
+
+      // Fetch Products
+      fetch('/api/v1/catalog/products')
+        .then(res => res.json())
+        .then(data => {
+          const prods = Array.isArray(data) ? data : data.products || [];
+          setProducts(prods);
+          OfflineStore.setProducts(prods);
+        }).catch(console.error);
+    } else {
+      setProducts(OfflineStore.getProducts());
+    }
+  }, []);
+
+  // Background Sync & Agent Notification Polling
   useEffect(() => {
     const syncInterval = setInterval(async () => {
       if (navigator.onLine) {
@@ -91,14 +112,12 @@ export default function TerminalPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(events)
               });
-              if (res.ok) {
-                OfflineStore.clearEvents();
-              }
+              if (res.ok) OfflineStore.clearEvents();
             }
 
             if (posTransactions.length > 0) {
               const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
-              const res = await fetch('/api/pos/transactions/sync', {
+              const res = await fetch('/api/v1/payments/terminal/sync_offline', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
@@ -117,32 +136,40 @@ export default function TerminalPage() {
             console.error("Sync failed", e);
           } finally {
             setSyncing(false);
+            setSyncCount(0);
           }
         }
+
+        // Poll for Agent Approvals (Restock Suggestions)
+        try {
+          const res = await fetch('/api/agents/approvals');
+          if (res.ok) {
+            const data = await res.json();
+            const approvals = data.pending_approvals || [];
+            const operationsApprovals = approvals.filter((a: any) => a.department === 'operations' && a.status === 'DRAFT');
+            if (operationsApprovals.length > 0 && !agentNotification) {
+               setAgentNotification(operationsApprovals[0]);
+            }
+          }
+        } catch (e) {}
       }
-    }, 10000); // Try syncing every 10 seconds
+    }, 10000);
 
     return () => clearInterval(syncInterval);
-  }, []);
+  }, [agentNotification]);
 
   const handlePinEntry = (digit: string) => {
     if (pin.length < 4) {
       const newPin = pin + digit;
       setPin(newPin);
-      setError('');
-
       if (newPin.length === 4) {
-        // Attempt to authenticate offline
         const staff = OfflineStore.getStaff();
-        const found = staff.find((s: any) => s.pin_hash === newPin); // Simple mock check
-
+        const found = staff.find((s: any) => s.pin_hash === newPin);
         if (found) {
           setActiveStaff(found);
-          // Check last event locally to determine clockedIn status
           const events = OfflineStore.getEvents().filter((e: any) => e.staff_id === found.id);
           if (events.length > 0) {
-             const lastEvent = events[events.length - 1];
-             setClockedIn(lastEvent.event_type === 'CLOCK_IN');
+             setClockedIn(events[events.length - 1].event_type === 'CLOCK_IN');
           }
         } else {
           setError(t('Invalid PIN'));
@@ -152,81 +179,69 @@ export default function TerminalPage() {
     }
   };
 
-  const handleClear = () => setPin('');
-  const handleLock = () => {
-      setActiveStaff(null);
-      setPin('');
+  const addToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product.id === product.id);
+      if (existing) {
+        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
   };
 
-  const handleClockAction = (type: 'CLOCK_IN' | 'CLOCK_OUT') => {
-    if (!activeStaff) return;
+  const cartTotal = cart.reduce((sum, item) => sum + (item.product.price_cents * item.quantity), 0);
 
-    const event = {
-      staff_id: activeStaff.id,
-      tenant_id: 'default_tenant',
-      event_type: type,
-      timestamp: new Date().toISOString(),
-      sync_status: 'PENDING'
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    setOrderStatus(t('Processing...'));
+
+    const tx = {
+      id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      amount_cents: cartTotal,
+      currency: currency,
+      payload: JSON.stringify(cart.map(item => ({ product_id: item.product.id, quantity: item.quantity }))),
+      client_id: 'terminal_mobile_1',
+      timestamp: new Date().toISOString()
     };
 
-    OfflineStore.addEvent(event);
-    setClockedIn(type === 'CLOCK_IN');
-  };
-
-  const handleNewOrder = async () => {
-    const basePrice = 5000; // $50.00
-    const converted = convert(basePrice, 'USD', currency);
-    if (converted.isOffline) {
-      setOfflineConversion(true);
-      setTimeout(() => setOfflineConversion(false), 3000);
-    }
-
     if (isOffline) {
-      setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
-      // Bypass Stripe Terminal and save offline
-      const tx = {
-        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        amount_cents: converted.amount,
-        currency: currency,
-        payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
-        client_id: 'terminal_1',
-        timestamp: new Date().toISOString()
-      };
       OfflineStore.addPosTransaction(tx);
-      setOrderStatus(`${t('Payment Saved Offline')} - ${converted.amount / 100} ${currency}`);
+      setOrderStatus(t('Sale saved offline.'));
+      setTimeout(() => {
+        setCart([]);
+        setShowCheckout(false);
+        setOrderStatus('');
+      }, 2000);
     } else {
-      setReserving(true);
-      setOrderStatus(t('Processing/Reserving...'));
-
       try {
-        const reserveRes = await fetch('/api/pos/terminal/reserve', {
+        const res = await fetch('/api/v1/payments/terminal/sync_offline', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+          body: JSON.stringify({ transactions: [tx] })
         });
-
-        const reserveData = await reserveRes.json();
-
-        if (!reserveData.success) {
-          setOrderStatus(t('Failed to reserve: ') + reserveData.error_message);
-          setReserving(false);
-          return;
+        if (res.ok) {
+          setOrderStatus(t('Payment Completed'));
+          setTimeout(() => {
+            setCart([]);
+            setShowCheckout(false);
+            setOrderStatus('');
+          }, 2000);
         }
-
-        setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
-
-        await fetch('/api/pos/terminal/commit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
-        });
-        setOrderStatus(`${t('Payment Completed')}`);
-      } catch (err) {
-        setOrderStatus(t('Error connecting to server'));
-      } finally {
-        setReserving(false);
+      } catch (e) {
+        OfflineStore.addPosTransaction(tx);
+        setOrderStatus(t('Error: Sale saved offline.'));
       }
     }
+  };
+
+  const handleApproveAgent = async (id: string) => {
+    if (!navigator.onLine) return;
+    await fetch(`/api/agents/approvals/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved: true })
+    });
+    setAgentNotification(null);
   };
 
   if (!activeStaff) {
@@ -237,166 +252,161 @@ export default function TerminalPage() {
               {isOffline && <span className="text-red-500 font-bold text-xs bg-red-100/10 px-2 py-1 rounded">{t('Offline Mode')}</span>}
               <LocalizationToggle />
            </div>
-
            <div className="mt-20 mb-12 text-center">
              <h1 className="text-2xl font-bold font-outfit mb-2">{t('Terminal Locked')}</h1>
-             <p className="text-gray-400">{t('Enter your PIN to unlock')}</p>
+             <p className="text-gray-400">{t('Enter PIN to unlock')}</p>
            </div>
-
            <div className="flex gap-4 mb-12">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className={`w-4 h-4 rounded-full border-2 ${pin.length > i ? 'bg-white border-white' : 'border-gray-600'}`}></div>
               ))}
            </div>
-
-           {error && <p className="text-red-500 mb-4 animate-bounce">{error}</p>}
-
            <div className="grid grid-cols-3 gap-6 w-full max-w-[280px]">
-             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+             {[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, 'C'].map((val, i) => (
                <button
-                 key={num}
-                 onClick={() => handlePinEntry(num.toString())}
-                 className="w-20 h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center"
+                 key={i}
+                 onClick={() => val === 'C' ? setPin('') : val !== '' && handlePinEntry(val.toString())}
+                 className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl font-light transition-colors ${val === '' ? 'invisible' : 'bg-gray-800 hover:bg-gray-700 active:bg-gray-600'}`}
                >
-                 {num}
+                 {val}
                </button>
              ))}
-             <div className="col-start-2">
-               <button
-                 onClick={() => handlePinEntry('0')}
-                 className="w-20 h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center"
-               >
-                 0
-               </button>
-             </div>
-             <div className="col-start-3 flex items-center justify-center">
-               <button
-                 onClick={handleClear}
-                 disabled={!pin}
-                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400"
-               >
-                 {t('Clear')}
-               </button>
-             </div>
            </div>
-
-           {syncing && <div className="absolute bottom-4 left-4 text-xs text-blue-400">{t('Syncing...')}</div>}
         </div>
       </div>
     );
   }
 
   return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 font-inter py-10">
+      <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-4 px-6 bg-white/80 backdrop-blur-md border-b sticky top-0 z-20 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
-            <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
-            {isOffline ? (
-              <span className="inline-block mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">{t('Offline Mode')}</span>
-            ) : (
-              <span className="inline-block mt-1 text-green-800 font-bold text-xs bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">{t('Online')}</span>
-            )}
+            <h1 className="text-lg font-bold font-outfit text-gray-900">{activeStaff.name}</h1>
+            <div className="flex items-center gap-2">
+               <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'}`}></div>
+               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{isOffline ? t('Offline') : t('Online')}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <LocalizationToggle />
-            <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
-              {t('Lock')}
-            </button>
+          <button onClick={() => setActiveStaff(null)} className="text-xs font-bold text-blue-600 uppercase tracking-widest">{t('Lock')}</button>
+        </div>
+
+        {/* Product Grid */}
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+          <div className="grid grid-cols-2 gap-3">
+            {products.map(product => (
+              <button
+                key={product.id}
+                onClick={() => addToCart(product)}
+                className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm text-left active:scale-95 transition-transform min-h-[120px] flex flex-col justify-between"
+              >
+                <div className="text-sm font-bold text-gray-900 line-clamp-2">{product.title}</div>
+                <div className="flex justify-between items-end mt-2">
+                  <span className="text-blue-600 font-bold">${(product.price_cents / 100).toFixed(2)}</span>
+                  <span className="text-[10px] text-gray-400">Qty: {product.inventory_count}</span>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50">
+        {/* Cart Summary Bar */}
+        {cart.length > 0 && !showCheckout && (
+          <button
+            onClick={() => setShowCheckout(true)}
+            className="absolute bottom-6 left-4 right-4 bg-blue-600 text-white p-4 rounded-2xl shadow-xl flex justify-between items-center animate-in slide-in-from-bottom"
+          >
+            <div className="flex items-center gap-3">
+               <span className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center font-bold">{cart.reduce((a,b) => a + b.quantity, 0)}</span>
+               <span className="font-bold">{t('View Cart')}</span>
+            </div>
+            <span className="font-outfit text-xl font-bold">${(cartTotal / 100).toFixed(2)}</span>
+          </button>
+        )}
 
-           <div className="app-card rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
-             <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-             </div>
-             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-1">
-               {clockedIn ? t('Clocked In') : t('Not Clocked In')}
-             </h2>
-             <p className="text-sm text-gray-500 mb-6">
-                {clockedIn ? t('Your time is being tracked locally.') : t('Clock in to start your shift.')}
-             </p>
-
-             {clockedIn ? (
-               <button
-                 onClick={() => handleClockAction('CLOCK_OUT')}
-                 className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
-               >
-                 {t('Clock Out')}
-               </button>
-             ) : (
-               <button
-                 onClick={() => handleClockAction('CLOCK_IN')}
-                 className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
-               >
-                 {t('Clock In')}
-               </button>
-             )}
-           </div>
-
-           {/* Role-based UI rendering */}
-           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Quick Actions')}</h3>
-
-           <div className="grid grid-cols-2 gap-4">
-             <button
-                onClick={handleNewOrder}
-                disabled={reserving}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
-             >
-               <div className="text-blue-500 mb-2">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-               </div>
-               <span className="font-medium text-gray-900">{t('New Order')}</span>
-             </button>
-
-             {activeStaff.role === 'Manager' && (
-               <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
-                 <div className="text-purple-500 mb-2">
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+        {/* Checkout Modal */}
+        {showCheckout && (
+          <div className="absolute inset-0 bg-white z-30 animate-in slide-in-from-bottom duration-300 flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center">
+               <h2 className="text-xl font-bold font-outfit">{t('Checkout')}</h2>
+               <button onClick={() => setShowCheckout(false)} className="text-gray-400"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round"/></svg></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+               {cart.map(item => (
+                 <div key={item.product.id} className="flex justify-between items-center">
+                    <div>
+                      <div className="font-bold text-gray-900">{item.product.title}</div>
+                      <div className="text-sm text-gray-500">x{item.quantity}</div>
+                    </div>
+                    <div className="font-bold text-gray-900">${(item.product.price_cents * item.quantity / 100).toFixed(2)}</div>
                  </div>
-                 <span className="font-medium text-gray-900">{t('Reports')}</span>
-               </button>
-             )}
-
-             <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
-               <div className="text-orange-500 mb-2">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+               ))}
+               <div className="border-t pt-4 flex justify-between items-center">
+                  <span className="text-gray-500 font-medium">{t('Total')}</span>
+                  <span className="text-2xl font-bold font-outfit">${(cartTotal / 100).toFixed(2)}</span>
                </div>
-               <span className="font-medium text-gray-900">{t('Refunds')}</span>
-             </button>
-           </div>
-
-           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
-           {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
-        </div>
-
-        {syncing && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>{t('Syncing transactions...')}</span>
+            </div>
+            <div className="p-6 space-y-3">
+               <button
+                 onClick={handleCheckout}
+                 className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-transform"
+               >
+                 {t('Complete Sale')}
+               </button>
+               {orderStatus && <div className="text-center text-sm font-bold text-blue-600 animate-pulse">{orderStatus}</div>}
+            </div>
           </div>
         )}
-        {offlineConversion && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-xs font-bold border border-amber-200 shadow-lg animate-bounce">
-            {t('Using cached rates - Syncing soon')}
+
+        {/* Sync Snackbar */}
+        {syncing && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-2 rounded-full shadow-lg text-xs font-bold flex items-center gap-2 z-50">
+             <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+             {t('Syncing')} {syncCount} {t('sales...')}
+          </div>
+        )}
+
+        {/* Agent Restock Notification (Glass Card) */}
+        {agentNotification && (
+          <div className="absolute inset-x-4 bottom-24 bg-white/30 backdrop-blur-xl border border-white/40 p-5 rounded-[2rem] shadow-2xl z-40 animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+             <div className="flex items-start gap-4">
+                <div className="bg-blue-500 w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-500/30">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div>
+                   <h4 className="font-bold text-gray-900 text-lg leading-tight">{t('Restock Suggestion')}</h4>
+                   <p className="text-sm text-gray-700 mt-1 font-medium">{agentNotification.description}</p>
+                </div>
+             </div>
+             <div className="flex gap-2 mt-6">
+                <button
+                   onClick={() => handleApproveAgent(agentNotification.id)}
+                   className="flex-1 bg-gray-900 text-white py-3 rounded-xl font-bold text-sm shadow-xl active:scale-95 transition-transform"
+                >
+                   {t('Approve')}
+                </button>
+                <button
+                   onClick={() => setAgentNotification(null)}
+                   className="flex-1 bg-white/50 text-gray-900 py-3 rounded-xl font-bold text-sm border border-black/5 hover:bg-white/80 active:scale-95 transition-transform"
+                >
+                   {t('Dismiss')}
+                </button>
+             </div>
           </div>
         )}
       </div>
+
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
+        .animate-in { animation: animate-in 0.3s ease-out; }
+        @keyframes animate-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}} />
     </div>
   );

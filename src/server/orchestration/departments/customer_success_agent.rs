@@ -69,10 +69,10 @@ impl Department for CustomerSuccessAgent {
             let _hub_clone = self.hub.clone();
 
             tokio::spawn(async move {
-                if source == "whatsapp" && !sender_id.is_empty() {
+                if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
                     let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
-                    if let Err(e) = integrations.send_message("whatsapp", "whatsapp", &sender_id, &text).await {
-                         tracing::error!("Failed to send whatsapp message via Meta integration: {}", e);
+                    if let Err(e) = integrations.send_message("meta", &source, &sender_id, &text).await {
+                         tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
                     }
                 }
             });

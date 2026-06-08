@@ -307,9 +307,50 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
+async fn handle_list_products(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
+        }
+    };
+
+    let products = sqlx::query_as::<_, ProductRow>(
+        "SELECT id, title, price_cents, inventory_count FROM products WHERE tenant_id = $1 AND is_hidden = false"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&mut *conn)
+    .await;
+
+    match products {
+        Ok(prods) => Json(prods).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch products: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
+        }
+    }
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+struct ProductRow {
+    id: String,
+    title: String,
+    price_cents: i64,
+    inventory_count: i32,
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/products", axum::routing::get(handle_list_products))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
 }

@@ -30,13 +30,20 @@ pub trait Actor: Send + Sync {
 
 pub struct ActorSystem {
     mailboxes: Mutex<HashMap<String, mpsc::Sender<ActorMessage>>>,
+    dead_letters: Mutex<Vec<ActorMessage>>,
 }
 
 impl ActorSystem {
     pub fn new() -> Self {
         Self {
             mailboxes: Mutex::new(HashMap::new()),
+            dead_letters: Mutex::new(Vec::new()),
         }
+    }
+
+    pub async fn get_dead_letters(&self) -> Vec<ActorMessage> {
+        let dlq = self.dead_letters.lock().await;
+        dlq.clone()
     }
 
     pub async fn register(&self, name: String, sender: mpsc::Sender<ActorMessage>) {
@@ -56,7 +63,10 @@ impl ActorSystem {
                 .await
                 .map_err(|e| format!("Failed to send message: {}", e))
         } else {
-            Err(format!("Recipient {} not found", msg.recipient))
+            let recipient = msg.recipient.clone();
+            let mut dlq = self.dead_letters.lock().await;
+            dlq.push(msg);
+            Err(format!("Recipient {} not found", recipient))
         }
     }
 }
@@ -632,5 +642,28 @@ mod tests {
         } else {
             panic!("Did not receive reply");
         }
+    }
+    #[tokio::test]
+    async fn test_actor_model_dead_letter_queue() {
+        let system = Arc::new(ActorSystem::new());
+
+        let msg = ActorMessage {
+            sender: "ProductionHarness".to_string(),
+            recipient: "NonExistentActor".to_string(),
+            content: "Lost message".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            correlation_id: "tx-dlq".to_string(),
+            original_sender: "ProductionHarness".to_string(),
+        };
+
+        let result = system.send(msg).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Recipient NonExistentActor not found");
+
+        let dlq = system.get_dead_letters().await;
+        assert_eq!(dlq.len(), 1);
+        assert_eq!(dlq[0].content, "Lost message");
+        assert_eq!(dlq[0].recipient, "NonExistentActor");
     }
 }
