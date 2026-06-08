@@ -1250,14 +1250,20 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + network_cost_f64;
 
+        let now = chrono::Utc::now();
+        use chrono::Datelike;
+        let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc();
+        let period_start = start_of_month.format("%Y-%m-%d").to_string();
+        let period_end = now.format("%Y-%m-%d").to_string();
+
         let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
             storage_cost: (storage_cost_f64 * 100.0) as i64,
             payment_fees: (payment_fees_f64 * 100.0) as i64,
-            period_start: "2024-05-01".to_string(), // In a real app this would be computed
-            period_end: "2024-05-31".to_string(),
+            period_start,
+            period_end,
             bandwidth_savings: (bandwidth_savings_f64 * 100.0) as i64,
             network_cost: (network_cost_f64 * 100.0) as i64,
         };

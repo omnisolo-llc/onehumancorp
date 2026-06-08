@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use ::server_pricing::prompt_caching::PromptCache;
 use ::server_pricing::deduplication::{RequestDeduplicator, DeduplicationResult};
-use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+use ::server_pricing::compression::{minify_json_prompt};
 use tokio_stream::Stream;
 use std::pin::Pin;
 
@@ -104,6 +104,19 @@ impl MinimaxClient {
             deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), // 5 minute TTL
         }
     }
+    pub fn truncate_prompt_recency(prompt: &str, max_words: usize) -> String {
+        if prompt.is_empty() || max_words == 0 {
+            return String::new();
+        }
+        let words: Vec<&str> = prompt.split_whitespace().collect();
+        if words.len() <= max_words {
+            return prompt.to_string();
+        }
+        // Keep the most recent words (end of the prompt)
+        let truncated = words[words.len() - max_words..].join(" ");
+        format!("... [truncated] {}" , truncated)
+    }
+
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         let prompt_clone = prompt.to_string();
@@ -166,10 +179,15 @@ impl MinimaxClient {
         }
 
         // 2. Optimize Prompt
+        let truncation_limit = std::env::var("OHC_LLM_TRUNCATION_LIMIT")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(1500);
+
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            truncate_by_word_count(prompt, 2000) // Safety truncation
+            Self::truncate_prompt_recency(prompt, truncation_limit) // Recency-based truncation for efficiency
         };
 
         let client = reqwest::Client::new();
@@ -238,7 +256,11 @@ impl MinimaxClient {
     pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
-        let optimized_prompt = truncate_by_word_count(prompt, 2000);
+        let truncation_limit = std::env::var("OHC_LLM_TRUNCATION_LIMIT")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(1500);
+        let optimized_prompt = Self::truncate_prompt_recency(prompt, truncation_limit);
 
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 

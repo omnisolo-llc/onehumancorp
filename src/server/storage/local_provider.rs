@@ -144,13 +144,14 @@ impl Provider for LocalProvider {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        // Quota Enforcement
+        // Quota Enforcement with Miser telemetry
         let t_id = key_str.split('/').next().unwrap_or("default");
         let agent_id = key_str.split('/').nth(1);
+        tracing::info!(tid = %t_id, size = reported_size, "💰 Miser telemetry: Tracking storage usage write");
         if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
             if status.soft_limit_reached {
                 if let Some(msg) = status.user_message {
-                    tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
+                    tracing::info!(tid = %t_id, "💰 Miser cost optimization: Storage soft limit reached. Nudging user: {}", msg);
                 }
             }
         }

@@ -48,8 +48,8 @@ export default function PricingPage() {
           </div>
 
           {/* Starter Tier */}
-          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between relative" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(79, 70, 229, 0.5)', borderRadius: '16px', boxShadow: '0 12px 48px rgba(79, 70, 229, 0.15)' }}>
-            <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Recommended</div>
+          <div className="p-6 md:p-8 shadow-sm flex flex-col justify-between relative" style={{ background: 'rgba(255, 255, 255, 0.70)', backdropFilter: 'blur(40px) saturate(220%)', border: '2px solid rgba(79, 70, 229, 0.6)', borderRadius: '28px', boxShadow: '0 12px 48px rgba(79, 70, 229, 0.15)', marginTop: '12px' }}>
+            <div className="absolute -top-3 right-4 bg-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg z-10">Recommended</div>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Starter</h3>
               <p className="text-xl font-semibold mb-2" style={{ color: '#1D1D1F' }}>$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
