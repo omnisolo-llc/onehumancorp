@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CostConfig {
@@ -10,12 +11,22 @@ pub struct CostConfig {
     pub cost_per_gb_month: f64,
     pub cost_per_compute_hour: f64,
     pub cost_per_network_gb: f64,
+    #[serde(default)]
+    pub model_overrides: HashMap<String, ModelPricing>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelPricing {
     pub input_cost: f64,
     pub output_cost: f64,
     pub cached_cost: f64,
+}
+
+pub fn get_pricing_with_config(model: &str, config: &CostConfig) -> ModelPricing {
+    if let Some(pricing) = config.model_overrides.get(model) {
+        return pricing.clone();
+    }
+    get_pricing(model)
 }
 
 pub fn get_pricing(model: &str) -> ModelPricing {
@@ -76,7 +87,15 @@ pub fn calculate_cost_cents(model: &str, input_tokens: i64, output_tokens: i64, 
 
 pub fn calculate_cost(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> f64 {
     let pricing = get_pricing(model);
+    calculate_cost_internal(pricing, input_tokens, output_tokens, cached_input_tokens)
+}
 
+pub fn calculate_cost_with_config_overrides(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, config: &CostConfig) -> f64 {
+    let pricing = get_pricing_with_config(model, config);
+    calculate_cost_internal(pricing, input_tokens, output_tokens, cached_input_tokens)
+}
+
+fn calculate_cost_internal(pricing: ModelPricing, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> f64 {
     // Per 1M tokens
     let input_cost = (input_tokens as f64 / 1_000_000.0) * pricing.input_cost;
     let output_cost = (output_tokens as f64 / 1_000_000.0) * pricing.output_cost;
@@ -261,6 +280,29 @@ mod tests {
 
         let cost_cents = calculate_cost_with_config_cents(1000, 500, 200, 100, &config);
         assert_eq!(cost_cents, 190);
+    }
+
+    #[test]
+    fn test_calculate_cost_with_config_overrides() {
+        let mut model_overrides = HashMap::new();
+        model_overrides.insert("custom-model".to_string(), ModelPricing {
+            input_cost: 50.0,
+            output_cost: 100.0,
+            cached_cost: 10.0,
+        });
+
+        let config = CostConfig {
+            model_overrides,
+            ..Default::default()
+        };
+
+        // 1M input tokens @ 50.0 = 50.0
+        let cost = calculate_cost_with_config_overrides("custom-model", 1_000_000, 0, 0, &config);
+        assert_eq!(cost, 50.0);
+
+        // Fallback to default if not in overrides
+        let cost_fallback = calculate_cost_with_config_overrides("claude-3-opus", 1_000_000, 0, 0, &config);
+        assert_eq!(cost_fallback, 15.0);
     }
 
     #[test]

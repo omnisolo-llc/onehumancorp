@@ -9,6 +9,7 @@ use opentelemetry::KeyValue;
 pub struct AuditEvent {
     pub agent_id: String,
     pub tenant_id: String,
+    pub model: String,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cached_input_tokens: i64,
@@ -92,17 +93,39 @@ impl CostAuditor {
     }
 
     pub fn record_event(&self, event: AuditEvent) -> f64 {
-        let cost = calculator::calculate_cost_with_config(
-            event.input_tokens,
-            event.output_tokens,
-            event.cached_input_tokens,
-            event.local_embedding_tokens,
-            &self.config,
-        );
+        let cost = if !event.model.is_empty() {
+            calculator::calculate_cost_with_config_overrides(
+                &event.model,
+                event.input_tokens,
+                event.output_tokens,
+                event.cached_input_tokens,
+                &self.config,
+            )
+        } else {
+            calculator::calculate_cost_with_config(
+                event.input_tokens,
+                event.output_tokens,
+                event.cached_input_tokens,
+                event.local_embedding_tokens,
+                &self.config,
+            )
+        };
 
         if event.input_tokens == 0 && event.output_tokens == 0 && event.cached_input_tokens == 0 && event.local_embedding_tokens == 0 {
             return 0.0;
         }
+
+        tracing::info!(
+            target: "ohc::billing::audit",
+            agent_id = %event.agent_id,
+            tenant_id = %event.tenant_id,
+            model = %event.model,
+            input_tokens = event.input_tokens,
+            output_tokens = event.output_tokens,
+            cached_tokens = event.cached_input_tokens,
+            cost = cost,
+            "Billing event recorded"
+        );
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
         let mut total_cost = self.total_cost.lock().unwrap();
@@ -476,6 +499,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            model: "".to_string(),
             input_tokens: 1000,
             output_tokens: 500,
             cached_input_tokens: 0,
@@ -536,6 +560,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            model: "".to_string(),
             input_tokens: 0,
             output_tokens: 0,
             cached_input_tokens: 100,
@@ -553,6 +578,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            model: "".to_string(),
             input_tokens: 0,
             output_tokens: 0,
             cached_input_tokens: 0,
@@ -575,6 +601,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            model: "".to_string(),
             input_tokens: 100,
             output_tokens: 50,
             cached_input_tokens: 100,

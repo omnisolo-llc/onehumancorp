@@ -94,175 +94,178 @@ export default function CostDashboardPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
-      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
-        <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Business Advisory Dashboard</h1>
-        <div className="flex gap-2">
-            <button onClick={() => router.push('/plan')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
-            Back to My Plan
+    <div className="flex flex-col min-h-screen font-inter bg-slate-50 text-slate-900 selection:bg-indigo-100">
+      <header className="px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/60 backdrop-blur-3xl saturate-150 border-b-white/20 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-slate-900 tracking-tight">Business Advisory Dashboard</h1>
+        <div className="flex gap-3">
+            <button onClick={() => router.push('/plan')} className="min-w-[140px] min-h-[44px] px-6 py-2 bg-slate-200/50 hover:bg-slate-200 text-slate-800 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] border border-white/40 flex items-center justify-center">
+            Back to Plan
             </button>
         </div>
       </header>
 
-      <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
+      <main id="cost-dashboard-screen" className="p-4 md:p-10 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
-        <section className="app-panel">
-            <div className="app-panel-header">
-                <h2 className="app-panel-title">Advisory Summary</h2>
+        <section className="p-8 md:p-10 shadow-2xl shadow-indigo-500/5 bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] w-full">
+            <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center shadow-inner">
+                    <span className="text-2xl">💡</span>
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold font-outfit text-slate-900">Advisory Summary</h2>
+                    <p className="text-sm text-slate-500 font-medium">Insights based on connected backend billing and usage signals.</p>
+                </div>
             </div>
-            <div className="app-panel-body">
-                <p className="text-gray-700 font-medium leading-relaxed">
-                  Cost and tier usage are based on connected backend billing, storage, network, and agent department usage signals.
-                </p>
-            </div>
+            <p className="text-slate-700 font-medium leading-relaxed bg-indigo-50/30 p-6 rounded-2xl border border-indigo-100/50">
+                Cost and tier usage are tracked in real-time. OHC Miser optimizes your token footprint and storage automatically to ensure maximum business efficiency.
+            </p>
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-          <div className="flex justify-between items-center mb-6">
-             <h2 className="text-xl font-bold font-outfit text-gray-900">My Plan</h2>
+        <section id="my-plan-section" className="p-8 md:p-10 shadow-2xl shadow-indigo-500/5 bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] hover:border-white transition-all duration-500">
+          <div className="flex justify-between items-center mb-8">
+             <h2 className="text-2xl font-bold font-outfit text-slate-900">Subscription Status</h2>
              <button
                onClick={() => router.push('/pricing')}
-               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
+               className="min-h-[44px] px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]">
                Upgrade
              </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.current_plan || 'Free'}</p>
+              <div className="p-6 rounded-[24px] bg-white/50 border border-white/50 shadow-sm">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Plan</h3>
+                  <p className="text-3xl font-extrabold text-slate-900 mt-2 font-outfit">{myPlanData?.current_plan || 'Free'}</p>
               </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
+              <div className="p-6 rounded-[24px] bg-white/50 border border-white/50 shadow-sm">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">AI Capacity</h3>
+                  <p className="text-3xl font-extrabold text-slate-900 mt-2 font-outfit">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-slate-400 font-bold">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ ∞'}</span></p>
               </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : '/ Unlimited'}</span></p>
+              <div className="p-6 rounded-[24px] bg-white/50 border border-white/50 shadow-sm">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cloud Assets</h3>
+                  <p className="text-3xl font-extrabold text-slate-900 mt-2 font-outfit">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} <span className="text-sm text-slate-400 font-bold">MB</span></p>
               </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
+              <div className="p-6 rounded-[24px] bg-white/50 border border-white/50 shadow-sm">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Next Bill</h3>
+                  <p className="text-3xl font-extrabold text-slate-900 mt-2 font-outfit">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
               </div>
           </div>
         </section>
 
         {/* Overview Section */}
-        <section className="app-panel">
-            <div className="app-panel-header">
-               <h2 className="app-panel-title">Cost Transparency</h2>
-               <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
+        <section className="p-8 md:p-10 shadow-2xl shadow-indigo-500/5 bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+               <h2 className="text-2xl font-bold font-outfit text-slate-900">Cost Transparency</h2>
+               <span id="cost-dashboard-period" className="text-xs font-bold text-slate-400 bg-slate-200/50 px-4 py-2 rounded-full uppercase tracking-wider">{data?.period_start} — {data?.period_end}</span>
             </div>
 
-            <div className="app-panel-body">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
-                        <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
-                        <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
+            <div className="">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="p-8 rounded-[28px] bg-slate-900 text-white shadow-xl shadow-slate-900/20 hover:-translate-y-1 transition-all duration-300">
+                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Total Investment</h2>
+                        <p id="cost-dashboard-total" className="text-4xl font-extrabold font-outfit">{formatCurrency(data?.total_costs || 0)}</p>
                     </div>
-                    <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
-                        <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
-                        <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
+                    <div className="p-8 rounded-[28px] bg-white/60 backdrop-blur-xl border border-white hover:-translate-y-1 transition-all duration-300">
+                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Gross Revenue</h2>
+                        <p id="cost-dashboard-revenue" className="text-4xl font-extrabold font-outfit text-emerald-600">{formatCurrency(data?.total_revenue || 0)}</p>
                     </div>
-                    <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
-                        <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
-                        <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
-                        <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
+                    <div className="p-8 rounded-[28px] bg-emerald-50/50 border border-emerald-100 hover:-translate-y-1 transition-all duration-300">
+                        <h2 className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3">Miser Savings</h2>
+                        <p id="cost-dashboard-total-savings" className="text-4xl font-extrabold font-outfit text-emerald-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
+                        <p className="text-[10px] font-bold text-emerald-600 mt-3 uppercase tracking-wider">Optimized via auto-WebP</p>
                     </div>
                 </div>
             </div>
         </section>
 
         {/* Breakdown Section */}
-        <section className="app-panel">
-            <div className="app-panel-header">
-                <h2 className="app-panel-title">Cost Breakdown</h2>
+        <section className="p-8 md:p-10 shadow-2xl shadow-indigo-500/5 bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] w-full">
+            <div className="app-panel-header mb-8">
+                <h2 className="text-2xl font-bold font-outfit text-slate-900">Cost Breakdown</h2>
             </div>
 
-            <div className="app-panel-body space-y-4">
-                <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
-                    <ul id="cost-dashboard-trend" className="space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="flex flex-col p-8 rounded-[28px] bg-white/50 border border-white shadow-sm hover:shadow-md transition-all duration-300">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">7-Day Expenditure Trend</h3>
+                    <ul id="cost-dashboard-trend" className="space-y-3">
                         {(data?.trend?.length ? data.trend : [{ date: 'No trend data yet', total_cost: 0 } as DailyCost]).map((daily, index) => (
-                            <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                                <span className="text-sm text-gray-700">{daily.date}</span>
-                                <span className="text-sm font-medium text-gray-900">{formatCurrency(daily.total_cost)}</span>
+                            <li key={index} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                                <span className="text-sm font-semibold text-slate-600">{daily.date}</span>
+                                <span className="text-sm font-extrabold text-slate-900">{formatCurrency(daily.total_cost)}</span>
                             </li>
                         ))}
                     </ul>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <div>
-                        <span className="font-medium text-gray-900">LLM Usage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
-                    </div>
-                    <div className="text-left sm:text-right w-full sm:w-auto">
-                        <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900 block">{formatCurrency(data?.llm_cost || 0)}</span>
-                        <span className="text-xs text-gray-500 font-medium">Efficiency: {data?.cache_hit_rate}% cache hit rate, ${data?.cost_per_1k_tokens.toFixed(4)}/1k tokens</span>
-                    </div>
-                </div>
-
-                {/* Per-Agent / Per-Feature Costs */}
-                <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <h3 className="font-medium text-gray-900 mb-2">Agent & Feature Costs</h3>
+                <div className="flex flex-col p-8 rounded-[28px] bg-white/50 border border-white shadow-sm hover:shadow-md transition-all duration-300">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Agent & Feature Costs</h3>
                     {data?.agent_costs && data.agent_costs.length > 0 ? (
-                        <ul id="cost-dashboard-agent-costs" className="space-y-2">
+                        <ul id="cost-dashboard-agent-costs" className="space-y-3">
                             {data.agent_costs.map((agent, index) => (
-                                <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                                    <span className="text-sm text-gray-700 capitalize">{agent.agent_id.replace(/_/g, ' ')}</span>
-                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(agent.cost_cents)}</span>
+                                <li key={index} className="flex justify-between items-center bg-indigo-50/30 p-3 rounded-xl border border-indigo-100/30">
+                                    <span className="text-sm font-semibold text-slate-700 capitalize">{agent.agent_id.replace(/_/g, ' ')}</span>
+                                    <span className="text-sm font-extrabold text-indigo-700">{formatCurrency(agent.cost_cents)}</span>
                                 </li>
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-sm text-gray-500">No agent cost data available.</p>
+                        <div className="flex flex-col items-center justify-center py-10">
+                            <span className="text-4xl mb-3 opacity-20">🤖</span>
+                            <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">No agent activity recorded</p>
+                        </div>
                     )}
                 </div>
+            </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="mt-8 space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-8 rounded-[28px] bg-white/50 border border-white hover:border-indigo-100 transition-all">
                     <div>
-                        <span className="font-medium text-gray-900">Storage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
+                        <span className="text-lg font-bold text-slate-900">Intelligence (LLM)</span>
+                        <p className="text-sm text-slate-500 mt-1 font-medium">Core brain operations and reasoning logic.</p>
                     </div>
-                    <span id="cost-dashboard-storage" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
+                    <div className="text-left sm:text-right w-full sm:w-auto">
+                        <span id="cost-dashboard-llm" className="text-2xl font-extrabold text-slate-900 block">{formatCurrency(data?.llm_cost || 0)}</span>
+                        <div className="flex gap-2 mt-2">
+                           <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded uppercase tracking-wider">Efficiency: {data?.cache_hit_rate}% cache hit</span>
+                           <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded uppercase tracking-wider">${data?.cost_per_1k_tokens.toFixed(4)}/1k</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-8 rounded-[28px] bg-white/50 border border-white hover:border-indigo-100 transition-all">
                     <div>
-                        <span className="font-medium text-gray-900">Payment Fees</span>
-                        <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
+                        <span className="text-lg font-bold text-slate-900">Cloud Persistence</span>
+                        <p className="text-sm text-slate-500 mt-1 font-medium">High-speed file storage and asset hosting.</p>
                     </div>
-                    <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
+                    <span id="cost-dashboard-storage" className="text-2xl font-extrabold text-slate-900">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-8 rounded-[28px] bg-white/50 border border-white hover:border-indigo-100 transition-all">
                     <div>
-                        <span className="font-medium text-gray-900">Compute Usage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
+                        <span className="text-lg font-bold text-slate-900">Transaction Fees</span>
+                        <p className="text-sm text-slate-500 mt-1 font-medium">Stripe ecosystem routing and processing.</p>
                     </div>
-                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.compute_cost || 0)}</span>
+                    <span id="cost-dashboard-payment-fees" className="text-2xl font-extrabold text-slate-900">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-8 rounded-[28px] bg-white/50 border border-white hover:border-indigo-100 transition-all">
                     <div>
-                        <span className="font-medium text-gray-900">Network & Bandwidth</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
+                        <span className="text-lg font-bold text-slate-900">Infrastructure</span>
+                        <p className="text-sm text-slate-500 mt-1 font-medium">Compute hours and background task workers.</p>
                     </div>
-                    <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.network_cost || 0)}</span>
+                    <span id="cost-dashboard-compute" className="text-2xl font-extrabold text-slate-900">{formatCurrency(data?.compute_cost || 0)}</span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-8 rounded-[28px] bg-emerald-50/20 border border-emerald-100/50 hover:bg-emerald-50/40 transition-all">
                     <div>
-                        <span className="font-medium text-green-700">Bandwidth Savings</span>
-                        <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>
+                        <span className="text-lg font-bold text-emerald-700">Miser Efficiency Gains</span>
+                        <p className="text-sm text-emerald-600 mt-1 font-medium">Savings from automated WebP compression and token pruning.</p>
                     </div>
-                    <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
+                    <span id="cost-dashboard-bandwidth-savings" className="text-2xl font-extrabold text-emerald-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
                 </div>
             </div>
         </section>
 
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="p-8 md:p-10 shadow-2xl shadow-indigo-500/5 bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] hover:border-white transition-all duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                 <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">

@@ -541,6 +541,14 @@ pub async fn record_llm_call_cost(
     model: &str,
     cost_usd: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    tracing::info!(
+        target: "ohc::telemetry::cost",
+        organization_id = %organization_id,
+        model = %model,
+        cost_usd = cost_usd,
+        "LLM call cost recorded"
+    );
+
     buffer_metric(
         pool,
         "ohc_llm_call_cost",
@@ -905,6 +913,17 @@ pub async fn record_agent_cost(
     entity: &str,
     cost: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    tracing::info!(
+        target: "ohc::telemetry::cost",
+        agent_id = %agent_id,
+        organization_id = %organization_id,
+        role = %role,
+        model = %model,
+        entity = %entity,
+        cost = cost,
+        "Agent cost recorded"
+    );
+
     buffer_metric(
         pool,
         "ohc_agent_cost",

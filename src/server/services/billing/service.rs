@@ -32,6 +32,7 @@ impl BillingService for MyBillingService {
         let event = AuditEvent {
             agent_id: req.agent_id.clone(),
             tenant_id,
+            model: req.model.clone(),
             input_tokens: req.prompt_tokens,
             output_tokens: req.completion_tokens,
             cached_input_tokens: req.cached_tokens,

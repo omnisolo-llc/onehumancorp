@@ -13,7 +13,6 @@
     "google-protobuf": "^3.21.4",
     "next": "^16.2.7",
     "pg": "^8.21.0",
-    "react": "^19.2.5",
     "swagger-ui-react": "^5.32.6",
     "ts-proto": "^2.11.6",
     "zod": "^3.23.0"
@@ -40,8 +39,8 @@
     "next-router-mock": "^1.0.5",
     "playwright": "1.50.1",
     "postcss": "^8.5.15",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tailwindcss": "^4.3.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
