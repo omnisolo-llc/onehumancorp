@@ -333,7 +333,7 @@ describe('OnboardingWizard', () => {
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
+        return Promise.resolve({ ok: false, status: 500, clone: () => ({ json: async () => ({ error: "Failed to start onboarding" }) }), json: async () => ({ error: "Failed to start onboarding" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
@@ -525,9 +525,40 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Open Assistant/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
+  });
+
+  it('retries handleSaveDraft on network failure', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    let fetchCalls = 0;
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') {
+        fetchCalls++;
+        if (fetchCalls < 2) {
+          return Promise.resolve({ ok: false, status: 500 });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 2 });
+    });
+
+    await renderOnboardingWizard();
+
+    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
+    await user.click(saveDraftButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+    }, { timeout: 3000 });
+
+    expect(fetchCalls).toBeGreaterThanOrEqual(2);
   });
 
   it('loads draft state correctly on mount', async () => {
@@ -655,6 +686,9 @@ describe('OnboardingWizard', () => {
     expect(await screen.findByText('Please enter a valid email address')).toBeInTheDocument();
 
     await user.clear(emailInput);
+    // Workaround for clear not triggering empty string validation properly sometimes
+    await user.type(emailInput, 'x');
+    await user.keyboard('{Backspace}');
     expect(await screen.findByText('Admin Email is required')).toBeInTheDocument();
 
     await user.type(emailInput, 'maya@example.com');

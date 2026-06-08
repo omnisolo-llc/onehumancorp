@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useOnboardingStore } from './store';
-type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save';
+type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save' | 'sparkles';
 
 function SetupIcon({ name }: { name: SetupIconName }) {
   const paths: Record<SetupIconName, string[]> = {
@@ -11,6 +11,7 @@ function SetupIcon({ name }: { name: SetupIconName }) {
     launch: ['M13 10V3L4 14h7v7l9-11h-7z'],
     next: ['M5 12h14', 'M13 6l6 6-6 6'],
     save: ['M5 4h12l2 2v16H5z', 'M8 4v7h8V4', 'M8 18h8'],
+    sparkles: ['M21 12l-3-1 1-3 1 3 3 1-3 1-1 3-1-3zM8 21l-3-4-4-3 4-3 3-4 3 4 4 3-4 3z'],
   };
 
   return (
@@ -98,6 +99,27 @@ export default function OnboardingWizard() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
 
+  const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = process.env.NODE_ENV === 'test' ? 10 : 500) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+           let errMsg = `HTTP error! status: ${response.status}`;
+           try {
+              const result = await response.clone().json();
+              errMsg = result.error || result.message || errMsg;
+           } catch (e) {}
+           throw new Error(errMsg);
+        }
+        return response;
+      } catch (err: any) {
+        if (i === retries - 1) throw err;
+        await new Promise(res => setTimeout(res, backoff * Math.pow(2, i)));
+      }
+    }
+    throw new Error('Max retries reached');
+  };
+
   const handleSaveDraft = async () => {
     setIsLoading(true);
     setError('');
@@ -126,7 +148,7 @@ export default function OnboardingWizard() {
         aiAutoRespond
       };
 
-      const res = await fetch('/api/onboarding/draft', {
+      const res = await fetchWithRetry('/api/onboarding/draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,10 +157,6 @@ export default function OnboardingWizard() {
         },
         body: JSON.stringify({ wizardState })
       });
-
-      if (!res.ok) {
-        throw new Error('Draft endpoint failed');
-      }
 
       setSaveMessage('Draft Saved!');
       setTimeout(() => setSaveMessage(''), 3000);
@@ -329,7 +347,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const startRes = await fetch('/api/onboarding/start', {
+      const startRes = await fetchWithRetry('/api/onboarding/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -492,7 +510,7 @@ export default function OnboardingWizard() {
                         const tenantIdStr = localStorage.getItem('tenant_id') || 'default';
                         const userIdStr = localStorage.getItem('user_id') || 'default';
 
-                        const startRes = await fetch('/api/onboarding/start', {
+                        const startRes = await fetchWithRetry('/api/onboarding/start', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
                           body: JSON.stringify({
@@ -1229,10 +1247,10 @@ export default function OnboardingWizard() {
                 </div>
 
                 <a
-                  href="/dashboard"
+                  href="/assistant"
                   className="flex w-full items-center justify-center glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
-                  <IconLabel icon="dashboard">Go to Dashboard</IconLabel>
+                  <IconLabel icon="sparkles">Open Assistant</IconLabel>
                 </a>
                 <a
                   href="/builder"
