@@ -61,7 +61,7 @@ jobs:
             artifact_name: ohc-x86_64-apple-darwin.tar.gz
             install_linux_deps: false
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install Linux build dependencies
         if: matrix.install_linux_deps
@@ -93,7 +93,7 @@ jobs:
         run: bazelisk build //release:release_archive --config=release --config=${{ matrix.bazel_config }}
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.name }}
           path: bazel-bin/release/${{ matrix.artifact_name }}
@@ -140,7 +140,7 @@ jobs:
             tauri_cli_bazel_flags: --config=linux_arm64
             install_linux_deps: true
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install Linux desktop packaging dependencies
         if: matrix.install_linux_deps
@@ -164,7 +164,7 @@ jobs:
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Cache Cargo and Tauri build outputs
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index
@@ -484,7 +484,7 @@ jobs:
           cat checksums-desktop-${{ matrix.name }}.txt
 
       - name: Upload desktop installer artifacts
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.name }}
           path: dist/
@@ -519,7 +519,7 @@ jobs:
           #   targets: "//src/ui/tauri:tauri_ios_ipa"
           #   patterns: "*.ipa"
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install iOS build dependencies
         if: matrix.name == 'ios'
@@ -606,7 +606,7 @@ jobs:
           cat checksums-mobile-${{ matrix.name }}.txt
 
       - name: Upload mobile artifacts
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7
         with:
           name: mobile-${{ matrix.name }}
           path: dist/
@@ -617,7 +617,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Install Linux build dependencies
         run: |
@@ -665,7 +665,7 @@ jobs:
           cat checksums-server-web-image.txt
 
       - name: Upload server web image artifact
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7
         with:
           name: server-web-image
           path: dist/
@@ -682,7 +682,7 @@ jobs:
       - build-server-web-image
     timeout-minutes: 15
     steps:
-      - uses: actions/download-artifact@v8.0.1
+      - uses: actions/download-artifact@v8
         with:
           path: dist/
 
@@ -703,7 +703,7 @@ jobs:
           cat checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3.0.0
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.tar.gz
@@ -756,7 +756,7 @@ jobs:
           ls -lh dl
 
       - name: Setup Node
-        uses: actions/setup-node@v6.1.0
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
 
@@ -836,17 +836,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4.2.0
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v4.2.0
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
