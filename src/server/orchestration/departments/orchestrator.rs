@@ -837,6 +837,55 @@ impl DepartmentOrchestrator {
                                 ).await;
                             }
                         }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("inventory_stockout") {
+                        if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                            let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let reorder_amount = payload.get("reorder_amount").and_then(|v| v.as_i64()).unwrap_or(0);
+                            let suggested_price_cents = (suggested_price * 100.0) as i64;
+                            let job_id = uuid::Uuid::new_v4().to_string();
+
+                            if let DbStore::Postgres = &self.db.store {
+                                // 1. Update product base price
+                                let _ = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
+                                    .bind(suggested_price)
+                                    .bind(suggested_price_cents)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await;
+
+                                // 2. Dispatch reorder to Job Queue
+                                let reorder_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "reorder_amount": reorder_amount,
+                                });
+                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'reorder_dispatch', $3)")
+                                    .bind(&job_id)
+                                    .bind(tenant_id)
+                                    .bind(reorder_payload)
+                                    .execute(&self.db.pool)
+                                    .await;
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(suggested_price)
+                                    .bind(suggested_price_cents)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+
+                                let reorder_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "reorder_amount": reorder_amount,
+                                });
+                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES (?, ?, 'reorder_dispatch', ?)")
+                                    .bind(&job_id)
+                                    .bind(tenant_id)
+                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
                     }
                 }
 
@@ -909,6 +958,25 @@ impl DepartmentOrchestrator {
         self.execute_action(
             DepartmentType::BusinessAdvisory,
             "Smart Price Suggestion: Winter Scarf".to_string(),
+            tenant_id.to_string(),
+            ActionRisk::DraftForReview,
+            payload
+        ).await.map(|_| ())
+    }
+
+    pub async fn simulate_inventory_stockout(&self, tenant_id: &str) -> Result<(), String> {
+        let payload = serde_json::json!({
+            "feature_type": "inventory_stockout",
+            "product_id": uuid::Uuid::new_v4().to_string(),
+            "product_name": "Red Dress",
+            "old_price": 40.0,
+            "suggested_price": 46.0,
+            "reorder_amount": 50
+        });
+
+        self.execute_action(
+            DepartmentType::BusinessAdvisory,
+            "Red Dress sold out in 2 days. Demand is high. Operations Agent drafted a reorder for 50 units. Finance Agent suggests raising price from $40 to $46.".to_string(),
             tenant_id.to_string(),
             ActionRisk::DraftForReview,
             payload

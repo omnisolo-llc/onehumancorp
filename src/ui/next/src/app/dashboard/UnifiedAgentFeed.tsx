@@ -208,8 +208,34 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft") && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft" || approval.payload?.feature_type === "inventory_stockout") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {approval.payload?.feature_type === "inventory_stockout" && (
+                        <div className="mb-4 p-4 rounded-xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 flex flex-col gap-3" data-testid="inventory-stockout-card">
+                          <div className="flex items-center gap-2 text-red-800 dark:text-red-300 font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Stockout Detected: {approval.payload.product_name}
+                          </div>
+                          <div className="text-xs text-red-700 dark:text-red-400 font-medium">
+                            Product sold out. Recommend price increase and immediate reorder.
+                          </div>
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-red-100 dark:border-red-900/50 relative mt-2">
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">Agent Proposals</div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Suggested Price:</span>
+                                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">${approval.payload.suggested_price} (was ${approval.payload.old_price})</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Reorder Amount:</span>
+                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{approval.payload.reorder_amount} units</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {approval.payload?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm">
@@ -404,6 +430,25 @@ export function UnifiedAgentFeed() {
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Dismiss restock"
                         data-testid="dismiss-restock"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === 'inventory_stockout' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve"
+                        data-testid="approve-proposal"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss"
+                        data-testid="reject-proposal"
                       >
                         Dismiss
                       </button>

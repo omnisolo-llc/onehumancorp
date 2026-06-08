@@ -15,7 +15,8 @@ test.describe("Unified Agent Feed Mobile UX", () => {
           INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
           VALUES
             ('e2e-feed-test-1', 'e2e-tenant', 'operations', '3 new orders to fulfill', 'PENDING', 'LOW', '{"feature_type": "fulfillment_batch", "message": "Batch process 3 orders?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('e2e-feed-test-2', 'e2e-tenant', 'marketing', 'Draft promo email?', 'PENDING', 'LOW', '{"context": {"weekly_health_report": true}, "message": "Send promo?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ('e2e-feed-test-2', 'e2e-tenant', 'marketing', 'Draft promo email?', 'PENDING', 'LOW', '{"context": {"weekly_health_report": true}, "message": "Send promo?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('e2e-feed-test-3', 'e2e-tenant', 'business_advisory', 'Red Dress sold out in 2 days. Demand is high. Operations Agent drafted a reorder for 50 units. Finance Agent suggests raising price from $40 to $46.', 'PENDING', 'HIGH', '{"feature_type": "inventory_stockout", "product_id": "test-prod-123", "product_name": "Red Dress", "reorder_amount": 50, "suggested_price": 46.0, "old_price": 40.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT (id) DO UPDATE SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP;
         `,
       },
@@ -30,9 +31,15 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     // 4. Verify the seeded cards are rendered
     const opsCard = page.locator("text=3 new orders to fulfill").first();
     const marketingCard = page.locator("text=Draft promo email?").first();
+    const stockoutCard = page.locator("text=Red Dress sold out in 2 days").first();
 
     await expect(opsCard).toBeVisible();
     await expect(marketingCard).toBeVisible();
+    await expect(stockoutCard).toBeVisible();
+
+    // Test the new stockout UI components specifically
+    await expect(page.locator("text=Stockout Detected: Red Dress").first()).toBeVisible();
+    await expect(page.locator("text=$46 (was $40)").first()).toBeVisible();
 
     // 5. Verify touch targets on the default Approve button (has min-h-[44px] class)
     // We can't strictly test min-height CSS but we can click them to verify interaction
@@ -49,5 +56,11 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await draftButton.click();
 
     await expect(page.locator("text=Draft promo email?").first()).not.toBeVisible();
+
+    // Now approve the stockout request
+    const stockoutApproveButton = stockoutCard.locator('..').locator('..').locator('button[data-testid="approve-proposal"]');
+    await expect(stockoutApproveButton).toBeVisible();
+    await stockoutApproveButton.click();
+    await expect(page.locator("text=Red Dress sold out in 2 days").first()).not.toBeVisible();
   });
 });
