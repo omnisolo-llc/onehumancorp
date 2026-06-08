@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 
-export default function BusinessSetupCompatibilityPage() {
+function BusinessSetupContent() {
   return (
     <main id="business-setup-screen" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] p-6">
       <section className="w-full max-w-xl rounded-[16px] glassmorphism p-8 shadow-sm border border-white/20">
@@ -14,5 +15,13 @@ export default function BusinessSetupCompatibilityPage() {
         </Link>
       </section>
     </main>
+  );
+}
+
+export default function BusinessSetupCompatibilityPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BusinessSetupContent />
+    </Suspense>
   );
 }
