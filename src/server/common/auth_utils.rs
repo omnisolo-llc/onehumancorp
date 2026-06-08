@@ -15,7 +15,7 @@ where
     E: Executor<'a, Database = Postgres>,
 {
     if ::server_config::get().multitenant {
-        if org_id.trim() == "system" {
+        if org_id.trim().eq_ignore_ascii_case("system") {
             return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode".into()));
         }
         if org_id.trim().is_empty() {
@@ -23,7 +23,7 @@ where
         }
     }
 
-    if org_id.trim() == "system" {
+    if org_id.trim().eq_ignore_ascii_case("system") {
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
         // and we cannot call execute multiple times because E is consumed.
