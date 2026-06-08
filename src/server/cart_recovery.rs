@@ -588,16 +588,57 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
             .await
             .map_err(|err| CartRecoveryError::Dispatch(err.to_string()))?;
 
+        let discount_percent = if session.amount_cents > 10000 {
+            15
+        } else if session.amount_cents > 5000 {
+            10
+        } else {
+            5
+        };
+        let discount_amount = (session.amount_cents as f64 * (discount_percent as f64 / 100.0)) / 100.0;
+        let discount_text = format!("{}%", discount_percent);
+
+        let amount = format!("${:.2}", session.amount_cents as f64 / 100.0);
+        let drafted_body = format!(
+            "Hi there! We noticed you left a {} checkout unfinished. Here's a special {} discount to help you decide. Resume securely here: {}",
+            amount, discount_text, message.checkout_url
+        );
+
+        let approval_payload = serde_json::json!({
+            "feature_type": "cart_recovery",
+            "action_type": "cart_recovery.dispatch",
+            "checkout_session_id": session.session_id,
+            "customer_id": session.customer_id,
+            "amount_cents": session.amount_cents,
+            "channel": message.channel,
+            "to": message.to,
+            "subject": message.subject,
+            "body": drafted_body,
+            "checkout_url": message.checkout_url,
+            "context": {
+                "cart_recovery": true,
+                "abandoned_carts_count": 1,
+                "potential_revenue": session.amount_cents as f64 / 100.0,
+                "discount_amount": discount_amount,
+                "discount_percent": discount_percent
+            }
+        });
+
+        let description = format!("Drafted cart recovery message for a {} abandoned cart.", amount);
+
         sqlx::query(
             r#"
-            INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
-            VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)
+            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+            VALUES ($1, $2, 'marketing', $3, 'DRAFT', 'HIGH', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             "#,
         )
         .bind(&job_id)
         .bind(&session.tenant_id)
-        .bind(CART_RECOVERY_JOB_TYPE)
-        .bind(payload)
+        .bind(&description)
+        .bind({
+            let redacted = ::server_telemetry::redact_interface_pii(approval_payload);
+            serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+        })
         .execute(&mut *tx)
         .await
         .map_err(|err| CartRecoveryError::Dispatch(err.to_string()))?;

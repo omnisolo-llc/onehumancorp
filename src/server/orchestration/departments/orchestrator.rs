@@ -686,7 +686,32 @@ impl DepartmentOrchestrator {
 
             if approved {
                 if let Some(payload) = &original_payload {
-                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("cart_recovery") {
+                        let job_id = uuid::Uuid::new_v4().to_string();
+                        if let DbStore::Postgres = &self.db.store {
+                            if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)")
+                                .bind(&job_id)
+                                .bind(tenant_id)
+                                .bind("cart_recovery")
+                                .bind(payload)
+                                .execute(&self.db.pool)
+                                .await
+                            {
+                                tracing::error!("Failed to enqueue cart recovery job: {}", e);
+                            }
+                        } else if let DbStore::Sqlite(pool) = &self.db.store {
+                            if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES (?, ?, ?, ?, 'PENDING', CURRENT_TIMESTAMP)")
+                                .bind(&job_id)
+                                .bind(tenant_id)
+                                .bind("cart_recovery")
+                                .bind(payload)
+                                .execute(pool)
+                                .await
+                            {
+                                tracing::error!("Failed to enqueue cart recovery job: {}", e);
+                            }
+                        }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;
                         let total_amount_cents = (price * 100.0) as i64;
