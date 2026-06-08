@@ -219,6 +219,7 @@ impl Department for SalesAgent {
             "tenant.quote.requested".to_string(),
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
+            "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
         ]
     }
@@ -227,13 +228,13 @@ impl Department for SalesAgent {
         if event.event_type == "agent:sales:approved" {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
-                    if feature_type == "quote_draft" {
+                    if feature_type == "quote_draft" || feature_type == "proposal_draft" {
                         let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
                         let deposit_amount = suggested_price * 0.20; // 20% deposit
 
                         tracing::info!(
-                            "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
+                            "Executing approved draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
                             customer_inquiry,
                             suggested_price,
                             deposit_amount
@@ -256,6 +257,77 @@ impl Department for SalesAgent {
                     }
                 }
             }
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.work_intake.received" {
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown request");
+            let query_embedding = vec![0.5; 1536]; // Mock query embedding for long-term memory
+            let context_records = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await?;
+            let context_str = context_records.join("\n");
+
+            let prompt = format!(
+                "You are the OneHumanCorp sales assistant. Based on the customer intake and past projects context, generate a proposal. Intake: {}. Context: {}. Return JSON with scope (string), suggested_time (string), suggested_price (float). Do not format as markdown blocks, just return JSON.",
+                message, context_str
+            );
+
+            let raw = match RuntimeSalesQuoteIntentPlanner::from_env().backend {
+                SalesIntentBackend::Minimax { api_key } => {
+                    crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await.unwrap_or_default()
+                }
+                SalesIntentBackend::Local => {
+                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_default()
+                }
+            };
+
+            let mut scope = "Standard project scope.".to_string();
+            let mut suggested_time = "2-4 weeks".to_string();
+            let mut suggested_price = 1500.0;
+
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) {
+                if let Some(s) = value.get("scope").and_then(|v| v.as_str()) {
+                    scope = s.to_string();
+                }
+                if let Some(t) = value.get("suggested_time").and_then(|v| v.as_str()) {
+                    suggested_time = t.to_string();
+                }
+                if let Some(p) = value.get("suggested_price").and_then(|v| v.as_f64()) {
+                    suggested_price = p;
+                }
+            } else if raw.contains('{') {
+                let start = raw.find('{').unwrap_or(0);
+                let end = raw.rfind('}').unwrap_or(raw.len() - 1);
+                if let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw[start..=end]) {
+                    if let Some(s) = value.get("scope").and_then(|v| v.as_str()) {
+                        scope = s.to_string();
+                    }
+                    if let Some(t) = value.get("suggested_time").and_then(|v| v.as_str()) {
+                        suggested_time = t.to_string();
+                    }
+                    if let Some(p) = value.get("suggested_price").and_then(|v| v.as_f64()) {
+                        suggested_price = p;
+                    }
+                }
+            }
+
+            let action_payload = serde_json::json!({
+                "feature_type": "proposal_draft",
+                "customer_inquiry": message,
+                "scope": scope,
+                "suggested_time": suggested_time,
+                "suggested_price": suggested_price
+            });
+
+            self.orchestrator
+                .execute_action(
+                    DepartmentType::Sales,
+                    "New Work Intake: Proposal Drafted".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    action_payload,
+                )
+                .await
+                .map(|_| ())?;
             return Ok(());
         }
 

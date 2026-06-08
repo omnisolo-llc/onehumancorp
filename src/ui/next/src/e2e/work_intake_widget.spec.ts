@@ -84,4 +84,27 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         expect(submitHtml).toContain('Powered by');
         expect(submitHtml).toContain('OHC');
     });
+
+    test('proposal draft appears in agent feed and can be approved', async ({ page }) => {
+        // Go to dashboard agent feed
+        await page.goto('/dashboard');
+
+        // Ensure "Proposals & Actions" feed is active
+        const feedTab = page.locator('button', { hasText: /Proposals/ }).first();
+        await expect(feedTab).toBeVisible({ timeout: 15000 });
+        await feedTab.click();
+
+        // Ensure the proposal draft card appears with details
+        await expect(page.locator('h3:has-text("New Work Intake: Proposal Drafted")').first()).toBeVisible({ timeout: 5000 });
+        await expect(page.locator('text=Customer Request:').first()).toBeVisible();
+        await expect(page.locator('text=Playwright Test').first()).toBeVisible();
+
+        // Click Approve & Send Proposal
+        const approveBtn = page.getByTestId('approve-send-proposal').first();
+        await expect(approveBtn).toBeVisible();
+        await approveBtn.click();
+
+        // Check if the card gets removed or status updates
+        await expect(page.locator('h3:has-text("New Work Intake: Proposal Drafted")').first()).not.toBeVisible({ timeout: 5000 });
+    });
 });
