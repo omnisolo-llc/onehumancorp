@@ -186,6 +186,7 @@ mod tests {
             start_time: chrono::Utc::now(),
             end_time: None,
             status: None,
+            payment_intent_id: None,
             created_at: None,
             updated_at: None,
         };
