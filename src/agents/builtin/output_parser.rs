@@ -3,6 +3,7 @@ use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
+use tracing::{warn, info};
 
 #[async_trait]
 pub trait LlmClientForParser: Send + Sync {
@@ -144,6 +145,8 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         )));
                     }
 
+                    warn!("Transient error executing LLM: {}, retrying {}/{}...", e, attempt + 1, max_retries);
+
                     let base_backoff = 500 * (1 << attempt);
                     let jitter = std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
@@ -168,6 +171,8 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             max_retries, parse_error_msg
                         )));
                     }
+
+                    info!("LLM-recoverable parse error, feeding back to model as ToolMessage (attempt {}/{}): {}", attempt + 1, max_retries, parse_error_msg);
 
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
                     if !msg.tool_calls.is_empty() {
@@ -697,5 +702,68 @@ mod retry_tests {
             }
             _ => panic!("Expected Transient error for exhaustion"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_retry_parser_tool_message_format() {
+        struct InspectingLlmClient {
+            requests: Mutex<Vec<ChatRequest>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClientForParser for InspectingLlmClient {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut reqs = self.requests.lock().await;
+                reqs.push(req.clone());
+
+                if reqs.len() == 1 {
+                    // First request: Return a malformed output to trigger the retry loop
+                    Ok(create_tool_call_resp(
+                        "structured_output",
+                        serde_json::json!({"data": {"wrong_field": "test"}}),
+                    ))
+                } else {
+                    // Second request: Return a successful response
+                    Ok(create_tool_call_resp(
+                        "structured_output",
+                        serde_json::json!({"data": {"result": "success"}}),
+                    ))
+                }
+            }
+        }
+
+        let inspecting_client = Arc::new(InspectingLlmClient {
+            requests: Mutex::new(vec![]),
+        });
+
+        let req = create_test_req();
+        let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
+            Box::new(StructuredOutputParser::new());
+        let retry_parser = RetryWithErrorOutputParser::new(
+            parser,
+            inspecting_client.clone() as Arc<dyn LlmClientForParser>,
+        );
+
+        let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 2).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success");
+
+        let reqs = inspecting_client.requests.lock().await;
+        assert_eq!(reqs.len(), 2);
+
+        let second_req = &reqs[1];
+
+        // The original message is added, plus the new Tool message containing the error
+        let last_msg = second_req.messages.last().expect("Should have messages");
+        assert_eq!(last_msg.role, crate::types::Role::Tool);
+        assert_eq!(last_msg.tool_results.len(), 1);
+
+        let tool_result = &last_msg.tool_results[0];
+        assert_eq!(tool_result.tool_call_id, "call_1");
+        assert!(tool_result.error.contains("Parsing error: Validation Error (Pydantic-first tool schema)"));
+        assert!(tool_result.error.contains("Please correct your tool arguments to match the required schema."));
     }
 }
