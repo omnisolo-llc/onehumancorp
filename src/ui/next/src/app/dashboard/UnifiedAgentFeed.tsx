@@ -208,8 +208,18 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft") && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft" || approval.payload?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {approval.payload?.feature_type === "social_post_draft" && (
+                        <div className="mb-4 p-4 rounded-xl bg-pink-50/50 dark:bg-pink-900/10 border border-pink-100 dark:border-pink-900/30 flex flex-col gap-3" data-testid="social-post-card">
+                          <div className="flex items-center gap-2 text-pink-800 dark:text-pink-300 font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                            Promoter Agent Drafts
+                          </div>
+                        </div>
+                      )}
                       {approval.payload?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm">
@@ -285,6 +295,27 @@ export function UnifiedAgentFeed() {
                             </span>
                           </div>
                         </>
+                      ) : approval.payload?.feature_type === 'social_post_draft' ? (
+                        <div className="flex flex-col gap-4 text-sm">
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                            <div className="flex items-center gap-2 mb-2 font-bold text-gray-800 dark:text-gray-200">
+                              <span className="w-5 h-5 flex items-center justify-center bg-gray-900 text-white rounded text-[10px]">T</span> TikTok
+                            </div>
+                            <p className="text-gray-700 dark:text-gray-300 italic">"{approval.payload.tiktok}"</p>
+                          </div>
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                            <div className="flex items-center gap-2 mb-2 font-bold text-gray-800 dark:text-gray-200">
+                              <span className="w-5 h-5 flex items-center justify-center bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 text-white rounded text-[10px]">I</span> Instagram
+                            </div>
+                            <p className="text-gray-700 dark:text-gray-300 italic">"{approval.payload.instagram}"</p>
+                          </div>
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                            <div className="flex items-center gap-2 mb-2 font-bold text-gray-800 dark:text-gray-200">
+                              <span className="w-5 h-5 flex items-center justify-center bg-blue-600 text-white rounded text-[10px]">F</span> Facebook
+                            </div>
+                            <p className="text-gray-700 dark:text-gray-300 italic">"{approval.payload.facebook}"</p>
+                          </div>
+                        </div>
                       ) : approval.payload?.feature_type === 'quote_draft' ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
@@ -393,6 +424,25 @@ export function UnifiedAgentFeed() {
                         data-testid="edit-quote-draft"
                       >
                         Edit Draft
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === "social_post_draft" ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-violet-600 text-white font-medium hover:opacity-90 transition-opacity shadow-md flex items-center justify-center"
+                        aria-label="Schedule Posts"
+                        data-testid="approve-social-draft"
+                      >
+                        Schedule Posts
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss Posts"
+                        data-testid="dismiss-social-draft"
+                      >
+                        Dismiss
                       </button>
                     </div>
                   ) : approval.payload?.context?.smart_pricing === true ? (
