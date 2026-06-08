@@ -54,7 +54,10 @@ export async function GET(
 
     return response;
   } catch (error) {
-    console.error('Error proxying to Rust Edge Storefront:', error);
+    // Only log the error if we are not in a test environment to avoid noise in test output
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error proxying to Rust Edge Storefront:', error);
+    }
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

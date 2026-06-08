@@ -1,7 +1,7 @@
 
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ChangelogPage from './page';
 
@@ -20,7 +20,9 @@ describe('ChangelogPage', () => {
   }) as any;
 
   it('renders the release notes page correctly', async () => {
-    render(<ChangelogPage />);
+    await act(async () => {
+      render(<ChangelogPage />);
+    });
 
     expect(screen.getByText('Release Notes & Changelog')).toBeInTheDocument();
 
@@ -34,13 +36,17 @@ describe('ChangelogPage', () => {
   });
 
   it('renders paragraph strings', async () => {
-    render(<ChangelogPage />);
+    await act(async () => {
+      render(<ChangelogPage />);
+    });
     const link = screen.getByText('Read the full technical changelog on our website →');
     expect(link).toHaveAttribute('href', 'https://onehumancorp.com/changelog');
   });
 
   it('renders paragraph elements for random text', async () => {
-    render(<ChangelogPage />);
+    await act(async () => {
+      render(<ChangelogPage />);
+    });
     await waitFor(() => {
       expect(screen.getByText(/Faster loading times for product images/)).toBeInTheDocument();
     });
@@ -48,6 +54,8 @@ describe('ChangelogPage', () => {
 
   it('covers the line 36 paragraph fallback', async () => {
     // Re-render to ensure we evaluate the branch where a line neither starts with ### nor -
-    render(<ChangelogPage />);
+    await act(async () => {
+      render(<ChangelogPage />);
+    });
   });
 });
