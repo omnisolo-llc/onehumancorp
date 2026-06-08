@@ -139,6 +139,9 @@
 
       <button id="next-btn">Next</button>
     </div>
+
+
+
     <script>
       const nextBtn = document.getElementById('next-btn');
       const nameInput = document.getElementById('assistant-name');
@@ -146,6 +149,51 @@
       const nameError = document.getElementById('name-error');
       const toneError = document.getElementById('tone-error');
       const container = document.getElementById('form-container');
+
+
+      function getApiBaseUrl() {
+        if (window.__TAURI__ && window.__TAURI__.core) {
+            return "http://127.0.0.1:18789"; // or dynamically fetched from rust
+        }
+        return window.location.origin; // fallback to same origin for remote deployments
+      }
+
+
+      function getApiHeaders() {
+          const headers = { 'Content-Type': 'application/json' };
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+          const userId = localStorage.getItem('user_id');
+
+          if (tenantId) headers['X-Tenant-ID'] = tenantId;
+          if (userId) headers['X-User-ID'] = userId;
+
+          return headers;
+      }
+
+
+      const apiUrl = getApiBaseUrl();
+      let businessName = localStorage.getItem('businessName') || '';
+
+      // Load state from backend
+      fetch(apiUrl + '/api/onboarding/state', {
+        headers: getApiHeaders()
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.wizardState) {
+          if (data.wizardState.assistantName) {
+            nameInput.value = data.wizardState.assistantName;
+          }
+          if (data.wizardState.assistantTone) {
+            toneSelect.value = data.wizardState.assistantTone;
+          }
+          if (data.wizardState.businessName && !businessName) {
+             businessName = data.wizardState.businessName;
+             localStorage.setItem('businessName', businessName);
+          }
+        }
+      })
+      .catch(err => console.error('Failed to load state', err));
 
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
@@ -170,7 +218,44 @@
            if (isValid) {
                localStorage.setItem('assistantName', name);
                localStorage.setItem('assistantTone', tone);
-               window.location.href = "success.html";
+
+               const saveAndStart = async () => {
+                 try {
+                   await fetch(apiUrl + '/api/onboarding/state', {
+                     method: 'POST',
+                     headers: getApiHeaders(),
+                     body: JSON.stringify({
+                       wizardState: {
+                         step: 5,
+                         businessName: businessName,
+                         assistantName: name,
+                         assistantTone: tone
+                       }
+                     })
+                   });
+
+                   await fetch(apiUrl + '/api/onboarding/start', {
+                     method: 'POST',
+                     headers: getApiHeaders(),
+                     body: JSON.stringify({
+                       business_type: "Local Business",
+                       company_name: businessName,
+                       admin_email: "",
+                       admin_name: "",
+                       admin_password: "",
+                       price_type: "fixed",
+                       location: "",
+                       target_audience: ""
+                     })
+                   });
+                 } catch (err) {
+                   console.error('Failed to sync to backend', err);
+                 }
+                 window.location.href = "success.html";
+               };
+
+               saveAndStart();
+
            } else {
                container.classList.remove('animate-shake');
                void container.offsetWidth; // trigger reflow
@@ -191,5 +276,8 @@
           }
       });
     </script>
+
+
+
   </body>
 </html>

@@ -126,11 +126,49 @@
       <div id="name-error" class="error-msg">Please enter a name for your business.</div>
       <button id="next-btn">Next</button>
     </div>
+
+
+
     <script>
       const nextBtn = document.getElementById('next-btn');
       const nameInput = document.getElementById('business-name');
       const nameError = document.getElementById('name-error');
       const container = document.getElementById('form-container');
+
+
+      function getApiBaseUrl() {
+        if (window.__TAURI__ && window.__TAURI__.core) {
+            return "http://127.0.0.1:18789"; // or dynamically fetched from rust
+        }
+        return window.location.origin; // fallback to same origin for remote deployments
+      }
+
+
+      function getApiHeaders() {
+          const headers = { 'Content-Type': 'application/json' };
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+          const userId = localStorage.getItem('user_id');
+
+          if (tenantId) headers['X-Tenant-ID'] = tenantId;
+          if (userId) headers['X-User-ID'] = userId;
+
+          return headers;
+      }
+
+
+      const apiUrl = getApiBaseUrl();
+
+      // Load state from backend
+      fetch(apiUrl + '/api/onboarding/state', {
+        headers: getApiHeaders()
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.wizardState && data.wizardState.businessName) {
+          nameInput.value = data.wizardState.businessName;
+        }
+      })
+      .catch(err => console.error('Failed to load state', err));
 
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
@@ -138,7 +176,24 @@
            if (name) {
                nameError.style.display = 'none';
                localStorage.setItem('businessName', name);
-               window.location.href = "assistant.html";
+
+               // Save state to backend
+               fetch(apiUrl + '/api/onboarding/state', {
+                 method: 'POST',
+                 headers: getApiHeaders(),
+                 body: JSON.stringify({
+                   wizardState: {
+                     step: 2,
+                     businessName: name
+                   }
+                 })
+               }).then(() => {
+                 window.location.href = "assistant.html";
+               }).catch(err => {
+                 console.error('Failed to save state', err);
+                 window.location.href = "assistant.html";
+               });
+
            } else {
                nameError.style.display = 'block';
                container.classList.remove('animate-shake');
@@ -154,5 +209,8 @@
           }
       });
     </script>
+
+
+
   </body>
 </html>

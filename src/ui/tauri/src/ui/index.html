@@ -91,13 +91,54 @@
       <p>Let's get your workspace set up.</p>
       <button id="start-btn">Start Onboarding</button>
     </div>
+
+
+
     <script>
       const startBtn = document.getElementById('start-btn');
+
+
+      function getApiBaseUrl() {
+        if (window.__TAURI__ && window.__TAURI__.core) {
+            return "http://127.0.0.1:18789"; // or dynamically fetched from rust
+        }
+        return window.location.origin; // fallback to same origin for remote deployments
+      }
+
+
+      function getApiHeaders() {
+          const headers = { 'Content-Type': 'application/json' };
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+          const userId = localStorage.getItem('user_id');
+
+          if (tenantId) headers['X-Tenant-ID'] = tenantId;
+          if (userId) headers['X-User-ID'] = userId;
+
+          return headers;
+      }
+
+      const apiUrl = getApiBaseUrl();
+
+      // Load state from backend to see if we should skip onboarding
+      fetch(apiUrl + '/api/onboarding/state', {
+        headers: getApiHeaders()
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.wizardState && data.wizardState.step >= 5) {
+            window.location.href = "dashboard.html";
+        }
+      })
+      .catch(err => console.error('Failed to load state', err));
+
       if (startBtn) {
         startBtn.addEventListener('click', () => {
            window.location.href = "setup.html";
         });
       }
     </script>
+
+
+
   </body>
 </html>
