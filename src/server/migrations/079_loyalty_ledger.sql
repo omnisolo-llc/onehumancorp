@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS loyalty_ledger;
+DROP TABLE IF EXISTS loyalty_ledger CASCADE;
 CREATE TABLE IF NOT EXISTS loyalty_ledgers (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
