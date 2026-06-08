@@ -67,6 +67,13 @@
       if (name) {
           document.getElementById('success-msg').innerText = `Workspace created for ${name}.`;
       }
+
+      const dashboardBtn = document.getElementById('dashboard-btn');
+      if (dashboardBtn) {
+        dashboardBtn.addEventListener('click', () => {
+          window.location.href = "dashboard.html";
+        });
+      }
     </script>
   </body>
 </html>
