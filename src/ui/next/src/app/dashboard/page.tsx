@@ -402,6 +402,27 @@ export default function Dashboard() {
 
         <UnifiedAgentFeed />
 
+        <section className="mb-6">
+          <div className="glassmorphism p-6 rounded-[16px] border border-blue-200/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-bl-full blur-2xl"></div>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-2xl shrink-0">✨</div>
+                <div>
+                  <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">AI Assistant Workstation</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 max-w-xl">
+                    Your personal operator for planning tasks, editing files, creating office artifacts, and summoning experts.
+                  </p>
+                </div>
+              </div>
+              <Link href="/assistant" className="shrink-0 px-6 py-3 bg-[#0066FF] hover:bg-blue-600 text-white font-medium rounded-lg shadow-sm transition-colors text-center">
+                Open Assistant
+              </Link>
+            </div>
+          </div>
+        </section>
+
+
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

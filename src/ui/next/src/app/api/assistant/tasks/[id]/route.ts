@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import { mutateTask } from '../../store';
 
+
+export async function GET(request: Request, context: { params: { id: string } }) {
+  const { listAssistantTasks } = await import('../../store');
+  const tasks = listAssistantTasks();
+  const task = tasks.find(t => t.id === context.params.id);
+  if (!task) {
+    return NextResponse.json({ error: 'task not found' }, { status: 404 });
+  }
+  return NextResponse.json({ task });
+}
+
 export async function PATCH(request: Request, context: { params: { id: string } }) {
   const payload = await request.json().catch(() => null);
   try {
