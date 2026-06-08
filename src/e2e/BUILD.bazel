@@ -10,6 +10,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
     "//src/ui/next:src/e2e/changelog.spec.ts",
     "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
+    "//src/ui/next:src/e2e/field-ops.spec.ts",
     "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
     "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
     "//src/ui/next:src/e2e/help.spec.ts",
