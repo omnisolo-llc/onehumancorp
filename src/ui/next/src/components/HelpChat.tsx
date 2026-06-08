@@ -66,12 +66,18 @@ export function HelpChat() {
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText })
+        body: JSON.stringify({ message: messageText }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error("Failed to fetch");
 
@@ -83,11 +89,15 @@ export function HelpChat() {
         sender: 'agent',
         ...reply
       }]);
-    } catch (err) {
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      const isTimeout = err.name === 'AbortError';
       setMessages(prev => [...prev, {
         id: nextMessageId('agent'),
         sender: 'agent',
-        text: "Sorry, I'm having trouble connecting right now."
+        text: isTimeout
+          ? "Sorry, the connection timed out. Please try again later or check your network connection."
+          : "Sorry, I'm having trouble connecting right now."
       }]);
     } finally {
       setIsLoading(false);
@@ -105,11 +115,11 @@ export function HelpChat() {
   return (
     <div className="help-chat-wrapper">
       {/* Floating Button */}
-      <div className="fixed bottom-6 right-[5.5rem] z-50">
+      <div className="fixed bottom-6 right-6 z-[9999]">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="bg-gray-900/90 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group animate-pulse backdrop-blur-[20px] saturate-200"
+            className="bg-blue-600/95 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[20px] saturate-200"
             aria-label="Open help chat"
           >
             <span className="text-xl">✨</span>
@@ -120,17 +130,17 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[60] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
+        <div className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
           {/* Header */}
-          <div id="ai-chat-header" className="bg-gray-900/95 text-white p-4 flex justify-between items-center backdrop-blur-[20px]">
+          <div id="ai-chat-header" className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-[20px]">
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
               <div>
                 <h3 className="font-bold font-outfit text-sm tracking-wide text-white/90">Ask AI Help</h3>
-                <p className="text-xs text-gray-300 font-inter font-medium">Always here to help</p>
+                <p className="text-xs text-blue-100 font-inter font-medium">Always here to help</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5" aria-label="Close help chat">
+            <button onClick={() => setIsOpen(false)} className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5" aria-label="Close help chat">
               <span className="sr-only">✕</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>

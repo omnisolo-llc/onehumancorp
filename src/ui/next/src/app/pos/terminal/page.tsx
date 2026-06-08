@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
+import StripeTerminalClient from './StripeTerminalClient';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -15,7 +16,16 @@ const OfflineStore = {
     events.push(event);
     localStorage.setItem('ohc_offline_events', JSON.stringify(events));
   },
-  clearEvents: () => localStorage.setItem('ohc_offline_events', '[]')
+  clearEvents: () => localStorage.setItem('ohc_offline_events', '[]'),
+
+  getPosTransactions: () => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'),
+  setPosTransactions: (transactions: any[]) => localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions)),
+  addPosTransaction: (tx: any) => {
+    const transactions = OfflineStore.getPosTransactions();
+    transactions.push(tx);
+    localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(transactions));
+  },
+  clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
 };
 
 export default function TerminalPage() {
@@ -28,26 +38,83 @@ export default function TerminalPage() {
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
+  const [reserving, setReserving] = useState(false);
+
+  useEffect(() => {
+    if (navigator.onLine) {
+      fetch('/api/staff')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            OfflineStore.setStaff(data);
+          } else if (data && data.staff) {
+            OfflineStore.setStaff(data.staff);
+          }
+        })
+        .catch(console.error);
+    }
+  }, []);
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Network listener
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    // Set initial state safely
+    setIsOffline(!navigator.onLine);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Background sync
   useEffect(() => {
     const syncInterval = setInterval(async () => {
-      const events = OfflineStore.getEvents();
-      if (events.length > 0 && navigator.onLine) {
-        setSyncing(true);
-        try {
-          const res = await fetch('/api/staff/timecard', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(events)
-          });
-          if (res.ok) {
-            OfflineStore.clearEvents();
+      if (navigator.onLine) {
+        const events = OfflineStore.getEvents();
+        const posTransactions = OfflineStore.getPosTransactions();
+
+        if (events.length > 0 || posTransactions.length > 0) {
+          setSyncing(true);
+          try {
+            if (events.length > 0) {
+              const res = await fetch('/api/staff/timecard', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(events)
+              });
+              if (res.ok) {
+                OfflineStore.clearEvents();
+              }
+            }
+
+            if (posTransactions.length > 0) {
+              const res = await fetch('/api/pos/transactions/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(posTransactions)
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
+                  const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
+                  OfflineStore.setPosTransactions(failedTxs);
+                } else {
+                  OfflineStore.clearPosTransactions();
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Sync failed", e);
+          } finally {
+            setSyncing(false);
           }
-        } catch (e) {
-          console.error("Sync failed", e);
-        } finally {
-          setSyncing(false);
         }
       }
     }, 10000); // Try syncing every 10 seconds
@@ -103,21 +170,68 @@ export default function TerminalPage() {
     setClockedIn(type === 'CLOCK_IN');
   };
 
-  const handleNewOrder = () => {
+  const handleNewOrder = async () => {
     const basePrice = 5000; // $50.00
     const converted = convert(basePrice, 'USD', currency);
     if (converted.isOffline) {
       setOfflineConversion(true);
       setTimeout(() => setOfflineConversion(false), 3000);
     }
-    setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+
+    if (isOffline) {
+      setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+      // Bypass Stripe Terminal and save offline
+      const tx = {
+        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        amount_cents: converted.amount,
+        currency: currency,
+        payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
+        client_id: 'terminal_1',
+        timestamp: new Date().toISOString()
+      };
+      OfflineStore.addPosTransaction(tx);
+      setOrderStatus(`${t('Payment Saved Offline')} - ${converted.amount / 100} ${currency}`);
+    } else {
+      setReserving(true);
+      setOrderStatus(t('Processing/Reserving...'));
+
+      try {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+        });
+
+        const reserveData = await reserveRes.json();
+
+        if (!reserveData.success) {
+          setOrderStatus(t('Failed to reserve: ') + reserveData.error_message);
+          setReserving(false);
+          return;
+        }
+
+        setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
+
+        await fetch('/api/v1/payments/terminal/commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+        });
+        setOrderStatus(`${t('Payment Completed')}`);
+      } catch (err) {
+        setOrderStatus(t('Error connecting to server'));
+      } finally {
+        setReserving(false);
+      }
+    }
   };
 
   if (!activeStaff) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 font-inter">
         <div className="w-[375px] h-[812px] bg-black text-white p-8 flex flex-col items-center relative overflow-hidden">
-           <div className="absolute top-8 right-8">
+           <div className="absolute top-8 right-8 flex items-center gap-4">
+              {isOffline && <span className="text-red-500 font-bold text-xs bg-red-100/10 px-2 py-1 rounded">{t('Offline Mode')}</span>}
               <LocalizationToggle />
            </div>
 
@@ -178,6 +292,7 @@ export default function TerminalPage() {
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
+            {isOffline && <span className="inline-block mt-1 text-red-500 font-bold text-xs bg-red-100 px-2 py-1 rounded">{t('Offline Mode')}</span>}
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
@@ -226,7 +341,8 @@ export default function TerminalPage() {
            <div className="grid grid-cols-2 gap-4">
              <button
                 onClick={handleNewOrder}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]"
+                disabled={reserving}
+                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -250,10 +366,20 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
+
+           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
-        {syncing && <div className="bg-blue-50 text-blue-600 text-xs text-center py-2 border-t border-blue-100">{t('Syncing offline events...')}</div>}
+        {syncing && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{t('Syncing offline events...')}</span>
+          </div>
+        )}
         {offlineConversion && (
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-xs font-bold border border-amber-200 shadow-lg animate-bounce">
             {t('Using cached rates - Syncing soon')}

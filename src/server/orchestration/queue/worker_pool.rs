@@ -15,7 +15,7 @@ pub struct WorkerPool {
 
 impl WorkerPool {
     pub fn new(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
-        Self::new_with_timeout(queue, num_workers, job_types, handler, 60000)
+        Self::new_with_timeout(queue, num_workers, job_types, handler, ohc_builtin_agent::agent::agent_task_timeout().as_millis() as u64)
     }
 
     pub fn new_with_timeout(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>, timeout_ms: u64) -> Self {

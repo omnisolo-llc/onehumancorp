@@ -8,6 +8,82 @@ use std::sync::Arc;
 
 pub struct SubagentExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
+    pub llm: Option<Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
+}
+
+impl SubagentExecutor {
+
+    async fn summarize_output(
+        &self,
+        raw_output: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        const TARGET_CHARS_MAX: usize = 8000;
+        const CHUNK_SIZE_CHARS: usize = 20000;
+
+        let mut current_text = raw_output.to_string();
+
+        let system_prompt = "You are an expert summarizer. Compress the following subagent execution result into a dense 1k-2k token summary. Preserve all key decisions, code changes, and unresolved issues. Do not include raw context loops.";
+
+        while current_text.len() > TARGET_CHARS_MAX {
+            let mut next_text_parts = Vec::new();
+
+            let chars: Vec<char> = current_text.chars().collect();
+            let mut i = 0;
+            while i < chars.len() {
+                let end = std::cmp::min(i + CHUNK_SIZE_CHARS, chars.len());
+                let chunk: String = chars[i..end].iter().collect();
+
+                let req = ohc_builtin_agent_core::types::ChatRequest {
+                    model: "gpt-4o-mini".to_string(), // Default fallback model
+                    system: system_prompt.to_string(),
+                    messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
+                    tools: vec![],
+                    max_tokens: 2000,
+                    temperature: 0.0,
+                };
+                let resp = if let Some(l) = &self.llm { l.chat(req).await? } else { return Err("LLM client not available for condensation".into()) };
+                next_text_parts.push(resp.message.content);
+
+                i += CHUNK_SIZE_CHARS;
+            }
+
+            let next_text = next_text_parts.join("
+
+");
+
+            if next_text.len() >= current_text.len() {
+                tracing::warn!("Condensation loop failed to reduce text size. Stopping early.");
+                current_text = next_text;
+                break;
+            }
+
+            current_text = next_text;
+        }
+
+        if raw_output.len() == current_text.len() {
+            let req = ohc_builtin_agent_core::types::ChatRequest {
+                model: "gpt-4o-mini".to_string(),
+                system: system_prompt.to_string(),
+                messages: vec![ohc_builtin_agent_core::types::Message::user(current_text)],
+                tools: vec![],
+                max_tokens: 2000,
+                temperature: 0.0,
+            };
+            let resp = if let Some(l) = &self.llm { l.chat(req).await? } else { return Err("LLM client not available for condensation".into()) };
+            current_text = resp.message.content;
+        }
+
+        if current_text.len() > TARGET_CHARS_MAX {
+            current_text = format!(
+                "{}
+
+[Output truncated. Subagent failed to condense summary.]",
+                current_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
+            );
+        }
+
+        Ok(current_text)
+    }
 }
 
 #[async_trait::async_trait]
@@ -71,10 +147,9 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let mut summary = inner.result;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
+                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}
+
+{}", e, inner.result));
                         Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", task, summary))
                     }
                 }
@@ -116,16 +191,15 @@ impl ToolExecutor for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let mut summary = inner.result;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
+                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}
+
+{}", e, inner.result));
                         Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, summary))
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
-        } else if mode == "worktree" {
+        } else if mode == "worktree_unused" {
             let task_id = uuid::Uuid::new_v4().to_string();
             let branch_name = format!("subagent-{}", task_id);
             let worktree_dir = format!(".agent-worktrees/{}", branch_name);
@@ -214,11 +288,9 @@ When finished or if you need to report progress, write your final summary to {}.
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        let mut summary = stdout;
-                        if summary.chars().count() > 8000 {
-                            summary = format!("{}\n\n[Output truncated. Subagent failed to condense summary.]", summary.chars().take(8000).collect::<String>());
-                        }
-                        summary
+                        self.summarize_output(&stdout).await.unwrap_or_else(|e| format!("Failed to summarize: {}
+
+{}", e, stdout))
                     } else {
                         format!("Subagent error: {}", stderr)
                     }
@@ -241,7 +313,7 @@ Final Result: {}", res).as_bytes()).await;
     }
 }
 
-pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
+pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>, llm: Option<Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>) -> Tool {
     Tool {
         name: "spawn_subagent".to_string(),
         description: "Spawn a subagent to work on a task in an isolated context (fork, teammate, or worktree) and return a condensed summary.".to_string(),
@@ -261,7 +333,7 @@ pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
             },
             "required": ["task", "mode"]
         }),
-        execute: Arc::new(SubagentExecutor { runner }),
+        execute: Arc::new(SubagentExecutor { runner, llm }),
     }
 }
 
@@ -272,7 +344,7 @@ mod tests {
     #[tokio::test]
     async fn test_subagent_empty_task() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = SubagentExecutor { runner };
+        let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
             "task": "",
             "mode": "fork"
@@ -291,7 +363,7 @@ mod tests {
     #[tokio::test]
     async fn test_subagent_invalid_mode() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = SubagentExecutor { runner };
+        let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
             "task": "do something",
             "mode": "invalid"
@@ -318,7 +390,7 @@ mod tests {
 
 
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = SubagentExecutor { runner };
+        let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
             "task": "Do this teammate task",
             "mode": "teammate"
@@ -371,7 +443,7 @@ mod tests {
         // Mock successful ohc_builtin_agent run
         runner.push_response(Ok(crate::runner::mock::mock_output(0, "I completed the worktree task", "")));
 
-        let executor = SubagentExecutor { runner };
+        let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
             "task": "Do this worktree task",
             "mode": "worktree"
@@ -385,6 +457,7 @@ mod tests {
         assert!(msg.contains("I completed the worktree task"), "Message should contain the agent output");
     }
 
+
     #[tokio::test]
     async fn test_subagent_output_truncation() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
@@ -392,7 +465,33 @@ mod tests {
 
         runner.push_response(Ok(crate::runner::mock::mock_output(0, &long_string, "")));
 
-        let executor = SubagentExecutor { runner };
+        // Mock LLM client that returns large string
+        struct BadLlmClient;
+
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for BadLlmClient {
+            async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let message = ohc_builtin_agent_core::types::Message {
+                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                    content: "a".repeat(9000), // always returns > 8000
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                };
+
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                    message,
+                    usage: Default::default(),
+                    response_id: None,
+                    stop_reason: "stop".to_string(),
+                })
+            }
+        }
+
+        let llm = Arc::new(BadLlmClient);
+
+        let executor = SubagentExecutor { runner, llm: Some(llm) };
         let args = json!({
             "task": "Test truncation",
             "mode": "fork"
@@ -404,4 +503,5 @@ mod tests {
         assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");
         assert!(msg.len() < 9000, "Expected output length to be less than 9000 after truncation");
     }
+
 }

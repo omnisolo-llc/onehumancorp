@@ -1,23 +1,27 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::Tool;
+use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
 
 // ── Sleep tool ────────────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct SleepArgs {
+    seconds: f64,
+}
 
 struct SleepExecutor;
 
 #[async_trait::async_trait]
-impl ToolExecutor for SleepExecutor {
-    async fn execute(
+impl PydanticToolExecutor<SleepArgs> for SleepExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: SleepArgs,
     ) -> Result<String, ToolError> {
-        let secs = args["seconds"]
-            .as_f64()
-            .ok_or_else(|| ToolError::LlmRecoverable("sleep: seconds is required".to_string()))?;
-        let secs = secs.max(0.0).min(60.0); // cap at 60s
+        let secs = args.seconds.clamp(0.0, 60.0); // cap at 60s
         tokio::time::sleep(std::time::Duration::from_secs_f64(secs)).await;
         Ok(format!("Slept for {}s.", secs))
     }
@@ -40,17 +44,18 @@ pub fn sleep_tool() -> Tool {
             },
             "required": ["seconds"]
         }),
-        execute: Arc::new(SleepExecutor),
+        execute: Arc::new(PydanticAdapter::new(SleepExecutor)),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::ToolExecutor; // Needed for calling .execute() on PydanticAdapter
 
     #[tokio::test]
     async fn test_sleep_executor_success() {
-        let executor = SleepExecutor;
+        let executor = PydanticAdapter::new(SleepExecutor);
         let args = json!({ "seconds": 0.01 });
 
         let start = std::time::Instant::now();
@@ -63,20 +68,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_sleep_executor_missing_args() {
-        let executor = SleepExecutor;
+        let executor = PydanticAdapter::new(SleepExecutor);
         let args = json!({});
 
         let result = executor.execute(args).await;
         assert!(result.is_err());
         match result.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("seconds is required")),
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+                assert!(msg.contains("missing field `seconds`"));
+            }
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
 
     #[tokio::test]
     async fn test_sleep_executor_capped() {
-        let executor = SleepExecutor;
+        let executor = PydanticAdapter::new(SleepExecutor);
         // The max sleep is capped at 60. We'll pass 100 but test logic will run (this is slow if it really sleeps 60s).
         // Actually, if we pass 100, it'll sleep 60s, so we'll test capping to 0.0 if negative instead.
         let args = json!({ "seconds": -5.0 });

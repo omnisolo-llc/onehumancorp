@@ -2,8 +2,17 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function AutoCatalogPage() {
+  return (
+    <React.Suspense fallback={<div className="p-4">Loading...</div>}>
+      <AutoCatalogContent />
+    </React.Suspense>
+  );
+}
+
+function AutoCatalogContent() {
   const [loading, setLoading] = useState(false);
   const [subscriptionMode, setSubscriptionMode] = useState(false);
   const [subscriptionInterval, setSubscriptionInterval] = useState('monthly');
@@ -19,6 +28,10 @@ export default function AutoCatalogPage() {
   } | null>(null);
   const [published, setPublished] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [textMode, setTextMode] = useState(searchParams.get('mode') === 'text');
+  const [promptText, setPromptText] = useState('');
+
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -68,6 +81,39 @@ export default function AutoCatalogPage() {
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+
+  const handleGenerate = async () => {
+    if (!promptText.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/generate-offering', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptText }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || 'Generation failed.');
+        return;
+      }
+      setProductData({
+        title: data.title || '',
+        description: data.description || '',
+        price: data.price || '0.00',
+        category: data.item_type || 'Product',
+        isSubscription: data.is_subscription || false,
+        subscriptionInterval: 'monthly',
+      });
+      setSubscriptionMode(data.is_subscription || false);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to generate offering details.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -142,7 +188,34 @@ export default function AutoCatalogPage() {
         </div>
       )}
 
-      {!loading && !productData && (
+      {!loading && !productData && textMode && (
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6 text-center">What do you want to offer?</h2>
+          <textarea
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+            placeholder="e.g., Guitar lessons for beginners, 1 hour"
+            className="w-full h-32 p-4 rounded-xl border border-gray-300 shadow-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-gray-800 mb-4"
+          />
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={!promptText.trim()}
+            className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[8px] shadow-md hover:bg-blue-600 transition-colors disabled:opacity-50"
+          >
+            Generate
+          </button>
+          <button
+            type="button"
+            onClick={() => setTextMode(false)}
+            className="mt-4 text-sm font-semibold text-gray-500 hover:text-gray-700"
+          >
+            Or upload a photo instead
+          </button>
+        </div>
+      )}
+
+      {!loading && !productData && !textMode && (
         <div className="flex-1 flex flex-col items-center justify-center">
           <button
             type="button"
@@ -159,6 +232,13 @@ export default function AutoCatalogPage() {
           <p className="text-sm text-gray-500 mt-4 text-center">
             Our AI Auto-Catalog Agent will instantly write the title, description, and suggest a price.
           </p>
+          <button
+            type="button"
+            onClick={() => setTextMode(true)}
+            className="mt-4 text-sm font-semibold text-[#0066FF] hover:text-blue-700"
+          >
+            Or describe your offering
+          </button>
         </div>
       )}
 
