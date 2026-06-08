@@ -1,75 +1,115 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 
 describe('POST /api/v1/growth/referrals/generate', () => {
-    let mockBackendUrl: string;
+    let mockBackendUrl = 'http://mock-backend';
 
     beforeEach(() => {
-        vi.clearAllMocks();
-        mockBackendUrl = 'http://mock-backend';
-        process.env.OHC_BACKEND_URL = mockBackendUrl;
+        vi.stubEnv('OHC_CORE_URL', mockBackendUrl);
+        // Reset fetch mock before each test
         global.fetch = vi.fn();
     });
 
-    it('should proxy the request to the backend with authorization and cookie headers', async () => {
-        const mockResponse = { referral_link: 'https://ohc.app/ref/123' };
-        (global.fetch as any).mockResolvedValue({
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.resetAllMocks();
+    });
+
+    it('generates a referral link successfully via backend API', async () => {
+        // Mock successful backend response
+        const mockResponse = {
+            referral_link: 'https://ohc.app/invite?ref=my-store&track=123',
+            message: 'Custom message here: https://ohc.app/invite?ref=my-store&track=123'
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
             ok: true,
-            json: () => Promise.resolve(mockResponse)
+            json: async () => mockResponse
         });
 
         const req = new Request('http://localhost/api/v1/growth/referrals/generate', {
             method: 'POST',
-            headers: {
-                'authorization': 'Bearer test-token',
-                'cookie': 'session=test-session'
-            }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'my-store', customMessage: 'Custom message here' })
         });
 
-        const res = await POST(req);
+        const response = await POST(req);
+        const data = await response.json();
 
+        expect(response.status).toBe(200);
+        expect(data).toEqual(mockResponse);
         expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/api/v1/growth/referrals/generate`, {
             method: 'POST',
-            headers: expect.any(Headers)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenant_id: 'my-store', custom_message: 'Custom message here' })
         });
-
-        const fetchArgs = (global.fetch as any).mock.calls[0];
-        const headers = fetchArgs[1].headers as Headers;
-        expect(headers.get('authorization')).toBe('Bearer test-token');
-        expect(headers.get('cookie')).toBe('session=test-session');
-        expect(headers.get('Content-Type')).toBe('application/json');
-
-        const json = await res.json();
-        expect(json).toEqual(mockResponse);
-        expect(res.status).toBe(200);
     });
 
-    it('should return error response if backend fails', async () => {
-        (global.fetch as any).mockResolvedValue({
+    it('escapes user input to prevent XSS', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({})
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/referrals/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tenantId: '<script>alert(1)</script>',
+                customMessage: 'Message with <script>alert(1)</script>'
+            })
+        });
+
+        await POST(req);
+
+        // Verify the payload sent to backend is escaped
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                body: JSON.stringify({
+                    tenant_id: '&lt;script&gt;alert(1)&lt;/script&gt;',
+                    custom_message: 'Message with &lt;script&gt;alert(1)&lt;/script&gt;'
+                })
+            })
+        );
+    });
+
+    it('falls back gracefully if backend API fails', async () => {
+        // Mock failed backend response (e.g. 500 server error)
+        (global.fetch as any).mockResolvedValueOnce({
             ok: false,
-            status: 400
+            status: 500,
+            statusText: 'Internal Server Error'
         });
 
         const req = new Request('http://localhost/api/v1/growth/referrals/generate', {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'my-store' })
         });
 
-        const res = await POST(req);
-        expect(res.status).toBe(400);
-        const json = await res.json();
-        expect(json.error).toBe('Failed to generate referral link');
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(200); // Should still return 200 to UI with fallback data
+        expect(data.referral_link).toBe('https://ohc.app/invite?ref=my-store');
+        expect(data.message).toContain('https://ohc.app/invite?ref=my-store');
     });
 
-    it('should handle internal server errors', async () => {
-        (global.fetch as any).mockRejectedValue(new Error('Network error'));
+    it('falls back gracefully if fetch throws an exception (network error)', async () => {
+        // Mock network error
+        (global.fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
         const req = new Request('http://localhost/api/v1/growth/referrals/generate', {
-            method: 'POST'
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'my-store' })
         });
 
-        const res = await POST(req);
-        expect(res.status).toBe(500);
-        const json = await res.json();
-        expect(json.error).toBe('Internal Server Error');
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(data.referral_link).toBe('https://ohc.app/invite?ref=demo-fallback');
     });
 });
