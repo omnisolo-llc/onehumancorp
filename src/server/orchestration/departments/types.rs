@@ -137,3 +137,12 @@ pub struct LoyaltyLedger {
     pub tier_name: Option<String>,
     pub last_updated: Option<chrono::DateTime<chrono::Utc>>,
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentActionRequest {
+    pub id: String,
+    pub tenant_id: String,
+    pub action_type: String,
+    pub status: String, // Pending, Approved, Rejected
+    pub confidence_score: f64,
+    pub payload: serde_json::Value,
+}

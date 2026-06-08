@@ -308,8 +308,13 @@ export function UnifiedAgentFeed() {
                                   </span>
                                 </div>
                               )}
-                              {approval.payload?.remaining_stock !== undefined && (
+                              {(approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === 'inventory_alert') && (
                                 <div className="flex flex-col gap-2">
+                                  {approval.payload.message && (
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 font-medium mb-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+                                      {approval.payload.message}
+                                    </div>
+                                  )}
                                   <div className="flex justify-between items-center text-sm">
                                     <span className="text-gray-500 dark:text-gray-400">Product ID:</span>
                                     <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.product_id}</span>
@@ -317,10 +322,6 @@ export function UnifiedAgentFeed() {
                                   <div className="flex justify-between items-center text-sm">
                                     <span className="text-gray-500 dark:text-gray-400">Remaining Stock:</span>
                                     <span className="font-semibold text-red-600 dark:text-red-400">{approval.payload.remaining_stock}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Alert Message:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.message}</span>
                                   </div>
                                 </div>
                               )}
@@ -389,7 +390,8 @@ export function UnifiedAgentFeed() {
                       >
                         Dismiss
                       </button>
-                    </div>                  ) : approval.payload?.remaining_stock !== undefined ? (
+                    </div>
+                  ) : (approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === 'inventory_alert') ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}

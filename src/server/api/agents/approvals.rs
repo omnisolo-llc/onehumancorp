@@ -45,6 +45,7 @@ where
         .route("/ledger", get(list_ledger_entries))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
+        .route("/simulate-inventory-alert", post(simulate_inventory_alert))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
 }
@@ -99,6 +100,38 @@ async fn simulate_smart_pricing(
         }
     }
 }
+
+async fn simulate_inventory_alert(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "inventory_alert",
+        "product_id": "Red Dress",
+        "remaining_stock": 0,
+        "message": "Red Dress sold out in 2 days. Demand is high. Operations Agent drafted a reorder for 50 units. Finance Agent suggests raising price from $40 to $46."
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::BusinessAdvisory,
+        "Draft reorder for 50 units of Red Dress and raise price to $46".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate inventory alert: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
 
 async fn list_approvals(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
