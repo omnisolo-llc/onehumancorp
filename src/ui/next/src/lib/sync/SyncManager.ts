@@ -82,6 +82,18 @@ export class SyncManager {
              payment_intent_id: m.idempotency_key,
              currency: m.currency || 'usd'
           };
+        } else if (m.type === 'draft_quote') {
+          return {
+             transaction_id: m.id,
+             product_id: 'draft_quote',
+             quantity_deducted: 0,
+             amount: null,
+             payment_method: null,
+             payment_intent_id: null,
+             currency: 'usd',
+             mutation_type: 'draft_quote',
+             payload: m.notes
+          };
         }
         return m;
       });

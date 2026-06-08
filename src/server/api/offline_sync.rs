@@ -11,6 +11,8 @@ pub struct OfflineMutation {
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
+    pub mutation_type: Option<String>,
+    pub payload: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -43,7 +45,7 @@ pub async fn offline_sync_handler(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let mut futures = Vec::new();
+    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
         let cache_clone = cache.clone();
@@ -51,7 +53,27 @@ pub async fn offline_sync_handler(
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
 
-        futures.push(async move {
+        if mutation.mutation_type.as_deref() == Some("draft_quote") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.unwrap();
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                     VALUES ($1, $2, 'sales', 'tenant.omnichannel.message.received', $3::jsonb, 'PENDING')"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(serde_json::json!({
+                    "source": "offline_app",
+                    "message": mutation.payload.unwrap_or_default()
+                }).to_string())
+                .execute(&mut *db_tx)
+                .await;
+                db_tx.commit().await.unwrap();
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+            continue;
+        }
+
+        futures.push(Box::pin(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
             let mut db_tx = db_clone.begin().await.unwrap();
@@ -152,7 +174,7 @@ pub async fn offline_sync_handler(
                     tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
                 }
             }
-        });
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
     }
     futures::future::join_all(futures).await;
 
@@ -210,7 +232,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()),
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
                 },
             ],
         };
@@ -230,7 +252,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()),
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
                 },
             ],
         };
