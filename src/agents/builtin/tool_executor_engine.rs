@@ -43,6 +43,7 @@ impl ToolExecutionEngine {
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
                     info!("LLM-recoverable error encountered: {}", msg);
+                    // Return the raw error to be sent back to the LLM
                     return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
