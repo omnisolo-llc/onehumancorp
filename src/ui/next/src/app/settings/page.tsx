@@ -266,6 +266,16 @@ export default function SettingsPage() {
                     <span className={`text-sm ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
                   </label>
                 ))}
+                <label className="flex items-center gap-3">
+                  <input
+                    aria-label="Enable Email Notifications"
+                    type="checkbox"
+                    checked={(preferences as any)["email_notifications"] || false}
+                    onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-800">Enable Email Notifications</span>
+                </label>
               </div>
             </div>
           </div>
