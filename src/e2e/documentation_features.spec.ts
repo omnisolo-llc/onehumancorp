@@ -1,10 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Help Chat Flow', () => {
-  test('should open help chat, type message, and see response', async ({ page, loginAs }) => {
-    await loginAs(page, 'owner');
-    await page.goto('/');
+  test('should open help chat, type message, and see response', async ({ page }) => {
     // Navigate to the dashboard
+    await page.goto('/');
 
     // Check that the floating chat button exists
     const chatButton = page.getByRole('button', { name: 'Open help chat' });
@@ -36,8 +35,7 @@ test.describe('Help Chat Flow', () => {
 });
 
 test.describe('Help Center Complete UI Flow', () => {
-  test('should load Help Center, find videos, and click video to play', async ({ page, loginAs }) => {
-    await loginAs(page, 'owner');
+  test('should load Help Center, find videos, and click video to play', async ({ page }) => {
     await page.goto('/help');
 
     // Search for the video string
@@ -64,10 +62,9 @@ test.describe('Help Center Complete UI Flow', () => {
 });
 
 test.describe('Tooltip functionality', () => {
-  test('should display tooltip on hover', async ({ page, loginAs }) => {
-    await loginAs(page, 'owner');
-    await page.goto('/api-docs');
+  test('should display tooltip on hover', async ({ page }) => {
     // Wait until tooltips load dynamically or are preloaded on Help page
+    await page.goto('/api-docs');
 
     // The component wrapper has class inline-block relative cursor-help
     const tooltipTrigger = page.locator('.cursor-help').first();
@@ -79,8 +76,7 @@ test.describe('Tooltip functionality', () => {
     await expect(page.getByText('Direct API access is only for custom integrations.')).toBeVisible();
   });
 
-  test('should display tooltip on dashboard hover', async ({ page, loginAs }) => {
-    await loginAs(page, 'owner');
+  test('should display tooltip on dashboard hover', async ({ page }) => {
     await page.goto('/dashboard');
 
     // We expect the tooltip with text "View your daily sales and overall business health." to appear
@@ -94,8 +90,7 @@ test.describe('Tooltip functionality', () => {
 });
 
 test.describe('Changelog UX', () => {
-  test('should ensure changelog renders beautiful design without placeholder text', async ({ page, loginAs }) => {
-    await loginAs(page, 'owner');
+  test('should ensure changelog renders beautiful design without placeholder text', async ({ page }) => {
     await page.goto('/changelog');
 
     await expect(page.getByRole('heading', { name: 'Version 1.0 (Latest)' })).toBeVisible();
@@ -105,8 +100,7 @@ test.describe('Changelog UX', () => {
 });
 
 test.describe('AppShell Help Button', () => {
-  test('should display Help Center link and navigate successfully', async ({ page, loginAs }) => {
-    await loginAs(page, 'owner');
+  test('should display Help Center link and navigate successfully', async ({ page }) => {
     await page.goto('/dashboard');
 
     const helpButton = page.getByRole('link', { name: 'Help Center' });

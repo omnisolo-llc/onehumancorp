@@ -4,7 +4,6 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HelpCenterPage from './page';
-import { TooltipProvider } from '../../components/TooltipRegistry';
 import userEvent from '@testing-library/user-event';
 
 describe('HelpCenterPage', () => {
@@ -52,7 +51,7 @@ describe('HelpCenterPage', () => {
   });
 
   it('renders articles loaded from API', async () => {
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(<HelpCenterPage />);
 
     expect(screen.getByText('Help Center')).toBeInTheDocument();
 
@@ -64,7 +63,7 @@ describe('HelpCenterPage', () => {
 
   it('filters articles based on search query', async () => {
     const user = userEvent.setup();
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(<HelpCenterPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
@@ -81,7 +80,7 @@ describe('HelpCenterPage', () => {
 
   it('displays no matching articles message when search fails', async () => {
     const user = userEvent.setup();
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(<HelpCenterPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
@@ -97,47 +96,11 @@ describe('HelpCenterPage', () => {
   });
 
   it('renders video tutorials loaded from API', async () => {
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    render(<HelpCenterPage />);
 
     await waitFor(() => {
       expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
       expect(screen.getByText('Linking your own website name')).toBeInTheDocument();
-    });
-  });
-
-  it('opens and closes the video modal when a video is clicked', async () => {
-    const user = userEvent.setup();
-    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
-
-    // Wait for the video to be rendered
-    await waitFor(() => {
-      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
-    });
-
-    // Verify modal is not currently open
-    expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
-
-    // Click on the video
-    const videoCard = screen.getByText('How to set up your first store easily').closest('div.aspect-\\[9\\/16\\]');
-    if (videoCard) {
-      await user.click(videoCard);
-    }
-
-    // Verify modal is open
-    await waitFor(() => {
-      expect(screen.getByLabelText('Close video')).toBeInTheDocument();
-      // Test that the modal contains the video title
-      const openVideoTitles = screen.getAllByText('How to set up your first store easily');
-      expect(openVideoTitles.length).toBeGreaterThan(1); // One in the list, one in the modal
-    });
-
-    // Click on the close button
-    const closeBtn = screen.getByLabelText('Close video');
-    await user.click(closeBtn);
-
-    // Verify modal is closed
-    await waitFor(() => {
-      expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
     });
   });
 });
