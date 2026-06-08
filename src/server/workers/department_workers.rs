@@ -1050,7 +1050,13 @@ let db_for_products = self.db.clone();
                                 let task_id = uuid::Uuid::new_v4().to_string();
                                 let title = format!("Draft Social Post: {}", product_name);
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
-                                let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
+                                let payload_with_feature_type = serde_json::json!({
+                                    "feature_type": "social_post",
+                                    "product_name": product_name,
+                                    "draft_copy": parsed.get("instagram").and_then(|v| v.as_str()).unwrap_or(drafted_msg.as_str()),
+                                    "captions": parsed
+                                });
+                                let proposed_content = serde_json::to_string(&payload_with_feature_type).unwrap_or_default();
 
                                 match &db_for_products.store {
                                     crate::db::DbStore::Postgres => {
