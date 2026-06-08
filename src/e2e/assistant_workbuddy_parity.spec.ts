@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
 
-test.describe('Assistant Agent Parity', () => {
+test.describe('Assistant WorkBuddy Parity', () => {
   test('renders the assistant shell with core capability tabs', async ({ page }) => {
     // Navigate from dashboard to assistant to follow full CUJ from logged-in state
     await page.goto('/dashboard');
     // We expect there to be a way to get to assistant from dashboard eventually.
     // For now we navigate directly as requested in the route setup.
-    await page.getByRole('link', { name: 'Open Agent Assistant' }).click();
+    await page.getByRole('link', { name: 'Open WorkBuddy Assistant' }).click();
 
     // Left rail
     await expect(page.getByRole('navigation').first()).toBeVisible();
@@ -32,7 +32,7 @@ test.describe('Assistant Agent Parity', () => {
 
   test('can interact with the task composer', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Open Agent Assistant' }).click();
+    await page.getByRole('link', { name: 'Open WorkBuddy Assistant' }).click();
 
     const promptInput = page.getByLabel('Task prompt');
     await promptInput.fill('Research next.js features and output a markdown file');
@@ -48,7 +48,7 @@ test.describe('Assistant Agent Parity', () => {
 
   test('can access Parity Audit Panel', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Open Agent Assistant' }).click();
+    await page.getByRole('link', { name: 'Open WorkBuddy Assistant' }).click();
 
     await page.getByRole('button', { name: 'Parity Audit' }).click();
     const parityPanel = page.getByLabel('Parity audit panel');
@@ -58,7 +58,7 @@ test.describe('Assistant Agent Parity', () => {
 
   test('can interact with Cloud Runtime controls', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Open Agent Assistant' }).click();
+    await page.getByRole('link', { name: 'Open WorkBuddy Assistant' }).click();
 
     await page.getByRole('button', { name: 'Cloud Runtime' }).click();
     const cloudPanel = page.getByLabel('Cloud runtime panel');
@@ -68,7 +68,7 @@ test.describe('Assistant Agent Parity', () => {
 
   test('can interact with the results panel tabs', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Open Agent Assistant' }).click();
+    await page.getByRole('link', { name: 'Open WorkBuddy Assistant' }).click();
 
     // Click on All Files
     await page.getByRole('button', { name: 'All Files' }).click();
