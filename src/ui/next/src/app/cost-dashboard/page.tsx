@@ -288,7 +288,7 @@ export default function CostDashboardPage() {
                                 <div className="text-left sm:text-right">
                                     <p className="font-semibold text-gray-900">
                                       {department.action_limit === null
-                                        ? `${department.actions_used} actions`
+                                        ? `${department.actions_used} / Unlimited actions`
                                         : `${department.actions_used} / ${department.action_limit} actions`}
                                     </p>
                                     {department.soft_limit_reached ? (

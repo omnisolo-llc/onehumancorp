@@ -187,7 +187,17 @@ describe('CostDashboardPage', () => {
       cost_per_1k_tokens: 0.0015,
       trend: [],
       department_tier_usage: {
-        departments: [],
+        departments: [
+          {
+            id: "dept-sales",
+            department_type: "sales",
+            agent_id: "sales_agent",
+            actions_used: 10,
+            action_limit: null,
+            usage_percent: null,
+            soft_limit_reached: false,
+          },
+        ],
       },
     };
 
@@ -230,7 +240,17 @@ describe('CostDashboardPage', () => {
       cost_per_1k_tokens: 0.0015,
       trend: [],
       department_tier_usage: {
-        departments: [],
+        departments: [
+          {
+            id: "dept-sales",
+            department_type: "sales",
+            agent_id: "sales_agent",
+            actions_used: 10,
+            action_limit: null,
+            usage_percent: null,
+            soft_limit_reached: false,
+          },
+        ],
       },
     };
 
@@ -265,6 +285,7 @@ describe('CostDashboardPage', () => {
     });
 
     expect(screen.getAllByText(/\/ Unlimited/)[0]).toBeDefined();
-    expect(screen.getAllByText(/\/ Unlimited/).length).toBe(2);
+    expect(screen.getAllByText(/\/ Unlimited/).length).toBe(3);
+    expect(screen.getByText('10 / Unlimited actions')).toBeDefined();
   });
 });
