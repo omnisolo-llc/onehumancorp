@@ -328,7 +328,7 @@ export function UnifiedAgentFeed() {
                         Dismiss
                       </button>
                     </div>                  ) : approval.payload?.remaining_stock !== undefined ? (
-                    <div className="flex gap-3 w-full">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors shadow-md flex items-center justify-center"
@@ -379,7 +379,7 @@ export function UnifiedAgentFeed() {
                     <>
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md"
+                        className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve proposal"
                         data-testid="approve-proposal"
                       >
@@ -388,7 +388,7 @@ export function UnifiedAgentFeed() {
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <button
                           onClick={() => {}}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                           aria-label="Edit proposal"
                           data-testid="edit-proposal"
                         >
@@ -396,7 +396,7 @@ export function UnifiedAgentFeed() {
                         </button>
                         <button
                           onClick={() => handleDecision(approval.id, false)}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                           aria-label="Reject proposal"
                           data-testid="reject-proposal"
                         >
